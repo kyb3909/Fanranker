@@ -211,7 +211,7 @@ function WriteContent() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="community"
-                    className="text-[12.5px] font-bold"
+                    className="text-[12px] font-bold"
                     style={{ color: "var(--wc-mute)" }}
                   >
                     게시판 선택
@@ -253,7 +253,7 @@ function WriteContent() {
                 {/* 말머리 선택 */}
                 {editor.flairs.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                    <Label className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       말머리 <span className="text-muted-foreground font-normal">(선택)</span>
                     </Label>
                     <div className="flex flex-wrap gap-1.5">
@@ -286,7 +286,7 @@ function WriteContent() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="source-url"
-                    className="text-[12.5px] font-bold"
+                    className="text-[12px] font-bold"
                     style={{ color: "var(--wc-mute)" }}
                   >
                     소스 URL <span className="text-muted-foreground font-normal">(선택)</span>
@@ -338,7 +338,7 @@ function WriteContent() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="title"
-                    className="text-[12.5px] font-bold"
+                    className="text-[12px] font-bold"
                     style={{ color: "var(--wc-mute)" }}
                   >
                     제목
@@ -376,7 +376,7 @@ function WriteContent() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="content"
-                    className="text-[12.5px] font-bold"
+                    className="text-[12px] font-bold"
                     style={{ color: "var(--wc-mute)" }}
                   >
                     내용
@@ -392,7 +392,7 @@ function WriteContent() {
 
                 {/* 이미지: 소스 URL 등으로 지정한 대표 이미지 + 본문 삽입용 업로드 */}
                 <div className="space-y-2">
-                  <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                  <Label className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                     이미지
                   </Label>
                   {editor.imagePreview && (

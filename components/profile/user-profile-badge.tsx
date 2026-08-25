@@ -21,7 +21,7 @@ export function UserProfileBadge({ isExpert, className, size = "sm" }: UserProfi
   }
 
   const sizeClasses = {
-    sm: "text-[10px] px-1.5 py-0.5",
+    sm: "text-[12px] px-1.5 py-0.5",
     md: "text-xs px-2 py-1",
     lg: "text-sm px-2.5 py-1.5",
   }

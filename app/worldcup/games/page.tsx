@@ -119,13 +119,13 @@ export default async function WorldcupGamesPage() {
               <span className="wc-pill-wine">경기 대기 중</span>
             </div>
             <h2
-              className="mt-4 text-[22px] font-extrabold sm:text-[26px]"
+              className="mt-4 text-[20px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.02em", color: "var(--wc-ink)" }}
             >
               다음 경기를 기다리는 중이에요
             </h2>
             <p
-              className="mx-auto mt-2.5 mb-7 max-w-[440px] text-[14.5px]"
+              className="mx-auto mt-2.5 mb-7 max-w-[440px] text-[14px]"
               style={{ lineHeight: 1.65, color: "var(--wc-ink-2)" }}
             >
               아직 등록된 경기 정보가 없어요. 업데이트되는 대로 이곳에 바로 추가됩니다.
@@ -155,10 +155,10 @@ export default async function WorldcupGamesPage() {
           <div className="flex min-w-0 items-center gap-3">
             <span className="text-2xl">🏟️</span>
             <span className="min-w-0">
-              <span className="block text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+              <span className="block text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 하이버리 스타디움
               </span>
-              <span className="block truncate text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+              <span className="block truncate text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 내 아바타로 입장해서 다른 구너들과 실시간 채팅 — 새벽 경기, 같이 봐요
               </span>
             </span>

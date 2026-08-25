@@ -223,7 +223,7 @@ export default async function MatchesPage({
         {/* 날짜 표제 — 매거진 일정면의 날짜 마스트헤드 */}
         <div className="mt-6 flex items-baseline gap-2.5">
           <h2
-            className="text-[22px] leading-none"
+            className="text-[20px] leading-none"
             style={{
               fontFamily: "var(--font-display-ko), var(--font-title)",
               fontWeight: 700,
@@ -247,7 +247,7 @@ export default async function MatchesPage({
             }}
           >
             <EmptyScene src="/images/empty/empty-no-matches.webp" size={320} />
-            <p className="mt-4 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="mt-4 text-[13px]" style={{ color: "var(--wc-mute)" }}>
               이 날짜에는 대상 리그 경기가 없습니다.
             </p>
           </div>
@@ -270,7 +270,7 @@ export default async function MatchesPage({
                   style={{ background: "var(--wc-line-2)" }}
                 />
                 <span
-                  className="gn-num shrink-0 text-[11px] font-bold"
+                  className="gn-num shrink-0 text-[12px] font-bold"
                   style={{ color: "var(--wc-mute-2)" }}
                 >
                   {rows.length}
@@ -309,7 +309,7 @@ export default async function MatchesPage({
                           라이브 스코어 미제공 정책은 그대로 — 상태 카피만 바꾼다. */}
                             {m.status === "completed" ? (
                               <span
-                                className="gn-num text-center text-[11px] font-bold"
+                                className="gn-num text-center text-[12px] font-bold"
                                 style={{ color: "var(--wc-mute-2)", letterSpacing: "0.08em" }}
                               >
                                 FT
@@ -321,21 +321,21 @@ export default async function MatchesPage({
                                 Date.now() - new Date(m.matchTime).getTime() > 0 &&
                                 Date.now() - new Date(m.matchTime).getTime() < 3 * 3600_000) ? (
                               <span
-                                className="text-center text-[11px] leading-tight font-bold"
+                                className="text-center text-[12px] leading-tight font-bold"
                                 style={{ color: "var(--wc-burgundy)" }}
                               >
                                 경기 중
                               </span>
                             ) : m.status === "cancelled" ? (
                               <span
-                                className="text-center text-[11px] font-bold"
+                                className="text-center text-[12px] font-bold"
                                 style={{ color: "var(--wc-mute-2)" }}
                               >
                                 취소
                               </span>
                             ) : (
                               <span
-                                className="gn-num text-center text-[15px] font-bold"
+                                className="gn-num text-center text-[16px] font-bold"
                                 style={{ color: "var(--wc-ink)" }}
                                 suppressHydrationWarning
                               >
@@ -352,7 +352,7 @@ export default async function MatchesPage({
                                 {displayTeamName(m.homeTeam, shortNames)}
                               </span>
                               <span
-                                className="gn-num text-center text-[15px] font-bold"
+                                className="gn-num text-center text-[16px] font-bold"
                                 style={{
                                   color:
                                     (m.status === "completed" || m.status === "in_progress") &&
@@ -373,7 +373,7 @@ export default async function MatchesPage({
                                 m.awayScore != null ? (
                                   `${m.homeScore}–${m.awayScore}`
                                 ) : (
-                                  <span className="text-[11px] font-semibold tracking-wide">
+                                  <span className="text-[12px] font-semibold tracking-wide">
                                     vs
                                   </span>
                                 )}
@@ -411,7 +411,7 @@ export default async function MatchesPage({
                 <Link
                   href={`/matches?date=${date}&expand=${[...expanded, code].join(",")}`}
                   scroll={false}
-                  className="mt-2 flex items-baseline justify-between rounded-xl px-4 py-3 text-[12.5px] no-underline"
+                  className="mt-2 flex items-baseline justify-between rounded-xl px-4 py-3 text-[12px] no-underline"
                   style={{
                     background: "var(--wc-soft)",
                     color: "var(--wc-mute)",

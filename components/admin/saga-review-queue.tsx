@@ -60,7 +60,7 @@ const TIER_STYLE = {
 } as const
 
 const inputCls =
-  "w-full rounded-md border px-2.5 py-1.5 text-[13.5px] focus:ring-2 focus:ring-rose-200 focus:outline-none"
+  "w-full rounded-md border px-2.5 py-1.5 text-[13px] focus:ring-2 focus:ring-rose-200 focus:outline-none"
 
 function RowCard({
   row,
@@ -155,10 +155,10 @@ function RowCard({
         value={headline}
         onChange={(e) => setHeadline(e.target.value)}
         placeholder="한국어 헤드라인을 입력하세요 (필수)"
-        className="mt-2.5 w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-[15.5px] font-bold focus:border-rose-300 focus:outline-none"
+        className="mt-2.5 w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-[16px] font-bold focus:border-rose-300 focus:outline-none"
       />
       {/* 원문 — 대조용 */}
-      <p className="mt-1.5 text-[12.5px] leading-snug break-words text-gray-500">
+      <p className="mt-1.5 text-[12px] leading-snug break-words text-gray-500">
         원문: {row.title}{" "}
         <a
           href={row.source_url}
@@ -172,7 +172,7 @@ function RowCard({
 
       {/* 어느 문서로 가는가 */}
       {saga ? (
-        <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-[12.5px] text-emerald-800">
+        <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-[12px] text-emerald-800">
           ✅ 기존 문서에 쌓임 →{" "}
           <a
             href={`/saga/${saga.slug}`}
@@ -185,18 +185,18 @@ function RowCard({
           <span className="text-emerald-600">(기록 {saga.entry_count}건)</span>
         </p>
       ) : (
-        <p className="mt-2 rounded-lg bg-blue-50 px-3 py-1.5 text-[12.5px] font-bold text-blue-800">
+        <p className="mt-2 rounded-lg bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-800">
           🆕 발행하면 새 사가 문서가 생깁니다 — 아래 선수명·방향을 꼭 확인하세요
         </p>
       )}
 
       {/* 수정 필드 — 한 줄 그리드 */}
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+        <label className="flex flex-col gap-1 text-[12px] font-bold text-gray-500">
           선수 (영문)
           <input value={player} onChange={(e) => setPlayer(e.target.value)} className={inputCls} />
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+        <label className="flex flex-col gap-1 text-[12px] font-bold text-gray-500">
           선수 (한글)
           <input
             value={playerKr}
@@ -205,7 +205,7 @@ function RowCard({
             className={inputCls}
           />
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+        <label className="flex flex-col gap-1 text-[12px] font-bold text-gray-500">
           방향
           <select
             value={direction}
@@ -216,7 +216,7 @@ function RowCard({
             <option value="out">OUT — 순수 이탈</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+        <label className="flex flex-col gap-1 text-[12px] font-bold text-gray-500">
           단계
           <select value={stage} onChange={(e) => setStage(e.target.value)} className={inputCls}>
             {STAGE_OPTIONS.map((o) => (
@@ -241,7 +241,7 @@ function RowCard({
         <button
           onClick={() => act("reject")}
           disabled={busy}
-          className="rounded-lg border px-5 py-2.5 text-[13.5px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          className="rounded-lg border px-5 py-2.5 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
         >
           반려
         </button>
@@ -270,13 +270,13 @@ export function SagaReviewQueue() {
         <a
           href="/saga"
           target="_blank"
-          className="text-[12.5px] font-bold text-rose-700 underline underline-offset-2"
+          className="text-[12px] font-bold text-rose-700 underline underline-offset-2"
           rel="noreferrer"
         >
           /saga 보기 ↗
         </a>
       </div>
-      <p className="text-[12.5px] text-gray-500">
+      <p className="text-[12px] text-gray-500">
         사가는 자동 생성됩니다 — 사전에 등재된 선수의 고확신 소식은 크론이 바로 발행하고, 여기엔{" "}
         <b>자동 발행이 보류한 것</b>(사전 미등재 선수·저확신·헤드라인 부재)만 남습니다.
       </p>
@@ -289,7 +289,7 @@ export function SagaReviewQueue() {
 
       {newSaga.length > 0 && (
         <section className="space-y-2.5">
-          <h3 className="text-[13.5px] font-extrabold text-blue-800">
+          <h3 className="text-[13px] font-extrabold text-blue-800">
             🆕 새 사가가 생기는 건 <span className="text-blue-500">{newSaga.length}</span>
             <span className="ml-2 font-bold text-gray-400">— 선수 이름이 맞는지 확인</span>
           </h3>
@@ -301,7 +301,7 @@ export function SagaReviewQueue() {
 
       {withSaga.length > 0 && (
         <section className="space-y-2.5">
-          <h3 className="text-[13.5px] font-extrabold text-emerald-800">
+          <h3 className="text-[13px] font-extrabold text-emerald-800">
             기존 사가에 쌓이는 건 <span className="text-emerald-500">{withSaga.length}</span>
             <span className="ml-2 font-bold text-gray-400">— 헤드라인만 훑고 발행</span>
           </h3>

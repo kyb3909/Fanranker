@@ -51,7 +51,7 @@ export function PageBand({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
               <Title
-                className="text-[30px] leading-none sm:text-[42px]"
+                className="text-[31px] leading-none sm:text-[42px]"
                 style={{
                   fontFamily: "var(--font-display-ko), var(--font-title)",
                   fontWeight: 700,
@@ -64,7 +64,7 @@ export function PageBand({
               </Title>
               {kicker && (
                 <span
-                  className="gn-num text-[12.5px] font-bold uppercase"
+                  className="gn-num text-[12px] font-bold uppercase"
                   style={{ letterSpacing: "0.2em", color: "var(--gn-bg-100)" }}
                 >
                   {kicker}
@@ -73,7 +73,7 @@ export function PageBand({
             </div>
             {description && (
               <p
-                className="mt-3 max-w-[46ch] text-[14.5px]"
+                className="mt-3 max-w-[46ch] text-[14px]"
                 style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
               >
                 {description}
@@ -93,7 +93,7 @@ export function PageBandStat({ value, label }: { value: ReactNode; label: string
   return (
     <>
       <span
-        className="gn-num block text-[34px] leading-none font-bold"
+        className="gn-num block text-[31px] leading-none font-bold"
         style={{ color: "var(--gn-cream)" }}
       >
         {value}

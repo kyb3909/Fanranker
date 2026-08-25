@@ -201,7 +201,7 @@ function CompactKicker({ card }: { card: CardNewsItem }) {
       ) : (
         <span
           key="media"
-          className="text-[11px] leading-none font-black"
+          className="text-[12px] leading-none font-black"
           style={{ color: "var(--wc-ink)" }}
         >
           𝕏
@@ -233,7 +233,7 @@ function CompactKicker({ card }: { card: CardNewsItem }) {
 
   return (
     <div
-      className="mb-1.5 flex items-center gap-2 text-[11px] font-bold"
+      className="mb-1.5 flex items-center gap-2 text-[12px] font-bold"
       style={{ letterSpacing: "0.03em" }}
     >
       {parts}
@@ -259,7 +259,7 @@ function TransferPromoCard() {
       <div className="flex items-center gap-3">
         <span
           aria-hidden
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[18px]"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[20px]"
           style={{
             background: "color-mix(in srgb, var(--wc-burgundy) 9%, transparent)",
           }}
@@ -268,13 +268,13 @@ function TransferPromoCard() {
         </span>
         <span className="min-w-0 flex-1">
           <span
-            className="block text-[14.5px] font-extrabold"
+            className="block text-[14px] font-extrabold"
             style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
           >
             이적시장 상황판
           </span>
           <span
-            className="mt-0.5 block text-[12.5px]"
+            className="mt-0.5 block text-[12px]"
             style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
           >
             오피셜 · Here we go · 루머를 신뢰 등급으로 — 실시간 타임라인
@@ -449,7 +449,7 @@ function TarotStrip({ tarot }: { tarot: NonNullable<ReturnType<typeof suggestTar
           trackEvent({ name: "tarot_hook_click", params: { surface: "cardnews" } })
           setOpen(true)
         }}
-        className="flex w-full items-center justify-center text-[12.5px] font-bold transition-colors"
+        className="flex w-full items-center justify-center text-[12px] font-bold transition-colors"
         style={{
           height: 44,
           borderTop: "1px solid var(--wc-line)",
@@ -531,22 +531,19 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
           aria-label="댓글 미리보기 펼치기"
         >
           <span
-            className="shrink-0 text-[11px] font-extrabold"
+            className="shrink-0 text-[12px] font-extrabold"
             style={{ color: "var(--wc-burgundy)" }}
           >
             BEST
           </span>
-          <span
-            className="min-w-0 flex-1 truncate text-[12.5px]"
-            style={{ color: "var(--wc-mute)" }}
-          >
+          <span className="min-w-0 flex-1 truncate text-[12px]" style={{ color: "var(--wc-mute)" }}>
             {first.content}
           </span>
           {/* 추천수 — 눈팅족의 스캔 신호 (2026-08-21 리포트 공백①: 시스템은 이미 있고
               노출만 없었다). 0이면 안 그린다 — 0 카운트 숨김 원칙 */}
           {first.votes > 0 && (
             <span
-              className="gn-num shrink-0 text-[11px] font-bold tabular-nums"
+              className="gn-num shrink-0 text-[12px] font-bold tabular-nums"
               style={{ color: "var(--wc-burgundy)" }}
             >
               추천 {first.votes}
@@ -558,18 +555,18 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
         <div className="space-y-2">
           {card.topComments.map((c, i) => (
             <div key={i} className="flex gap-1.5">
-              <span className="shrink-0 text-[11.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+              <span className="shrink-0 text-[12px] font-bold" style={{ color: "var(--wc-ink)" }}>
                 {c.nickname}
               </span>
               <span
-                className="line-clamp-2 min-w-0 flex-1 text-[12.5px] leading-snug"
+                className="line-clamp-2 min-w-0 flex-1 text-[12px] leading-snug"
                 style={{ color: "var(--wc-mute)" }}
               >
                 {c.content}
               </span>
               {c.votes > 0 && (
                 <span
-                  className="gn-num shrink-0 text-[11px] font-bold tabular-nums"
+                  className="gn-num shrink-0 text-[12px] font-bold tabular-nums"
                   style={{ color: "var(--wc-burgundy)" }}
                 >
                   추천 {c.votes}
@@ -657,7 +654,7 @@ function CompactCard({
           <h2
             className="line-clamp-2"
             style={{
-              fontSize: 14.5,
+              fontSize: 14,
               fontWeight: 650,
               lineHeight: 1.38,
               letterSpacing: "-0.01em",
@@ -919,7 +916,7 @@ export function CardNewsFeed({
                   if (!on && c.id !== "all")
                     trackEvent({ name: "cardnews_chip_filter", params: { chip_id: c.id } })
                 }}
-                className="shrink-0 rounded-full px-3.5 text-[12.5px] font-bold whitespace-nowrap transition-colors"
+                className="shrink-0 rounded-full px-3.5 text-[12px] font-bold whitespace-nowrap transition-colors"
                 style={{
                   height: 34,
                   background: on ? "var(--wc-wine-tint)" : "var(--wc-card)",
@@ -944,13 +941,13 @@ export function CardNewsFeed({
             className="flex items-baseline justify-between rounded-xl px-4 py-3"
             style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
           >
-            <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+            <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
               {filtered.length > 0 ? "이 말머리는 여기까지" : "오늘은 이 말머리 소식이 없어요"}
             </span>
             <button
               type="button"
               onClick={() => setChip("all")}
-              className="shrink-0 text-[12.5px] font-bold"
+              className="shrink-0 text-[12px] font-bold"
               style={{ color: "var(--wc-burgundy)" }}
             >
               전체 보기 →

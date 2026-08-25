@@ -64,7 +64,7 @@ function RegionCard({
         </div>
         <div className="mt-2 w-full text-center">
           <p className="text-xs font-bold text-[#888]">{region.name}</p>
-          <p className="text-[10px] text-[#555]">{region.league}</p>
+          <p className="text-[12px] text-[#555]">{region.league}</p>
         </div>
       </div>
     )
@@ -98,7 +98,7 @@ function RegionCard({
       </div>
       {/* 하단 라벨 */}
       <div className="mt-1.5 w-full text-center">
-        <p className="text-[10px] font-semibold tracking-wide text-[#c8944a]">{region.league}</p>
+        <p className="text-[12px] font-semibold tracking-wide text-[#c8944a]">{region.league}</p>
       </div>
     </button>
   )

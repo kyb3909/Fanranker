@@ -47,16 +47,16 @@ function FormRow({ m, teamName }: { m: FormMatch; teamName?: string }) {
           : { text: "무", color: "var(--wc-mute)" }
   }
   return (
-    <li className="flex items-center gap-2 py-[3px] text-[12.5px]">
+    <li className="flex items-center gap-2 py-[3px] text-[12px]">
       {mark && (
         <span
-          className="grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+          className="grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[12px] font-extrabold"
           style={{ background: `${mark.color}1a`, color: mark.color }}
         >
           {mark.text}
         </span>
       )}
-      <span className="gn-num shrink-0 text-[11px]" style={{ color: "var(--wc-mute-2)" }}>
+      <span className="gn-num shrink-0 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
         {m.date}
       </span>
       <span className="min-w-0 flex-1 truncate" style={{ color: "var(--wc-ink)" }}>
@@ -110,7 +110,7 @@ export async function MatchInfoSection({
               const teamName = pickRecurringTeam(side.form) ?? anchor?.home.name
               return (
                 <div key={side.label} className="min-w-0">
-                  <p className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                  <p className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                     {side.label}
                   </p>
                   <ul className="mt-1">
@@ -143,7 +143,7 @@ export async function MatchInfoSection({
               { label: awayName, rows: p.injuries.away },
             ].map((side) => (
               <div key={side.label} className="min-w-0">
-                <p className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                <p className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                   {side.label}
                 </p>
                 {side.rows.length === 0 ? (
@@ -153,11 +153,11 @@ export async function MatchInfoSection({
                 ) : (
                   <ul className="mt-1 space-y-[3px]">
                     {side.rows.map((r, i) => (
-                      <li key={i} className="flex items-baseline gap-2 text-[12.5px]">
+                      <li key={i} className="flex items-baseline gap-2 text-[12px]">
                         <span className="font-bold" style={{ color: "var(--wc-ink)" }}>
                           {r.name}
                         </span>
-                        <span className="text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                        <span className="text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
                           {r.status}
                         </span>
                       </li>
@@ -174,7 +174,7 @@ export async function MatchInfoSection({
         <Panel title="심판">
           <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
             {p.officials.map((o, i) => (
-              <li key={i} className="text-[12.5px]">
+              <li key={i} className="text-[12px]">
                 <span style={{ color: "var(--wc-mute)" }}>{o.role} </span>
                 <span className="font-bold" style={{ color: "var(--wc-ink)" }}>
                   {o.name}

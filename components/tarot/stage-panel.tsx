@@ -63,7 +63,7 @@ export function StagePanel({
 
       {/* 자막 — 루나가 지금 무슨 상태인지 */}
       <p
-        className="absolute inset-x-0 top-3 px-4 text-center text-[12.5px] font-semibold"
+        className="absolute inset-x-0 top-3 px-4 text-center text-[12px] font-semibold"
         style={{ color: "rgba(255,255,255,.92)", textShadow: "0 1px 6px rgba(0,0,0,.75)" }}
       >
         {caption}

@@ -115,7 +115,7 @@ function PlatformBadge({
       {c.label && (
         <span
           style={{
-            fontSize: 11.5,
+            fontSize: 11,
             fontWeight: 800,
             letterSpacing: "0.06em",
             color: c.labelColor,
@@ -128,7 +128,7 @@ function PlatformBadge({
       <span
         style={{
           marginLeft: "auto",
-          fontSize: 11.5,
+          fontSize: 11,
           color: sourceOpacity,
           display: "inline-flex",
           alignItems: "center",

@@ -98,14 +98,14 @@ export function ContributorsLeaderboard({
                   >
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={e.avatar_url ?? undefined} alt={e.nickname ?? ""} />
-                      <AvatarFallback className="text-[11px]">{initial}</AvatarFallback>
+                      <AvatarFallback className="text-[12px]">{initial}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">
                         {e.nickname || e.user_id.slice(0, 12)}
                       </div>
                       {e.display_title && (
-                        <div className="text-muted-foreground truncate text-[10px]">
+                        <div className="text-muted-foreground truncate text-[12px]">
                           {e.display_title}
                         </div>
                       )}

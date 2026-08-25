@@ -59,7 +59,7 @@ export function SectionHeader({
             </div>
           )}
           <Title
-            className="mt-1.5 text-[26px] sm:text-[32px]"
+            className="mt-1.5 text-[26px] sm:text-[31px]"
             style={{
               fontFamily: "var(--font-display-ko), var(--font-title)",
               fontWeight: 700,

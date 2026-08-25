@@ -162,7 +162,7 @@ export function InvestDialog({
           )}
 
           {/* 안내 */}
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-[12px]">
             현금 결제 없이, 예측으로 얻은 포인트만 사용할 수 있어요.
           </p>
 

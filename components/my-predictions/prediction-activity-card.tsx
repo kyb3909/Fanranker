@@ -195,25 +195,25 @@ export function PredictionActivityCard({
               {/* 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (작성자 옆 팔로우 버튼 제거) */}
               {activity.stats && activity.stats.accuracy > 0 && (
                 <span
-                  className={`inline-flex h-5 items-center gap-0.5 rounded-full bg-white px-1.5 text-[10px] font-bold shadow-sm ${sportColor.text}`}
+                  className={`inline-flex h-5 items-center gap-0.5 rounded-full bg-white px-1.5 text-[12px] font-bold shadow-sm ${sportColor.text}`}
                 >
                   <Target className="h-2.5 w-2.5" />
                   {activity.stats.accuracy.toFixed(1)}%
                 </span>
               )}
               {activity.stats && activity.stats.current_streak > 0 && (
-                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[10px] font-bold text-orange-600 shadow-sm">
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[12px] font-bold text-orange-600 shadow-sm">
                   <Flame className="h-2.5 w-2.5" />
                   {activity.stats.current_streak}연승
                 </span>
               )}
               {activity.stats && activity.stats.net_profit > 0 && (
-                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[10px] font-bold text-emerald-600 shadow-sm">
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[12px] font-bold text-emerald-600 shadow-sm">
                   <TrendingUp className="h-2.5 w-2.5" />+{activity.stats.net_profit.toFixed(0)}
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-[11px] font-medium text-white/80">
+            <p className="mt-0.5 text-[12px] font-medium text-white/80">
               {formatActivityDate(activity.created_at)} ·{" "}
               {formatRelativeTime(new Date(activity.created_at))}
             </p>
@@ -243,7 +243,7 @@ export function PredictionActivityCard({
                     {sportLabel} {group.matchCount}경기
                   </span>
                   <span
-                    className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
+                    className={`rounded-md px-1.5 py-0.5 text-[12px] font-bold ${
                       slipLocked ? "bg-gray-100 text-gray-600" : "bg-primary/90 text-white"
                     }`}
                   >
@@ -251,7 +251,7 @@ export function PredictionActivityCard({
                   </span>
                   {statusDot && (
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${statusDot.pillClass}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-bold ${statusDot.pillClass}`}
                     >
                       <span
                         className={`inline-block h-1.5 w-1.5 rounded-full ${statusDot.dotClass}`}
@@ -273,12 +273,12 @@ export function PredictionActivityCard({
                     {/* 📝 분석 섹션 */}
                     {group.analysisText && (
                       <section>
-                        <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase">
+                        <h4 className="mb-2 flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-gray-500 uppercase">
                           <span aria-hidden="true">📝</span>
                           <span>분석</span>
                         </h4>
                         <div className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
-                          <p className="text-[13.5px] leading-relaxed whitespace-pre-line text-gray-800">
+                          <p className="text-[13px] leading-relaxed whitespace-pre-line text-gray-800">
                             {group.analysisText}
                           </p>
                         </div>
@@ -288,7 +288,7 @@ export function PredictionActivityCard({
                     {/* 🎯 예측 섹션 */}
                     {group.matches.length > 0 && (
                       <section>
-                        <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase">
+                        <h4 className="mb-2 flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-gray-500 uppercase">
                           <span aria-hidden="true">🎯</span>
                           <span>예측 {group.matches.length}경기</span>
                         </h4>
@@ -437,7 +437,7 @@ function OddsCell({
       : "border-gray-200 bg-white text-gray-500"
   return (
     <div className={`${base} ${stateClass}`}>
-      <div className="truncate text-[11px] font-semibold">{label}</div>
+      <div className="truncate text-[12px] font-semibold">{label}</div>
       {subLabel && <div className="text-[9px] opacity-70">{subLabel}</div>}
       <div className="mt-0.5 text-[13px] font-bold tabular-nums">{oddsValue}</div>
     </div>
@@ -462,11 +462,11 @@ function PredictionMatchCard({ match }: { match: PredictionMatch }) {
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">
           {match.league && (
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-700">
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[12px] font-bold text-gray-700">
               {match.league}
             </span>
           )}
-          <span className="bg-primary/90 rounded px-1.5 py-0.5 text-[10px] font-bold text-white">
+          <span className="bg-primary/90 rounded px-1.5 py-0.5 text-[12px] font-bold text-white">
             {gameType}
             {lineValue != null && (
               <span className="ml-0.5 tabular-nums">
@@ -477,7 +477,7 @@ function PredictionMatchCard({ match }: { match: PredictionMatch }) {
         </div>
         {resultPill && (
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resultPill.className}`}
+            className={`rounded-full px-2 py-0.5 text-[12px] font-bold ${resultPill.className}`}
           >
             {resultPill.label}
           </span>
@@ -486,7 +486,7 @@ function PredictionMatchCard({ match }: { match: PredictionMatch }) {
 
       {/* 경기 시간 + 경기장 */}
       {(matchTimeText || match.venue) && (
-        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-gray-500">
           {matchTimeText && <span className="tabular-nums">🕒 {matchTimeText}</span>}
           {match.venue && <span className="truncate">🏟 {match.venue}</span>}
         </div>
@@ -547,7 +547,7 @@ function PredictionMatchCard({ match }: { match: PredictionMatch }) {
       )}
 
       {/* 내 선택 요약 + 정답 비교 */}
-      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 text-[11px]">
+      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 text-[12px]">
         <span className="text-gray-500">
           내 선택: <span className="font-bold text-gray-900">{match.selection}</span>
           {match.odds > 0 && <span className="text-gray-500"> · {match.odds.toFixed(2)}배</span>}

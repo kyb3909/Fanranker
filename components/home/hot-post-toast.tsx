@@ -32,7 +32,7 @@ export function HotPostToast({
           <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />
         </div>
         <Link href={`/post/${toast.id}`} onClick={dismiss} className="min-w-0 flex-1">
-          <div className="text-[10px] font-bold text-orange-600">
+          <div className="text-[12px] font-bold text-orange-600">
             🔥 {toast.community_name || "커뮤니티"} 인기글 등극
           </div>
           <div className="max-w-[240px] truncate text-[13px] font-semibold text-gray-900 sm:max-w-[380px]">

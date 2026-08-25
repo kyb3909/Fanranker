@@ -370,7 +370,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
 
   const renderGroup = (label: string, communities: CommunityInfo[]) => (
     <>
-      <p className="text-muted-foreground px-4 pt-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">
+      <p className="text-muted-foreground px-4 pt-2 pb-1 text-[12px] font-semibold tracking-wider uppercase">
         {label}
       </p>
       {communities.map((community) => renderParentWithChannels(community))}
@@ -394,7 +394,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
           }}
         >
           <h2
-            className="flex items-center gap-2 text-[11px] font-bold uppercase"
+            className="flex items-center gap-2 text-[12px] font-bold uppercase"
             style={{
               color: "var(--wc-ink)",
               letterSpacing: "0.18em",

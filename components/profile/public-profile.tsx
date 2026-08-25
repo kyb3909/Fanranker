@@ -178,7 +178,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
 
           {/* 가입일 + 호칭 */}
           <div
-            className="mt-2 flex flex-wrap items-center gap-1.5 text-[12.5px]"
+            className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]"
             style={{ color: "var(--wc-mute)" }}
           >
             {publicProfile.bio && <span>{publicProfile.bio} ·</span>}
@@ -193,7 +193,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
               <>
                 <span aria-hidden>·</span>
                 <span
-                  className="inline-flex items-center rounded-full px-2 py-px text-[11px] font-bold"
+                  className="inline-flex items-center rounded-full px-2 py-px text-[12px] font-bold"
                   style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
                 >
                   🏆 {publicProfile.display_title.flair_name} {publicProfile.display_title.name}
@@ -339,7 +339,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
                       팀 카르마
                     </h3>
                   </div>
-                  <div className="tnum text-[11px]" style={{ color: "var(--wc-mute)" }}>
+                  <div className="tnum text-[12px]" style={{ color: "var(--wc-mute)" }}>
                     총 <b style={{ color: "var(--wc-burgundy)" }}>{totalKarma.toLocaleString()}</b>
                     점
                   </div>
@@ -371,7 +371,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
                           <span className="text-sm font-medium" style={{ color: "var(--wc-ink)" }}>
                             {tk.team_short_name || tk.team_name}
                           </span>
-                          <span className="text-[10px]" style={{ color: "var(--wc-mute)" }}>
+                          <span className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                             {tk.sport}
                           </span>
                         </div>
@@ -386,7 +386,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
                   })}
                   {teamKarma.length > 8 && (
                     <div
-                      className="px-4 py-2 text-center text-[11px]"
+                      className="px-4 py-2 text-center text-[12px]"
                       style={{ color: "var(--wc-mute)" }}
                     >
                       외 {teamKarma.length - 8}개 팀
@@ -428,7 +428,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
                           unoptimized
                         />
                       </div>
-                      <span className="text-[10px]" style={{ color: "var(--wc-mute)" }}>
+                      <span className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                         {pa.pixel_art_items.name}
                       </span>
                     </div>

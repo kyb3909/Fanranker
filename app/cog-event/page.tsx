@@ -204,7 +204,7 @@ export default async function CogEventPage({
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       {preview && (
         <div
-          className="px-4 py-2 text-center text-[12.5px] font-bold text-white"
+          className="px-4 py-2 text-center text-[12px] font-bold text-white"
           style={{ background: "var(--wc-ink)" }}
         >
           미리보기 모드 — 채널 합의 전이라 실제 참가 등록은 되지 않습니다
@@ -233,7 +233,7 @@ export default async function CogEventPage({
               }}
             >
               <span
-                className="gn-num absolute top-5 left-[42px] text-[15px] font-bold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[18px]"
+                className="gn-num absolute top-5 left-[42px] text-[16px] font-bold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[20px]"
                 style={{
                   transform: "skewX(8deg) rotate(90deg)",
                   transformOrigin: "left top",
@@ -251,12 +251,12 @@ export default async function CogEventPage({
               {/* ── 좌: 선언 ── */}
               <div>
                 <p
-                  className="mb-3 flex flex-wrap items-center gap-2.5 text-[12.5px] font-extrabold"
+                  className="mb-3 flex flex-wrap items-center gap-2.5 text-[12px] font-extrabold"
                   style={{ color: "var(--gn-bg-100)", letterSpacing: "0.14em" }}
                 >
                   COG · 시청자 팬덤 대결
                   <span
-                    className="gn-num rounded px-1.5 py-[2px] text-[10.5px]"
+                    className="gn-num rounded px-1.5 py-[2px] text-[12px]"
                     style={{
                       border: "1px solid var(--gn-night-line)",
                       color: "var(--gn-cream-dim)",
@@ -293,7 +293,7 @@ export default async function CogEventPage({
                 </h1>
 
                 <p
-                  className="mb-6 flex items-center gap-3 text-[14.5px] font-bold"
+                  className="mb-6 flex items-center gap-3 text-[14px] font-bold"
                   style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
                 >
                   <span
@@ -315,7 +315,7 @@ export default async function CogEventPage({
                     label={started && !isClosed ? "대결 종료까지" : "개막까지"}
                   />
                   <span
-                    className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-3 text-[12.5px] font-bold"
+                    className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-3 text-[12px] font-bold"
                     style={{
                       background: "rgba(255,255,255,.06)",
                       border: "1px solid var(--gn-night-line)",
@@ -330,7 +330,7 @@ export default async function CogEventPage({
                 {!isDraft && !isClosed && (
                   <Link
                     href="/prediction?ref=cog"
-                    className="inline-flex items-center gap-2 rounded-[12px] px-6 py-3.5 text-[15.5px] font-extrabold transition-transform active:scale-[.98]"
+                    className="inline-flex items-center gap-2 rounded-[12px] px-6 py-3.5 text-[16px] font-extrabold transition-transform active:scale-[.98]"
                     style={{
                       background: "linear-gradient(100deg, var(--wc-burgundy), var(--gn-bg-700))",
                       color: "var(--gn-cream)",
@@ -408,7 +408,7 @@ export default async function CogEventPage({
                           {g.club_kor}
                         </span>
                         <span
-                          className="text-[10.5px] font-bold"
+                          className="text-[12px] font-bold"
                           style={{
                             color: "rgba(245,239,231,.72)",
                             textShadow: "0 1px 8px rgba(0,0,0,.8)",
@@ -434,7 +434,7 @@ export default async function CogEventPage({
               {totalRegs > 0 && (
                 <span className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
                   참여 팬{" "}
-                  <b className="gn-num text-[17px]" style={{ color: "var(--gn-cream)" }}>
+                  <b className="gn-num text-[16px]" style={{ color: "var(--gn-cream)" }}>
                     {totalRegs.toLocaleString()}
                   </b>
                 </span>
@@ -466,7 +466,7 @@ export default async function CogEventPage({
             ★ ★ ★&nbsp;&nbsp;두 진영, 라운드마다의 승부&nbsp;&nbsp;★ ★ ★
           </p>
           <h2
-            className="text-[26px] sm:text-[30px]"
+            className="text-[26px] sm:text-[31px]"
             style={{
               fontFamily: DISPLAY,
               fontWeight: 700,
@@ -510,14 +510,14 @@ export default async function CogEventPage({
             ["보상 안내", "각 팬덤 1위에게 특별 상품", "상품 내용은 추후 공개"],
           ].map(([k, t, d]) => (
             <div key={k} className="px-5 py-4" style={{ background: "var(--wc-card, #fff)" }}>
-              <p className="mb-1 text-[11.5px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
+              <p className="mb-1 text-[12px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
                 {k}
               </p>
-              <p className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+              <p className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 {t}
               </p>
               <p
-                className="mt-0.5 text-[12.5px]"
+                className="mt-0.5 text-[12px]"
                 style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
               >
                 {d}
@@ -533,14 +533,14 @@ export default async function CogEventPage({
               Round results
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em" }}
             >
               라운드 결과
             </h2>
           </div>
           <div
-            className="rounded-xl px-5 py-6 text-center text-[13.5px] font-semibold"
+            className="rounded-xl px-5 py-6 text-center text-[13px] font-semibold"
             style={{
               border: "1px dashed var(--wc-line-2)",
               color: "var(--wc-mute)",
@@ -560,7 +560,7 @@ export default async function CogEventPage({
               Scoring
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em" }}
             >
               예측에 쓰는 볼
@@ -604,7 +604,7 @@ export default async function CogEventPage({
               Join
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em" }}
             >
               참여 방법
@@ -616,12 +616,12 @@ export default async function CogEventPage({
               <div key={s.num} className="wc-step-card">
                 <div className="wc-step-num">{s.num}</div>
                 <div
-                  className="mb-[9px] text-[18px] font-extrabold"
+                  className="mb-[9px] text-[20px] font-extrabold"
                   style={{ letterSpacing: "-.02em" }}
                 >
                   {s.title}
                 </div>
-                <p className="text-[14.5px]" style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}>
+                <p className="text-[14px]" style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}>
                   {s.body}
                 </p>
               </div>
@@ -658,7 +658,7 @@ export default async function CogEventPage({
             />
             <div className="absolute right-0 bottom-0 left-0 px-5 pb-6 text-center sm:pb-8">
               <p
-                className="text-[11px] font-extrabold"
+                className="text-[12px] font-extrabold"
                 style={{
                   color: "rgba(245,239,231,.85)",
                   letterSpacing: "0.2em",
@@ -682,7 +682,7 @@ export default async function CogEventPage({
                 첼루키 vs 리빅, 이번 라운드는 어느 쪽인가
               </h2>
               <p
-                className="mx-auto mt-2.5 max-w-[560px] text-[13.5px] sm:text-[14.5px]"
+                className="mx-auto mt-2.5 max-w-[560px] text-[13px] sm:text-[14px]"
                 style={{
                   lineHeight: 1.6,
                   color: "rgba(245,239,231,.78)",
@@ -706,12 +706,12 @@ export default async function CogEventPage({
               Prize
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em" }}
             >
               상품 안내
             </h2>
-            <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="mt-[10px] text-[14px]" style={{ color: "var(--wc-mute)" }}>
               이벤트는 세 갈래로 돌아갑니다. 이벤트 3은 종료 후 승리 팬덤을 대상으로 한 추첨이고,
               글을 쓰거나 댓글을 달며 함께한 분들 중에서 뽑습니다.
               <br />
@@ -731,7 +731,7 @@ export default async function CogEventPage({
                 className="grid grid-cols-[96px_1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[150px_1fr_110px_1fr]"
                 style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : "none" }}
               >
-                <span className="text-[13.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                <span className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                   {tier}
                 </span>
                 <span
@@ -747,7 +747,7 @@ export default async function CogEventPage({
                   {n}
                 </span>
                 <span
-                  className="col-span-3 text-[12.5px] sm:col-span-1"
+                  className="col-span-3 text-[12px] sm:col-span-1"
                   style={{ color: "var(--wc-mute-2)", wordBreak: "keep-all" }}
                 >
                   {how}
@@ -761,7 +761,7 @@ export default async function CogEventPage({
         <section className="mt-12">
           <div className="wc-panel">
             <h3
-              className="mb-[14px] text-[15.5px] font-extrabold"
+              className="mb-[14px] text-[16px] font-extrabold"
               style={{ color: "var(--wc-mute)" }}
             >
               유의사항
@@ -786,7 +786,7 @@ export default async function CogEventPage({
 
         {/* 스탠바이 — 공개 전 페이지임을 숨기지 않는다 */}
         <p
-          className="mt-10 pb-14 text-center text-[12.5px]"
+          className="mt-10 pb-14 text-center text-[12px]"
           style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
         >
           코그 채널 제휴 준비 중 · 공개 전 페이지입니다.

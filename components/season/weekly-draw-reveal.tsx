@@ -145,7 +145,7 @@ export function WeeklyDrawReveal({
     >
       <div className="mb-5 text-center">
         <p
-          className="text-[11px] font-extrabold"
+          className="text-[12px] font-extrabold"
           style={{ color: "var(--wc-burgundy, #8b1e3f)", letterSpacing: "0.18em" }}
         >
           THIS WEEK&apos;S WINNERS
@@ -202,7 +202,7 @@ export function WeeklyDrawReveal({
           style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)" }}
         >
           <p
-            className="mb-3 text-center text-[10.5px] font-extrabold"
+            className="mb-3 text-center text-[12px] font-extrabold"
             style={{ color: "rgba(245,239,231,.5)", letterSpacing: "0.16em" }}
           >
             THIS WEEK&apos;S DUEL
@@ -232,7 +232,7 @@ export function WeeklyDrawReveal({
                       {s.nickname}
                     </span>
                     <span
-                      className="mt-0.5 block text-[10.5px] font-bold tabular-nums"
+                      className="mt-0.5 block text-[12px] font-bold tabular-nums"
                       style={{ color: won ? "rgba(245,239,231,.75)" : "rgba(245,239,231,.3)" }}
                     >
                       {s.skill_score.toFixed(2)}

@@ -121,7 +121,7 @@ function TopicShareCard({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-base">{emoji}</span>
-          <span className="text-[15px] font-bold">{name}</span>
+          <span className="text-[16px] font-bold">{name}</span>
         </div>
         <span className="text-muted-foreground text-[12px]">{total}건</span>
       </div>
@@ -139,7 +139,7 @@ function TopicShareCard({
               title={`${t.label} ${pct.toFixed(1)}%`}
             >
               {pct >= 10 && (
-                <span className="truncate px-0.5 text-[10px] font-bold text-white drop-shadow-sm">
+                <span className="truncate px-0.5 text-[12px] font-bold text-white drop-shadow-sm">
                   {t.label}
                 </span>
               )}

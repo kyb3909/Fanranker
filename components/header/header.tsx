@@ -60,7 +60,7 @@ export function Header() {
                 <Image src="/logo-brush.webp" alt="" width={112} height={33} priority />
               </span>
               <span
-                className="relative z-10 ml-0.5 text-[19px] leading-none sm:-ml-[4px] sm:text-[24px] lg:text-[26px]"
+                className="relative z-10 ml-0.5 text-[20px] leading-none sm:-ml-[4px] sm:text-[26px] lg:text-[26px]"
                 style={{ letterSpacing: "-0.02em", color: "var(--wc-ink, #1A1416)" }}
               >
                 <span className="font-bold">gongnori</span>

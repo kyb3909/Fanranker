@@ -149,7 +149,7 @@ export default function MyPostsPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-[17px] font-black" style={{ color: "var(--wc-ink)" }}>
+          <h1 className="text-[16px] font-black" style={{ color: "var(--wc-ink)" }}>
             내 작성글
           </h1>
           <span

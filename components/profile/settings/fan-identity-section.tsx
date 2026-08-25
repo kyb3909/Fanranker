@@ -194,7 +194,7 @@ export function FanIdentitySection() {
                     </span>
                   )}
                   {!s.team_id && (
-                    <span className="text-muted-foreground text-[10px]">
+                    <span className="text-muted-foreground text-[12px]">
                       (리그 flair — 기부 불가)
                     </span>
                   )}
@@ -257,7 +257,7 @@ export function FanIdentitySection() {
           const flairName = arr[0]?.flair_name ?? ""
           return (
             <div key={flairId} className="space-y-1.5">
-              <div className="text-muted-foreground text-[11px]">{flairName}</div>
+              <div className="text-muted-foreground text-[12px]">{flairName}</div>
               <div className="flex flex-wrap gap-1.5">
                 {arr.map((t) => {
                   const selected = localDisplay === t.id
@@ -279,7 +279,7 @@ export function FanIdentitySection() {
                     >
                       {!t.unlocked && <Lock className="h-3 w-3" />}
                       <span>{t.name}</span>
-                      <span className="text-muted-foreground text-[10px] tabular-nums">
+                      <span className="text-muted-foreground text-[12px] tabular-nums">
                         {t.threshold.toLocaleString()}p
                       </span>
                     </button>

@@ -88,7 +88,7 @@ export function ReportDialog({ targetType, targetId, open, onOpenChange }: Repor
             {REPORT_REASONS.map((r) => (
               <label
                 key={r.value}
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                   reason === r.value
                     ? "border-primary bg-primary/5"
                     : "border-border hover:border-muted-foreground/30"
@@ -103,23 +103,21 @@ export function ReportDialog({ targetType, targetId, open, onOpenChange }: Repor
                   className="sr-only"
                 />
                 <span
-                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold text-white ${
+                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[12px] font-bold text-white ${
                     r.card === "red" ? "bg-primary" : "bg-yellow-500"
                   }`}
                 >
                   {r.card === "red" ? "레드" : "옐로"}
                 </span>
                 <span className="text-sm font-medium">{r.label}</span>
-                {reason === r.value && (
-                  <span className="ml-auto text-primary text-sm">✓</span>
-                )}
+                {reason === r.value && <span className="text-primary ml-auto text-sm">✓</span>}
               </label>
             ))}
           </div>
 
           {/* 상세 설명 */}
           <div className="space-y-2">
-            <Label htmlFor="report-description" className="text-sm text-muted-foreground">
+            <Label htmlFor="report-description" className="text-muted-foreground text-sm">
               상세 설명 (선택)
             </Label>
             <Textarea

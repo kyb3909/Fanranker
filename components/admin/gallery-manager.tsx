@@ -132,7 +132,7 @@ export function GalleryManager() {
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-1 px-2 py-1.5">
-                  <span className="text-muted-foreground truncate text-[11px]">
+                  <span className="text-muted-foreground truncate text-[12px]">
                     {item.author_handle || item.author_name || "-"}
                     {item.media.length > 1 ? ` · ${item.media.length}장` : ""}
                   </span>

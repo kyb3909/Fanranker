@@ -71,13 +71,13 @@ function TimelineRow({
             </>
           )}
         </span>
-        <span className="ml-auto shrink-0 text-[11px]">{teamOf(e.side)}</span>
+        <span className="ml-auto shrink-0 text-[12px]">{teamOf(e.side)}</span>
       </li>
     )
   }
 
   return (
-    <li className="flex items-baseline gap-2 text-[13.5px]">
+    <li className="flex items-baseline gap-2 text-[13px]">
       <span
         className="gn-num shrink-0 text-right text-[12px] font-bold"
         style={{ color: isScore ? "var(--wc-burgundy)" : "var(--wc-mute-2)", minWidth: 30 }}
@@ -93,13 +93,13 @@ function TimelineRow({
           {e.player}
         </span>
         {e.kind === "pen" && (
-          <span className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+          <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
             {" "}
             (PK)
           </span>
         )}
         {e.kind === "og" && (
-          <span className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+          <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
             {" "}
             (자책)
           </span>
@@ -117,7 +117,7 @@ function TimelineRow({
       </span>
       {e.score && (
         <span
-          className="gn-num ml-auto shrink-0 text-[12.5px] font-bold"
+          className="gn-num ml-auto shrink-0 text-[12px] font-bold"
           style={{ color: "var(--wc-mute)" }}
         >
           {e.score}
@@ -160,7 +160,7 @@ export function MatchStatsSection({
         <section>
           <h2 className="sheet-lab">경기 스탯</h2>
           <div
-            className="mt-1 flex items-baseline justify-between text-[11.5px] font-bold"
+            className="mt-1 flex items-baseline justify-between text-[12px] font-bold"
             style={{ color: "var(--wc-mute)" }}
           >
             <span className="truncate">{homeTeam}</span>
@@ -179,7 +179,7 @@ export function MatchStatsSection({
                     >
                       {s.home}
                     </span>
-                    <span className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                    <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       {s.label}
                     </span>
                     <span
@@ -227,7 +227,7 @@ export function MatchStatsSection({
                   style={{ background: "var(--wc-line-2)" }}
                 />
                 <span
-                  className="shrink-0 text-[11px] font-bold"
+                  className="shrink-0 text-[12px] font-bold"
                   style={{ color: "var(--wc-mute-2)" }}
                 >
                   전반{" "}

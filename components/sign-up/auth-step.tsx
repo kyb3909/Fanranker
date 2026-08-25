@@ -175,7 +175,7 @@ export function AuthStep({
                 autoComplete="new-password"
                 minLength={8}
               />
-              <ul className="text-muted-foreground space-y-0.5 text-[11px]">
+              <ul className="text-muted-foreground space-y-0.5 text-[12px]">
                 <li className={password.length >= 8 ? "text-emerald-500" : ""}>
                   {password.length >= 8 ? "✓" : "•"} 8자 이상
                 </li>

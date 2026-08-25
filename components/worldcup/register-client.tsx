@@ -65,7 +65,7 @@ export function RegisterClient() {
             <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
               로그인 후 참가 신청할 수 있어요
             </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
               gongnori.fan 계정으로 로그인하면 바로 참가 신청을 마칠 수 있어요.
             </p>
           </div>
@@ -165,12 +165,12 @@ export function RegisterClient() {
                 {i + 1}
               </span>
               <div>
-                <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--wc-ink)" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--wc-ink)" }}>
                   {r.title}
                 </div>
                 <p
                   style={{
-                    fontSize: 13.5,
+                    fontSize: 13,
                     lineHeight: 1.6,
                     color: "var(--wc-ink-2)",
                     marginTop: 2,
@@ -207,7 +207,7 @@ export function RegisterClient() {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            fontSize: 14.5,
+            fontSize: 14,
             fontWeight: 700,
             color: "var(--wc-ink)",
             textAlign: "left",
@@ -215,7 +215,7 @@ export function RegisterClient() {
         >
           <span>
             이벤트 참가 약관{" "}
-            <span style={{ fontWeight: 500, fontSize: 12.5, color: "var(--wc-mute)" }}>
+            <span style={{ fontWeight: 500, fontSize: 12, color: "var(--wc-mute)" }}>
               (전문 보기)
             </span>
           </span>
@@ -239,7 +239,7 @@ export function RegisterClient() {
           >
             <div
               style={{
-                fontSize: 13.5,
+                fontSize: 13,
                 fontWeight: 800,
                 color: "var(--wc-ink)",
                 margin: "14px 0 2px",
@@ -247,14 +247,14 @@ export function RegisterClient() {
             >
               {EVENT_TERMS_TITLE}
             </div>
-            <div style={{ fontSize: 11.5, color: "var(--wc-mute)", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "var(--wc-mute)", marginBottom: 12 }}>
               {EVENT_TERMS_DATE}
             </div>
             {EVENT_TERMS.map((art) => (
               <div key={art.title} style={{ marginBottom: 12 }}>
                 <div
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: "var(--wc-ink)",
                     marginBottom: 4,
@@ -267,7 +267,7 @@ export function RegisterClient() {
                     <li
                       key={i}
                       style={{
-                        fontSize: 12.5,
+                        fontSize: 12,
                         lineHeight: 1.65,
                         color: "var(--wc-ink-2)",
                         marginBottom: 3,
@@ -358,7 +358,7 @@ export function RegisterClient() {
       >
         {submitting ? "신청 처리 중..." : "참가 신청하기"}
       </button>
-      <p className="text-center text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+      <p className="text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
         현금이 오가지 않는 무료 이벤트예요. 참가 신청은 한 번만 가능하며, 이후에는 변경할 수 없어요.
       </p>
     </div>

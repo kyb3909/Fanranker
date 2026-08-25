@@ -27,7 +27,7 @@ export function CollapsibleRows({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="w-full rounded-lg py-1.5 text-[11.5px] font-bold transition-opacity hover:opacity-80"
+            className="w-full rounded-lg py-1.5 text-[12px] font-bold transition-opacity hover:opacity-80"
             style={{ color: "var(--gn-cream-dim)", background: "rgba(245,239,231,0.04)" }}
           >
             {open ? "접기 ▴" : `이전 상황 ${restCount}개 보기 ▾`}

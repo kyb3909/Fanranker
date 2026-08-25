@@ -56,7 +56,7 @@ export function SiteFooter() {
             <Link
               key={href}
               href={href}
-              className="text-[12.5px] font-semibold transition-colors hover:text-[var(--gn-cream)]"
+              className="text-[12px] font-semibold transition-colors hover:text-[var(--gn-cream)]"
               style={{ color: "#8d8794" }}
             >
               {label}
@@ -67,7 +67,7 @@ export function SiteFooter() {
         {/* 사업자 표시 (전자상거래법) — 운영자가 BUSINESS_INFO 실값을 채우면 노출된다.
             플레이스홀더 상태로 내보내면 허위 표시라 미기재보다 나쁘다 → 게이트. */}
         {isBusinessInfoConfigured() && (
-          <div className="mt-6 text-[11.5px] leading-relaxed" style={{ color: "#5b5565" }}>
+          <div className="mt-6 text-[12px] leading-relaxed" style={{ color: "#5b5565" }}>
             <p>
               상호: {BUSINESS_INFO.company} | 대표자: {BUSINESS_INFO.ceo} | 사업자등록번호:{" "}
               {BUSINESS_INFO.regNo}

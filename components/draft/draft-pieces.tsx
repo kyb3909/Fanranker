@@ -297,7 +297,7 @@ export function PlayerPoolCard({
                   style={{
                     color: "var(--draft-burgundy)",
                     fontWeight: 700,
-                    fontSize: 10.5,
+                    fontSize: 10,
                   }}
                 >
                   {ourData
@@ -305,7 +305,7 @@ export function PlayerPoolCard({
                     : `${player.position} 소유율 ${player.ownedRank}위`}
                 </span>
               ) : (
-                <span className="draft-num" style={{ fontSize: 10.5 }}>
+                <span className="draft-num" style={{ fontSize: 10 }}>
                   {ourData ? `픽률 ${pickStat.rate.toFixed(0)}%` : `${player.owned.toFixed(1)}%`}
                 </span>
               )}

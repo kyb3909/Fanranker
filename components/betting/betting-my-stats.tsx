@@ -63,13 +63,13 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                 {(myStats.summary.profit_rate || 0) >= 0 ? "+" : ""}
                 {(myStats.summary.profit_rate || 0).toFixed(1)}%
               </div>
-              <div className="text-muted-foreground mt-0.5 text-[10px]">수익률</div>
+              <div className="text-muted-foreground mt-0.5 text-[12px]">수익률</div>
             </div>
             <div className="bg-muted/40 rounded-lg p-2 text-center">
               <div className="text-primary text-lg font-bold">
                 {(myStats.summary.accuracy || 0).toFixed(1)}%
               </div>
-              <div className="text-muted-foreground mt-0.5 text-[10px]">적중률</div>
+              <div className="text-muted-foreground mt-0.5 text-[12px]">적중률</div>
             </div>
             <div className="bg-muted/40 rounded-lg p-2 text-center">
               <div
@@ -80,7 +80,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                 {(myStats.summary.net_profit || 0) >= 0 ? "+" : ""}
                 {(myStats.summary.net_profit || 0).toFixed(2)}
               </div>
-              <div className="text-muted-foreground mt-0.5 text-[10px]">순수익</div>
+              <div className="text-muted-foreground mt-0.5 text-[12px]">순수익</div>
             </div>
           </div>
           {/* Detail info */}
@@ -143,13 +143,13 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                     <div className="flex items-center gap-1.5">
                       <BoardIcon slug={sport.sport} className="h-4 w-4" />
                       <span className="text-sm font-semibold">{sport.sport}</span>
-                      <span className="text-muted-foreground ml-1 text-[10px]">
+                      <span className="text-muted-foreground ml-1 text-[12px]">
                         {sport.correct_predictions}/{sport.total_predictions}적중
                       </span>
                     </div>
                     {sport.current_streak !== 0 && (
                       <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                        className={`rounded-full px-1.5 py-0.5 text-[12px] font-medium ${
                           sport.current_streak > 0
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-primary/15 text-primary"
@@ -171,13 +171,13 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                         {(sport.profit_rate || 0) >= 0 ? "+" : ""}
                         {(sport.profit_rate || 0).toFixed(1)}%
                       </div>
-                      <div className="text-muted-foreground text-[10px]">수익률</div>
+                      <div className="text-muted-foreground text-[12px]">수익률</div>
                     </div>
                     <div className="bg-muted/40 rounded px-2 py-1.5 text-center">
                       <div className="text-primary text-xs font-bold">
                         {(sport.accuracy || 0).toFixed(1)}%
                       </div>
-                      <div className="text-muted-foreground text-[10px]">적중률</div>
+                      <div className="text-muted-foreground text-[12px]">적중률</div>
                     </div>
                     <div className="bg-muted/40 rounded px-2 py-1.5 text-center">
                       <div
@@ -188,7 +188,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                         {(sport.net_profit || 0) >= 0 ? "+" : ""}
                         {(sport.net_profit || 0).toFixed(2)}
                       </div>
-                      <div className="text-muted-foreground text-[10px]">순수익</div>
+                      <div className="text-muted-foreground text-[12px]">순수익</div>
                     </div>
                   </div>
                 </div>

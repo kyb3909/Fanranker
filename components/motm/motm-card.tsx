@@ -145,7 +145,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
       <>
         <div className="mt-2 flex flex-col gap-1.5">
           {listed.map((o, i) => (
-            <div key={o.key} className="flex items-center gap-2 text-[11.5px]">
+            <div key={o.key} className="flex items-center gap-2 text-[12px]">
               <span
                 className="w-[86px] truncate font-bold"
                 style={{ color: INK, wordBreak: "keep-all" }}
@@ -171,7 +171,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
           ))}
         </div>
         {restCount > 0 && restVotes > 0 && (
-          <p className="mt-1.5 text-right text-[10.5px]" style={{ color: MUTE2 }}>
+          <p className="mt-1.5 text-right text-[12px]" style={{ color: MUTE2 }}>
             그 외 {restCount}명 {restVotes}표
           </p>
         )}
@@ -199,7 +199,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
           background: sel ? "color-mix(in srgb, #961e37 7%, #fff)" : "var(--wc-card, #fff)",
         }}
       >
-        <span className="block text-[9.5px] font-bold tabular-nums" style={{ color: MUTE2 }}>
+        <span className="block text-[9px] font-bold tabular-nums" style={{ color: MUTE2 }}>
           {o.number ?? "–"}
         </span>
         <span
@@ -214,7 +214,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
 
   if (!data) {
     return (
-      <p className="py-8 text-center text-[12.5px]" style={{ color: MUTE2 }}>
+      <p className="py-8 text-center text-[12px]" style={{ color: MUTE2 }}>
         투표 불러오는 중…
       </p>
     )
@@ -224,7 +224,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
   if (data.closed) {
     if (data.total === 0 || !leader) {
       return (
-        <p className="py-8 text-center text-[12.5px]" style={{ color: MUTE2 }}>
+        <p className="py-8 text-center text-[12px]" style={{ color: MUTE2 }}>
           이 경기의 MoTM 투표는 마감되었습니다.
         </p>
       )
@@ -232,14 +232,14 @@ export function MotmCard({ pollId }: { pollId: string }) {
     return (
       <section>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[11px] font-bold" style={{ color: MUTE }}>
+          <span className="text-[12px] font-bold" style={{ color: MUTE }}>
             🏅 팬 선정 MoTM
           </span>
-          <span className="text-[15px] font-extrabold" style={{ color: BURGUNDY }}>
+          <span className="text-[16px] font-extrabold" style={{ color: BURGUNDY }}>
             {leader.label}
             {showPct ? ` ${leaderPct}%` : ` ${leaderVotes}표`}
           </span>
-          <span className="text-[11px] tabular-nums" style={{ color: MUTE2 }}>
+          <span className="text-[12px] tabular-nums" style={{ color: MUTE2 }}>
             {data.total.toLocaleString()}표
           </span>
         </div>
@@ -257,21 +257,21 @@ export function MotmCard({ pollId }: { pollId: string }) {
           <span className="min-w-0 truncate text-[13px] font-extrabold" style={{ color: BURGUNDY }}>
             ✓ 내 픽 · {mine?.label}
           </span>
-          <span className="shrink-0 text-[11px] tabular-nums" style={{ color: MUTE2 }}>
+          <span className="shrink-0 text-[12px] tabular-nums" style={{ color: MUTE2 }}>
             {data.total === 1 && !showPct ? "첫 표" : `${data.total.toLocaleString()}표`}
           </span>
         </div>
         {showPct ? (
           distributionRows(3)
         ) : (
-          <p className="mt-2 text-[11.5px]" style={{ color: MUTE }}>
+          <p className="mt-2 text-[12px]" style={{ color: MUTE }}>
             분포는 3표부터 공개됩니다 — 지금은 초반 집계 중.
           </p>
         )}
         <button
           type="button"
           onClick={openPicker}
-          className="mt-3 h-[38px] w-full rounded-[11px] text-[12.5px] font-bold"
+          className="mt-3 h-[38px] w-full rounded-[11px] text-[12px] font-bold"
           style={{ border: `1px solid ${LINE}`, background: "var(--wc-card, #fff)", color: MUTE }}
         >
           픽 변경
@@ -283,10 +283,10 @@ export function MotmCard({ pollId }: { pollId: string }) {
   /* ── 투표 전 — 선수 그리드 인라인 ── */
   return (
     <section>
-      <p className="text-[13.5px] font-extrabold" style={{ color: INK, wordBreak: "keep-all" }}>
+      <p className="text-[13px] font-extrabold" style={{ color: INK, wordBreak: "keep-all" }}>
         🏅 오늘의 MoTM은?
       </p>
-      <p className="mt-0.5 mb-2 text-[11px]" style={{ color: MUTE }}>
+      <p className="mt-0.5 mb-2 text-[12px]" style={{ color: MUTE }}>
         출전 {data.options.length}명 · 1인 선택 · 내일 오전 11시 확정
       </p>
       <div className="flex" style={{ borderBottom: `1px solid ${LINE}` }}>
@@ -295,7 +295,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
             key={t}
             type="button"
             onClick={() => setTeam(t)}
-            className="relative h-10 flex-1 text-[12.5px] font-bold"
+            className="relative h-10 flex-1 text-[12px] font-bold"
             style={{ color: team === t ? BURGUNDY : MUTE }}
           >
             {sideLabel(t)}
@@ -310,7 +310,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
         ))}
       </div>
       <div className="pt-3">
-        <p className="mb-1.5 text-[10.5px] font-bold tracking-[0.08em]" style={{ color: MUTE2 }}>
+        <p className="mb-1.5 text-[12px] font-bold tracking-[0.08em]" style={{ color: MUTE2 }}>
           선발
         </p>
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
@@ -319,7 +319,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
         {group(team, "sub").length > 0 && (
           <>
             <p
-              className="mt-3 mb-1.5 text-[10.5px] font-bold tracking-[0.08em]"
+              className="mt-3 mb-1.5 text-[12px] font-bold tracking-[0.08em]"
               style={{ color: MUTE2 }}
             >
               교체 투입
@@ -340,7 +340,7 @@ export function MotmCard({ pollId }: { pollId: string }) {
         {busy ? "저장 중…" : data.myKey && picked !== data.myKey ? "픽 변경" : "투표하기"}
       </button>
       {!isSignedIn && (
-        <p className="mt-1.5 text-center text-[10.5px]" style={{ color: MUTE2 }}>
+        <p className="mt-1.5 text-center text-[12px]" style={{ color: MUTE2 }}>
           투표는 로그인 후 반영됩니다
         </p>
       )}

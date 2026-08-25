@@ -199,7 +199,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span
-                        className="font-title block text-[18px] font-extrabold"
+                        className="font-title block text-[20px] font-extrabold"
                         style={{ color: "var(--wc-ink)", letterSpacing: "-0.025em" }}
                       >
                         {cat.name}
@@ -214,13 +214,13 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
                       )}
                       {s && (
                         <span
-                          className="mt-2.5 flex gap-3.5 text-[12.5px] font-semibold"
+                          className="mt-2.5 flex gap-3.5 text-[12px] font-semibold"
                           style={{ color: "var(--wc-mute)" }}
                         >
                           <span>
                             오늘 글
                             <b
-                              className="gn-num ml-1.5 text-[15px]"
+                              className="gn-num ml-1.5 text-[16px]"
                               style={{ color: "var(--wc-ink-2)" }}
                             >
                               {s.today.toLocaleString()}
@@ -229,7 +229,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
                           <span>
                             전체
                             <b
-                              className="gn-num ml-1.5 text-[15px]"
+                              className="gn-num ml-1.5 text-[16px]"
                               style={{ color: "var(--wc-ink-2)" }}
                             >
                               {s.total.toLocaleString()}
@@ -269,7 +269,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
                 style={{ background: "var(--wc-card)", borderBottom: "1px solid var(--wc-line)" }}
               >
                 <h2
-                  className="flex items-center gap-2 text-[11px] font-bold uppercase"
+                  className="flex items-center gap-2 text-[12px] font-bold uppercase"
                   style={{ color: "var(--wc-ink)", letterSpacing: "0.18em" }}
                 >
                   <TrendingUp className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
@@ -376,13 +376,13 @@ function HotEmptyState({ boards }: { boards: Category[] }) {
       </span>
       {/* "아무도 추천을 안 눌렀다"는 활동 부재 자백 — 다음 액션 안내로 교체 (2026-07-30 워룸) */}
       <p
-        className="font-title mt-4 text-[17px] font-extrabold"
+        className="font-title mt-4 text-[16px] font-extrabold"
         style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
       >
         이번 주 인기글, 지금 추천으로 정해진다
       </p>
       <p
-        className="mx-auto mt-2 max-w-[42ch] text-[13.5px]"
+        className="mx-auto mt-2 max-w-[42ch] text-[13px]"
         style={{ color: "var(--wc-mute)", lineHeight: 1.6, wordBreak: "keep-all" }}
       >
         여기 올라오는 조건은 하나, 최근 7일 안에 추천 1개. 읽다가 괜찮은 글 있으면 추천 한 번
@@ -393,7 +393,7 @@ function HotEmptyState({ boards }: { boards: Category[] }) {
           <Link
             key={b.slug}
             href={`/community/${b.slug}`}
-            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-[13.5px] font-bold transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-[13px] font-bold transition-opacity hover:opacity-90"
             style={
               i === 0
                 ? { background: "var(--wc-burgundy)", color: "#fff" }
@@ -409,7 +409,7 @@ function HotEmptyState({ boards }: { boards: Category[] }) {
         ))}
         <Link
           href="/write"
-          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-[13.5px] font-bold"
+          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-[13px] font-bold"
           style={{
             background: "var(--wc-card)",
             color: "var(--wc-ink)",

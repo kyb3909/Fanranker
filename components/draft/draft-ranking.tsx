@@ -63,7 +63,7 @@ export function DraftRanking({ pickStats }: { pickStats: PickStats }) {
         <h2 className="text-[16px] font-black" style={{ color: "var(--wc-ink)" }}>
           선수 픽 랭킹
         </h2>
-        <span className="text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+        <span className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
           {ours
             ? `유저 드래프트 ${pickStats.games}판 기준`
             : "FPL 전 세계 소유율 기준 (판이 쌓이면 유저 픽으로 바뀝니다)"}
@@ -154,7 +154,7 @@ function RankRow({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="truncate text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+          <span className="truncate text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
             {p.nameKo}
           </span>
           <span className="shrink-0 text-[11px]" style={{ color: "var(--wc-mute)" }}>
@@ -182,7 +182,7 @@ function RankRow({
         >
           {row.valueLabel}
         </div>
-        <div className="gn-num mt-0.5 text-[10.5px]" style={{ color: "var(--wc-mute)" }}>
+        <div className="gn-num mt-0.5 text-[10px]" style={{ color: "var(--wc-mute)" }}>
           {row.sub}
         </div>
       </div>

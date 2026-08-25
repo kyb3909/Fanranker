@@ -65,7 +65,7 @@ export function CommentSection({
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 style={{ margin: 0, fontSize: 15.5, fontWeight: 800 }}>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
             댓글{" "}
             <span className="tnum" style={{ color: "var(--wc-burgundy)" }}>
               {countAllComments(comments)}

@@ -58,9 +58,9 @@ export function MonthlyPrizeBanner() {
               {CURRENT_PRIZE.month} 이달의 상품
             </h3>
           </div>
-          <span className="text-muted-foreground text-[11px] font-semibold">1위 증정</span>
+          <span className="text-muted-foreground text-[12px] font-semibold">1위 증정</span>
         </div>
-        <p className="text-muted-foreground/60 mt-0.5 ml-[22px] text-[11px] tracking-wide uppercase">
+        <p className="text-muted-foreground/60 mt-0.5 ml-[22px] text-[12px] tracking-wide uppercase">
           Monthly Prize
         </p>
       </div>
@@ -78,7 +78,7 @@ export function MonthlyPrizeBanner() {
               const isUnlocked = hint.week <= revealedWeeks
               return (
                 <div key={hint.week} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="text-muted-foreground w-8 text-[11px] font-medium">
+                  <span className="text-muted-foreground w-8 text-[12px] font-medium">
                     W{hint.week}
                   </span>
                   {isUnlocked ? (
@@ -130,7 +130,7 @@ export function MonthlyPrizeBanner() {
 
           <div className="p-4">
             <p className="text-foreground text-[14px] font-bold">{CURRENT_PRIZE.title}</p>
-            <p className="text-muted-foreground mt-0.5 text-[11px]">{CURRENT_PRIZE.description}</p>
+            <p className="text-muted-foreground mt-0.5 text-[12px]">{CURRENT_PRIZE.description}</p>
 
             <Link
               href="/prediction"

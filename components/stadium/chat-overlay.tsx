@@ -42,7 +42,7 @@ export function ChatOverlay({
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col">
       {/* 접속자 수 뱃지 (우상단) */}
       <div className="pointer-events-auto absolute top-[-36px] right-2">
-        <div className="flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] text-white backdrop-blur-sm">
+        <div className="flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[12px] text-white backdrop-blur-sm">
           <span
             className={cn("h-1.5 w-1.5 rounded-full", isConnected ? "bg-green-400" : "bg-red-400")}
           />
@@ -54,7 +54,7 @@ export function ChatOverlay({
       {/* 채팅 토글 */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="pointer-events-auto mx-auto mb-1 rounded-full bg-black/40 px-3 py-0.5 text-[10px] text-white/70 backdrop-blur-sm transition-colors hover:bg-black/60"
+        className="pointer-events-auto mx-auto mb-1 rounded-full bg-black/40 px-3 py-0.5 text-[12px] text-white/70 backdrop-blur-sm transition-colors hover:bg-black/60"
       >
         {expanded ? "채팅 접기" : "채팅 펼치기"}
       </button>
@@ -72,7 +72,7 @@ export function ChatOverlay({
               messages.map((msg) => (
                 <div key={msg.id} className="text-[13px] leading-snug">
                   {msg.type === "system" ? (
-                    <span className="text-[11px] text-white/40">{msg.text}</span>
+                    <span className="text-[12px] text-white/40">{msg.text}</span>
                   ) : (
                     <>
                       <span

@@ -82,7 +82,7 @@ export function CardTable({
                   }}
                 >
                   <span
-                    className="absolute inset-0 flex items-center justify-center text-[15px]"
+                    className="absolute inset-0 flex items-center justify-center text-[16px]"
                     style={{ color: "rgba(224,189,126,.75)" }}
                     aria-hidden
                   >
@@ -115,18 +115,18 @@ export function CardTable({
 
             <span className="mt-1.5 block text-center leading-tight">
               <span
-                className="block text-[10px] font-bold"
+                className="block text-[12px] font-bold"
                 style={{ color: isFlipped ? "#e0bd7e" : "rgba(255,255,255,.45)" }}
               >
                 {c.positionName}
               </span>
               <span
-                className="block text-[11px] font-semibold transition-opacity duration-500"
+                className="block text-[12px] font-semibold transition-opacity duration-500"
                 style={{ color: "rgba(255,255,255,.92)", opacity: isFlipped ? 1 : 0 }}
               >
                 {c.nameKo}
                 {c.reversed && (
-                  <span className="ml-0.5 text-[10px]" style={{ color: "rgba(255,255,255,.6)" }}>
+                  <span className="ml-0.5 text-[12px]" style={{ color: "rgba(255,255,255,.6)" }}>
                     역
                   </span>
                 )}

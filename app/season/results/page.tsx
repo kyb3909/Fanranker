@@ -86,11 +86,11 @@ function EmptyShell({
       />
       <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-16 sm:px-6">
         <section className="rounded-xl p-6 text-center" style={cardStyle}>
-          <h2 className="text-[17px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+          <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
             {title}
           </h2>
           <p
-            className="mx-auto mt-2 max-w-[420px] text-[13.5px]"
+            className="mx-auto mt-2 max-w-[420px] text-[13px]"
             style={{ color: "var(--wc-mute)", lineHeight: 1.65, wordBreak: "keep-all" }}
           >
             {body}
@@ -120,7 +120,7 @@ function SlipCard({ slip }: { slip: RaceResultSlip }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2">
           <span
-            className="rounded px-2 py-[3px] text-[11.5px] font-extrabold"
+            className="rounded px-2 py-[3px] text-[12px] font-extrabold"
             style={statusChipStyle(slip.status)}
           >
             {label}
@@ -130,7 +130,7 @@ function SlipCard({ slip }: { slip: RaceResultSlip }) {
           </span>
         </span>
         <span
-          className="text-[15px] font-extrabold tabular-nums"
+          className="text-[16px] font-extrabold tabular-nums"
           style={{ color: settled ? "var(--wc-ink)" : "var(--wc-mute)" }}
         >
           {settled ? `${fmtPoint(slip.net)}점` : "—"}
@@ -144,7 +144,7 @@ function SlipCard({ slip }: { slip: RaceResultSlip }) {
             className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
           >
             <span
-              className="min-w-0 text-[13.5px] font-semibold"
+              className="min-w-0 text-[13px] font-semibold"
               style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
             >
               {p.home} <span style={{ color: "var(--wc-mute)" }}>vs</span> {p.away}
@@ -154,7 +154,7 @@ function SlipCard({ slip }: { slip: RaceResultSlip }) {
                 </span>
               )}
             </span>
-            <span className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+            <span className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
               내 예측 <b style={{ color: "var(--wc-ink-2)" }}>{p.pick}</b>
               {p.isCorrect === true && " · 맞음"}
               {p.isCorrect === false && " · 틀림"}
@@ -163,7 +163,7 @@ function SlipCard({ slip }: { slip: RaceResultSlip }) {
           </li>
         ))}
         {slip.picks.length === 0 && (
-          <li className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+          <li className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
             경기 정보를 불러오지 못했습니다.
           </li>
         )}
@@ -209,7 +209,7 @@ export default async function SeasonResultsPage() {
   ) : (
     <Link
       href="/season?ref=event"
-      className="text-[13.5px] font-bold"
+      className="text-[13px] font-bold"
       style={{ color: "var(--wc-burgundy)" }}
     >
       이벤트 안내 보기 →
@@ -253,7 +253,7 @@ export default async function SeasonResultsPage() {
       <main className="mx-auto w-full max-w-[880px] space-y-4 px-4 pt-6 pb-16 sm:px-6">
         {/* ② 요약 — 순위 패널과 같은 분모(정산 완료분)를 쓴다 */}
         <section className="rounded-xl p-4" style={cardStyle}>
-          <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+          <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
             요약
           </h2>
           <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
@@ -261,7 +261,7 @@ export default async function SeasonResultsPage() {
               <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 {results.slips.length}
               </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 예측 수
               </p>
             </div>
@@ -269,7 +269,7 @@ export default async function SeasonResultsPage() {
               <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 {accuracy === null ? "—" : `${accuracy}%`}
               </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 적중률 ({results.won}/{settled})
               </p>
             </div>
@@ -277,7 +277,7 @@ export default async function SeasonResultsPage() {
               <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 {fmtPoint(results.netPoints)}
               </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 점수
               </p>
             </div>
@@ -285,7 +285,7 @@ export default async function SeasonResultsPage() {
               <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
                 {standing.me ? `${standing.me.rank}위` : "—"}
               </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 / {standing.participants}명
               </p>
             </div>
@@ -295,7 +295,7 @@ export default async function SeasonResultsPage() {
           {standing.me && (
             <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--wc-line)" }}>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-ink-2)" }}>
+                <span className="text-[12px] font-bold" style={{ color: "var(--wc-ink-2)" }}>
                   상품 자격 · 예측한 날{" "}
                   <b className="tabular-nums" style={{ color: "var(--wc-burgundy)" }}>
                     {Math.min(standing.me.activeDays, MIN_ACTIVE_DAYS)}일
@@ -303,7 +303,7 @@ export default async function SeasonResultsPage() {
                   / {MIN_ACTIVE_DAYS}일
                 </span>
                 <span
-                  className="shrink-0 text-[11.5px] font-extrabold"
+                  className="shrink-0 text-[12px] font-extrabold"
                   style={{
                     color: standing.me.eligible ? "var(--wc-go, #2f7d5b)" : "var(--wc-mute)",
                   }}
@@ -327,19 +327,19 @@ export default async function SeasonResultsPage() {
                   }}
                 />
               </div>
-              <p className="mt-1.5 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="mt-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 서로 다른 {MIN_ACTIVE_DAYS}일에 예측해야 상품을 받을 수 있습니다. 순위는 자격과
                 상관없이 점수 순으로 매겨집니다.
               </p>
             </div>
           )}
           {results.pending > 0 && (
-            <p className="mt-3 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="mt-3 text-[12px]" style={{ color: "var(--wc-mute)" }}>
               정산 대기 {results.pending}건은 정산이 끝나는 시점에 점수로 들어갑니다.
             </p>
           )}
           {results.cancelled > 0 && (
-            <p className="mt-1 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute)" }}>
               취소된 경기 {results.cancelled}건은 볼을 돌려드렸고 점수에는 영향이 없습니다.
             </p>
           )}
@@ -354,13 +354,13 @@ export default async function SeasonResultsPage() {
           </ul>
         ) : (
           <section className="rounded-xl p-6 text-center" style={cardStyle}>
-            <p className="text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="text-[13px]" style={{ color: "var(--wc-mute)" }}>
               참가한 뒤로 한 축구 예측이 아직 없습니다. 하나만 해도 순위표에 반영됩니다.
             </p>
             <p className="mt-4">
               <Link
                 href="/prediction?ref=event"
-                className="inline-block rounded-lg px-4 py-2.5 text-[13.5px] font-bold"
+                className="inline-block rounded-lg px-4 py-2.5 text-[13px] font-bold"
                 style={{ background: "var(--wc-burgundy)", color: "#fff" }}
               >
                 오늘 경기 예측하러 가기 →
@@ -371,7 +371,7 @@ export default async function SeasonResultsPage() {
 
         {/* ③ TOP 5 요약 */}
         <section className="rounded-xl p-4" style={cardStyle}>
-          <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+          <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
             순위 상위 5명
           </h2>
           {standing.top.length > 0 ? (
@@ -394,7 +394,7 @@ export default async function SeasonResultsPage() {
                       {i + 1}
                     </span>
                     <span
-                      className="truncate text-[13.5px] font-bold"
+                      className="truncate text-[13px] font-bold"
                       style={{ color: "var(--wc-ink)" }}
                     >
                       {r.nickname}

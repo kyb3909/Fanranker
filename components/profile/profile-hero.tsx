@@ -72,7 +72,7 @@ export function ProfileHero({
               </h1>
               {isExpert && <UserProfileBadge isExpert size="sm" />}
               {isJournalist && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[12px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                   기자
                 </span>
               )}
@@ -126,7 +126,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
       style={{ borderRight: "1px solid var(--wc-line)" }}
     >
       <div
-        className="flex items-center gap-1 text-[10px] tracking-wide uppercase"
+        className="flex items-center gap-1 text-[12px] tracking-wide uppercase"
         style={{ color: "var(--wc-mute)" }}
       >
         {icon}

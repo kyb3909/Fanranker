@@ -563,21 +563,21 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
             <button
               onClick={pip.onExpand}
               aria-label="스타디움 크게 보기"
-              className="rounded-md bg-black/70 px-2 py-1 text-[11px] font-bold text-white/90 backdrop-blur-sm transition-colors hover:bg-black/90"
+              className="rounded-md bg-black/70 px-2 py-1 text-[12px] font-bold text-white/90 backdrop-blur-sm transition-colors hover:bg-black/90"
             >
               ⤢
             </button>
             <button
               onClick={pip.onClose}
               aria-label="스타디움 나가기"
-              className="rounded-md bg-black/70 px-2 py-1 text-[11px] font-bold text-white/90 backdrop-blur-sm transition-colors hover:bg-black/90"
+              className="rounded-md bg-black/70 px-2 py-1 text-[12px] font-bold text-white/90 backdrop-blur-sm transition-colors hover:bg-black/90"
             >
               ✕
             </button>
           </div>
           {/* 방 라벨 + 조작 상태 — 상단 좌측 */}
           <div className="absolute top-1.5 left-1.5 z-20 flex items-center gap-1">
-            <span className="rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-sm">
+            <span className="rounded-md bg-black/70 px-2 py-1 text-[12px] font-semibold text-white/85 backdrop-blur-sm">
               🏟️ {roomIndex ? `${roomIndex}채널` : "스타디움"}
               {currentOccupancy && stadiumConfig
                 ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
@@ -595,7 +595,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
               {miniChats.map((m) => (
                 <p
                   key={m.key}
-                  className="truncate rounded bg-black/60 px-1.5 py-0.5 text-[10px] leading-tight text-white/90 backdrop-blur-sm"
+                  className="truncate rounded bg-black/60 px-1.5 py-0.5 text-[12px] leading-tight text-white/90 backdrop-blur-sm"
                 >
                   <span className="font-bold text-amber-300">{m.nickname}</span> {m.text}
                 </p>
@@ -617,7 +617,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
               }}
               placeholder={miniActive ? "채팅 입력 후 Enter" : "클릭해서 채팅·조작 참여"}
               maxLength={200}
-              className="w-full border-t border-white/15 bg-black/75 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/45 focus:bg-black/90 focus:outline-none"
+              className="w-full border-t border-white/15 bg-black/75 px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/45 focus:bg-black/90 focus:outline-none"
             />
           </form>
         </>
@@ -639,7 +639,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
             actions={
               <button
                 onClick={toggleSwitcher}
-                className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+                className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[12px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
               >
                 🚪 채널 목록
               </button>
@@ -661,7 +661,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
                 <button
                   onClick={() => void refreshRoomCounts()}
                   disabled={countsLoading}
-                  className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+                  className="rounded-full border border-white/12 px-2 py-0.5 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
                 >
                   {countsLoading ? "확인 중…" : "새로고침"}
                 </button>
@@ -708,13 +708,13 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
                   )
                 })}
               </div>
-              <p className="mt-2 text-[10px] leading-relaxed text-white/45">
+              <p className="mt-2 text-[12px] leading-relaxed text-white/45">
                 채널 개수는 아스날 경기장 레벨(Lv.{stadiumConfig.stadiumLevel})만큼 열려요
               </p>
             </div>
           )}
           {/* 조작 안내 — 데스크톱(키보드)에서만. 터치 디바이스는 TouchControls 오버레이가 대체. */}
-          <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
+          <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[12px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
             A/D · ←→ 이동 · Space 점프 · 도어 앞에서 W/↑ 진입 · Enter 채팅
           </div>
           {/* 모바일 터치 조작 — pointer:coarse 에서만 렌더 */}

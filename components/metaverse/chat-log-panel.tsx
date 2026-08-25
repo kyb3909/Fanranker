@@ -371,7 +371,7 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
         }}
         onClick={toggleCollapsed}
         style={{ right: layout.right, bottom: layout.bottom, position: "absolute", zIndex: 20 }}
-        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[11px] font-semibold text-white/80 backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-white"
+        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[12px] font-semibold text-white/80 backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-white"
         aria-label="채팅 로그 열기"
       >
         <span aria-hidden>💬</span>
@@ -405,7 +405,7 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
         onMouseDown={startDrag}
         className="flex cursor-move items-center justify-between border-b border-white/10 px-3 py-2 select-none"
       >
-        <span className="text-[11px] font-semibold tracking-wide text-white/80">💬 채팅 로그</span>
+        <span className="text-[12px] font-semibold tracking-wide text-white/80">💬 채팅 로그</span>
         <div className="flex items-center gap-1">
           <button
             onClick={toggleCollapsed}
@@ -421,13 +421,13 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
       {/* 메시지 영역 */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2">
         {visible.length === 0 ? (
-          <p className="py-4 text-center text-[11px] text-white/35">아직 메시지가 없어요</p>
+          <p className="py-4 text-center text-[12px] text-white/35">아직 메시지가 없어요</p>
         ) : (
           <ul className="space-y-1">
             {visible.map((e) => {
               const isSelf = e.userId === selfUserId
               return (
-                <li key={e.id} className="text-[11px] leading-snug">
+                <li key={e.id} className="text-[12px] leading-snug">
                   <button
                     onClick={(ev) => onNicknameClick(ev, e)}
                     disabled={isSelf}
@@ -450,7 +450,7 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
       </div>
 
       {hiddenCount > 0 && (
-        <div className="border-t border-white/10 bg-white/[0.02] px-3 py-1.5 text-[10px] text-white/45">
+        <div className="border-t border-white/10 bg-white/[0.02] px-3 py-1.5 text-[12px] text-white/45">
           뮤트된 유저 {hiddenCount}개 메시지 숨김
         </div>
       )}

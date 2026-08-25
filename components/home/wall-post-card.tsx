@@ -47,7 +47,7 @@ export function WallPostCard({ post }: { post: WallPost }) {
         />
         <div className="min-w-0 flex-1">
           {/* 키커 — 뉴스 카드의 출처 자리에 "담벼락"이 선다. 이 카드의 정체 표기 전부다 */}
-          <p className="mb-0.5 flex items-center gap-1.5 text-[11.5px] font-bold">
+          <p className="mb-0.5 flex items-center gap-1.5 text-[12px] font-bold">
             <span style={{ color: "var(--wc-burgundy)" }}>담벼락</span>
             <span aria-hidden style={{ color: "var(--wc-mute-2)" }}>
               ·
@@ -59,7 +59,7 @@ export function WallPostCard({ post }: { post: WallPost }) {
           <h2
             className="line-clamp-2"
             style={{
-              fontSize: 14.5,
+              fontSize: 14,
               fontWeight: 650,
               lineHeight: 1.38,
               letterSpacing: "-0.01em",
@@ -114,7 +114,7 @@ export function WallMoreRow() {
     <div className="-mt-1 flex justify-end px-1">
       <Link
         href="/?tab=board"
-        className="text-[12.5px] font-bold no-underline"
+        className="text-[12px] font-bold no-underline"
         style={{ color: "var(--wc-mute)" }}
         onClick={() => trackEvent({ name: "wall_now_open_board", params: { surface: "cardnews" } })}
       >

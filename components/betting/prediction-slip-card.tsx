@@ -88,20 +88,20 @@ function getCellStyle(
 function MatchResultBadge({ result }: { result: string }) {
   if (result === "win") {
     return (
-      <span className="bg-primary text-primary-foreground inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">
+      <span className="bg-primary text-primary-foreground inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[12px] font-semibold">
         ✓ 적중
       </span>
     )
   }
   if (result === "lose") {
     return (
-      <span className="bg-muted text-muted-foreground inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">
+      <span className="bg-muted text-muted-foreground inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[12px] font-semibold">
         ✗ 미적중
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+    <span className="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[12px] font-medium text-amber-600">
       결과 대기
     </span>
   )

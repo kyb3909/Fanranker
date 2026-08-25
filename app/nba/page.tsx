@@ -115,13 +115,13 @@ export default async function NbaPage() {
             {/* 경기 / 승부예측 */}
             <section className="rounded-xl p-4" style={cardStyle}>
               <div className="flex items-center justify-between">
-                <h2 className="text-[15px] font-extrabold" style={sectionTitleStyle}>
+                <h2 className="text-[16px] font-extrabold" style={sectionTitleStyle}>
                   🏀 다가오는 경기
                 </h2>
                 {games.length > 0 && (
                   <Link
                     href="/prediction"
-                    className="text-[12.5px] font-bold"
+                    className="text-[12px] font-bold"
                     style={{ color: "var(--wc-burgundy)" }}
                   >
                     승부예측 가기 →
@@ -136,10 +136,10 @@ export default async function NbaPage() {
                       className="rounded-lg px-3 py-2.5"
                       style={{ background: "var(--wc-soft)" }}
                     >
-                      <p className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                      <p className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
                         {g.home} <span style={{ color: "var(--wc-mute)" }}>vs</span> {g.away}
                       </p>
-                      <p className="mt-0.5 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                      <p className="mt-0.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                         {formatKickoff(g.matchTime)}
                         {g.league ? ` · ${g.league}` : ""}
                       </p>
@@ -155,7 +155,7 @@ export default async function NbaPage() {
                     지금은 NBA 오프시즌이에요
                   </p>
                   <p
-                    className="mt-1 text-[12.5px] leading-relaxed"
+                    className="mt-1 text-[12px] leading-relaxed"
                     style={{ color: "var(--wc-mute)" }}
                   >
                     시즌이 개막하면 이 자리에 경기 일정과 승부예측이 자동으로 열립니다.
@@ -169,12 +169,12 @@ export default async function NbaPage() {
             {/* 농구 게시판 */}
             <section className="rounded-xl p-4" style={cardStyle}>
               <div className="flex items-center justify-between">
-                <h2 className="text-[15px] font-extrabold" style={sectionTitleStyle}>
+                <h2 className="text-[16px] font-extrabold" style={sectionTitleStyle}>
                   농구 게시판
                 </h2>
                 <Link
                   href="/community/basketball"
-                  className="text-[12.5px] font-bold"
+                  className="text-[12px] font-bold"
                   style={{ color: "var(--wc-burgundy)" }}
                 >
                   전체 보기 →
@@ -189,7 +189,7 @@ export default async function NbaPage() {
                         className="flex items-baseline justify-between gap-3 py-2.5"
                       >
                         <span
-                          className="min-w-0 truncate text-[13.5px] font-semibold"
+                          className="min-w-0 truncate text-[13px] font-semibold"
                           style={{ color: "var(--wc-ink)" }}
                         >
                           {p.title}
@@ -202,10 +202,7 @@ export default async function NbaPage() {
                             </span>
                           )}
                         </span>
-                        <span
-                          className="shrink-0 text-[11.5px]"
-                          style={{ color: "var(--wc-mute)" }}
-                        >
+                        <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                           {formatRelativeTime(new Date(p.created_at))}
                         </span>
                       </Link>
@@ -220,7 +217,7 @@ export default async function NbaPage() {
                   <p className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
                     아직 글이 없어요
                   </p>
-                  <p className="mt-1 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                  <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                     첫 글의 주인공이 되어보세요 — 트레이드 루머, 우리 팀 전망, 어젯밤 하이라이트
                     뭐든 좋아요.
                   </p>
@@ -239,13 +236,10 @@ export default async function NbaPage() {
           <aside className="col-span-12 space-y-4 lg:col-span-4">
             {/* 루나 타로 — 전 종목 대응이라 NBA 질문도 이미 받는다 */}
             <section className="rounded-xl p-4" style={cardStyle}>
-              <h2 className="text-[15px] font-extrabold" style={sectionTitleStyle}>
+              <h2 className="text-[16px] font-extrabold" style={sectionTitleStyle}>
                 🔮 루나의 점집
               </h2>
-              <p
-                className="mt-1.5 text-[12.5px] leading-relaxed"
-                style={{ color: "var(--wc-mute)" }}
-              >
+              <p className="mt-1.5 text-[12px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
                 NBA 질문도 받아요. 팀 이름을 넣어 물어보면 카드가 흐름을 비춰줍니다.
               </p>
               <Link
@@ -259,13 +253,10 @@ export default async function NbaPage() {
 
             {/* 승부예측 안내 — 오프시즌에도 예측 화면 자체는 존재함을 알린다 */}
             <section className="rounded-xl p-4" style={cardStyle}>
-              <h2 className="text-[15px] font-extrabold" style={sectionTitleStyle}>
+              <h2 className="text-[16px] font-extrabold" style={sectionTitleStyle}>
                 승부예측
               </h2>
-              <p
-                className="mt-1.5 text-[12.5px] leading-relaxed"
-                style={{ color: "var(--wc-mute)" }}
-              >
+              <p className="mt-1.5 text-[12px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
                 무료 볼로 즐기는 승부예측. NBA 개막 후에는 농구 탭에서 매일 밤 경기를 픽할 수
                 있어요.
               </p>

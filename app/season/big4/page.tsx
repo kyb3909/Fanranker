@@ -71,13 +71,13 @@ export default function Big4PromoPage() {
             COMING SOON · PREMIER LEAGUE BIG 4
           </p>
           <h1
-            className="mt-3 text-[44px] leading-[1.05] font-bold sm:text-[64px]"
+            className="mt-3 text-[42px] leading-[1.05] font-bold sm:text-[64px]"
             style={{ fontFamily: DISPLAY }}
           >
             네 팬덤이
             <br />한 판에 모인다
           </h1>
-          <p className="mt-4 max-w-[560px] text-[15px] leading-relaxed text-white/70">
+          <p className="mt-4 max-w-[560px] text-[16px] leading-relaxed text-white/70">
             아스널 · 리버풀 · 첼시, 그리고 맨유까지. 프리미어리그 빅4 팬덤이 시즌 승부예측
             대항전에서 자존심을 겨룹니다. 팀을 고르고, 예측하고, 팬덤의 이름으로 이기세요.
           </p>
@@ -100,7 +100,7 @@ export default function Big4PromoPage() {
                 height={84}
                 className="h-[72px] w-auto drop-shadow-[0_4px_14px_rgba(0,0,0,.45)] sm:h-[84px]"
               />
-              <span className="absolute bottom-2 left-0 w-full text-center text-[11px] font-extrabold tracking-[0.2em] text-white/80">
+              <span className="absolute bottom-2 left-0 w-full text-center text-[12px] font-extrabold tracking-[0.2em] text-white/80">
                 {t.fandom.toUpperCase()}
               </span>
             </div>
@@ -110,7 +110,7 @@ export default function Big4PromoPage() {
 
       {/* ── 팀 카드 4종 ── */}
       <section className="mx-auto max-w-[1100px] px-4 py-12 sm:px-6">
-        <h2 className="text-[22px] font-bold text-[#1f1216]" style={{ fontFamily: DISPLAY }}>
+        <h2 className="text-[20px] font-bold text-[#1f1216]" style={{ fontFamily: DISPLAY }}>
           어느 팬덤으로 참전할 것인가
         </h2>
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -158,7 +158,7 @@ export default function Big4PromoPage() {
       {/* ── 방식 요약 + CTA ── */}
       <section className="mx-auto max-w-[1100px] px-4 pb-16 sm:px-6">
         <div className="rounded-2xl bg-white p-6 shadow-[0_2px_14px_rgba(31,18,22,.08)] sm:p-8">
-          <h2 className="text-[18px] font-bold text-[#1f1216]" style={{ fontFamily: DISPLAY }}>
+          <h2 className="text-[20px] font-bold text-[#1f1216]" style={{ fontFamily: DISPLAY }}>
             방식은 간단합니다
           </h2>
           <ol className="mt-4 grid gap-4 text-[14px] leading-relaxed text-[#4a3a3f] sm:grid-cols-3">

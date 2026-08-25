@@ -94,7 +94,7 @@ export function SnackFeedClient({
     <div className="fixed inset-0 z-50 bg-black">
       {/* 상단 바 */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent px-4 pt-3 pb-8">
-        <span className="text-[15px] font-bold text-white">🍿 떡밥 피드</span>
+        <span className="text-[16px] font-bold text-white">🍿 떡밥 피드</span>
         <Link
           href="/"
           className="pointer-events-auto rounded-full bg-white/15 p-2 text-white backdrop-blur-sm"
@@ -149,7 +149,7 @@ export function SnackFeedClient({
                         liked[card.id] ? "fill-rose-500 text-rose-500" : ""
                       }`}
                     />
-                    <span className="mt-0.5 text-[11px] tabular-nums">
+                    <span className="mt-0.5 text-[12px] tabular-nums">
                       {card.voteCount + (liked[card.id] ? 1 : 0)}
                     </span>
                   </button>
@@ -159,7 +159,7 @@ export function SnackFeedClient({
                     aria-label="댓글"
                   >
                     <MessageCircle className="h-7 w-7" />
-                    <span className="mt-0.5 text-[11px] tabular-nums">{card.commentCount}</span>
+                    <span className="mt-0.5 text-[12px] tabular-nums">{card.commentCount}</span>
                   </Link>
                 </div>
               </div>

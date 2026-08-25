@@ -53,7 +53,7 @@ export function BoardRecentPosts({
         }}
       >
         <h3
-          className="flex items-center gap-2 text-[11px] font-bold uppercase"
+          className="flex items-center gap-2 text-[12px] font-bold uppercase"
           style={{
             color: "var(--wc-ink)",
             letterSpacing: "0.18em",
@@ -97,7 +97,7 @@ export function BoardRecentPosts({
                 {post.title}
               </span>
               <div
-                className="gn-num flex shrink-0 items-center gap-2.5 text-[11px]"
+                className="gn-num flex shrink-0 items-center gap-2.5 text-[12px]"
                 style={{ color: "var(--wc-mute)" }}
               >
                 {/* 0 카운트는 아이콘째 숨긴다 — "0의 행렬 = 죽은 사이트 신호" (2026-08-20 수정) */}

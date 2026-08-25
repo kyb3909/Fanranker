@@ -21,7 +21,7 @@ export default function NotFound() {
         />
         <div className="text-primary text-[68px] leading-none font-black tracking-tight">404</div>
         <h1
-          className="text-foreground mt-3 text-[21px] font-extrabold"
+          className="text-foreground mt-3 text-[20px] font-extrabold"
           style={{ wordBreak: "keep-all" }}
         >
           앗, 공이 골대 밖으로 나갔어요
@@ -35,7 +35,7 @@ export default function NotFound() {
           마스코트도 한참 찾아봤지만 안 보이네요...
         </p>
         <NotFoundActions />
-        <p className="text-muted-foreground/70 mt-7 text-[12.5px] italic">
+        <p className="text-muted-foreground/70 mt-7 text-[12px] italic">
           “내가 분명 여기 어디 차 놨는데...” — 주인장
         </p>
       </div>

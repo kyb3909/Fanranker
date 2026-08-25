@@ -151,7 +151,7 @@ export function TeamPicker({
                 />
               )}
               <span
-                className="text-[27px] leading-none"
+                className="text-[26px] leading-none"
                 style={{
                   fontFamily: "var(--font-display-ko), var(--font-title)",
                   fontWeight: 700,
@@ -170,7 +170,7 @@ export function TeamPicker({
               </p>
 
               <div
-                className="mt-auto flex flex-wrap items-center justify-between gap-1 pt-3 text-[12.5px] font-bold"
+                className="mt-auto flex flex-wrap items-center justify-between gap-1 pt-3 text-[12px] font-bold"
                 style={{ color: "var(--wc-mute-2)" }}
               >
                 {/* 0 카운트 비노출 규칙 (워룸) — 참가자가 생기기 전엔 모집 문구로 */}

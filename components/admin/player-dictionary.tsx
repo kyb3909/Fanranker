@@ -79,8 +79,8 @@ export function PlayerDictionaryCandidates() {
             <li key={c.name} className="rounded-lg border p-2.5">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-sm font-semibold">{c.name}</span>
-                <span className="text-muted-foreground text-[11px]">{c.hits}회 차단</span>
-                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px]">
+                <span className="text-muted-foreground text-[12px]">{c.hits}회 차단</span>
+                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[12px]">
                   {c.samples[0]}
                 </span>
               </div>
@@ -90,7 +90,7 @@ export function PlayerDictionaryCandidates() {
                   {c.suggestions.map((s) => (
                     <div
                       key={s.id}
-                      className="bg-muted/50 flex flex-wrap items-center gap-1.5 rounded px-2 py-1.5 text-[11px]"
+                      className="bg-muted/50 flex flex-wrap items-center gap-1.5 rounded px-2 py-1.5 text-[12px]"
                     >
                       <span className="text-muted-foreground">기존</span>
                       <span className="font-semibold">{s.preferred_ko}</span>
@@ -130,7 +130,7 @@ export function PlayerDictionaryCandidates() {
                 </div>
               )}
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
                 <span className="text-muted-foreground">또는 새 선수로</span>
                 <input
                   value={romanized[c.name] ?? ""}

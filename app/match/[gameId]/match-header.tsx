@@ -118,13 +118,13 @@ export function MatchHeader({
         <div className="flex items-center justify-between gap-3">
           <Link
             href={`/matches?date=${backDate}`}
-            className="text-[11.5px] font-semibold no-underline transition-colors"
+            className="text-[12px] font-semibold no-underline transition-colors"
             style={{ color: "var(--gn-cream-dim)" }}
           >
             ← 경기 일정
           </Link>
           <span
-            className="text-[11.5px] font-bold"
+            className="text-[12px] font-bold"
             style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.12em" }}
           >
             {status}
@@ -138,20 +138,20 @@ export function MatchHeader({
         <p className="mt-3.5 flex flex-wrap items-baseline gap-x-2">
           {leagueKicker(match.leagueCode) && (
             <span
-              className="gn-num text-[12.5px] font-bold uppercase"
+              className="gn-num text-[12px] font-bold uppercase"
               style={{ color: "var(--gn-bg-100)", letterSpacing: "0.2em" }}
             >
               {leagueKicker(match.leagueCode)}
             </span>
           )}
-          <span className="text-[12.5px] font-semibold" style={{ color: "var(--gn-cream-dim)" }}>
+          <span className="text-[12px] font-semibold" style={{ color: "var(--gn-cream-dim)" }}>
             {leagueLabel(match.leagueCode)}
           </span>
         </p>
 
         <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-5">
           <span
-            className="min-w-0 text-right text-[17px] leading-tight font-extrabold sm:text-[20px]"
+            className="min-w-0 text-right text-[16px] leading-tight font-extrabold sm:text-[20px]"
             style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
           >
             {homeLabel ?? match.homeTeam}
@@ -159,7 +159,7 @@ export function MatchHeader({
           {showScore ? (
             <span className="text-center">
               <span
-                className="gn-num block text-[40px] leading-none font-bold sm:text-[56px]"
+                className="gn-num block text-[42px] leading-none font-bold sm:text-[56px]"
                 style={{ letterSpacing: "-0.02em" }}
               >
                 <span style={{ color: homeTone }}>{homeScore}</span>
@@ -184,14 +184,14 @@ export function MatchHeader({
           ) : (
             <span className="text-center">
               <span
-                className="gn-num block text-[28px] leading-none font-bold sm:text-[32px]"
+                className="gn-num block text-[26px] leading-none font-bold sm:text-[31px]"
                 style={{ color: "var(--gn-cream)" }}
                 suppressHydrationWarning
               >
                 {fmtKstTime(match.matchTime)}
               </span>
               <span
-                className="mt-1 block text-[11px] font-bold"
+                className="mt-1 block text-[12px] font-bold"
                 style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.12em" }}
               >
                 KST
@@ -199,14 +199,14 @@ export function MatchHeader({
             </span>
           )}
           <span
-            className="min-w-0 text-left text-[17px] leading-tight font-extrabold sm:text-[20px]"
+            className="min-w-0 text-left text-[16px] leading-tight font-extrabold sm:text-[20px]"
             style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
           >
             {awayLabel ?? match.awayTeam}
           </span>
         </div>
 
-        <p className="mt-4 text-[11.5px]" style={{ color: "var(--gn-cream-dim)" }}>
+        <p className="mt-4 text-[12px]" style={{ color: "var(--gn-cream-dim)" }}>
           <span suppressHydrationWarning>{fmtKst(match.matchTime)}</span>
           {match.venue ? ` · ${match.venue}` : ""}
         </p>
@@ -243,14 +243,14 @@ export function MatchHeader({
                 style={{ background: "var(--wc-burgundy)" }}
               />
               <span
-                className="min-w-0 truncate text-[12.5px] font-extrabold"
+                className="min-w-0 truncate text-[12px] font-extrabold"
                 style={{ color: "var(--wc-ink)" }}
               >
                 경기 반응 보러
                 {thread.commentCount > 0 ? ` · 댓글 ${thread.commentCount}` : ""}
               </span>
               <span
-                className="inline-flex h-[30px] shrink-0 items-center rounded-full px-[13px] text-[11.5px] font-extrabold text-white"
+                className="inline-flex h-[30px] shrink-0 items-center rounded-full px-[13px] text-[12px] font-extrabold text-white"
                 style={{ background: "var(--wc-burgundy)" }}
               >
                 불판 →

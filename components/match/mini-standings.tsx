@@ -133,10 +133,10 @@ export async function MatchMiniStandings({
       <table className="mt-2 w-full border-collapse">
         <thead>
           <tr style={{ color: "var(--wc-mute-2)" }}>
-            <th className="w-8 py-1.5 text-right text-[11px] font-bold">#</th>
-            <th className="py-1.5 pl-3 text-left text-[11px] font-bold">팀</th>
+            <th className="w-8 py-1.5 text-right text-[12px] font-bold">#</th>
+            <th className="py-1.5 pl-3 text-left text-[12px] font-bold">팀</th>
             {["경기", "득실", "승점"].map((h) => (
-              <th key={h} className="w-11 py-1.5 text-right text-[11px] font-bold">
+              <th key={h} className="w-11 py-1.5 text-right text-[12px] font-bold">
                 {h}
               </th>
             ))}
@@ -157,7 +157,7 @@ export async function MatchMiniStandings({
                 }}
               >
                 <td
-                  className="gn-num py-2 text-right text-[12.5px] font-bold"
+                  className="gn-num py-2 text-right text-[12px] font-bold"
                   style={{ color: "var(--wc-mute-2)" }}
                 >
                   {idx + 1}
@@ -169,13 +169,13 @@ export async function MatchMiniStandings({
                   {r.팀명 ? displayTeamName(r.팀명, shortNames) : "-"}
                 </td>
                 <td
-                  className="gn-num py-2 text-right text-[12.5px]"
+                  className="gn-num py-2 text-right text-[12px]"
                   style={{ color: "var(--wc-mute)" }}
                 >
                   {Number(r.경기) || 0}
                 </td>
                 <td
-                  className="gn-num py-2 text-right text-[12.5px]"
+                  className="gn-num py-2 text-right text-[12px]"
                   style={{ color: "var(--wc-mute)" }}
                 >
                   {gd > 0 ? `+${gd}` : gd}

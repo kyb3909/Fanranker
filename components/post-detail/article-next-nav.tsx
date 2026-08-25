@@ -59,7 +59,7 @@ export function ArticleNextNav({
               }
             >
               <span
-                className="text-[13.5px] leading-snug font-bold"
+                className="text-[13px] leading-snug font-bold"
                 style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
               >
                 {p.title}
@@ -88,14 +88,11 @@ export function ArticleNextNav({
             })
           }
         >
-          <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-bold">
             <span style={{ color: "var(--wc-mute)" }}>다음 떡밥 · </span>
             <span style={{ color: "var(--wc-ink)" }}>{next.title}</span>
           </span>
-          <span
-            className="shrink-0 text-[12.5px] font-bold"
-            style={{ color: "var(--wc-burgundy)" }}
-          >
+          <span className="shrink-0 text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
             계속 읽기 →
           </span>
         </Link>

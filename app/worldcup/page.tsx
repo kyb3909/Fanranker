@@ -190,7 +190,7 @@ export default async function WorldcupPage() {
           >
             <p
               style={{
-                fontSize: 13.5,
+                fontSize: 13,
                 lineHeight: 1.65,
                 color: "var(--wc-ink-2)",
                 wordBreak: "keep-all",
@@ -258,7 +258,7 @@ export default async function WorldcupPage() {
                 How it works
               </div>
               <h2
-                className="text-[24px] font-extrabold sm:text-[28px]"
+                className="text-[26px] font-extrabold sm:text-[26px]"
                 style={{ letterSpacing: "-.03em" }}
               >
                 진행 방식
@@ -269,15 +269,12 @@ export default async function WorldcupPage() {
                 <div key={s.num} className="wc-step-card">
                   <div className="wc-step-num">{s.num}</div>
                   <div
-                    className="mb-[9px] text-[18px] font-extrabold"
+                    className="mb-[9px] text-[20px] font-extrabold"
                     style={{ letterSpacing: "-.02em" }}
                   >
                     {s.title}
                   </div>
-                  <p
-                    className="text-[14.5px]"
-                    style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}
-                  >
+                  <p className="text-[14px]" style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}>
                     {s.body}
                   </p>
                 </div>
@@ -295,12 +292,12 @@ export default async function WorldcupPage() {
                 Prize
               </div>
               <h2
-                className="text-[24px] font-extrabold sm:text-[28px]"
+                className="text-[26px] font-extrabold sm:text-[26px]"
                 style={{ letterSpacing: "-.03em" }}
               >
                 경품 안내
               </h2>
-              <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="mt-[10px] text-[14px]" style={{ color: "var(--wc-mute)" }}>
                 토너먼트 최고 점수를 기록한 단 한 명에게 드리는 상품입니다.
               </p>
             </div>
@@ -340,7 +337,7 @@ export default async function WorldcupPage() {
               >
                 <div
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: 800,
                     letterSpacing: ".1em",
                     color: "var(--wc-burgundy)",
@@ -393,7 +390,7 @@ export default async function WorldcupPage() {
                     </span>
                     <span
                       style={{
-                        fontSize: 13.5,
+                        fontSize: 13,
                         lineHeight: 1.55,
                         color: "var(--wc-mute)",
                         fontWeight: 500,
@@ -413,10 +410,7 @@ export default async function WorldcupPage() {
       {/* ── 유의사항 ────────────────────────────────────────── */}
       <section className="mx-auto px-4 pb-10 sm:px-6" style={{ maxWidth: 880, paddingTop: 24 }}>
         <div className="wc-panel">
-          <h3
-            className="mb-[14px] text-[15.5px] font-extrabold"
-            style={{ color: "var(--wc-mute)" }}
-          >
+          <h3 className="mb-[14px] text-[16px] font-extrabold" style={{ color: "var(--wc-mute)" }}>
             유의사항
           </h3>
           <ul className="flex flex-col gap-2" style={{ listStyle: "none", margin: 0, padding: 0 }}>

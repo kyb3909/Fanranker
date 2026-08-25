@@ -52,7 +52,7 @@ function EligibilityBar({ activeDays, eligible }: { activeDays: number; eligible
           / {MIN_ACTIVE_DAYS}일
         </span>
         <span
-          className="shrink-0 text-[11.5px] font-extrabold"
+          className="shrink-0 text-[12px] font-extrabold"
           style={{ color: eligible ? "var(--wc-go, #2f7d5b)" : "var(--wc-mute)" }}
         >
           {eligible ? "자격 있음" : `${MIN_ACTIVE_DAYS - activeDays}일 남음`}
@@ -70,7 +70,7 @@ function EligibilityBar({ activeDays, eligible }: { activeDays: number; eligible
           }}
         />
       </div>
-      <p className="mt-1.5 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+      <p className="mt-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
         서로 다른 {MIN_ACTIVE_DAYS}일에 예측해야 상품을 받을 수 있습니다. 순위는 자격과 상관없이
         점수 순으로 매겨집니다.
       </p>
@@ -84,7 +84,7 @@ export function RaceMyPanel() {
 
   return (
     <section className="rounded-xl p-4" style={cardStyle}>
-      <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+      <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
         내 현황
       </h2>
       {data?.me ? (
@@ -93,7 +93,7 @@ export function RaceMyPanel() {
             <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
               {data.me.rank}위
             </p>
-            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
               / {data.participants}명
             </p>
           </div>
@@ -101,7 +101,7 @@ export function RaceMyPanel() {
             <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
               {data.me.points.toLocaleString()}P
             </p>
-            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
               점수
             </p>
           </div>
@@ -109,7 +109,7 @@ export function RaceMyPanel() {
             <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
               {winRate(data.me) === null ? "—" : `${winRate(data.me)}%`}
             </p>
-            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
               적중률 ({data.me.won}/{data.me.settled})
             </p>
           </div>
@@ -130,7 +130,7 @@ export function RaceTopPanel() {
 
   return (
     <section className="rounded-xl p-4" style={cardStyle}>
-      <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+      <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
         순위 상위 5명
       </h2>
       {data?.top?.length ? (
@@ -152,10 +152,7 @@ export function RaceTopPanel() {
                 >
                   {i + 1}
                 </span>
-                <span
-                  className="truncate text-[13.5px] font-bold"
-                  style={{ color: "var(--wc-ink)" }}
-                >
+                <span className="truncate text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
                   {r.nickname}
                 </span>
               </span>
@@ -163,7 +160,7 @@ export function RaceTopPanel() {
                 {/* 자격 표시는 순위와 별개 축 — 점수만 높고 참여일이 모자란 계정을
                     발표일이 아니라 지금 보이게 한다 */}
                 <span
-                  className="text-[11px] font-bold tabular-nums"
+                  className="text-[12px] font-bold tabular-nums"
                   style={{ color: r.eligible ? "var(--wc-go, #2f7d5b)" : "var(--wc-mute)" }}
                 >
                   {r.eligible ? "자격 ✓" : `${r.activeDays}/${MIN_ACTIVE_DAYS}일`}
@@ -183,7 +180,7 @@ export function RaceTopPanel() {
           아직 아무도 예측하지 않았습니다. 지금 예측하면 1위입니다.
         </p>
       )}
-      <p className="mt-2.5 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+      <p className="mt-2.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
         순위는 점수 순입니다. 상품은 서로 다른 {MIN_ACTIVE_DAYS}일에 예측한 사람 중 1위에게 갑니다.
       </p>
     </section>

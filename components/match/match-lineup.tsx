@@ -53,7 +53,7 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
             img("/match/icons/goal.png", "득점", `g${i}`)
           )}
           {p.goalMinutes && p.goalMinutes.length > 0 && (
-            <span className="gn-num text-[9.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+            <span className="gn-num text-[9px] font-bold" style={{ color: "var(--wc-mute)" }}>
               {p.goalMinutes.join(" ")}
             </span>
           )}
@@ -73,12 +73,12 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
           <span className="text-[9px]" style={{ color: "var(--wc-down, #c03a3a)" }}>
             ▼
           </span>
-          <span className="gn-num text-[9.5px]" style={{ color: "var(--wc-mute-2)" }}>
+          <span className="gn-num text-[9px]" style={{ color: "var(--wc-mute-2)" }}>
             {p.subOut}
           </span>
           {p.subPartner && (
             <span
-              className="max-w-[64px] truncate text-[9.5px]"
+              className="max-w-[64px] truncate text-[9px]"
               style={{ color: "var(--wc-mute-2)" }}
             >
               {p.subPartner}
@@ -91,7 +91,7 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
           <span className="text-[9px]" style={{ color: "var(--wc-go, #2f7d5b)" }}>
             ▲
           </span>
-          <span className="gn-num text-[9.5px]" style={{ color: "var(--wc-mute-2)" }}>
+          <span className="gn-num text-[9px]" style={{ color: "var(--wc-mute-2)" }}>
             {p.subIn}
           </span>
         </span>
@@ -221,9 +221,7 @@ export function MatchLineup({
         >
           {/* 빈 더그아웃 + 백지 전술판 삽화 (P2) — 대기가 "고장"이 아니라 "발표 전"으로 읽히게 */}
           <EmptyScene src="/images/empty/empty-lineup-wait.webp" size={260} />
-          <p className="mt-3 text-[13.5px] font-semibold">
-            라인업은 킥오프 약 1시간 전에 공개됩니다
-          </p>
+          <p className="mt-3 text-[13px] font-semibold">라인업은 킥오프 약 1시간 전에 공개됩니다</p>
           {kickoffLabel && (
             <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
               킥오프 <span className="gn-num font-bold">{kickoffLabel}</span> KST
@@ -295,7 +293,7 @@ export function MatchLineup({
               </div>
               <ol className="mt-1.5 space-y-[3px]">
                 {side.starters.map((p, i) => (
-                  <li key={i} className="flex items-center gap-2 text-[12.5px] leading-[1.5]">
+                  <li key={i} className="flex items-center gap-2 text-[12px] leading-[1.5]">
                     <span
                       className="gn-num grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
                       style={{
@@ -319,7 +317,7 @@ export function MatchLineup({
                 // 교체 투입이 있으면 기본 펼침 — 누가 들어왔는지가 접혀 있으면 의미가 없다
                 <details className="mt-2" open={side.bench.some((p) => p.subIn)}>
                   <summary
-                    className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full px-2 py-[2px] text-[10.5px] font-bold"
+                    className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full px-2 py-[2px] text-[10px] font-bold"
                     style={{
                       background: "var(--wc-soft)",
                       color: "var(--wc-mute)",
@@ -331,9 +329,9 @@ export function MatchLineup({
                   </summary>
                   <ol className="mt-1.5 space-y-[3px]">
                     {side.bench.map((p, i) => (
-                      <li key={i} className="flex items-center gap-2 text-[11.5px] leading-[1.5]">
+                      <li key={i} className="flex items-center gap-2 text-[11px] leading-[1.5]">
                         <span
-                          className="gn-num grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[9.5px] font-bold"
+                          className="gn-num grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[9px] font-bold"
                           style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
                         >
                           {p.number ?? "·"}

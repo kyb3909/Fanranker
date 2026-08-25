@@ -30,7 +30,7 @@ function RowTime({ m }: { m: FixtureRow }) {
   if (m.status === "completed") {
     return (
       <span
-        className="gn-num text-[10.5px] font-bold"
+        className="gn-num text-[12px] font-bold"
         style={{ color: "var(--wc-mute-2)", letterSpacing: "0.08em" }}
       >
         FT
@@ -39,14 +39,14 @@ function RowTime({ m }: { m: FixtureRow }) {
   }
   if (m.status === "cancelled") {
     return (
-      <span className="text-[10.5px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
+      <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
         취소
       </span>
     )
   }
   if (m.status === "in_progress") {
     return (
-      <span className="text-[10.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+      <span className="text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
         경기 중
       </span>
     )
@@ -127,7 +127,7 @@ export async function MatchdayRail({
             >
               <RowTime m={m} />
               <span
-                className={`truncate text-[12.5px] ${isCurrent ? "font-extrabold" : "font-semibold"}`}
+                className={`truncate text-[12px] ${isCurrent ? "font-extrabold" : "font-semibold"}`}
                 style={{ color: isCurrent ? "var(--wc-ink)" : "var(--wc-mute)" }}
               >
                 {label(m.homeTeam)} – {label(m.awayTeam)}
@@ -137,7 +137,7 @@ export async function MatchdayRail({
               m.homeScore != null &&
               m.awayScore != null ? (
                 <span
-                  className="gn-num text-[12.5px] font-bold"
+                  className="gn-num text-[12px] font-bold"
                   style={{ color: isCurrent ? "var(--wc-ink)" : "var(--wc-mute)" }}
                 >
                   {m.homeScore}-{m.awayScore}

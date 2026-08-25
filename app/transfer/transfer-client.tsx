@@ -126,13 +126,13 @@ export function TransferBoardClient({ initialItems }: { initialItems: TransferIt
                       {kstTime(it.postedAt)}
                     </span>
                     <span
-                      className={`mt-0.5 inline-flex h-[18px] shrink-0 items-center rounded px-1.5 text-[10.5px] font-bold ${tier.className}`}
+                      className={`mt-0.5 inline-flex h-[18px] shrink-0 items-center rounded px-1.5 text-[12px] font-bold ${tier.className}`}
                     >
                       {tier.label}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[14px] leading-snug font-medium">{it.headline}</p>
-                      <p className="text-muted-foreground mt-0.5 flex items-center gap-2 text-[11.5px]">
+                      <p className="text-muted-foreground mt-0.5 flex items-center gap-2 text-[12px]">
                         {it.source && <span className="truncate">{it.source}</span>}
                         {it.sourceUrl && (
                           <a

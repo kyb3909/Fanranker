@@ -63,7 +63,7 @@ export function CountryPicker() {
     <div className="min-h-[calc(100svh-3.5rem)] bg-neutral-950 px-4 py-10 text-white">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 text-center">
-          <p className="text-[11px] font-semibold tracking-[0.25em] text-white/40 uppercase">
+          <p className="text-[12px] font-semibold tracking-[0.25em] text-white/40 uppercase">
             Stadium Metaverse
           </p>
           <h1 className="mt-3 text-2xl font-bold md:text-3xl">어느 리그로 떠나볼까요?</h1>
@@ -92,7 +92,7 @@ export function CountryPicker() {
                   />
                   {!country.active ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                      <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold backdrop-blur-sm">
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-[12px] font-semibold backdrop-blur-sm">
                         {country.comingSoonNote ?? "준비 중"}
                       </span>
                     </div>
@@ -126,7 +126,7 @@ export function CountryPicker() {
           })}
         </ul>
 
-        <p className="mt-10 text-center text-[10px] text-white/40">
+        <p className="mt-10 text-center text-[12px] text-white/40">
           내부 테스트 중 · 국가별 지도와 리그 데이터는 순차적으로 열릴 예정입니다.
         </p>
       </div>

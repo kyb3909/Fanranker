@@ -32,7 +32,7 @@ export async function MatchExtrasSection({
         <section>
           <h2 className="sheet-lab">경기 스탯</h2>
           <div
-            className="mt-1 flex items-baseline justify-between text-[11.5px] font-bold"
+            className="mt-1 flex items-baseline justify-between text-[12px] font-bold"
             style={{ color: "var(--wc-mute)" }}
           >
             <span className="truncate">{homeTeam}</span>
@@ -51,7 +51,7 @@ export async function MatchExtrasSection({
                     >
                       {s.home}
                     </span>
-                    <span className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                    <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       {s.label}
                     </span>
                     <span
@@ -88,7 +88,7 @@ export async function MatchExtrasSection({
         <section className="mt-8">
           <h2 className="sheet-lab">경기 리포트</h2>
           <h3
-            className="mt-1.5 text-[16.5px] leading-snug"
+            className="mt-1.5 text-[16px] leading-snug"
             style={{
               fontFamily: "var(--font-display-ko), var(--font-title)",
               fontWeight: 700,
@@ -103,7 +103,7 @@ export async function MatchExtrasSection({
             {report.paragraphs.map((p, i) => (
               <p
                 key={i}
-                className="text-[13.5px] leading-relaxed"
+                className="text-[13px] leading-relaxed"
                 style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
               >
                 {p}

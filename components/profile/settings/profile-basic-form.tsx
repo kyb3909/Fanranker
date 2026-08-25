@@ -72,7 +72,7 @@ export function ProfileBasicForm({
             {new Date(nextChangeAt).toLocaleDateString("ko-KR")} 이후 변경 가능
           </p>
         ) : (
-          <p className="text-muted-foreground text-[11px]">2~20자. 변경 후 3개월간 재변경 불가</p>
+          <p className="text-muted-foreground text-[12px]">2~20자. 변경 후 3개월간 재변경 불가</p>
         )}
       </div>
 
@@ -96,7 +96,7 @@ export function ProfileBasicForm({
           placeholder="자신을 한 줄로 소개해보세요"
           maxLength={50}
         />
-        <p className="text-muted-foreground text-right text-[11px]">{bio.length}/50</p>
+        <p className="text-muted-foreground text-right text-[12px]">{bio.length}/50</p>
       </div>
 
       <Separator />
@@ -109,7 +109,7 @@ export function ProfileBasicForm({
             최애 팀 & 선수
           </Label>
           {!hasFavoriteSet && (
-            <span className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
+            <span className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[12px] font-bold text-amber-600">
               <Coins className="h-2.5 w-2.5" />
               +200G
             </span>

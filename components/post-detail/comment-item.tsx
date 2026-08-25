@@ -98,7 +98,7 @@ export const CommentItem = memo(function CommentItem({
                     {comment.author}
                   </span>
                 )}
-                <span className="text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                <span className="text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
                   {comment.timestamp}
                 </span>
                 {(() => {
@@ -111,7 +111,7 @@ export const CommentItem = memo(function CommentItem({
                   const isA = key === "a"
                   return (
                     <span
-                      className="rounded px-1.5 py-0.5 text-[10.5px] font-extrabold"
+                      className="rounded px-1.5 py-0.5 text-[12px] font-extrabold"
                       style={{
                         background: isA
                           ? "color-mix(in srgb, #961e37 9%, transparent)"
@@ -126,7 +126,7 @@ export const CommentItem = memo(function CommentItem({
                 })()}
                 {comment.isSecret && (
                   <span
-                    className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10.5px] font-bold"
+                    className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[12px] font-bold"
                     style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
                     title="원글 작성자와 운영자만 볼 수 있는 비밀댓글입니다."
                   >

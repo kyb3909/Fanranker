@@ -159,7 +159,7 @@ export function TeamSquadsManager() {
             placeholder={
               "여기에 CSV 를 붙여넣어도 됩니다. 필수 열: soccerway_team_id, player_slug, name_kr"
             }
-            className="bg-background w-full rounded border p-2 font-mono text-[11px]"
+            className="bg-background w-full rounded border p-2 font-mono text-[12px]"
           />
 
           {csvText.trim() && (
@@ -183,7 +183,7 @@ export function TeamSquadsManager() {
           )}
 
           {csvPlan && (
-            <div className="rounded-lg border px-3 py-2 text-[11px]">
+            <div className="rounded-lg border px-3 py-2 text-[12px]">
               <p>
                 {csvPlan.dry_run ? "반영 예정" : "확정"}{" "}
                 <b>{csvPlan.would_update ?? csvPlan.updated ?? 0}</b>건 · 건너뜀{" "}

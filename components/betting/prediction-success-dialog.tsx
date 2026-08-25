@@ -88,7 +88,7 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
       <p className="mb-2 text-[13px] font-bold" style={{ color: "var(--wc-ink, #1a1714)" }}>
         {entry.homeTeam} vs {entry.awayTeam}
         <span
-          className="ml-1.5 text-[11px] font-semibold"
+          className="ml-1.5 text-[12px] font-semibold"
           style={{ color: "var(--wc-mute, #5c6470)" }}
         >
           {getGameTypeLabel(entry.gameType)} · {entry.total.toLocaleString()}명 참여
@@ -343,7 +343,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                   />
                 ) : (
                   <span
-                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md text-[10px] font-bold"
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md text-[12px] font-bold"
                     style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
                   >
                     이슈
@@ -357,7 +357,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                     {card.title}
                   </span>
                   <span
-                    className="flex items-center gap-2 text-[11px] tabular-nums"
+                    className="flex items-center gap-2 text-[12px] tabular-nums"
                     style={{ color: "var(--wc-mute, #5c6470)" }}
                   >
                     {card.flair?.name && (
@@ -407,7 +407,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                 }}
               >
                 <span
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[12px] font-bold"
                   style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
                 >
                   {STAGE_LABEL[s.stage] ?? s.stage}
@@ -419,7 +419,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                   {s.title}
                 </span>
                 <span
-                  className="shrink-0 text-[11px] tabular-nums"
+                  className="shrink-0 text-[12px] tabular-nums"
                   style={{ color: "var(--wc-mute, #5c6470)" }}
                 >
                   기록 {s.entry_count}
@@ -465,7 +465,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                     />
                   ) : (
                     <span
-                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md text-[10px] font-bold"
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md text-[12px] font-bold"
                       style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
                     >
                       소식
@@ -479,7 +479,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                       {post.title}
                     </span>
                     <span
-                      className="flex items-center gap-2 text-[11px] tabular-nums"
+                      className="flex items-center gap-2 text-[12px] tabular-nums"
                       style={{ color: "var(--wc-mute, #5c6470)" }}
                     >
                       <span className="flex items-center gap-0.5">

@@ -113,17 +113,17 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
           {/* 참여 통계 */}
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="bg-muted/40 rounded-lg p-2.5 text-center">
-              <p className="text-muted-foreground text-[11px]">참여자</p>
+              <p className="text-muted-foreground text-[12px]">참여자</p>
               <p className="text-foreground text-sm font-semibold">{overall.totalParticipants}명</p>
             </div>
             <div className="bg-muted/40 rounded-lg p-2.5 text-center">
-              <p className="text-muted-foreground text-[11px]">총 예측</p>
+              <p className="text-muted-foreground text-[12px]">총 예측</p>
               <p className="text-foreground text-sm font-semibold">
                 {totalGames.toLocaleString()}건
               </p>
             </div>
             <div className="bg-muted/40 rounded-lg p-2.5 text-center">
-              <p className="text-muted-foreground text-[11px]">총 사용 볼</p>
+              <p className="text-muted-foreground text-[12px]">총 사용 볼</p>
               <p className="text-foreground text-sm font-semibold">
                 {formatBalls(overall.totalWagered)} 볼
               </p>
@@ -154,7 +154,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-foreground text-sm font-semibold">{s.sport}</span>
-                      <span className="text-muted-foreground text-[11px]">
+                      <span className="text-muted-foreground text-[12px]">
                         {s.participants}명 참여
                       </span>
                     </div>
@@ -189,7 +189,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                     >
                       {sportHouseLosing ? "유저 승" : "주인장 승"}
                     </p>
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       {formatBalls(Math.abs(s.housePnl))} 볼
                     </p>
                   </div>
@@ -249,7 +249,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                     )}
                   </div>
                   <span
-                    className={`w-16 shrink-0 text-[11px] font-medium tabular-nums ${
+                    className={`w-16 shrink-0 text-[12px] font-medium tabular-nums ${
                       isHouseWin
                         ? "text-red-600 dark:text-red-400"
                         : day.housePnl < 0
@@ -264,7 +264,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
               )
             })}
           </div>
-          <div className="mt-3 flex justify-between text-[11px]">
+          <div className="mt-3 flex justify-between text-[12px]">
             <span className="text-emerald-600 dark:text-emerald-400">← 유저 유리</span>
             <span className="text-red-600 dark:text-red-400">주인장 유리 →</span>
           </div>

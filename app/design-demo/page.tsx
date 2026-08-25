@@ -44,7 +44,7 @@ function UserFlair({
 
   return (
     <span
-      className={`inline-flex items-center rounded-sm px-1.5 py-[1px] text-[11px] leading-tight font-medium ${bg[rarity]} ${text[rarity]}`}
+      className={`inline-flex items-center rounded-sm px-1.5 py-[1px] text-[12px] leading-tight font-medium ${bg[rarity]} ${text[rarity]}`}
     >
       {label}
     </span>
@@ -74,7 +74,7 @@ function UserBlock({
     <div className="flex flex-col leading-none">
       <div className="flex items-center gap-1.5">
         <span className={`text-foreground font-semibold ${nameSize}`}>{nickname}</span>
-        {time && <span className="text-muted-foreground text-[11px]">{time}</span>}
+        {time && <span className="text-muted-foreground text-[12px]">{time}</span>}
       </div>
       <div className="mt-0.5">
         <UserFlair adj={adj} noun={noun} rarity={rarity} />
@@ -160,7 +160,7 @@ function MockPost({ u, title, body }: { u: UserDemo; title: string; body: string
           time="6분 전"
         />
       </div>
-      <h3 className="text-foreground mb-1.5 text-[15px] font-semibold">{title}</h3>
+      <h3 className="text-foreground mb-1.5 text-[16px] font-semibold">{title}</h3>
       <p className="text-muted-foreground text-[13px] leading-relaxed">{body}</p>
       <div className="border-border/40 text-muted-foreground mt-3 flex items-center gap-3 border-t pt-3 text-[12px]">
         <button className="hover:text-foreground flex items-center gap-1 transition-colors">
@@ -193,7 +193,7 @@ function MockComment({ u, text }: { u: UserDemo; text: string }) {
           size="sm"
         />
         <p className="text-foreground/90 mt-1 text-[13px]">{text}</p>
-        <div className="text-muted-foreground mt-1 flex gap-3 text-[11px]">
+        <div className="text-muted-foreground mt-1 flex gap-3 text-[12px]">
           <button className="hover:text-foreground">👍 5</button>
           <button className="hover:text-foreground">답글</button>
         </div>
@@ -224,7 +224,7 @@ function MockProfile({ u }: { u: UserDemo }) {
           <UserFlair adj={u.adj} noun={u.noun} rarity={u.rarity} />
 
           {/* 종목별 레벨 */}
-          <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
+          <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[12px]">
             <span>⚽ 축구 Lv.7</span>
             <span>⚾ 야구 Lv.3</span>
             <span>🎮 게임 Lv.5</span>
@@ -233,13 +233,13 @@ function MockProfile({ u }: { u: UserDemo }) {
           {/* 픽셀아트 컬렉션 (프로필 전용) */}
           {u.art && (
             <div className="border-border/40 mt-2 border-t pt-2">
-              <p className="text-muted-foreground mb-1.5 text-[11px] font-medium">보유 픽셀아트</p>
+              <p className="text-muted-foreground mb-1.5 text-[12px] font-medium">보유 픽셀아트</p>
               <div className="flex gap-2">
                 <div className="border-border/40 bg-muted/20 h-12 w-12 overflow-hidden rounded-lg border p-0.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={u.art} alt="" className="h-full w-full object-cover" />
                 </div>
-                <div className="border-border/60 bg-muted/10 text-muted-foreground flex h-12 w-12 items-center justify-center rounded-lg border border-dashed text-[10px]">
+                <div className="border-border/60 bg-muted/10 text-muted-foreground flex h-12 w-12 items-center justify-center rounded-lg border border-dashed text-[12px]">
                   +
                 </div>
               </div>
@@ -274,7 +274,7 @@ function MockShop() {
             <img src="/pixel-art/messi.png" alt={it.name} className="h-11 w-11 object-cover" />
           </div>
           <p className="text-xs font-medium">{it.name}</p>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[12px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
             {it.price}P
           </span>
         </button>
@@ -290,7 +290,7 @@ function Hero() {
     <div className="grid gap-4 sm:grid-cols-2">
       {/* Before */}
       <div className="border-border bg-card rounded-xl border p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-bold tracking-widest uppercase">
+        <p className="text-muted-foreground mb-3 text-[12px] font-bold tracking-widest uppercase">
           Before
         </p>
         <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ function Hero() {
 
       {/* After */}
       <div className="border-primary/30 bg-primary/[0.03] rounded-xl border-2 p-4">
-        <p className="text-primary mb-3 text-[10px] font-bold tracking-widest uppercase">After</p>
+        <p className="text-primary mb-3 text-[12px] font-bold tracking-widest uppercase">After</p>
         <div className="flex items-center gap-2.5">
           <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm">
             😎
@@ -313,7 +313,7 @@ function Hero() {
           <div className="flex flex-col leading-none">
             <div className="flex items-center gap-1.5">
               <span className="text-foreground text-[14px] font-semibold">풋볼매니아_kr</span>
-              <span className="text-muted-foreground text-[11px]">6분 전</span>
+              <span className="text-muted-foreground text-[12px]">6분 전</span>
             </div>
             <div className="mt-0.5">
               <UserFlair adj="축잘알" noun="꾸레" rarity="epic" />
@@ -346,7 +346,7 @@ function FlairShowcase() {
       {list.map((t, i) => (
         <div key={i} className="bg-muted/30 flex items-center gap-2 rounded-lg px-3 py-2">
           <UserFlair adj={t.adj} noun={t.noun} rarity={t.rarity} />
-          <span className="text-muted-foreground text-[10px]">{rarityLabel[t.rarity]}</span>
+          <span className="text-muted-foreground text-[12px]">{rarityLabel[t.rarity]}</span>
         </div>
       ))}
     </div>
@@ -520,14 +520,14 @@ function FullProfilePage() {
                   {pa.cat === "축구" ? "⚽" : "🎮"}
                 </div>
               </div>
-              <span className="text-muted-foreground text-[10px]">{pa.name}</span>
+              <span className="text-muted-foreground text-[12px]">{pa.name}</span>
             </div>
           ))}
           <div className="flex flex-col items-center gap-1">
             <div className="border-border/60 bg-muted/20 text-muted-foreground flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed text-xs">
               +3
             </div>
-            <span className="text-muted-foreground text-[10px]">더보기</span>
+            <span className="text-muted-foreground text-[12px]">더보기</span>
           </div>
         </div>
       </Card>
@@ -608,7 +608,7 @@ export default function DesignDemoPage() {
           <p className="mt-1 text-sm">
             <span className="font-semibold">프로필 페이지</span>: 칭호 + 보유 픽셀아트 컬렉션 표시
           </p>
-          <p className="text-muted-foreground mt-2 text-[11px]">
+          <p className="text-muted-foreground mt-2 text-[12px]">
             형용사 = 업적 달성 · 명사 = 포인트로 구매 · 픽셀아트 = 상점 구매 (프로필 꾸미기)
           </p>
         </div>

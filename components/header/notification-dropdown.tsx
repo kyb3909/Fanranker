@@ -219,7 +219,7 @@ export function NotificationDropdown() {
           )}
           {unreadCount > 0 && (
             <span
-              className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full text-[12px] font-bold text-white"
               aria-hidden="true"
               style={{ background: "var(--wc-burgundy, #961E37)" }}
             >
@@ -241,7 +241,7 @@ export function NotificationDropdown() {
           }}
         >
           <h3
-            className="text-[11px] font-bold uppercase"
+            className="text-[12px] font-bold uppercase"
             style={{
               color: "var(--wc-burgundy, #961E37)",
               letterSpacing: "0.18em",

@@ -179,11 +179,11 @@ export function TeamDictionaryManager() {
             <li key={u.name} className="space-y-2 px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold">{u.name}</span>
-                <span className="text-muted-foreground text-[11px] tabular-nums">
+                <span className="text-muted-foreground text-[12px] tabular-nums">
                   {u.hits}회 차단
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
                 <span className="text-muted-foreground">기존 팀의 별칭으로</span>
                 <select
                   value={aliasTarget[u.name] ?? ""}
@@ -214,7 +214,7 @@ export function TeamDictionaryManager() {
                   흡수
                 </button>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
                 <span className="text-muted-foreground">또는 새 팀으로</span>
                 <input
                   value={registerUrl[u.name] ?? ""}
@@ -275,11 +275,11 @@ export function TeamDictionaryManager() {
                 {p.pageTournament}
               </span>
               {p.homeAwayFlip === true && (
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[12px] text-amber-700">
                   홈/원정 뒤집힘
                 </span>
               )}
-              <span className="text-muted-foreground ml-auto text-[11px] tabular-nums">
+              <span className="text-muted-foreground ml-auto text-[12px] tabular-nums">
                 마켓 {p.gameCount}행
               </span>
               {p.candidateUrl && (
@@ -287,7 +287,7 @@ export function TeamDictionaryManager() {
                   href={p.candidateUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-primary text-[11px] underline underline-offset-2"
+                  className="text-primary text-[12px] underline underline-offset-2"
                 >
                   soccerway ↗
                 </a>
@@ -343,7 +343,7 @@ export function TeamDictionaryManager() {
             placeholder={
               "여기에 CSV 를 붙여넣어도 됩니다.\nurl,name_kr\nhttps://int.soccerway.com/.../team/bournemouth/XXXXXXXX/,본머스"
             }
-            className="bg-background w-full rounded border p-2 font-mono text-[11px]"
+            className="bg-background w-full rounded border p-2 font-mono text-[12px]"
           />
 
           {csvText.trim() && (
@@ -368,7 +368,7 @@ export function TeamDictionaryManager() {
 
           {csvPlan && (
             <div className="rounded-lg border">
-              <div className="bg-muted/40 flex flex-wrap gap-3 border-b px-3 py-2 text-[11px]">
+              <div className="bg-muted/40 flex flex-wrap gap-3 border-b px-3 py-2 text-[12px]">
                 {(["insert", "update", "skip", "error"] as const).map((k) => (
                   <span key={k} className={k === "error" ? "font-semibold text-red-600" : ""}>
                     {{ insert: "신규", update: "수정", skip: "건너뜀", error: "오류" }[k]}{" "}
@@ -379,7 +379,7 @@ export function TeamDictionaryManager() {
                   <span className="text-muted-foreground ml-auto">미리보기 — 아직 반영 안 됨</span>
                 )}
               </div>
-              <ul className="max-h-64 divide-y overflow-auto text-[11px]">
+              <ul className="max-h-64 divide-y overflow-auto text-[12px]">
                 {csvPlan.plan.map((p, i) => (
                   <li key={i} className="flex gap-2 px-3 py-1">
                     <span className="text-muted-foreground w-8 shrink-0 text-right">{p.line}</span>
@@ -428,17 +428,17 @@ export function TeamDictionaryManager() {
                 key={t.soccerway_team_id}
                 className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 text-sm"
               >
-                <span className={`rounded-full border px-2 py-0.5 text-[11px] ${s.cls}`}>
+                <span className={`rounded-full border px-2 py-0.5 text-[12px] ${s.cls}`}>
                   {s.text}
                 </span>
                 <span className="font-medium">{t.name_kr ?? "—"}</span>
                 <span className="text-muted-foreground text-xs">{t.name_en}</span>
                 {t.aliases_kr.length > 0 && (
-                  <span className="text-muted-foreground max-w-[240px] truncate text-[11px]">
+                  <span className="text-muted-foreground max-w-[240px] truncate text-[12px]">
                     별칭: {t.aliases_kr.join(", ")}
                   </span>
                 )}
-                <span className="text-muted-foreground/60 font-mono text-[10px]">
+                <span className="text-muted-foreground/60 font-mono text-[12px]">
                   {t.soccerway_team_id}
                 </span>
                 <span className="ml-auto flex gap-1.5">
@@ -451,7 +451,7 @@ export function TeamDictionaryManager() {
                         )
                       }
                       disabled={busy}
-                      className="rounded bg-emerald-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                      className="rounded bg-emerald-600 px-2 py-1 text-[12px] font-medium text-white disabled:opacity-50"
                     >
                       확정
                     </button>
@@ -465,7 +465,7 @@ export function TeamDictionaryManager() {
                       }))
                     }}
                     disabled={busy}
-                    className="rounded border px-2 py-1 text-[11px] disabled:opacity-50"
+                    className="rounded border px-2 py-1 text-[12px] disabled:opacity-50"
                   >
                     수정
                   </button>
@@ -488,7 +488,7 @@ export function TeamDictionaryManager() {
                         )
                       }}
                       disabled={busy}
-                      className="text-muted-foreground rounded border px-2 py-1 text-[11px] disabled:opacity-50"
+                      className="text-muted-foreground rounded border px-2 py-1 text-[12px] disabled:opacity-50"
                     >
                       제외
                     </button>
@@ -499,7 +499,7 @@ export function TeamDictionaryManager() {
                   <div className="bg-muted/40 mt-2 w-full space-y-3 rounded-lg border p-3">
                     {/* 대표 표기 수정 */}
                     <div className="space-y-1">
-                      <label className="text-muted-foreground text-[11px] font-medium">
+                      <label className="text-muted-foreground text-[12px] font-medium">
                         대표 한글 표기
                       </label>
                       <div className="flex flex-wrap gap-1.5">
@@ -525,12 +525,12 @@ export function TeamDictionaryManager() {
                             )
                           }}
                           disabled={busy}
-                          className="rounded bg-sky-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                          className="rounded bg-sky-600 px-2 py-1 text-[12px] font-medium text-white disabled:opacity-50"
                         >
                           표기 저장
                         </button>
                       </div>
-                      <p className="text-muted-foreground text-[10px]">
+                      <p className="text-muted-foreground text-[12px]">
                         기존 표기는 <b>버려집니다</b> — 틀린 표기를 별칭으로 남기면 계속 이 팀으로
                         해석되기 때문입니다.
                       </p>
@@ -539,7 +539,7 @@ export function TeamDictionaryManager() {
                     {/* 별칭 제거 */}
                     {t.aliases_kr.length > 0 && (
                       <div className="space-y-1">
-                        <label className="text-muted-foreground text-[11px] font-medium">
+                        <label className="text-muted-foreground text-[12px] font-medium">
                           별칭 — 잘못 붙은 것을 누르면 제거됩니다
                         </label>
                         <div className="flex flex-wrap gap-1">
@@ -557,7 +557,7 @@ export function TeamDictionaryManager() {
                                 )
                               }
                               disabled={busy}
-                              className="bg-background rounded-full border px-2 py-0.5 text-[11px] hover:border-red-300 hover:text-red-600 disabled:opacity-50"
+                              className="bg-background rounded-full border px-2 py-0.5 text-[12px] hover:border-red-300 hover:text-red-600 disabled:opacity-50"
                             >
                               {a} ×
                             </button>
@@ -568,7 +568,7 @@ export function TeamDictionaryManager() {
 
                     {/* 다른 팀으로 이설 */}
                     <div className="space-y-1">
-                      <label className="text-muted-foreground text-[11px] font-medium">
+                      <label className="text-muted-foreground text-[12px] font-medium">
                         엉뚱한 팀에 붙었다면 — 올바른 soccerway 팀으로 이설
                       </label>
                       <div className="flex flex-wrap gap-1.5">
@@ -595,12 +595,12 @@ export function TeamDictionaryManager() {
                             )
                           }}
                           disabled={busy}
-                          className="rounded bg-amber-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                          className="rounded bg-amber-600 px-2 py-1 text-[12px] font-medium text-white disabled:opacity-50"
                         >
                           이설
                         </button>
                       </div>
-                      <p className="text-muted-foreground text-[10px]">
+                      <p className="text-muted-foreground text-[12px]">
                         한글 표기와 별칭이 대상 팀으로 옮겨지고, 이 행은 한글 결속만 비워집니다
                         (soccerway 팀 자체는 남습니다).
                       </p>

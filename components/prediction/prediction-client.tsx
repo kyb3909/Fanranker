@@ -68,18 +68,18 @@ export function PredictionClient({
                   boxShadow: "var(--wc-shadow-1)",
                 }}
               >
-                <p className="text-[17px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                <p className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                   승부예측은 8월 21일 0시에 열립니다
                 </p>
                 <p
-                  className="mt-2 text-[13.5px] leading-relaxed"
+                  className="mt-2 text-[13px] leading-relaxed"
                   style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
                 >
                   개막 라운드부터 시작합니다. 참가 신청을 미리 해두면 첫 경기부터 기록이 쌓입니다.
                 </p>
                 <Link
                   href="/season?ref=pre-open"
-                  className="mt-4 inline-block rounded-lg px-5 py-2.5 text-[13.5px] font-bold"
+                  className="mt-4 inline-block rounded-lg px-5 py-2.5 text-[13px] font-bold"
                   style={{ background: "var(--wc-burgundy)", color: "#fff" }}
                 >
                   참가 신청하러 가기

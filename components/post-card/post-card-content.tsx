@@ -118,7 +118,7 @@ export const PostCardContent = memo(function PostCardContent({
                   className="transition-opacity hover:opacity-80"
                 >
                   <span
-                    className="inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
+                    className="inline-flex h-6 items-center gap-1 px-[9px] text-[12px] font-bold"
                     style={{ background: catChip.bg, color: catChip.color, borderRadius: 8 }}
                   >
                     <BoardIcon slug={category} className="h-3.5 w-3.5" />
@@ -127,7 +127,7 @@ export const PostCardContent = memo(function PostCardContent({
                 </Link>
               ) : (
                 <span
-                  className="inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
+                  className="inline-flex h-6 items-center gap-1 px-[9px] text-[12px] font-bold"
                   style={{ background: catChip.bg, color: catChip.color, borderRadius: 8 }}
                 >
                   <BoardIcon slug={category} className="h-3.5 w-3.5" />
@@ -143,7 +143,7 @@ export const PostCardContent = memo(function PostCardContent({
           )}
           {flair?.name && (
             <span
-              className="inline-flex h-6 items-center px-2 text-[11.5px] font-bold"
+              className="inline-flex h-6 items-center px-2 text-[12px] font-bold"
               style={{
                 background: "#f2efea",
                 color: "var(--wc-mute)",
@@ -155,7 +155,7 @@ export const PostCardContent = memo(function PostCardContent({
           )}
           {temperature != null && temperature > 0 && (
             <span
-              className="tnum ml-auto inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
+              className="tnum ml-auto inline-flex h-6 items-center gap-1 px-[9px] text-[12px] font-bold"
               style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)", borderRadius: 8 }}
             >
               🌡 {temperature}°
@@ -171,7 +171,7 @@ export const PostCardContent = memo(function PostCardContent({
           <Link href={`/post/${postId}`} className="group gn-pin-title block">
             <h2
               title={title}
-              className="font-title line-clamp-2 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
+              className="font-title line-clamp-2 text-[16px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[20px]"
               style={{
                 color: "var(--wc-ink, #1a1714)",
                 fontWeight: 700,
@@ -726,7 +726,7 @@ function ProviderCard({
     <div className="border-border bg-card relative overflow-hidden border-t">
       {/* 출처 헤더 */}
       <header
-        className="flex items-center gap-2 py-2 pr-3 pl-4 text-[11px] font-bold"
+        className="flex items-center gap-2 py-2 pr-3 pl-4 text-[12px] font-bold"
         style={{
           background: "#fff",
           borderBottom: "1px solid var(--wc-line)",

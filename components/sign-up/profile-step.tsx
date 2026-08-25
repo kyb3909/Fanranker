@@ -126,7 +126,7 @@ export function ProfileStep({
         <div className="mb-3 flex items-center gap-2">
           <Coins className="h-4 w-4 text-amber-500" />
           <p className="text-foreground text-sm font-medium">최애 팀 & 선수</p>
-          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[12px] font-bold text-amber-600">
             +100골드
           </span>
         </div>
@@ -154,7 +154,7 @@ export function ProfileStep({
             />
           </div>
         </div>
-        <p className="text-muted-foreground mt-2 text-[11px]">
+        <p className="text-muted-foreground mt-2 text-[12px]">
           하나라도 입력하면 100골드를 드려요!
         </p>
       </div>

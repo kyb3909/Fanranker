@@ -121,7 +121,7 @@ function ControlButton({
       aria-label={ariaLabel}
       className={[
         "min-h-11 rounded-md border border-white/15 bg-gradient-to-b from-neutral-600 to-neutral-700",
-        "px-3 py-2 text-center text-[11px] leading-tight font-semibold whitespace-nowrap text-white",
+        "px-3 py-2 text-center text-[12px] leading-tight font-semibold whitespace-nowrap text-white",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_1px_2px_rgba(0,0,0,0.5)]",
         "transition-all hover:from-neutral-500 hover:to-neutral-600",
         "active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]",
@@ -162,7 +162,7 @@ function BannerCard({ banner, priority }: { banner: Banner; priority: boolean })
 
       {/* 제목 오버레이 — 하단 반투명 그라데이션 + 흰 굵은 텍스트 (실제 광고 캡션 스타일) */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-1.5 pt-4 pb-1.5 sm:px-2 sm:pt-5 sm:pb-2">
-        <p className="line-clamp-2 text-[10px] leading-[1.2] font-extrabold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] sm:text-[11px]">
+        <p className="line-clamp-2 text-[12px] leading-[1.2] font-extrabold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] sm:text-[12px]">
           {rest || banner.title}
         </p>
       </div>

@@ -72,7 +72,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
         }}
       />
       <div
-        className="relative flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.18em] uppercase"
+        className="relative flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-bold tracking-[0.18em] uppercase"
         style={{
           color: "var(--wc-mute-2, #8B93A0)",
           background: "var(--wc-card, #ffffff)",
@@ -87,7 +87,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
         {config.label}
       </div>
       <span
-        className="relative mt-2 text-[11px] font-semibold tracking-wide"
+        className="relative mt-2 text-[12px] font-semibold tracking-wide"
         style={{ color: "var(--wc-mute-2, #8B93A0)" }}
       >
         {config.dimensions}

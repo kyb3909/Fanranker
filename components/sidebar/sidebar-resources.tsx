@@ -12,7 +12,7 @@ export function SidebarResources() {
           {/* 다른 모듈 헤더(게시판·오늘의 설문)와 같은 11px 트래킹 라벨 — 버건디 회수
               (우측 레일은 헤더 반복 리듬으로 정돈되는 영역, 2026-08-20 감리 A-6) */}
           <h3
-            className="flex items-center gap-2 text-[11px] font-bold tracking-[0.14em]"
+            className="flex items-center gap-2 text-[12px] font-bold tracking-[0.14em]"
             style={{ color: "var(--wc-ink)" }}
           >
             <BookOpen className="h-3.5 w-3.5" />

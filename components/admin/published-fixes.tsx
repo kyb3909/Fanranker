@@ -164,18 +164,18 @@ function PublishedArticles() {
                   <p className="min-w-0 flex-1 truncate text-sm font-medium">{row.title}</p>
                 )}
                 {reports.length > 0 && (
-                  <span className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  <span className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[12px] font-bold text-white">
                     제보 {reports.length}
                   </span>
                 )}
-                <span className="text-muted-foreground shrink-0 text-[11px]">
+                <span className="text-muted-foreground shrink-0 text-[12px]">
                   {timeAgo(row.created_at)}
                 </span>
                 <a
                   href={`/post/${row.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-muted-foreground shrink-0 text-[11px] underline underline-offset-2"
+                  className="text-muted-foreground shrink-0 text-[12px] underline underline-offset-2"
                 >
                   보기
                 </a>
@@ -187,7 +187,7 @@ function PublishedArticles() {
                       setContent(row.content)
                       setNote("")
                     }}
-                    className="shrink-0 rounded border px-2.5 py-1 text-[11px]"
+                    className="shrink-0 rounded border px-2.5 py-1 text-[12px]"
                   >
                     수정
                   </button>
@@ -200,7 +200,7 @@ function PublishedArticles() {
                       {reports.map((r) => (
                         <div key={r.id} className="rounded-lg bg-red-50 p-2 dark:bg-red-950/30">
                           <p className="text-xs font-semibold">📣 {r.claim}</p>
-                          <p className="text-muted-foreground mt-0.5 text-[11px]">
+                          <p className="text-muted-foreground mt-0.5 text-[12px]">
                             “{r.comment_text.slice(0, 200)}”
                           </p>
                           <div className="mt-1 flex gap-1.5">
@@ -208,21 +208,21 @@ function PublishedArticles() {
                               onClick={() =>
                                 setNote(`독자 제보: ${r.claim} — "${r.comment_text}"`.slice(0, 500))
                               }
-                              className="rounded border px-2 py-0.5 text-[11px]"
+                              className="rounded border px-2 py-0.5 text-[12px]"
                             >
                               사유로 채우기
                             </button>
                             <button
                               onClick={() => void dismissReport(r.id)}
                               disabled={busy}
-                              className="text-muted-foreground rounded border px-2 py-0.5 text-[11px]"
+                              className="text-muted-foreground rounded border px-2 py-0.5 text-[12px]"
                             >
                               무시 (제보가 틀림)
                             </button>
                           </div>
                         </div>
                       ))}
-                      <p className="text-muted-foreground text-[11px]">
+                      <p className="text-muted-foreground text-[12px]">
                         제보는 자동 감지된 주장일 뿐입니다 — 사실인지 확인 후 반영하세요. 기사를
                         저장하면 이 기사의 대기 제보는 반영됨으로 처리됩니다.
                       </p>
@@ -239,7 +239,7 @@ function PublishedArticles() {
                     placeholder='무엇이 문제였나요? (선택) — 예: "클럽이 틀림: 바르사→레알" / "선수명 음차 교정"'
                     className="mt-2 w-full rounded border px-2 py-1.5 text-xs"
                   />
-                  <p className="text-muted-foreground mt-0.5 text-[11px]">
+                  <p className="text-muted-foreground mt-0.5 text-[12px]">
                     사유를 적으면 표기 교정(사전 등재)과 사실 오류(사전 미등재·사고 기록)를 구분해
                     학습합니다.
                   </p>
@@ -340,14 +340,14 @@ function PublishedSagaEntries() {
                       setPlayerKr(row.sagas.subject?.player_name_kr ?? "")
                     }}
                     title="사가 제목·선수 한글명 교정 (사전에 등재됨)"
-                    className="text-muted-foreground shrink-0 text-[11px] underline underline-offset-2"
+                    className="text-muted-foreground shrink-0 text-[12px] underline underline-offset-2"
                   >
                     이름교정
                   </button>
                 )}
                 <span
                   className={cn(
-                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold",
+                    "shrink-0 rounded px-1.5 py-0.5 text-[12px] font-bold",
                     row.tier === "official" && "bg-emerald-700 text-white",
                     row.tier === "tier1" && "bg-[#7a1e3c] text-white",
                     row.tier === "rumor" && "bg-muted text-muted-foreground"
@@ -364,7 +364,7 @@ function PublishedSagaEntries() {
                 ) : (
                   <span className="min-w-0 flex-1 truncate text-[13px]">{row.headline}</span>
                 )}
-                <span className="text-muted-foreground shrink-0 text-[11px]">
+                <span className="text-muted-foreground shrink-0 text-[12px]">
                   {timeAgo(row.occurred_at)}
                 </span>
                 {isEditing ? (
@@ -372,7 +372,7 @@ function PublishedSagaEntries() {
                     <select
                       value={tier}
                       onChange={(e) => setTier(e.target.value as EntryRow["tier"])}
-                      className="bg-background rounded border px-1.5 py-1 text-[11px]"
+                      className="bg-background rounded border px-1.5 py-1 text-[12px]"
                     >
                       <option value="official">오피셜</option>
                       <option value="tier1">유력</option>
@@ -393,14 +393,14 @@ function PublishedSagaEntries() {
                         if (ok) setEditing(null)
                       }}
                       disabled={busy || !headline.trim()}
-                      className="rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                      className="rounded bg-emerald-600 px-2.5 py-1 text-[12px] font-medium text-white disabled:opacity-50"
                     >
                       저장
                     </button>
                     <button
                       onClick={() => setEditing(null)}
                       disabled={busy}
-                      className="text-muted-foreground rounded border px-2 py-1 text-[11px]"
+                      className="text-muted-foreground rounded border px-2 py-1 text-[12px]"
                     >
                       취소
                     </button>
@@ -413,7 +413,7 @@ function PublishedSagaEntries() {
                       setTier(row.tier)
                       setEntryNote("")
                     }}
-                    className="shrink-0 rounded border px-2.5 py-1 text-[11px]"
+                    className="shrink-0 rounded border px-2.5 py-1 text-[12px]"
                   >
                     수정
                   </button>
@@ -425,12 +425,12 @@ function PublishedSagaEntries() {
                   onChange={(e) => setEntryNote(e.target.value)}
                   maxLength={500}
                   placeholder="수정 사유 (선택) — 표기 교정인지 사실 오류인지 학습 분류에 쓰입니다"
-                  className="mt-1.5 w-full rounded border px-2 py-1 text-[11px]"
+                  className="mt-1.5 w-full rounded border px-2 py-1 text-[12px]"
                 />
               )}
 
               {isRenaming && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
                   <input
                     value={sagaTitle}
                     onChange={(e) => setSagaTitle(e.target.value)}

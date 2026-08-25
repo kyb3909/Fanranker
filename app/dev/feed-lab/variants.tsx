@@ -47,12 +47,12 @@ function Current({ s }: { s: Sample }) {
       style={{ ...card, display: "flex", gap: 12, alignItems: "center", padding: "12px 16px" }}
     >
       <div style={{ minWidth: 0, flex: 1 }}>
-        <p style={{ fontSize: 11.5, fontWeight: 600, color: MUTE, marginBottom: 4 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: MUTE, marginBottom: 4 }}>
           {s.source} <span style={{ color: BUR }}>● {s.flair}</span>
         </p>
         <h2
           style={{
-            fontSize: 14.5,
+            fontSize: 14,
             fontWeight: 650,
             lineHeight: 1.38,
             color: INK,
@@ -61,7 +61,7 @@ function Current({ s }: { s: Sample }) {
         >
           {s.title}
         </h2>
-        <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11.5, color: MUTE }}>
+        <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11, color: MUTE }}>
           <span>공놀이봇</span>
           <span>♡ {s.votes || ""}</span>
           <span>💬 {s.comments || ""}</span>
@@ -77,7 +77,7 @@ function Current({ s }: { s: Sample }) {
               border: `1px solid ${L}`,
             }}
           >
-            <p style={{ fontSize: 11.5, fontWeight: 700, color: INK, marginBottom: 6 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: INK, marginBottom: 6 }}>
               🗳️ {s.vs.question}
             </p>
             <div style={{ display: "flex", gap: 6 }}>
@@ -88,7 +88,7 @@ function Current({ s }: { s: Sample }) {
                   borderRadius: 8,
                   border: `1.5px solid ${L}`,
                   background: CARD,
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: 700,
                   color: INK,
                   textAlign: "left",
@@ -103,7 +103,7 @@ function Current({ s }: { s: Sample }) {
                   borderRadius: 8,
                   border: `1.5px solid ${L}`,
                   background: CARD,
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: 700,
                   color: INK,
                   textAlign: "left",
@@ -112,7 +112,7 @@ function Current({ s }: { s: Sample }) {
                 {s.vs.b}
               </button>
             </div>
-            <p style={{ fontSize: 10.5, color: MUTE, marginTop: 4 }}>
+            <p style={{ fontSize: 10, color: MUTE, marginTop: 4 }}>
               첫 표를 던져보세요 · 투표는 로그인 후
             </p>
           </div>
@@ -126,7 +126,7 @@ function Current({ s }: { s: Sample }) {
               borderRadius: 999,
               background: "color-mix(in srgb, var(--wc-burgundy) 7%, transparent)",
               color: BUR,
-              fontSize: 11.5,
+              fontSize: 11,
               fontWeight: 600,
             }}
           >
@@ -195,7 +195,7 @@ function I1Card({ s }: { s: Sample }) {
                 height: 44,
                 border: "none",
                 background: "transparent",
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: 700,
                 color: INK,
                 cursor: "pointer",
@@ -210,7 +210,7 @@ function I1Card({ s }: { s: Sample }) {
                 height: 44,
                 border: "none",
                 background: "transparent",
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: 700,
                 color: INK,
                 cursor: "pointer",
@@ -226,7 +226,7 @@ function I1Card({ s }: { s: Sample }) {
               height: 44,
               border: "none",
               background: "transparent",
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: 700,
               color: BUR,
               cursor: "pointer",
@@ -241,7 +241,7 @@ function I1Card({ s }: { s: Sample }) {
               height: 44,
               border: "none",
               background: "transparent",
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: 600,
               color: MUTE,
               cursor: "pointer",
@@ -371,7 +371,7 @@ function E1Card({ s }: { s: Sample }) {
       <div style={{ minWidth: 0, flex: 1 }}>
         <p
           style={{
-            fontSize: 10.5,
+            fontSize: 10,
             fontWeight: 600,
             letterSpacing: "0.08em",
             color: MUTE,
@@ -471,12 +471,12 @@ function E3Card({ s }: { s: Sample }) {
         style={{ width: 132, height: 132, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
       />
       <div style={{ minWidth: 0, flex: 1 }}>
-        <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: BUR }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: BUR }}>
           {s.flair}
         </p>
         <h2
           style={{
-            fontSize: 16.5,
+            fontSize: 16,
             fontWeight: 700,
             lineHeight: 1.36,
             color: INK,
@@ -486,7 +486,7 @@ function E3Card({ s }: { s: Sample }) {
         >
           {s.title}
         </h2>
-        <p style={{ fontSize: 11.5, color: MUTE, marginTop: 8 }}>
+        <p style={{ fontSize: 11, color: MUTE, marginTop: 8 }}>
           {s.source} · {s.ago}
         </p>
         {s.vs && (
@@ -644,7 +644,7 @@ function C1Card({ s }: { s: Sample }) {
         </p>
         <h2
           style={{
-            fontSize: 15.5,
+            fontSize: 15,
             fontWeight: 700,
             lineHeight: 1.36,
             color: INK,
@@ -654,7 +654,7 @@ function C1Card({ s }: { s: Sample }) {
           {s.title}
         </h2>
         {s.comments > 0 && (
-          <p style={{ fontSize: 11.5, color: MUTE, marginTop: 6 }}>💬 {s.comments}</p>
+          <p style={{ fontSize: 11, color: MUTE, marginTop: 6 }}>💬 {s.comments}</p>
         )}
       </div>
       <img
@@ -712,7 +712,7 @@ function C2Card({ s }: { s: Sample }) {
               borderRadius: 6,
               border: `1px solid ${L}`,
               background: CARD,
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: 700,
               color: INK,
               cursor: "pointer",
@@ -727,7 +727,7 @@ function C2Card({ s }: { s: Sample }) {
               borderRadius: 6,
               border: `1px solid ${L}`,
               background: CARD,
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: 700,
               color: INK,
               cursor: "pointer",
@@ -814,7 +814,7 @@ function C3Card({ s }: { s: Sample }) {
                 borderRadius: 999,
                 border: `1px solid ${L}`,
                 background: CARD,
-                fontSize: 11.5,
+                fontSize: 11,
                 fontWeight: 700,
                 color: INK,
                 cursor: "pointer",
@@ -828,7 +828,7 @@ function C3Card({ s }: { s: Sample }) {
                 borderRadius: 999,
                 border: `1px solid ${L}`,
                 background: CARD,
-                fontSize: 11.5,
+                fontSize: 11,
                 fontWeight: 700,
                 color: INK,
                 cursor: "pointer",
@@ -869,7 +869,7 @@ function A2Card({ s }: { s: Sample }) {
         {s.title}
       </h2>
       {s.vs && (
-        <p style={{ marginTop: 8, fontSize: 12.5 }}>
+        <p style={{ marginTop: 8, fontSize: 12 }}>
           <button
             style={{
               border: "none",

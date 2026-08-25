@@ -68,13 +68,13 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
           )}
           <div className="min-w-0">
             <h1
-              className="text-[19px] font-extrabold"
+              className="text-[20px] font-extrabold"
               style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
             >
               {creator.name}
             </h1>
             {creator.description && (
-              <p className="mt-0.5 truncate text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="mt-0.5 truncate text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 {creator.description}
               </p>
             )}
@@ -274,7 +274,7 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
                             </span>
                           )}
                           <span
-                            className="mt-1.5 block text-[11px]"
+                            className="mt-1.5 block text-[12px]"
                             style={{ color: "var(--wc-mute-2)" }}
                           >
                             {post.publishedText} · YouTube

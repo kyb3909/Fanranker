@@ -30,7 +30,7 @@ export function ArticleTarotHook({ title }: { title: string }) {
           setOpen(true)
           trackEvent({ name: "tarot_hook_click", params: { surface: "post" } })
         }}
-        className="inline-flex items-center gap-1.5 text-[12.5px] font-bold transition-opacity hover:opacity-80"
+        className="inline-flex items-center gap-1.5 text-[12px] font-bold transition-opacity hover:opacity-80"
         style={{ color: "var(--wc-burgundy)" }}
       >
         <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -82,7 +82,7 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
               borderRadius: 12,
               background: "var(--wc-soft)",
               color: "var(--wc-burgundy)",
-              fontSize: 10.5,
+              fontSize: 10,
               fontWeight: 700,
             }}
           >

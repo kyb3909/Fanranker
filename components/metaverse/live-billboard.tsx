@@ -55,7 +55,7 @@ export function LiveBillboard() {
     return (
       <button
         onClick={() => setMinimized(false)}
-        className="absolute top-14 left-3 z-20 flex items-center gap-1.5 rounded-full border border-red-500/60 bg-black/80 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105"
+        className="absolute top-14 left-3 z-20 flex items-center gap-1.5 rounded-full border border-red-500/60 bg-black/80 px-3 py-1.5 text-[12px] font-bold text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105"
       >
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" />
         캣스날 LIVE — 전광판 열기
@@ -67,14 +67,14 @@ export function LiveBillboard() {
     <div className="absolute top-14 left-3 z-20 w-[min(420px,calc(100vw-24px))] overflow-hidden rounded-xl border-2 border-neutral-700 bg-black shadow-2xl">
       {/* 전광판 헤더 */}
       <div className="flex items-center justify-between border-b border-white/10 bg-neutral-900 px-3 py-1.5">
-        <span className="flex items-center gap-1.5 text-[11px] font-bold text-white">
+        <span className="flex items-center gap-1.5 text-[12px] font-bold text-white">
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" />
           캣스날 LIVE
         </span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowChat((v) => !v)}
-            className="rounded px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded px-2 py-0.5 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           >
             {showChat ? "채팅 접기" : "채팅 보기"}
           </button>
@@ -82,21 +82,21 @@ export function LiveBillboard() {
             href={`https://www.youtube.com/watch?v=${videoId}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded px-2 py-0.5 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           >
             유튜브에서 열기 ↗
           </a>
           <button
             onClick={() => setMinimized(true)}
             aria-label="전광판 접기"
-            className="rounded px-1.5 py-0.5 text-[11px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded px-1.5 py-0.5 text-[12px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           >
             —
           </button>
           <button
             onClick={() => setDismissed(true)}
             aria-label="전광판 닫기"
-            className="rounded px-1.5 py-0.5 text-[11px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded px-1.5 py-0.5 text-[12px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           >
             ✕
           </button>

@@ -102,12 +102,12 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
         }}
       >
         <span
-          className="block text-[13.5px] leading-snug font-bold"
+          className="block text-[13px] leading-snug font-bold"
           style={{ color: mine ? color : "var(--wc-ink, #2a2530)", wordBreak: "keep-all" }}
         >
           {opt.label}
         </span>
-        <span className="mt-0.5 block text-[11.5px]" style={{ color: "var(--wc-mute, #8a8378)" }}>
+        <span className="mt-0.5 block text-[12px]" style={{ color: "var(--wc-mute, #8a8378)" }}>
           {mine ? "내 선택 ✓" : "이쪽에 한 표"}
         </span>
       </button>
@@ -122,7 +122,7 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span
-          className="rounded-md px-2 py-[3px] text-[10.5px] font-extrabold tracking-wider"
+          className="rounded-md px-2 py-[3px] text-[12px] font-extrabold tracking-wider"
           style={{
             background: "color-mix(in srgb, var(--wc-burgundy) 8%, transparent)",
             color: "var(--wc-burgundy)",
@@ -131,7 +131,7 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
           오늘의 쟁점
         </span>
         <h3
-          className="text-[15px] font-extrabold"
+          className="text-[16px] font-extrabold"
           style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
         >
           {vs.question}
@@ -164,7 +164,7 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
           {showPct && `${bPct}%`}
         </div>
       </div>
-      <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute, #8a8378)" }}>
+      <p className="mt-2 text-[12px]" style={{ color: "var(--wc-mute, #8a8378)" }}>
         {total === 0
           ? "아직 표가 없어요 — 첫 표를 던져보세요"
           : `참여 ${total.toLocaleString()}명${showPct ? "" : " · 집계 중"}`}
@@ -184,7 +184,7 @@ export function IssueSummary({ summary }: { summary: string[] }) {
       style={{ background: "var(--wc-soft, #f1ece4)", border: "1px solid var(--wc-line, #e5ded4)" }}
     >
       <p
-        className="mb-1.5 text-[11px] font-extrabold tracking-[0.14em]"
+        className="mb-1.5 text-[12px] font-extrabold tracking-[0.14em]"
         style={{ color: "var(--wc-burgundy)" }}
       >
         3줄 요약
@@ -193,7 +193,7 @@ export function IssueSummary({ summary }: { summary: string[] }) {
         {summary.slice(0, 3).map((line, i) => (
           <li
             key={i}
-            className="relative pl-3.5 text-[13.5px] leading-relaxed"
+            className="relative pl-3.5 text-[13px] leading-relaxed"
             style={{ color: "var(--wc-ink, #4a443c)", wordBreak: "keep-all" }}
           >
             <span

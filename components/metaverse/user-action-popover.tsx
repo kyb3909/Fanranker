@@ -98,12 +98,12 @@ export function UserActionPopover({ identity }: { identity: MetaversePlayerIdent
       className="absolute z-50 w-40 rounded-md border border-white/15 bg-neutral-900/95 p-2 shadow-2xl backdrop-blur-sm"
       style={{ left, top }}
     >
-      <div className="border-b border-white/10 px-1 pb-2 text-[11px] font-semibold break-all text-white">
+      <div className="border-b border-white/10 px-1 pb-2 text-[12px] font-semibold break-all text-white">
         {ctx.nickname}
       </div>
       <button
         onClick={onToggleMute}
-        className={`mt-1 flex w-full items-center rounded px-2 py-1.5 text-[11px] transition-colors ${
+        className={`mt-1 flex w-full items-center rounded px-2 py-1.5 text-[12px] transition-colors ${
           muted ? "text-white/80 hover:bg-white/10" : "text-amber-200 hover:bg-amber-500/15"
         }`}
       >
@@ -111,13 +111,13 @@ export function UserActionPopover({ identity }: { identity: MetaversePlayerIdent
       </button>
       <button
         onClick={onReport}
-        className="mt-0.5 flex w-full items-center rounded px-2 py-1.5 text-[11px] text-red-200 transition-colors hover:bg-red-500/20"
+        className="mt-0.5 flex w-full items-center rounded px-2 py-1.5 text-[12px] text-red-200 transition-colors hover:bg-red-500/20"
       >
         <span>🚩 신고</span>
       </button>
       <button
         onClick={close}
-        className="mt-0.5 flex w-full items-center justify-between rounded px-2 py-1.5 text-[11px] text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
+        className="mt-0.5 flex w-full items-center justify-between rounded px-2 py-1.5 text-[12px] text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
       >
         <span>닫기</span>
         <span className="text-[9px] text-white/30">Esc</span>

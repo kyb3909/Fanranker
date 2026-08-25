@@ -158,7 +158,7 @@ export default async function StandingsPage({
         <div className="px-4 sm:px-0">
           <div className="mt-6 flex items-baseline gap-2.5">
             <h2
-              className="text-[22px] leading-none"
+              className="text-[20px] leading-none"
               style={{
                 fontFamily: "var(--font-display-ko), var(--font-title)",
                 fontWeight: 700,
@@ -184,7 +184,7 @@ export default async function StandingsPage({
               }}
             >
               <EmptyScene src="/images/empty/empty-preseason.webp" size={300} />
-              <p className="mt-4 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="mt-4 text-[13px]" style={{ color: "var(--wc-mute)" }}>
                 순위표를 준비 중입니다.
               </p>
             </div>
@@ -193,7 +193,7 @@ export default async function StandingsPage({
               {played === 0 && (
                 // 개막 전 — 전 팀 0 인 표를 그대로 두고 한 줄로만 알린다. 삽화는 뺐다
                 // (2026-08-22 운영자: 리그마다 반복되니 오히려 눈에 거슬린다)
-                <p className="mt-3 text-center text-[12.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                <p className="mt-3 text-center text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
                   아직 개막 전입니다 — 첫 라운드가 끝나면 채워집니다.
                 </p>
               )}
@@ -202,10 +202,10 @@ export default async function StandingsPage({
                 <table className="w-full min-w-[440px] border-collapse">
                   <thead>
                     <tr style={{ color: "var(--wc-mute-2)" }}>
-                      <th className="w-8 py-2 text-right text-[11px] font-bold">#</th>
-                      <th className="py-2 pl-3 text-left text-[11px] font-bold">팀</th>
+                      <th className="w-8 py-2 text-right text-[12px] font-bold">#</th>
+                      <th className="py-2 pl-3 text-left text-[12px] font-bold">팀</th>
                       {["경기", "승", "무", "패", "득실", "승점"].map((h) => (
-                        <th key={h} className="w-10 py-2 text-right text-[11px] font-bold">
+                        <th key={h} className="w-10 py-2 text-right text-[12px] font-bold">
                           {h}
                         </th>
                       ))}
@@ -227,7 +227,7 @@ export default async function StandingsPage({
                             {rank}
                           </td>
                           <td
-                            className="truncate py-2.5 pl-3 text-[13.5px] font-bold"
+                            className="truncate py-2.5 pl-3 text-[13px] font-bold"
                             style={{ color: "var(--wc-ink)" }}
                           >
                             {r.팀명 ? displayTeamName(r.팀명, shortNames) : "-"}
@@ -260,7 +260,7 @@ export default async function StandingsPage({
                 </table>
               </div>
               {played > 0 && (
-                <p className="mt-3 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                <p className="mt-3 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
                   <span className="font-bold" style={{ color: "var(--wc-blue)" }}>
                     1–4위
                   </span>{" "}

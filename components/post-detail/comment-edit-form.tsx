@@ -70,7 +70,7 @@ export function CommentEditForm({
         <div className="relative">
           <button
             onClick={() => setShowPicker(!showPicker)}
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all ${
+            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium transition-all ${
               showPicker
                 ? "bg-amber-500/10 text-amber-600"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"

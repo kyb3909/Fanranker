@@ -435,7 +435,7 @@ export default async function CommunityPage({
                   {slug === "football" && (
                     <Link
                       href="/transfer"
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--wc-soft)]"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold no-underline transition-colors hover:bg-[var(--wc-soft)]"
                       style={{
                         background: "var(--wc-card)",
                         border: "1px solid var(--wc-line)",
@@ -454,7 +454,7 @@ export default async function CommunityPage({
                       <Link
                         key={ch.slug}
                         href={`/community/${ch.slug}`}
-                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--wc-soft)]"
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold no-underline transition-colors hover:bg-[var(--wc-soft)]"
                         style={{
                           background: "var(--wc-card)",
                           border: "1px solid var(--wc-line)",

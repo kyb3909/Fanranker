@@ -25,10 +25,10 @@ export function BridgeRow({
       className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
       style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
     >
-      <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+      <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
         {title}
       </span>
-      <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+      <span className="text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
         {action}
       </span>
     </Link>

@@ -364,7 +364,7 @@ function SearchContent() {
                 </div>
               ) : hasSearched && posts.length > 0 ? (
                 <>
-                  <div className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                  <div className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                     검색 결과 <b style={{ color: "var(--wc-burgundy)" }}>{visiblePosts.length}건</b>
                   </div>
                   {visiblePosts.map((post) => (
@@ -387,7 +387,7 @@ function SearchContent() {
                         }}
                       >
                         <span
-                          className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                          className="rounded-full px-2.5 py-0.5 text-[12px] font-bold"
                           style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
                         >
                           {post.community}
@@ -411,7 +411,7 @@ function SearchContent() {
                         <p
                           style={{
                             margin: 0,
-                            fontSize: 13.5,
+                            fontSize: 13,
                             lineHeight: 1.55,
                             color: "var(--wc-mute)",
                             display: "-webkit-box",

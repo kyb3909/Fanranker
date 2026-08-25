@@ -57,7 +57,7 @@ export default function WorldcupPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-foreground text-lg font-bold tracking-tight">이상형 월드컵</h1>
               {activeBattles.length > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[12px] font-semibold text-emerald-600">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                   {activeBattles.length}개 진행 중
                 </span>
@@ -158,7 +158,7 @@ function WorldcupCard({ room, onSelect }: { room: BattleRoom; onSelect: () => vo
             )}
           </div>
           <span
-            className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+            className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${
               isActive
                 ? "bg-emerald-500/10 text-emerald-600"
                 : room.status === "pending"
@@ -176,12 +176,12 @@ function WorldcupCard({ room, onSelect }: { room: BattleRoom; onSelect: () => vo
           <div className="bg-muted/60 flex items-center gap-3 rounded-lg px-3 py-2">
             <div className="text-center">
               <p className="text-primary text-lg font-black">{room.bracket_size ?? "?"}</p>
-              <p className="text-muted-foreground text-[10px]">강</p>
+              <p className="text-muted-foreground text-[12px]">강</p>
             </div>
             <div className="bg-border h-8 w-px" />
             <div className="text-center">
               <p className="text-foreground text-lg font-black">{room.total_participants}</p>
-              <p className="text-muted-foreground text-[10px]">참여</p>
+              <p className="text-muted-foreground text-[12px]">참여</p>
             </div>
           </div>
           {isActive && (
@@ -192,7 +192,7 @@ function WorldcupCard({ room, onSelect }: { room: BattleRoom; onSelect: () => vo
         </div>
       </div>
 
-      <div className="border-border text-muted-foreground flex items-center gap-3 border-t px-5 py-2.5 text-[11px]">
+      <div className="border-border text-muted-foreground flex items-center gap-3 border-t px-5 py-2.5 text-[12px]">
         {room.category && <span>{room.category}</span>}
         {room.ends_at && (
           <span className="ml-auto flex items-center gap-1">

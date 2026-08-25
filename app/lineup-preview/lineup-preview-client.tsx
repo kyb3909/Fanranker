@@ -69,7 +69,7 @@ function StatusBadge({ gameId }: { gameId: string }) {
   const s = STATUS_LABEL[status]
   return (
     <span
-      className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+      className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold"
       style={{ background: s.bg, color: s.fg }}
     >
       {s.text}
@@ -82,12 +82,12 @@ export function LineupPreviewClient({ matches }: { matches: PreviewMatch[] }) {
     <div className="worldcup-scope min-h-[80vh]">
       <main className="mx-auto max-w-[760px] px-4 py-8 sm:px-6">
         <p
-          className="text-[11px] font-extrabold uppercase"
+          className="text-[12px] font-extrabold uppercase"
           style={{ color: "var(--wc-mute-2)", letterSpacing: "0.14em" }}
         >
           Unlisted Preview
         </p>
-        <h1 className="mt-1 text-[24px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+        <h1 className="mt-1 text-[26px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
           선발 라인업 검증
         </h1>
         <p className="mt-1.5 text-[13px]" style={{ color: "var(--wc-mute)" }}>
@@ -113,20 +113,20 @@ export function LineupPreviewClient({ matches }: { matches: PreviewMatch[] }) {
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <span
-                  className="gn-num shrink-0 text-[11px] font-bold"
+                  className="gn-num shrink-0 text-[12px] font-bold"
                   style={{ color: "var(--wc-mute-2)" }}
                 >
                   {fmtKst(m.matchTime)}
                 </span>
                 <span
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[12px] font-bold"
                   style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
                 >
                   {m.leagueCode}
                 </span>
                 {m.phase !== "scheduled" && (
                   <span
-                    className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-extrabold"
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[12px] font-extrabold"
                     style={
                       m.phase === "live"
                         ? { background: "var(--wc-burgundy)", color: "#fff" }
@@ -150,7 +150,7 @@ export function LineupPreviewClient({ matches }: { matches: PreviewMatch[] }) {
                 {isMatchPageLeague(m.leagueCode) && (
                   <Link
                     href={`/match/${m.gameId}`}
-                    className="shrink-0 text-[11.5px] font-bold no-underline"
+                    className="shrink-0 text-[12px] font-bold no-underline"
                     style={{ color: "var(--wc-burgundy)" }}
                   >
                     매치 페이지 →

@@ -41,7 +41,7 @@ export default async function GalleryPage() {
         tabIndex={-1}
       >
         <GalleryClient items={(data ?? []) as GalleryItem[]} />
-        <p className="mt-8 text-center text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+        <p className="mt-8 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
           모든 사진의 저작권은 촬영자에게 있으며, 원문 트윗을 통해 표시됩니다.
           <br />
           촬영자가 원문을 삭제하면 갤러리에서도 더 이상 표시되지 않습니다.

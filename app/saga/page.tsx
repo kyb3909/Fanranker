@@ -86,11 +86,11 @@ export default async function SagaIndexPage() {
                   className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md"
                   style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
                 >
-                  <p className="text-[11px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
+                  <p className="text-[12px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
                     SEASON SAGA
                   </p>
                   <p
-                    className="mt-0.5 text-[15px] font-extrabold"
+                    className="mt-0.5 text-[16px] font-extrabold"
                     style={{ color: "var(--wc-ink)" }}
                   >
                     {s.title}
@@ -121,7 +121,7 @@ export default async function SagaIndexPage() {
                   <div className="flex items-center gap-2">
                     {/* 단계 칩 — "지금 어디까지 왔나"가 재방문 이유 (PRD §7) */}
                     <span
-                      className="rounded px-1.5 py-0.5 text-[11px] font-extrabold"
+                      className="rounded px-1.5 py-0.5 text-[12px] font-extrabold"
                       style={{
                         background: closed ? "var(--wc-line)" : "rgba(139,30,63,.08)",
                         color: closed ? "var(--wc-mute)" : "var(--wc-burgundy)",
@@ -132,12 +132,12 @@ export default async function SagaIndexPage() {
                         : (STAGE_LABEL[s.stage] ?? s.stage)}
                     </span>
                     {!s.is_confirmed && !closed && (
-                      <span className="text-[11px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                      <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                         미확인 루머
                       </span>
                     )}
                     <span
-                      className="ml-auto text-[11.5px]"
+                      className="ml-auto text-[12px]"
                       style={{ color: "var(--wc-mute)" }}
                       suppressHydrationWarning
                     >
@@ -146,7 +146,7 @@ export default async function SagaIndexPage() {
                   </div>
 
                   <h2
-                    className="mt-1.5 text-[16.5px] font-extrabold"
+                    className="mt-1.5 text-[16px] font-extrabold"
                     style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
                   >
                     {s.title}
@@ -177,7 +177,7 @@ export default async function SagaIndexPage() {
                       />
                     ))}
                     <span
-                      className="ml-2 text-[11px] font-bold"
+                      className="ml-2 text-[12px] font-bold"
                       style={{ color: "var(--wc-mute)" }}
                     >
                       기록 {s.entry_count}건

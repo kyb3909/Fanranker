@@ -330,10 +330,10 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
               />
             </span>
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-[14.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                루나 <span className="align-[1px] text-[10px] text-[var(--wc-burgundy)]">✦</span>
+              <span className="text-[14px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                루나 <span className="align-[1px] text-[12px] text-[var(--wc-burgundy)]">✦</span>
               </span>
-              <span className="truncate text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+              <span className="truncate text-[12px]" style={{ color: "var(--wc-mute)" }}>
                 {status}
               </span>
             </span>
@@ -467,10 +467,7 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
               className="flex flex-none items-center gap-2 px-4 py-2"
               style={{ borderTop: "1px solid var(--wc-line)" }}
             >
-              <span
-                className="shrink-0 text-[11.5px] font-bold"
-                style={{ color: "var(--wc-mute)" }}
-              >
+              <span className="shrink-0 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
                 몇 장
               </span>
               {SPREAD_IDS.map((id) => {
@@ -542,7 +539,7 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
       </div>
 
       {/* 오락 목적 고지 — 상시 노출 */}
-      <p className="mt-4 text-center text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+      <p className="mt-4 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
         타로 리딩은 오락 목적의 콘텐츠예요. 경기 결과나 이적을 예측하지 않으며,
         <br />
         어떤 형태의 금전적 판단에도 사용할 수 없어요.

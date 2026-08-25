@@ -66,13 +66,13 @@ export function StadiumInfoCard({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-foreground text-[13px] leading-tight font-bold">{pin.name}</p>
-                <p className="text-muted-foreground mt-0.5 text-[11px]">{pin.team_name}</p>
+                <p className="text-muted-foreground mt-0.5 text-[12px]">{pin.team_name}</p>
               </div>
             </div>
 
             {/* Progress section */}
             <div className="mt-3 rounded-lg bg-[#f7f6f3] px-3 py-2">
-              <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-center justify-between text-[12px]">
                 <span className="text-foreground font-bold">Lv.{pin.level}</span>
                 <span className="text-muted-foreground">
                   {pin.level === 0 ? "미착공" : `${Math.round(pin.progress_pct)}%`}
@@ -115,7 +115,7 @@ export function StadiumInfoCard({
                     <Landmark className="h-3.5 w-3.5" />
                     부지 매입
                   </button>
-                  <p className="text-muted-foreground mt-1.5 text-center text-[10px]">
+                  <p className="text-muted-foreground mt-1.5 text-center text-[12px]">
                     투자하여 경기장 건설에 참여하세요
                   </p>
                 </>

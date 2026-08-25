@@ -48,7 +48,7 @@ export function TitleCard({ item, onPurchase }: TitleCardProps) {
           borderRadius: 4,
           background: chip.bg,
           color: chip.color,
-          fontSize: 10.5,
+          fontSize: 10,
           fontWeight: 800,
           marginBottom: 10,
         }}
@@ -91,7 +91,7 @@ export function TitleCard({ item, onPurchase }: TitleCardProps) {
       </p>
       <p
         style={{
-          fontSize: 12.5,
+          fontSize: 12,
           color: "var(--wc-mute)",
           marginBottom: 14,
         }}

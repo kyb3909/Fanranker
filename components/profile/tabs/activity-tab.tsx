@@ -65,7 +65,7 @@ export function ActivityTab({ recentPosts, pixelArts }: ActivityTabProps) {
                 <p className="text-foreground truncate text-sm font-medium">{post.title}</p>
                 <div className="mt-1 flex items-center justify-between">
                   <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                    <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
+                    <span className="bg-muted rounded px-1.5 py-0.5 text-[12px]">
                       {COMMUNITY_NAMES[post.community_slug] || post.community_slug}
                     </span>
                     <span>{formatRelativeTime(new Date(post.created_at))}</span>
@@ -109,7 +109,7 @@ export function ActivityTab({ recentPosts, pixelArts }: ActivityTabProps) {
                     unoptimized
                   />
                 </div>
-                <span className="text-muted-foreground max-w-full truncate text-[10px]">
+                <span className="text-muted-foreground max-w-full truncate text-[12px]">
                   {pa.pixel_art_items.name}
                 </span>
               </div>

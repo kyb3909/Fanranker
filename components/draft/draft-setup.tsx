@@ -362,7 +362,7 @@ export function DraftSetup({
                 <span className="text-sm font-semibold" style={{ color: "var(--wc-ink)" }}>
                   {myFormation}
                 </span>
-                <span className="text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                <span className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
                   이 배치로 11명을 채웁니다
                 </span>
               </div>
@@ -372,7 +372,7 @@ export function DraftSetup({
                 예산·선수 수는 밴드에, 포메이션 구성은 포메이션 버튼에, 스네이크 설명은
                 "내 드래프트 순서" 아래에. 여기서만 알 수 있는 세 가지만 한 줄로 남긴다. */}
               <div
-                className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px]"
+                className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]"
                 style={{ color: "var(--wc-mute)" }}
               >
                 <span>

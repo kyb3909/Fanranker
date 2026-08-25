@@ -34,7 +34,7 @@ function minuteKey(minute: string): number {
 function MinuteChip({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="gn-num inline-flex h-[22px] min-w-[40px] shrink-0 items-center justify-center rounded-md px-1.5 text-[11px] font-bold"
+      className="gn-num inline-flex h-[22px] min-w-[40px] shrink-0 items-center justify-center rounded-md px-1.5 text-[12px] font-bold"
       style={{ background: CHIP_BG, color: CREAM_DIM }}
     >
       {children}
@@ -47,10 +47,7 @@ function MarkerRow({ chip, label }: { chip: string; label: string }) {
   return (
     <li className="flex items-center gap-2.5 px-3 py-1.5">
       <MinuteChip>{chip}</MinuteChip>
-      <span
-        className="text-[11.5px] font-bold"
-        style={{ color: CREAM_DIM, letterSpacing: "0.06em" }}
-      >
+      <span className="text-[12px] font-bold" style={{ color: CREAM_DIM, letterSpacing: "0.06em" }}>
         {label}
       </span>
     </li>
@@ -85,7 +82,7 @@ function EventRow({ e, team }: { e: LfaTimelineEvent; team: string }) {
       )}
 
       <span
-        className={`min-w-0 flex-1 truncate text-[12.5px] ${isGoal ? "font-bold" : "font-semibold"}`}
+        className={`min-w-0 flex-1 truncate text-[12px] ${isGoal ? "font-bold" : "font-semibold"}`}
         style={{ color: isGoal ? CREAM : CREAM_DIM }}
       >
         {e.kind === "sub" ? (
@@ -106,7 +103,7 @@ function EventRow({ e, team }: { e: LfaTimelineEvent; team: string }) {
       </span>
 
       <span
-        className="max-w-[96px] shrink-0 truncate text-[11px]"
+        className="max-w-[96px] shrink-0 truncate text-[12px]"
         style={{ color: CREAM_DIM, opacity: 0.75 }}
       >
         {team}
@@ -186,19 +183,19 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
           <span className="flex min-w-0 items-baseline gap-2">
             {kicker && (
               <span
-                className="gn-num text-[11px] font-bold uppercase"
+                className="gn-num text-[12px] font-bold uppercase"
                 style={{ color: "var(--gn-bg-100)", letterSpacing: "0.18em" }}
               >
                 {kicker}
               </span>
             )}
-            <span className="truncate text-[11.5px] font-semibold" style={{ color: CREAM_DIM }}>
+            <span className="truncate text-[12px] font-semibold" style={{ color: CREAM_DIM }}>
               {leagueLabel(match.leagueCode)}
             </span>
           </span>
           {live ? (
             <span
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold"
               style={{ background: CHIP_BG, color: "var(--gn-live)", letterSpacing: "0.06em" }}
             >
               {/* 라임은 LIVE 전용, 화면당 1곳 — 불판에서는 여기가 그 1곳 */}
@@ -211,7 +208,7 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
             </span>
           ) : (
             <span
-              className="gn-num shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
+              className="gn-num shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold"
               style={{ background: CHIP_BG, color: CREAM_DIM, letterSpacing: "0.14em" }}
             >
               {finished ? "FT" : "예정"}
@@ -222,14 +219,14 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
         {/* 스코어열 — 매치 헤더의 축소판 */}
         <div className="mt-3 mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
           <span
-            className="min-w-0 text-right text-[15px] leading-tight font-extrabold sm:text-[16px]"
+            className="min-w-0 text-right text-[16px] leading-tight font-extrabold sm:text-[16px]"
             style={{ color: CREAM, wordBreak: "keep-all" }}
           >
             {homeLabel}
           </span>
           {showScore ? (
             <span
-              className="gn-num text-center text-[32px] leading-none font-bold sm:text-[36px]"
+              className="gn-num text-center text-[31px] leading-none font-bold sm:text-[31px]"
               style={{ letterSpacing: "-0.02em" }}
             >
               <span style={{ color: homeTone }}>{homeScore}</span>
@@ -241,14 +238,14 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
           ) : (
             <span className="text-center">
               <span
-                className="gn-num block text-[24px] leading-none font-bold"
+                className="gn-num block text-[26px] leading-none font-bold"
                 style={{ color: CREAM }}
                 suppressHydrationWarning
               >
                 {kickoff}
               </span>
               <span
-                className="mt-1 block text-[10px] font-bold"
+                className="mt-1 block text-[12px] font-bold"
                 style={{ color: CREAM_DIM, letterSpacing: "0.12em" }}
               >
                 KST
@@ -256,7 +253,7 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
             </span>
           )}
           <span
-            className="min-w-0 text-left text-[15px] leading-tight font-extrabold sm:text-[16px]"
+            className="min-w-0 text-left text-[16px] leading-tight font-extrabold sm:text-[16px]"
             style={{ color: CREAM, wordBreak: "keep-all" }}
           >
             {awayLabel}
@@ -299,14 +296,14 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
             <>
               <Link
                 href={`/match/${gameId}`}
-                className="text-[11.5px] font-bold no-underline"
+                className="text-[12px] font-bold no-underline"
                 style={{ color: CREAM_DIM }}
               >
                 매치 리포트 →
               </Link>
               <Link
                 href="/matches"
-                className="text-[11.5px] font-bold no-underline"
+                className="text-[12px] font-bold no-underline"
                 style={{ color: CREAM_DIM }}
               >
                 오늘 다른 경기 →
@@ -315,7 +312,7 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
           ) : (
             <Link
               href={`/match/${gameId}`}
-              className="text-[11.5px] font-bold no-underline"
+              className="text-[12px] font-bold no-underline"
               style={{ color: CREAM_DIM }}
             >
               경기 정보·상대전적 →

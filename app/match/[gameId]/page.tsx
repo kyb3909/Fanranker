@@ -190,10 +190,10 @@ export default async function MatchPage({ params }: Props) {
                 className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
                 style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
               >
-                <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
                   이 경기, 승부예측으로
                 </span>
-                <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+                <span className="text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
                   시즌 이벤트 픽 남기기 →
                 </span>
               </Link>
@@ -270,7 +270,7 @@ export default async function MatchPage({ params }: Props) {
                       const predicted = confidence === "predicted"
                       return (
                         <p
-                          className="mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold"
+                          className="mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold"
                           style={{
                             background: predicted
                               ? "color-mix(in srgb, var(--wc-gold) 18%, transparent)"

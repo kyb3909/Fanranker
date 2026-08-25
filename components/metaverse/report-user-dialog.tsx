@@ -110,7 +110,7 @@ export function ReportUserDialog({
       <div className="w-[min(92vw,420px)] rounded-lg border border-white/10 bg-neutral-900 p-5 shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-[11px] font-semibold tracking-wider text-white/40 uppercase">신고</p>
+            <p className="text-[12px] font-semibold tracking-wider text-white/40 uppercase">신고</p>
             <h2 className="mt-1 text-base font-bold break-all text-white">🚩 {target.nickname}</h2>
           </div>
           <button
@@ -125,13 +125,13 @@ export function ReportUserDialog({
         {done ? (
           <div className="mt-6 rounded border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
             <p className="text-sm text-emerald-200">신고가 접수됐어요.</p>
-            <p className="mt-1 text-[11px] text-emerald-300/70">관리자가 검토 후 조치합니다.</p>
+            <p className="mt-1 text-[12px] text-emerald-300/70">관리자가 검토 후 조치합니다.</p>
           </div>
         ) : (
           <>
             <div className="mt-5 space-y-4">
               <label className="block">
-                <span className="text-[11px] font-semibold text-white/70">사유</span>
+                <span className="text-[12px] font-semibold text-white/70">사유</span>
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   {REASON_OPTIONS.map((opt) => (
                     <button
@@ -141,7 +141,7 @@ export function ReportUserDialog({
                         setReason(opt.value)
                         if (error) setError(null)
                       }}
-                      className={`rounded border px-2 py-1.5 text-[11px] transition-colors ${
+                      className={`rounded border px-2 py-1.5 text-[12px] transition-colors ${
                         reason === opt.value
                           ? "border-red-400/70 bg-red-500/20 text-red-100"
                           : "border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/10 hover:text-white"
@@ -154,7 +154,7 @@ export function ReportUserDialog({
               </label>
 
               <label className="block">
-                <span className="text-[11px] font-semibold text-white/70">
+                <span className="text-[12px] font-semibold text-white/70">
                   상세 설명 <span className="text-white/40">(선택 · 최대 500자)</span>
                 </span>
                 <textarea
@@ -164,20 +164,20 @@ export function ReportUserDialog({
                   placeholder="관리자 검토에 도움되는 맥락이 있으면 적어주세요"
                   className="mt-1 w-full rounded border border-white/15 bg-black/40 px-3 py-2 text-xs text-white placeholder-white/30 focus:border-white/30 focus:outline-none"
                 />
-                <div className="mt-0.5 text-right text-[10px] text-white/40 tabular-nums">
+                <div className="mt-0.5 text-right text-[12px] text-white/40 tabular-nums">
                   {note.length}/500
                 </div>
               </label>
             </div>
 
             {error && (
-              <div className="mt-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-200">
+              <div className="mt-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-200">
                 {error}
               </div>
             )}
 
             <div className="mt-5 flex items-center justify-between">
-              <p className="text-[10px] text-white/40">허위 신고 반복 시 제재될 수 있어요</p>
+              <p className="text-[12px] text-white/40">허위 신고 반복 시 제재될 수 있어요</p>
               <div className="flex gap-2">
                 <button
                   onClick={onClose}

@@ -181,7 +181,7 @@ function Variant({
         <div className="flex-1 space-y-1">
           <h2 className="text-lg font-bold">{label}</h2>
           <p className="text-muted-foreground text-xs">{description}</p>
-          <ul className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+          <ul className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
             {highlight.map((h) => (
               <li key={h} className="bg-muted rounded px-1.5 py-0.5">
                 {h}
@@ -205,10 +205,10 @@ function BaselineCard({ post }: { post: Post }) {
         <Avatar />
         <div>
           <p className="text-foreground text-[13px] font-medium">{post.author}</p>
-          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
             {post.titleBadge && (
               <>
-                <span className="rounded bg-emerald-500/10 px-1.5 py-px text-[10px] font-semibold text-emerald-700">
+                <span className="rounded bg-emerald-500/10 px-1.5 py-px text-[12px] font-semibold text-emerald-700">
                   {post.titleBadge}
                 </span>
                 <span>·</span>
@@ -216,7 +216,7 @@ function BaselineCard({ post }: { post: Post }) {
             )}
             {post.flair && (
               <>
-                <span className="rounded bg-amber-500/10 px-1.5 py-px text-[10px] font-semibold text-amber-600">
+                <span className="rounded bg-amber-500/10 px-1.5 py-px text-[12px] font-semibold text-amber-600">
                   {post.flair}
                 </span>
                 <span>·</span>
@@ -227,7 +227,7 @@ function BaselineCard({ post }: { post: Post }) {
         </div>
       </header>
 
-      <h3 className="text-foreground line-clamp-2 text-[15px] leading-[1.4] font-medium sm:text-[16px]">
+      <h3 className="text-foreground line-clamp-2 text-[16px] leading-[1.4] font-medium sm:text-[16px]">
         {post.title}
       </h3>
       <p className="text-foreground/80 mt-2 line-clamp-2 text-[14px] leading-[1.6]">{post.body}</p>
@@ -235,7 +235,7 @@ function BaselineCard({ post }: { post: Post }) {
       <footer className="border-border text-muted-foreground mt-3 flex items-center gap-4 border-t pt-3 text-[12px]">
         <Vote count={post.votes} />
         <Stat icon={<MessageCircle className="h-3.5 w-3.5" />} value={post.comments} />
-        <span className="bg-muted ml-auto rounded px-2 py-0.5 text-[10px] font-medium">
+        <span className="bg-muted ml-auto rounded px-2 py-0.5 text-[12px] font-medium">
           {post.boardName}
         </span>
       </footer>
@@ -256,7 +256,7 @@ function PretendardCard({ post }: { post: Post }) {
           <div className="flex items-center gap-1.5 text-[12px] text-neutral-500">
             {post.titleBadge && (
               <>
-                <span className="rounded bg-emerald-500/10 px-1.5 py-px text-[10px] font-semibold text-emerald-700">
+                <span className="rounded bg-emerald-500/10 px-1.5 py-px text-[12px] font-semibold text-emerald-700">
                   {post.titleBadge}
                 </span>
                 <span>·</span>
@@ -264,7 +264,7 @@ function PretendardCard({ post }: { post: Post }) {
             )}
             {post.flair && (
               <>
-                <span className="rounded bg-amber-500/10 px-1.5 py-px text-[10px] font-semibold text-amber-600">
+                <span className="rounded bg-amber-500/10 px-1.5 py-px text-[12px] font-semibold text-amber-600">
                   {post.flair}
                 </span>
                 <span>·</span>
@@ -275,7 +275,7 @@ function PretendardCard({ post }: { post: Post }) {
         </div>
       </header>
 
-      <h3 className="line-clamp-2 text-[17px] leading-[1.35] font-bold tracking-tight text-neutral-900">
+      <h3 className="line-clamp-2 text-[16px] leading-[1.35] font-bold tracking-tight text-neutral-900">
         {post.title}
       </h3>
       <p className="mt-2 line-clamp-2 text-[14px] leading-[1.65] text-neutral-600">{post.body}</p>
@@ -283,7 +283,7 @@ function PretendardCard({ post }: { post: Post }) {
       <footer className="mt-3 flex items-center gap-4 border-t border-neutral-200 pt-3 text-[12px] text-neutral-500">
         <Vote count={post.votes} />
         <Stat icon={<MessageCircle className="h-3.5 w-3.5" />} value={post.comments} />
-        <span className="ml-auto rounded bg-neutral-100 px-2 py-0.5 text-[10px] font-medium">
+        <span className="ml-auto rounded bg-neutral-100 px-2 py-0.5 text-[12px] font-medium">
           {post.boardName}
         </span>
       </footer>
@@ -298,14 +298,14 @@ function DualCard({ post }: { post: Post }) {
   return (
     <article className="ft-pret bg-white p-5 transition-colors hover:bg-neutral-50/60">
       <p
-        className="ft-suit mb-1.5 text-[11px] font-semibold text-rose-800"
+        className="ft-suit mb-1.5 text-[12px] font-semibold text-rose-800"
         style={{ letterSpacing: "0.06em" }}
       >
         {post.category}
       </p>
 
       <h3
-        className="ft-suit line-clamp-2 text-[17px] leading-[1.35] font-bold text-neutral-900"
+        className="ft-suit line-clamp-2 text-[16px] leading-[1.35] font-bold text-neutral-900"
         style={{ letterSpacing: "-0.01em" }}
       >
         {post.title}
@@ -345,24 +345,22 @@ function DualCard({ post }: { post: Post }) {
 function SerifCard({ post }: { post: Post }) {
   return (
     <article className="ft-pret bg-white p-6 transition-colors hover:bg-neutral-50/60">
-      <p className="ft-suit mb-2 text-[10px] font-semibold tracking-[0.12em] text-rose-800 uppercase">
+      <p className="ft-suit mb-2 text-[12px] font-semibold tracking-[0.12em] text-rose-800 uppercase">
         {post.category}
       </p>
 
-      <h3 className="ft-serif line-clamp-2 text-[19px] leading-[1.4] font-semibold text-neutral-900">
+      <h3 className="ft-serif line-clamp-2 text-[20px] leading-[1.4] font-semibold text-neutral-900">
         {post.title}
       </h3>
 
-      <p className="mt-2.5 line-clamp-3 text-[14.5px] leading-[1.7] text-neutral-700">
-        {post.body}
-      </p>
+      <p className="mt-2.5 line-clamp-3 text-[14px] leading-[1.7] text-neutral-700">{post.body}</p>
 
       <div className="mt-4 flex items-center gap-3 text-[12px] text-neutral-500">
         <Avatar size={22} />
         <div className="flex items-baseline gap-1.5">
           <span className="font-semibold text-neutral-900 italic">{post.author}</span>
           {(post.titleBadge || post.flair) && (
-            <span className="text-[11px] text-neutral-400">· {post.titleBadge || post.flair}</span>
+            <span className="text-[12px] text-neutral-400">· {post.titleBadge || post.flair}</span>
           )}
         </div>
         <span className="text-neutral-400">· {post.time}</span>

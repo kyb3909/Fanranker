@@ -139,7 +139,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
             >
               {rateText}
             </span>
-            <span style={{ fontSize: 10.5, fontWeight: 700, marginTop: 4, opacity: 0.78 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, marginTop: 4, opacity: 0.78 }}>
               적중률
             </span>
           </div>
@@ -163,7 +163,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
             {football && title ? `⚽ ${title.name}` : "내 예측 성적"}
           </h2>
           {football && title && (
-            <div style={{ fontSize: 13.5, opacity: 0.82, marginTop: 4 }}>{title.role}</div>
+            <div style={{ fontSize: 13, opacity: 0.82, marginTop: 4 }}>{title.role}</div>
           )}
         </div>
 

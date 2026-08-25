@@ -265,7 +265,7 @@ export function BettingSlip({
               {/* 행 2: 매치명 */}
               <div
                 style={{
-                  fontSize: 13.5,
+                  fontSize: 13,
                   fontWeight: 700,
                   color: "var(--wc-ink)",
                   wordBreak: "keep-all",
@@ -446,7 +446,7 @@ export function BettingSlip({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>총 배점</span>
+            <span style={{ fontSize: 12, color: "var(--wc-mute)" }}>총 배점</span>
             <span
               style={{
                 fontSize: 14,
@@ -459,7 +459,7 @@ export function BettingSlip({
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>예상 획득 점수</span>
+            <span style={{ fontSize: 12, color: "var(--wc-mute)" }}>예상 획득 점수</span>
             <span
               style={{
                 fontSize: 18,
@@ -560,7 +560,7 @@ export function BettingSlip({
               <span className="text-xs font-medium sm:text-sm">{selectedBets.length}경기 선택</span>
               {selectedBets.length > 0 && selectedBets[0].sport && (
                 <span
-                  className="rounded px-1.5 py-0.5 text-[10px] sm:text-xs"
+                  className="rounded px-1.5 py-0.5 text-[12px] sm:text-xs"
                   style={{
                     background: "var(--wc-soft)",
                     color: "var(--wc-burgundy)",

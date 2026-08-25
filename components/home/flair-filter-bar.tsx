@@ -92,13 +92,13 @@ export function FlairFilterBar({ followedSlugs }: { followedSlugs: string[] }) {
         />
         말머리 필터
         {(favCount > 0 || muteCount > 0) && (
-          <span className="text-[11px] font-medium" style={{ color: "var(--wc-mute)" }}>
+          <span className="text-[12px] font-medium" style={{ color: "var(--wc-mute)" }}>
             {favCount > 0 && `⭐ ${favCount}`}
             {favCount > 0 && muteCount > 0 && " · "}
             {muteCount > 0 && `🔇 ${muteCount}`}
           </span>
         )}
-        <span className="ml-auto text-[11px]" style={{ color: "var(--wc-mute)" }}>
+        <span className="ml-auto text-[12px]" style={{ color: "var(--wc-mute)" }}>
           {open ? "접기" : "펼치기"}
         </span>
       </button>
@@ -108,7 +108,7 @@ export function FlairFilterBar({ followedSlugs }: { followedSlugs: string[] }) {
           style={{ borderTop: "1px solid var(--wc-line)" }}
         >
           <p
-            className="mt-2 w-full text-[11px] leading-relaxed"
+            className="mt-2 w-full text-[12px] leading-relaxed"
             style={{ color: "var(--wc-mute)" }}
           >
             칩을 누르면 즐겨찾기(⭐ 그 말머리만 보기) → 뮤트(🔇 숨기기) → 해제 순으로 바뀝니다.

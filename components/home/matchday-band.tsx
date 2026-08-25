@@ -170,7 +170,7 @@ export function MatchdayBand({
               Matchday
             </span>
             <h2
-              className="text-[30px] leading-none sm:text-[42px]"
+              className="text-[31px] leading-none sm:text-[42px]"
               style={{
                 fontFamily: DISPLAY,
                 fontWeight: 700,
@@ -182,7 +182,7 @@ export function MatchdayBand({
             </h2>
             {countdown && matches.length > 0 && (
               <span
-                className="gn-num ml-auto hidden text-[15px] font-bold sm:block"
+                className="gn-num ml-auto hidden text-[16px] font-bold sm:block"
                 style={{ letterSpacing: "0.06em", color: "var(--gn-cream-dim)" }}
                 suppressHydrationWarning
               >
@@ -211,7 +211,7 @@ export function MatchdayBand({
           </span>
           <h2
             /* PageBand 와 동일 스케일 — 페이지 제목(42) > 톱스토리 헤드라인(31) 위계 */
-            className="text-[30px] leading-none sm:text-[42px]"
+            className="text-[31px] leading-none sm:text-[42px]"
             style={{
               // 어그로체는 Bold(700) 단일 — 900 을 얹으면 브라우저가 합성 볼드로 뭉갠다
               fontFamily: DISPLAY,
@@ -223,7 +223,7 @@ export function MatchdayBand({
             오늘의 메인 이벤트
           </h2>
           <span
-            className="gn-num ml-auto hidden text-[15px] font-bold sm:block"
+            className="gn-num ml-auto hidden text-[16px] font-bold sm:block"
             style={{ letterSpacing: "0.1em", color: "var(--gn-cream-dim)" }}
             suppressHydrationWarning
           >
@@ -262,26 +262,26 @@ export function MatchdayBand({
             </div>
             <div className="relative z-[2] max-w-[62%] p-5 sm:p-7">
               <p
-                className="text-[11px] font-extrabold uppercase"
+                className="text-[12px] font-extrabold uppercase"
                 style={{ color: "var(--wc-gold)", letterSpacing: "0.12em" }}
               >
                 Arsenal Only · Premier League 2026/27
               </p>
               <p
-                className="font-title mt-1.5 text-[19px] leading-[1.25] font-bold sm:text-[25px]"
+                className="font-title mt-1.5 text-[20px] leading-[1.25] font-bold sm:text-[26px]"
                 style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
               >
                 개막 기념 승부예측 이벤트
               </p>
               <p
-                className="mt-1 text-[12.5px] sm:text-[13.5px]"
+                className="mt-1 text-[12px] sm:text-[13px]"
                 style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
               >
                 1등 상품 · 14번 Thierry Henry 사인 유니폼. 국가대표 경기 기간이 시작될 때 1위인
                 사람에게 증정됩니다
               </p>
               <span
-                className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-[12.5px] font-bold"
+                className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-[12px] font-bold"
                 style={{ background: "var(--wc-burgundy)", color: "var(--gn-cream)" }}
               >
                 참가하기 →
@@ -369,7 +369,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
           <div className="relative z-[2] w-full p-5 sm:p-8">
             {(c.source || c.flair) && (
               <span
-                className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-[5px] text-[12.5px] font-extrabold"
+                className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-[5px] text-[12px] font-extrabold"
                 style={{ background: "var(--wc-burgundy)", color: "var(--gn-cream)" }}
               >
                 {c.flair?.name ?? "오늘의 톱뉴스"}
@@ -377,7 +377,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               </span>
             )}
             <h3
-              className="font-title max-w-[21ch] text-[22px] leading-[1.24] font-bold sm:text-[31px]"
+              className="font-title max-w-[21ch] text-[20px] leading-[1.24] font-bold sm:text-[31px]"
               style={{
                 color: "var(--gn-cream)",
                 letterSpacing: "-0.025em",
@@ -412,7 +412,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                 — "댓글 0 · 추천 0" 전시는 유령 사이트 각인만 남긴다). CTA 링크는
                 2026-08-04 운영자 지시로 제거 — 제목 링크가 내비게이션을 담당한다. */}
             {(c.commentCount > 0 || c.voteCount > 0) && (
-              <p className="mt-3 text-[13.5px]" style={{ color: "var(--gn-cream-dim)" }}>
+              <p className="mt-3 text-[13px]" style={{ color: "var(--gn-cream-dim)" }}>
                 <span className="gn-num">
                   {[
                     c.commentCount > 0 ? `댓글 ${c.commentCount}` : null,
@@ -541,7 +541,7 @@ function TodayFixtures({
     >
       <div className="flex items-center justify-between">
         <h3
-          className="text-[21px] leading-none"
+          className="text-[20px] leading-none"
           style={{
             fontFamily: DISPLAY,
             fontWeight: 700,
@@ -566,11 +566,11 @@ function TodayFixtures({
           className="mt-2 flex items-baseline gap-2.5 pt-1 pb-3"
           style={{ borderBottom: "1px solid var(--gn-night-line)" }}
         >
-          <span className="text-[12.5px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
+          <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
             다음 킥오프까지
           </span>
           <span
-            className="gn-num text-[34px] leading-none font-bold"
+            className="gn-num text-[31px] leading-none font-bold"
             style={{ color: "var(--gn-cream)" }}
             suppressHydrationWarning
           >
@@ -587,7 +587,7 @@ function TodayFixtures({
           className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 transition-opacity hover:opacity-85"
           style={{ background: "rgba(150,30,55,0.28)", border: "1px solid rgba(150,30,55,0.5)" }}
         >
-          <span className="text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
+          <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream)" }}>
             오늘 개막 이벤트 참가하기
           </span>
           <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
@@ -609,7 +609,7 @@ function TodayFixtures({
                 style={{ background: "var(--gn-live)" }}
               />
               <span
-                className="gn-num text-[11px] font-bold"
+                className="gn-num text-[12px] font-bold"
                 style={{ color: "var(--gn-live)", letterSpacing: "0.14em" }}
               >
                 LIVE
@@ -623,7 +623,7 @@ function TodayFixtures({
                     className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2 transition-opacity hover:opacity-80"
                   >
                     <span
-                      className="gn-num text-[15px] leading-none font-bold"
+                      className="gn-num text-[16px] leading-none font-bold"
                       style={{ color: "var(--gn-cream)" }}
                     >
                       {m.homeScore != null && m.awayScore != null
@@ -631,7 +631,7 @@ function TodayFixtures({
                         : "LIVE"}
                     </span>
                     <span
-                      className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                      className="gn-num rounded px-0 py-[3px] text-center text-[12px] font-bold uppercase"
                       style={{
                         border: "1px solid var(--gn-night-line)",
                         color: "var(--gn-cream-dim)",
@@ -646,7 +646,7 @@ function TodayFixtures({
                     >
                       {m.homeTeam}
                       <span
-                        className="gn-num mx-1.5 text-[11px] font-bold"
+                        className="gn-num mx-1.5 text-[12px] font-bold"
                         style={{ color: "#8d8794" }}
                       >
                         VS
@@ -679,7 +679,7 @@ function TodayFixtures({
                   {fmtKstTime(m.matchTime)}
                 </span>
                 <span
-                  className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                  className="gn-num rounded px-0 py-[3px] text-center text-[12px] font-bold uppercase"
                   style={{
                     border: "1px solid var(--gn-night-line)",
                     color: "var(--gn-cream-dim)",
@@ -694,7 +694,7 @@ function TodayFixtures({
                 >
                   {m.homeTeam}
                   <span
-                    className="gn-num mx-1.5 text-[11px] font-bold"
+                    className="gn-num mx-1.5 text-[12px] font-bold"
                     style={{ color: "#8d8794" }}
                   >
                     VS
@@ -710,7 +710,7 @@ function TodayFixtures({
         {finishedShown.length > 0 && (
           <div className="mt-1" style={{ borderTop: "1px solid var(--gn-night-line)" }}>
             <p
-              className="gn-num pt-2 pb-1 text-[11px] font-bold"
+              className="gn-num pt-2 pb-1 text-[12px] font-bold"
               style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.14em" }}
             >
               FT
@@ -723,13 +723,13 @@ function TodayFixtures({
                     className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2 transition-opacity hover:opacity-80"
                   >
                     <span
-                      className="gn-num text-[15px] leading-none font-bold"
+                      className="gn-num text-[16px] leading-none font-bold"
                       style={{ color: "var(--gn-cream)" }}
                     >
                       {m.homeScore}-{m.awayScore}
                     </span>
                     <span
-                      className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                      className="gn-num rounded px-0 py-[3px] text-center text-[12px] font-bold uppercase"
                       style={{
                         border: "1px solid var(--gn-night-line)",
                         color: "var(--gn-cream-dim)",
@@ -744,7 +744,7 @@ function TodayFixtures({
                     >
                       {m.homeTeam}
                       <span
-                        className="gn-num mx-1.5 text-[11px] font-bold"
+                        className="gn-num mx-1.5 text-[12px] font-bold"
                         style={{ color: "#8d8794" }}
                       >
                         VS
@@ -763,7 +763,7 @@ function TodayFixtures({
       {(matches.length > 0 || finishedMatches.length > 0) && (
         <Link
           href="/matches"
-          className="mt-1 flex items-center justify-between py-2 text-[12.5px] font-bold transition-opacity hover:opacity-80"
+          className="mt-1 flex items-center justify-between py-2 text-[12px] font-bold transition-opacity hover:opacity-80"
           style={{ borderTop: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
         >
           <span suppressHydrationWarning>
@@ -779,7 +779,7 @@ function TodayFixtures({
 
       <Link
         href="/prediction"
-        className="mt-4 flex items-center justify-center gap-1.5 rounded-[12px] py-3 text-[15px] font-extrabold transition-transform active:scale-[.98]"
+        className="mt-4 flex items-center justify-center gap-1.5 rounded-[12px] py-3 text-[16px] font-extrabold transition-transform active:scale-[.98]"
         style={{ background: "var(--gn-cream)", color: "var(--gn-night)" }}
       >
         {!isSignedIn

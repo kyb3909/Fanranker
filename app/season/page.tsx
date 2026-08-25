@@ -328,7 +328,7 @@ export default async function SeasonEventPage({
                 Premier League 2026/27
               </span>
               <h1
-                className="text-[30px] leading-none sm:text-[42px]"
+                className="text-[31px] leading-none sm:text-[42px]"
                 style={{
                   fontFamily: DISPLAY,
                   fontWeight: 700,
@@ -340,7 +340,7 @@ export default async function SeasonEventPage({
               </h1>
               {!isClosed && (
                 <span
-                  className="gn-num ml-auto hidden text-[15px] font-bold sm:block"
+                  className="gn-num ml-auto hidden text-[16px] font-bold sm:block"
                   style={{ letterSpacing: "0.1em", color: "var(--gn-cream-dim)" }}
                 >
                   종료까지 D-{daysLeft}
@@ -356,7 +356,7 @@ export default async function SeasonEventPage({
                 <>
                   {" "}
                   · 참가자{" "}
-                  <b className="gn-num text-[15px]" style={{ color: "var(--gn-cream)" }}>
+                  <b className="gn-num text-[16px]" style={{ color: "var(--gn-cream)" }}>
                     {totalRegs.toLocaleString()}
                   </b>
                 </>
@@ -365,7 +365,7 @@ export default async function SeasonEventPage({
                 <>
                   {" "}
                   · 누적 예측{" "}
-                  <b className="gn-num text-[15px]" style={{ color: "var(--gn-cream)" }}>
+                  <b className="gn-num text-[16px]" style={{ color: "var(--gn-cream)" }}>
                     {(slipCount ?? 0).toLocaleString()}
                   </b>
                 </>
@@ -399,7 +399,7 @@ export default async function SeasonEventPage({
               boxShadow: "0 12px 30px -12px rgba(150,30,55,.55)",
             }}
           >
-            <span className="text-[15px] font-extrabold" style={{ wordBreak: "keep-all" }}>
+            <span className="text-[16px] font-extrabold" style={{ wordBreak: "keep-all" }}>
               오늘 경기 예측하러 가기
             </span>
             <ArrowRight className="h-[18px] w-[18px] shrink-0" aria-hidden />
@@ -420,25 +420,25 @@ export default async function SeasonEventPage({
             {arsenal ? (
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[17px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                  <p className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                     {arsenal.home} <span style={{ color: "var(--wc-mute)" }}>vs</span>{" "}
                     {arsenal.away}
                   </p>
-                  <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                  <p className="mt-0.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                     {formatKickoff(arsenal.matchTime)}
                     {arsenal.league ? ` · ${arsenal.league}` : ""}
                   </p>
                 </div>
                 <Link
                   href="/prediction?ref=event"
-                  className="rounded-lg px-4 py-2.5 text-[13.5px] font-bold"
+                  className="rounded-lg px-4 py-2.5 text-[13px] font-bold"
                   style={{ background: "var(--wc-burgundy)", color: "#fff" }}
                 >
                   예측하러 가기 →
                 </Link>
               </div>
             ) : (
-              <p className="mt-2 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+              <p className="mt-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
                 다음 아스날 경기는 일정 나오는 대로 올립니다.
               </p>
             )}
@@ -465,12 +465,12 @@ export default async function SeasonEventPage({
           {/* ④ 지금 뜨는 글 — 허브가 막다른 골목이 되지 않게 (핵심 전환 루프) */}
           <section className="rounded-xl p-4" style={cardStyle}>
             <div className="flex items-center justify-between">
-              <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+              <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 지금 읽히는 글
               </h2>
               <Link
                 href="/?ref=event"
-                className="text-[12.5px] font-bold"
+                className="text-[12px] font-bold"
                 style={{ color: "var(--wc-burgundy)" }}
               >
                 담벼락 가기 →
@@ -484,7 +484,7 @@ export default async function SeasonEventPage({
                     className="flex items-baseline justify-between gap-3 py-2.5"
                   >
                     <span
-                      className="min-w-0 truncate text-[13.5px] font-semibold"
+                      className="min-w-0 truncate text-[13px] font-semibold"
                       style={{ color: "var(--wc-ink)" }}
                     >
                       {p.title}
@@ -497,7 +497,7 @@ export default async function SeasonEventPage({
                         </span>
                       )}
                     </span>
-                    <span className="shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                    <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                       {formatRelativeTime(new Date(p.created_at))}
                     </span>
                   </Link>
@@ -518,7 +518,7 @@ export default async function SeasonEventPage({
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       {preview && (
         <div
-          className="px-4 py-2 text-center text-[12.5px] font-bold text-white"
+          className="px-4 py-2 text-center text-[12px] font-bold text-white"
           style={{ background: "var(--wc-ink)" }}
         >
           미리보기 모드 — 표시된 참가·예측 숫자는 표본입니다 (실제 등록은 오픈 후 가능)
@@ -543,7 +543,7 @@ export default async function SeasonEventPage({
               }}
             >
               <span
-                className="gn-num absolute top-5 left-[42px] text-[15px] font-bold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[18px]"
+                className="gn-num absolute top-5 left-[42px] text-[16px] font-bold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[20px]"
                 style={{
                   transform: "skewX(8deg) rotate(90deg)",
                   transformOrigin: "left top",
@@ -562,12 +562,12 @@ export default async function SeasonEventPage({
               {/* ── 좌: 선언 ── */}
               <div>
                 <p
-                  className="mb-3 flex flex-wrap items-center gap-2.5 text-[12.5px] font-extrabold"
+                  className="mb-3 flex flex-wrap items-center gap-2.5 text-[12px] font-extrabold"
                   style={{ color: "var(--gn-bg-100)", letterSpacing: "0.14em" }}
                 >
                   8.21 예측 오픈 · 8.22 프리미어리그 개막
                   <span
-                    className="gn-num rounded px-1.5 py-[2px] text-[10.5px]"
+                    className="gn-num rounded px-1.5 py-[2px] text-[12px]"
                     style={{
                       border: "1px solid var(--gn-night-line)",
                       color: "var(--gn-cream-dim)",
@@ -618,19 +618,19 @@ export default async function SeasonEventPage({
                   }}
                 >
                   <p
-                    className="text-[15px] font-bold"
+                    className="text-[16px] font-bold"
                     style={{ fontFamily: DISPLAY, fontWeight: 700, color: "var(--wc-gold)" }}
                   >
                     1등 상품 · 14번 Thierry Henry 사인 유니폼
                   </p>
                   <p
-                    className="mt-1 text-[14.5px] font-bold"
+                    className="mt-1 text-[14px] font-bold"
                     style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
                   >
                     티에리 앙리가 직접 사인한 유니폼 한 장.
                   </p>
                   <p
-                    className="mt-1 text-[12.5px]"
+                    className="mt-1 text-[12px]"
                     style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
                   >
                     국가대표 경기 기간이 시작되는 9월 21일, 그때 1위인 사람에게 증정됩니다. 정품
@@ -693,7 +693,7 @@ export default async function SeasonEventPage({
                   />
                   {/* 박물관 플레이트 캡션 — 가짜 손글씨(Nanum Pen) 금지, 사인은 사진 속에만 */}
                   <p
-                    className="absolute inset-x-0 bottom-0 z-[1] px-4 pb-3.5 text-center text-[10.5px] font-bold"
+                    className="absolute inset-x-0 bottom-0 z-[1] px-4 pb-3.5 text-center text-[12px] font-bold"
                     style={{ color: "rgba(245,239,231,.85)", letterSpacing: "0.14em" }}
                   >
                     THIERRY HENRY · No.14 · SIGNED
@@ -713,7 +713,7 @@ export default async function SeasonEventPage({
               {previewTotalRegs > 0 && (
                 <span className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
                   참가자{" "}
-                  <b className="gn-num text-[17px]" style={{ color: "var(--gn-cream)" }}>
+                  <b className="gn-num text-[16px]" style={{ color: "var(--gn-cream)" }}>
                     {previewTotalRegs.toLocaleString()}
                   </b>
                 </span>
@@ -721,7 +721,7 @@ export default async function SeasonEventPage({
               {previewSlipCount > 0 && (
                 <span className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
                   누적 예측{" "}
-                  <b className="gn-num text-[17px]" style={{ color: "var(--gn-cream)" }}>
+                  <b className="gn-num text-[16px]" style={{ color: "var(--gn-cream)" }}>
                     {previewSlipCount.toLocaleString()}
                   </b>
                 </span>
@@ -754,7 +754,7 @@ export default async function SeasonEventPage({
               JOIN
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em" }}
             >
               참가 방법
@@ -765,12 +765,12 @@ export default async function SeasonEventPage({
               <div key={s.num} className="wc-step-card">
                 <div className="wc-step-num">{s.num}</div>
                 <div
-                  className="mb-[9px] text-[18px] font-extrabold"
+                  className="mb-[9px] text-[20px] font-extrabold"
                   style={{ letterSpacing: "-.02em" }}
                 >
                   {s.title}
                 </div>
-                <p className="text-[14.5px]" style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}>
+                <p className="text-[14px]" style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}>
                   {s.body}
                 </p>
               </div>
@@ -800,13 +800,13 @@ export default async function SeasonEventPage({
               SCORING
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em", wordBreak: "keep-all" }}
             >
               점수는 이렇게 쌓입니다
             </h2>
             <p
-              className="mx-auto mt-[10px] max-w-[620px] text-[14.5px]"
+              className="mx-auto mt-[10px] max-w-[620px] text-[14px]"
               style={{ color: "var(--wc-mute)", lineHeight: 1.65, wordBreak: "keep-all" }}
             >
               프리미어리그를 포함한 전 세계 축구 경기를 예측합니다. 매일 받는 무료 볼 10개를 어떻게
@@ -867,7 +867,7 @@ export default async function SeasonEventPage({
                 Arsenal news
               </div>
               <h2
-                className="text-[24px] font-extrabold sm:text-[28px]"
+                className="text-[26px] font-extrabold sm:text-[26px]"
                 style={{ letterSpacing: "-.03em" }}
               >
                 아스날 소식
@@ -890,7 +890,7 @@ export default async function SeasonEventPage({
                   >
                     {n.title}
                   </span>
-                  <span className="shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                  <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                     {formatRelativeTime(new Date(n.created_at))}
                   </span>
                 </Link>
@@ -908,13 +908,13 @@ export default async function SeasonEventPage({
               DRAWS
             </div>
             <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.03em", wordBreak: "keep-all" }}
             >
               순위와 별개로 도는 추첨
             </h2>
             <p
-              className="mx-auto mt-[10px] max-w-[620px] text-[14.5px]"
+              className="mx-auto mt-[10px] max-w-[620px] text-[14px]"
               style={{ color: "var(--wc-mute)", lineHeight: 1.65, wordBreak: "keep-all" }}
             >
               순위와 따로 매일 밤과 매주 월요일에 추첨이 있습니다. 1등 상품인 사인 유니폼은 여기
@@ -924,7 +924,7 @@ export default async function SeasonEventPage({
           <div className="grid gap-[18px] sm:grid-cols-2">
             {DRAWS.map((d) => (
               <div key={d.title} className="rounded-xl p-4" style={cardStyle}>
-                <h3 className="text-[15.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                <h3 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                   {d.title}
                 </h3>
                 <ul
@@ -934,7 +934,7 @@ export default async function SeasonEventPage({
                   {d.lines.map((l) => (
                     <li
                       key={l}
-                      className="flex gap-2 text-[13.5px]"
+                      className="flex gap-2 text-[13px]"
                       style={{ lineHeight: 1.62, color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
                     >
                       <span style={{ flexShrink: 0 }}>·</span>
@@ -951,7 +951,7 @@ export default async function SeasonEventPage({
         <section className="mt-12 pb-14">
           <div className="wc-panel">
             <h3
-              className="mb-[14px] text-[15.5px] font-extrabold"
+              className="mb-[14px] text-[16px] font-extrabold"
               style={{ color: "var(--wc-mute)" }}
             >
               이벤트 규칙
@@ -960,7 +960,7 @@ export default async function SeasonEventPage({
               {RULES.map((r) => (
                 <div key={r.title}>
                   <p
-                    className="mb-1.5 text-[13.5px] font-extrabold"
+                    className="mb-1.5 text-[13px] font-extrabold"
                     style={{ color: "var(--wc-ink-2)" }}
                   >
                     {r.title}

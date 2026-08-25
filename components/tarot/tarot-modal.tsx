@@ -46,7 +46,7 @@ export function TarotModal({
         style={{ background: "var(--wc-paper)" }}
       >
         <DialogHeader>
-          <DialogTitle className="text-[17px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+          <DialogTitle className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
             루나의 축구 점집
           </DialogTitle>
         </DialogHeader>

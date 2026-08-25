@@ -317,7 +317,7 @@ export function SignInMenu() {
         </div>
 
         {/* Terms footer */}
-        <p className="border-border text-muted-foreground border-t px-4 py-3 text-center text-[11px] leading-relaxed">
+        <p className="border-border text-muted-foreground border-t px-4 py-3 text-center text-[12px] leading-relaxed">
           가입하면{" "}
           <Link
             href="/terms"

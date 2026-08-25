@@ -59,7 +59,7 @@ export const PollWidget = memo(function PollWidget() {
       >
         <BarChart3 className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
         <h3
-          className="text-[11px] font-bold uppercase"
+          className="text-[12px] font-bold uppercase"
           style={{ color: "var(--wc-ink)", letterSpacing: "0.18em" }}
         >
           오늘의 설문
@@ -170,7 +170,7 @@ function PollCard({ initial }: { initial: PollEntry }) {
               </div>
             )
           })}
-          <p className="pt-0.5 text-[11px]" style={{ color: "var(--wc-mute)" }}>
+          <p className="pt-0.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
             {total}명 참여
           </p>
 
@@ -200,7 +200,7 @@ function PollCard({ initial }: { initial: PollEntry }) {
             </div>
           )}
           {reasonSaved && (
-            <p className="pt-0.5 text-[11px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="pt-0.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
               의견 고마워요 👍
             </p>
           )}

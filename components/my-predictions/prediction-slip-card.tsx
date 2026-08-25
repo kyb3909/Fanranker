@@ -155,7 +155,7 @@ export function BettingSlipCard({
                   {slip.sport}
                 </span>
                 {slip.roundInfo && (
-                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[12px]">
                     {slip.roundInfo.year}년 {slip.roundInfo.round}회차
                   </Badge>
                 )}
@@ -269,7 +269,7 @@ export function BettingSlipCard({
 
                   {/* Game Type Badge with Handicap/Line Info */}
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-[12px]">
                       {getGameTypeLabel(
                         game.gameType ?? "일반",
                         slip.sport,
@@ -280,7 +280,7 @@ export function BettingSlipCard({
                     {game.gameType.includes("핸디캡") && game.handicap !== null && (
                       <Badge
                         variant="outline"
-                        className="border-blue-200 bg-blue-50 text-[10px] text-blue-700"
+                        className="border-blue-200 bg-blue-50 text-[12px] text-blue-700"
                       >
                         {game.handicap < 0 ? (
                           <span>
@@ -297,7 +297,7 @@ export function BettingSlipCard({
                     {game.gameType.includes("언더오버") && game.overUnderLine !== null && (
                       <Badge
                         variant="outline"
-                        className="border-purple-200 bg-purple-50 text-[10px] text-purple-700"
+                        className="border-purple-200 bg-purple-50 text-[12px] text-purple-700"
                       >
                         기준 {game.overUnderLine}
                       </Badge>

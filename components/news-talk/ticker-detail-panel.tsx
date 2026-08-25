@@ -165,7 +165,7 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
                 <span className="text-primary text-[12px] font-semibold">{details.source}</span>
                 {details.originalTitle && (
                   <span
-                    className="text-muted-foreground max-w-[300px] truncate text-[11px]"
+                    className="text-muted-foreground max-w-[300px] truncate text-[12px]"
                     title={details.originalTitle}
                   >
                     · {details.originalTitle}

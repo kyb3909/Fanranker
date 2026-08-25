@@ -72,7 +72,7 @@ export function RaceJoinButton({ registrationOpen }: { registrationOpen: boolean
       type="button"
       onClick={join}
       disabled={busy}
-      className="inline-flex items-center gap-2 rounded-[12px] px-6 py-3.5 text-[15.5px] font-extrabold transition-transform active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-70"
+      className="inline-flex items-center gap-2 rounded-[12px] px-6 py-3.5 text-[16px] font-extrabold transition-transform active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-70"
       style={{
         background: "linear-gradient(100deg, var(--wc-burgundy), var(--gn-bg-700))",
         color: "var(--gn-cream)",

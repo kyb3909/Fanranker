@@ -39,7 +39,7 @@ export function TitleBadge({
     <span
       className={cn(
         "inline-flex items-center rounded-sm leading-tight font-medium",
-        size === "sm" ? "px-1.5 py-[1px] text-[11px]" : "px-2 py-0.5 text-xs",
+        size === "sm" ? "px-1.5 py-[1px] text-[12px]" : "px-2 py-0.5 text-xs",
         RARITY_STYLES[rarityKey],
         className
       )}

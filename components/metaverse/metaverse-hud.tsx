@@ -62,7 +62,7 @@ export function MetaverseHud({ actions, locationLabel = "🏟️ 웸블리 광�
 
 function HudLocation({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg backdrop-blur-sm">
+    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 text-[12px] font-semibold text-white shadow-lg backdrop-blur-sm">
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
       {label}
     </div>
@@ -74,7 +74,7 @@ function HudKeyMap({ open, onToggle }: { open: boolean; onToggle: () => void }) 
     <div className="overflow-hidden rounded-lg border border-white/10 bg-black/60 shadow-lg backdrop-blur-sm">
       <button
         onClick={onToggle}
-        className="pointer-events-auto flex w-full items-center justify-between gap-3 px-3 py-1.5 text-[11px] font-semibold text-white/90 hover:bg-white/5"
+        className="pointer-events-auto flex w-full items-center justify-between gap-3 px-3 py-1.5 text-[12px] font-semibold text-white/90 hover:bg-white/5"
         aria-expanded={open}
       >
         <span className="flex items-center gap-1.5">
@@ -84,14 +84,14 @@ function HudKeyMap({ open, onToggle }: { open: boolean; onToggle: () => void }) 
         <span className="text-white/40">{open ? "▾" : "▸"}</span>
       </button>
       {open ? (
-        <ul className="border-t border-white/10 px-3 py-2 text-[11px] text-white/80">
+        <ul className="border-t border-white/10 px-3 py-2 text-[12px] text-white/80">
           {KEY_MAP.map((item) => (
             <li key={item.action} className="flex items-center gap-2 py-0.5">
               <span className="flex gap-1">
                 {item.keys.map((k) => (
                   <kbd
                     key={k}
-                    className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-white/20 bg-white/10 px-1.5 font-mono text-[10px] text-white"
+                    className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-white/20 bg-white/10 px-1.5 font-mono text-[12px] text-white"
                   >
                     {k}
                   </kbd>
@@ -128,7 +128,7 @@ function HudChargeBar() {
 
   return (
     <div className="pointer-events-none absolute top-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
-      <div className="flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-[10px] font-bold tracking-wide text-white shadow-lg backdrop-blur-sm">
+      <div className="flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-[12px] font-bold tracking-wide text-white shadow-lg backdrop-blur-sm">
         <span aria-hidden>⚡</span>
         <span>킥 충전</span>
         <span className="text-white/60">{Math.round(t * 100)}%</span>

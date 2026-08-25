@@ -336,13 +336,13 @@ export function DraftResult({
                         style={{
                           ...cell,
                           fontWeight: 700,
-                          fontSize: 13.5,
+                          fontSize: 13,
                           color: "var(--draft-ink)",
                         }}
                       >
                         {p.nameKo}
                       </td>
-                      <td style={{ ...cell, fontSize: 11.5, color: "var(--draft-mute)" }}>
+                      <td style={{ ...cell, fontSize: 11, color: "var(--draft-mute)" }}>
                         {p.teamKo}
                       </td>
                       <td style={cell}>
@@ -372,10 +372,7 @@ export function DraftResult({
                     </tr>
                   ))}
                   <tr>
-                    <td
-                      colSpan={3}
-                      style={{ padding: "10px 12px", fontSize: 11.5, fontWeight: 700 }}
-                    >
+                    <td colSpan={3} style={{ padding: "10px 12px", fontSize: 11, fontWeight: 700 }}>
                       합계
                     </td>
                     <td style={{ padding: "10px 12px" }}>

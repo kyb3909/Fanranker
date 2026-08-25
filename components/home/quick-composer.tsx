@@ -147,7 +147,7 @@ export function QuickComposer() {
         </div>
       )}
       {expanded && !isSignedIn && !note && (
-        <p className="mt-1.5 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+        <p className="mt-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
           올릴 때 로그인 창이 떠도 쓰던 글은 그대로 남아 있어요.
         </p>
       )}

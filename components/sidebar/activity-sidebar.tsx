@@ -134,7 +134,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
         >
           <MessageSquare className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
           <h3
-            className="text-[11px] font-bold uppercase"
+            className="text-[12px] font-bold uppercase"
             style={{
               color: "var(--wc-ink)",
               letterSpacing: "0.18em",
@@ -177,7 +177,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
                     </p>
                     {post.comments > 0 && (
                       <span
-                        className="gn-num shrink-0 text-[11px] font-bold"
+                        className="gn-num shrink-0 text-[12px] font-bold"
                         style={{ color: "var(--wc-mute)" }}
                       >
                         [{post.comments}]

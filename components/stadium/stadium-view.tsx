@@ -51,7 +51,7 @@ function Avatar({
       {/* 닉네임 */}
       <div
         className={cn(
-          "mb-0.5 rounded-full px-1.5 py-px text-center text-[10px] font-bold whitespace-nowrap text-white",
+          "mb-0.5 rounded-full px-1.5 py-px text-center text-[12px] font-bold whitespace-nowrap text-white",
           isMe ? "bg-green-600/90" : "bg-black/50"
         )}
       >

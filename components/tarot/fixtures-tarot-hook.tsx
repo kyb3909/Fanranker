@@ -28,7 +28,7 @@ export function FixturesTarotHook({ question }: { question: string }) {
           setOpen(true)
           trackEvent({ name: "tarot_hook_click", params: { surface: "fixtures" } })
         }}
-        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[11.5px] font-bold transition-colors hover:bg-[var(--wc-tint)]"
+        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[12px] font-bold transition-colors hover:bg-[var(--wc-tint)]"
         style={{
           background: "var(--wc-wine-tint)",
           border: "1px solid var(--wc-line)",

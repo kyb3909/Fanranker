@@ -184,7 +184,7 @@ export function PostDetailContent({
                       <AvatarFallback>{post.author?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
                     </Avatar>
                     <span
-                      className="text-[14.5px] font-extrabold hover:underline"
+                      className="text-[14px] font-extrabold hover:underline"
                       style={{ color: "var(--wc-ink)" }}
                     >
                       {post.author}

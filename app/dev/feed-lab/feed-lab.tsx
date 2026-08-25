@@ -61,7 +61,7 @@ function ThumbRatioStrip() {
               }}
             />
             <figcaption
-              style={{ fontSize: 10.5, color: "var(--wc-mute)", marginTop: 5, lineHeight: 1.4 }}
+              style={{ fontSize: 10, color: "var(--wc-mute)", marginTop: 5, lineHeight: 1.4 }}
             >
               {o.label}
               <br />
@@ -170,7 +170,7 @@ export function FeedLab() {
                       borderRadius: 999,
                       background: "color-mix(in srgb, var(--wc-burgundy) 8%, transparent)",
                       color: "var(--wc-burgundy)",
-                      fontSize: 10.5,
+                      fontSize: 10,
                       fontWeight: 700,
                       verticalAlign: "middle",
                     }}

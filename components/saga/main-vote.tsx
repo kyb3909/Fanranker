@@ -116,17 +116,17 @@ export function SagaMainVote({ slug, closed, initial, labels }: Props) {
       </h2>
 
       {agg.total === 0 ? (
-        <p className="mt-3 text-[13.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+        <p className="mt-3 text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
           아직 투표가 없습니다 — 첫 표를 던져보세요.
         </p>
       ) : (
         <>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-[24px] font-extrabold sm:text-[28px]" style={{ color: GO_COLOR }}>
+            <span className="text-[26px] font-extrabold sm:text-[26px]" style={{ color: GO_COLOR }}>
               {goLabel} {goPct}%
             </span>
             <span
-              className="text-[24px] font-extrabold sm:text-[28px]"
+              className="text-[26px] font-extrabold sm:text-[26px]"
               style={{ color: STAY_COLOR }}
             >
               {stayLabel} {100 - goPct}%

@@ -78,13 +78,13 @@ function NoticeCard({ notice }: { notice: GlobalNotice }) {
       >
         <Megaphone className="h-4 w-4 shrink-0" style={{ color: "#B5841E" }} aria-hidden />
         <span
-          className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-extrabold"
+          className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-extrabold"
           style={{ background: "#B5841E", color: "#fff" }}
         >
           공지
         </span>
         <span
-          className="min-w-0 flex-1 text-[15px] font-bold"
+          className="min-w-0 flex-1 text-[16px] font-bold"
           style={{ color: "var(--wc-ink, #2A1A1F)" }}
         >
           {notice.title}

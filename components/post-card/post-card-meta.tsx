@@ -79,7 +79,7 @@ export function PostCardMeta({
 
   return (
     <div
-      className="flex items-center gap-3.5 text-[12.5px]"
+      className="flex items-center gap-3.5 text-[12px]"
       style={{
         color: "var(--wc-mute)",
         marginTop: 12,
@@ -153,7 +153,7 @@ export function PostCardMeta({
           <>
             <Hairline />
             <span
-              className="hidden rounded px-1.5 py-px text-[10px] font-semibold sm:inline"
+              className="hidden rounded px-1.5 py-px text-[12px] font-semibold sm:inline"
               style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
             >
               {flairTitle}
@@ -266,7 +266,7 @@ function AvatarSm({ avatar, author }: { avatar: string; author: string }) {
   return (
     <Avatar className="h-[26px] w-[26px]">
       <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
-      <AvatarFallback className="text-[11px]" style={{ background: "#f2efea", color: "#961E37" }}>
+      <AvatarFallback className="text-[12px]" style={{ background: "#f2efea", color: "#961E37" }}>
         {author?.[0] ?? "?"}
       </AvatarFallback>
     </Avatar>

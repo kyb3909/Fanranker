@@ -27,7 +27,7 @@ function GameBadge({ badge }: { badge: "HOT" | "NEW" }) {
         borderRadius: 4,
         padding: "1px 5px",
         fontWeight: 800,
-        fontSize: 9.5,
+        fontSize: 9,
         letterSpacing: "0.1em",
         lineHeight: 1.5,
       }}

@@ -295,7 +295,7 @@ export const CommunityContent = memo(function CommunityContent({
 
             {/* 테이블 헤더 — wc-soft tone, uppercase eyebrow letter-spacing */}
             <div
-              className="hidden grid-cols-10 gap-2 px-3 py-2.5 text-[11px] font-bold sm:grid"
+              className="hidden grid-cols-10 gap-2 px-3 py-2.5 text-[12px] font-bold sm:grid"
               style={{
                 background: "#ffffff",
                 color: "var(--wc-mute)",
@@ -312,7 +312,7 @@ export const CommunityContent = memo(function CommunityContent({
             </div>
             {/* 모바일 헤더 */}
             <div
-              className="grid grid-cols-12 gap-1 px-3 py-2.5 text-[11px] font-bold sm:hidden"
+              className="grid grid-cols-12 gap-1 px-3 py-2.5 text-[12px] font-bold sm:hidden"
               style={{
                 background: "#ffffff",
                 color: "var(--wc-mute)",
@@ -359,7 +359,7 @@ export const CommunityContent = memo(function CommunityContent({
                   <div className="col-span-5 hidden items-center gap-1.5 sm:flex">
                     {post.flair && (
                       <span
-                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        className="shrink-0 rounded px-1.5 py-0.5 text-[12px] font-bold"
                         style={{
                           backgroundColor: "#ffffff",
                           color: "var(--wc-mute)",
@@ -412,7 +412,7 @@ export const CommunityContent = memo(function CommunityContent({
                       )}
                       {!post.isNotice && post.flair && (
                         <span
-                          className="shrink-0 rounded px-1 py-0.5 text-[10px] font-bold"
+                          className="shrink-0 rounded px-1 py-0.5 text-[12px] font-bold"
                           style={{
                             backgroundColor: "#ffffff",
                             color: "var(--wc-mute)",

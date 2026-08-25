@@ -172,7 +172,7 @@ export function CardVsVote({
         }}
       >
         <span
-          className={`block truncate font-bold ${compact ? "text-[11.5px]" : "text-[12.5px]"}`}
+          className={`block truncate font-bold ${compact ? "text-[12px]" : "text-[12px]"}`}
           style={{ color: mine ? color : "var(--wc-ink, #1a1714)", wordBreak: "keep-all" }}
         >
           {label}
@@ -211,7 +211,7 @@ export function CardVsVote({
           disabled={busy}
           role="radio"
           aria-checked={mine}
-          className="min-w-0 flex-1 px-3 text-[12.5px] font-bold transition-colors"
+          className="min-w-0 flex-1 px-3 text-[12px] font-bold transition-colors"
           style={{
             height: 44,
             background: mine ? `color-mix(in srgb, ${color} 9%, white)` : "transparent",
@@ -288,7 +288,7 @@ export function CardVsVote({
       }}
     >
       <p
-        className={`mb-1.5 leading-snug font-bold ${compact ? "line-clamp-1 text-[11.5px]" : "text-[12.5px]"}`}
+        className={`mb-1.5 leading-snug font-bold ${compact ? "line-clamp-1 text-[12px]" : "text-[12px]"}`}
         style={{ color: "var(--wc-ink, #1a1714)", wordBreak: "keep-all" }}
       >
         🗳️ {vs.question}
@@ -298,7 +298,7 @@ export function CardVsVote({
         {side(vs.bKey, vs.bLabel, B_COLOR)}
       </div>
       {/* 박스는 안내 줄이 있으므로 띠와 달리 여기서 값을 돌려준다 — 규칙(showPct/showCount)은 공유 */}
-      <p className="mt-1 text-[10.5px]" style={{ color: "var(--wc-mute, #5c6470)" }}>
+      <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute, #5c6470)" }}>
         {total === 0
           ? "첫 표를 던져보세요"
           : myKey && total === 1

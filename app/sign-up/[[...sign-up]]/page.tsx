@@ -583,7 +583,7 @@ export default function SignUpPage() {
 
         {/* Terms footer — 가입 단계에서 체크박스로 명시 동의를 받으므로
             "간주" 표현은 잉여이자 역효과(묵시 동의로 오독됨) → 안내형으로 교체 */}
-        <p className="text-muted-foreground mt-4 text-center text-[11px] leading-relaxed">
+        <p className="text-muted-foreground mt-4 text-center text-[12px] leading-relaxed">
           가입에는{" "}
           <Link
             href="/terms"

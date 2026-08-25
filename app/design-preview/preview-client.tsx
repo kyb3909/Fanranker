@@ -117,7 +117,7 @@ function RichEmbed({ provider, url }: { provider: string; url: string }) {
         style={{ borderColor: "var(--wc-line)" }}
       >
         <div className="px-3.5 pt-3">
-          <div className="flex items-center gap-2 text-[12.5px]">
+          <div className="flex items-center gap-2 text-[12px]">
             {data.author_avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -136,7 +136,7 @@ function RichEmbed({ provider, url }: { provider: string; url: string }) {
           </div>
           {data.title && (
             <p
-              className="mt-2 text-[13.5px] leading-relaxed"
+              className="mt-2 text-[13px] leading-relaxed"
               style={{
                 color: "var(--wc-ink)",
                 display: "-webkit-box",
@@ -162,7 +162,7 @@ function RichEmbed({ provider, url }: { provider: string; url: string }) {
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 px-3.5 py-2 text-[11.5px]"
+          className="flex items-center gap-1 px-3.5 py-2 text-[12px]"
           style={{ color: "var(--wc-mute-2)" }}
         >
           <ExternalLink className="h-3 w-3" /> X에서 보기
@@ -224,7 +224,7 @@ function RichEmbed({ provider, url }: { provider: string; url: string }) {
         <div className="truncate text-[13px] font-semibold" style={{ color: "var(--wc-ink)" }}>
           {data.title || domain}
         </div>
-        <div className="text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+        <div className="text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
           🔗 {domain}
         </div>
       </div>
@@ -276,7 +276,7 @@ export function PreviewClient({ posts }: { posts: PreviewPost[] }) {
   return (
     <div className="worldcup-scope min-h-screen" style={{ background: "var(--wc-canvas)" }}>
       <div
-        className="sticky top-0 z-20 flex flex-wrap items-center gap-2 px-4 py-2.5 text-[12.5px]"
+        className="sticky top-0 z-20 flex flex-wrap items-center gap-2 px-4 py-2.5 text-[12px]"
         style={{ background: "var(--wc-ink)", color: "#fff" }}
       >
         <span className="font-bold">🎨 담벼락 디자인 프리뷰</span>
@@ -398,7 +398,7 @@ function AfterFeed({ posts, density }: { posts: PreviewPost[]; density: "card" |
       )}
 
       <div
-        className="flex items-center gap-3 rounded-xl px-4 py-3 text-[13.5px] font-bold"
+        className="flex items-center gap-3 rounded-xl px-4 py-3 text-[13px] font-bold"
         style={{
           background: "linear-gradient(100deg, var(--wc-burgundy-deep), var(--wc-burgundy))",
           color: "#fff",
@@ -430,7 +430,7 @@ function AfterCard({ p }: { p: PreviewPost }) {
           style={{ color: "var(--wc-mute-2)" }}
         >
           <span
-            className="inline-flex h-[26px] items-center gap-1 rounded-md px-2 text-[11.5px] font-bold"
+            className="inline-flex h-[26px] items-center gap-1 rounded-md px-2 text-[12px] font-bold"
             style={{ background: c.bg, color: c.color }}
           >
             {c.emoji} {p.sport}
@@ -439,7 +439,7 @@ function AfterCard({ p }: { p: PreviewPost }) {
           <span>{p.time}</span>
           {p.hot && (
             <span
-              className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold"
+              className="ml-auto inline-flex items-center gap-1 text-[12px] font-bold"
               style={{ color: "var(--wc-burgundy)" }}
             >
               <Flame className="h-3.5 w-3.5" /> 인기
@@ -449,7 +449,7 @@ function AfterCard({ p }: { p: PreviewPost }) {
 
         {/* 제목 */}
         <h2
-          className="text-[17px] font-bold"
+          className="text-[16px] font-bold"
           style={{ color: "var(--wc-ink)", letterSpacing: "-0.01em", lineHeight: 1.45 }}
         >
           {p.title}
@@ -457,7 +457,7 @@ function AfterCard({ p }: { p: PreviewPost }) {
         {/* 본문 (제목과 띄움) */}
         {p.body && (
           <p
-            className="mt-2 text-[13.5px]"
+            className="mt-2 text-[13px]"
             style={{
               color: "var(--wc-mute)",
               lineHeight: 1.6,
@@ -486,11 +486,11 @@ function AfterCard({ p }: { p: PreviewPost }) {
 
         {/* 메타 (미디어와 충분히 띄움) */}
         <div
-          className="mt-4 flex items-center gap-2.5 border-t pt-3 text-[12.5px]"
+          className="mt-4 flex items-center gap-2.5 border-t pt-3 text-[12px]"
           style={{ borderColor: "var(--wc-line)", color: "var(--wc-mute)" }}
         >
           <span
-            className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold"
+            className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[12px] font-bold"
             style={{ background: "#f2efea", color: "#961E37" }}
           >
             {p.author[0] ?? "?"}
@@ -500,7 +500,7 @@ function AfterCard({ p }: { p: PreviewPost }) {
           </span>
           {p.flair && (
             <span
-              className="rounded px-1.5 py-px text-[10px] font-semibold"
+              className="rounded px-1.5 py-px text-[12px] font-semibold"
               style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
             >
               {p.flair}
@@ -524,7 +524,7 @@ function CompactRow({ p }: { p: PreviewPost }) {
   const c = chip(p.sport)
   return (
     <div
-      className="flex items-center gap-2.5 px-3.5 py-2.5 text-[13.5px]"
+      className="flex items-center gap-2.5 px-3.5 py-2.5 text-[13px]"
       style={{ borderBottom: "1px solid var(--wc-line)" }}
     >
       <span className="shrink-0 text-[13px]">{c.emoji}</span>
@@ -557,7 +557,7 @@ function BeforeFeed({ posts }: { posts: PreviewPost[] }) {
       >
         🏆 <span className="flex-1">월드컵 승부예측 구너들의 대결 — 지금 참가하세요</span>
         <span
-          className="rounded-lg px-3 py-1.5 text-[12.5px]"
+          className="rounded-lg px-3 py-1.5 text-[12px]"
           style={{ background: "rgba(255,255,255,.14)" }}
         >
           참가 신청 →
@@ -585,7 +585,7 @@ function BeforeCard({ p }: { p: PreviewPost }) {
       <div style={{ padding: "18px 20px" }}>
         <div className="mb-2 flex items-center gap-2">
           <span
-            className="inline-flex h-6 items-center gap-1 rounded-md px-2 text-[11.5px] font-bold"
+            className="inline-flex h-6 items-center gap-1 rounded-md px-2 text-[12px] font-bold"
             style={{ background: c.bg, color: c.color }}
           >
             {c.emoji} {p.sport}
@@ -594,13 +594,13 @@ function BeforeCard({ p }: { p: PreviewPost }) {
             {p.time}
           </span>
           <span
-            className="ml-auto inline-flex h-6 items-center gap-1 rounded-md px-2 text-[11.5px] font-bold"
+            className="ml-auto inline-flex h-6 items-center gap-1 rounded-md px-2 text-[12px] font-bold"
             style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
           >
             🌡 {(p.votes / 2 + p.comments + 3).toFixed(1)}°
           </span>
         </div>
-        <h2 className="truncate text-[18px] font-bold" style={{ color: "var(--wc-ink)" }}>
+        <h2 className="truncate text-[20px] font-bold" style={{ color: "var(--wc-ink)" }}>
           {p.title}
         </h2>
         {p.body && (
@@ -646,11 +646,11 @@ function BeforeCard({ p }: { p: PreviewPost }) {
           />
         )}
         <div
-          className="mt-3 flex items-center gap-3 border-t pt-3 text-[12.5px]"
+          className="mt-3 flex items-center gap-3 border-t pt-3 text-[12px]"
           style={{ borderColor: "var(--wc-line)", color: "var(--wc-mute)" }}
         >
           <span
-            className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[11px] font-bold"
+            className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[12px] font-bold"
             style={{ background: "#f2efea", color: "#961E37" }}
           >
             {p.author[0] ?? "?"}
@@ -660,7 +660,7 @@ function BeforeCard({ p }: { p: PreviewPost }) {
           </span>
           {p.flair && (
             <span
-              className="rounded px-1.5 py-px text-[10px] font-semibold"
+              className="rounded px-1.5 py-px text-[12px] font-semibold"
               style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
             >
               {p.flair}
@@ -670,7 +670,7 @@ function BeforeCard({ p }: { p: PreviewPost }) {
             <Stat icon={<ThumbsUp className="h-3.5 w-3.5" />} n={p.votes} />
             <Stat icon={<MessageCircle className="h-3.5 w-3.5" />} n={p.comments} />
             <Stat icon={<Eye className="h-3.5 w-3.5" />} n={p.views} />
-            <span className="text-[11px]" style={{ color: "var(--wc-line-2)" }}>
+            <span className="text-[12px]" style={{ color: "var(--wc-line-2)" }}>
               (저장·공유는 hover 시)
             </span>
           </span>

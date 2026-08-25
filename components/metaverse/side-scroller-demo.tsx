@@ -166,13 +166,13 @@ export function SideScrollerDemo() {
           <>
             <button
               onClick={() => setShopOpen(true)}
-              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[12px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
             >
               👕 유니폼 상점
             </button>
             <Link
               href="/metaverse/uk"
-              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/80 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80 hover:text-white"
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[12px] font-semibold text-white/80 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80 hover:text-white"
             >
               ← 월드맵
             </Link>

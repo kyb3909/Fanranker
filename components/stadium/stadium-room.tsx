@@ -148,7 +148,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
             <Trophy className="h-3 w-3" style={{ color: team.color }} />
           </div>
           <span className="truncate text-sm font-bold">{team.team_short_name}</span>
-          <span className="text-muted-foreground shrink-0 text-[10px]">Lv.{stadium.level}</span>
+          <span className="text-muted-foreground shrink-0 text-[12px]">Lv.{stadium.level}</span>
         </div>
 
         {/* 게이지 바 (인라인) */}
@@ -164,7 +164,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
 
         {/* 참여자 수 + 투자 버튼 */}
         <div className="flex shrink-0 items-center gap-1.5">
-          <span className="text-muted-foreground text-[10px] tabular-nums">
+          <span className="text-muted-foreground text-[12px] tabular-nums">
             <Users className="mr-0.5 inline h-3 w-3" />
             {stadium.fan_count}
           </span>

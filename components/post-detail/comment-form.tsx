@@ -113,7 +113,7 @@ export function CommentForm({
           className="min-h-[100px] resize-none"
           style={{
             padding: "11px 13px",
-            fontSize: 13.5,
+            fontSize: 13,
             lineHeight: 1.55,
             border: "1px solid var(--wc-line-2)",
             borderRadius: 12,

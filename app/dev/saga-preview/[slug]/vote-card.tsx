@@ -98,7 +98,7 @@ export function VoteCard({ slug, closed, initial }: Props) {
       </h2>
 
       {agg.total === 0 ? (
-        <p className="mt-3 text-[13.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+        <p className="mt-3 text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
           아직 투표가 없습니다 — 첫 표를 던져보세요.
         </p>
       ) : (

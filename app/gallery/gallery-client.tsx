@@ -51,7 +51,7 @@ export function GalleryClient({ items }: { items: GalleryItem[] }) {
         <p className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
           아직 등록된 사진이 없어요
         </p>
-        <p className="mt-1 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+        <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute)" }}>
           운영자가 큐레이션한 사진이 이곳에 차곡차곡 쌓입니다.
         </p>
       </div>
@@ -203,12 +203,12 @@ function Lightbox({
         className="flex items-center justify-center gap-2 px-4 py-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="text-[12.5px] text-white/70">📷 {slide.author}</span>
+        <span className="text-[12px] text-white/70">📷 {slide.author}</span>
         <a
           href={slide.tweetUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white/90 hover:underline"
+          className="inline-flex items-center gap-1 text-[12px] font-semibold text-white/90 hover:underline"
         >
           <ExternalLink className="h-3.5 w-3.5" />
           원문 보기

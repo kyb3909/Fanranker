@@ -74,7 +74,7 @@ function MobileTabBarContent() {
               }}
             >
               <tab.icon className={`h-[22px] w-[22px] ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className="font-sans text-[11px] font-medium tracking-tight">{tab.label}</span>
+              <span className="font-sans text-[12px] font-medium tracking-tight">{tab.label}</span>
             </Link>
           )
         })}

@@ -86,7 +86,7 @@ export default async function WorldcupResultPage({
             <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
               이벤트 미존재
             </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
               이벤트(slug=&quot;{EVENT_SLUG}&quot;)를 찾을 수 없습니다.
             </p>
           </div>
@@ -224,7 +224,7 @@ export default async function WorldcupResultPage({
             }}
           >
             <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>데이터 부족</div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
               이벤트가 종료됐지만 참가자/예측 데이터가 없어 결과를 산정할 수 없습니다.
             </p>
           </div>
@@ -334,7 +334,7 @@ export default async function WorldcupResultPage({
                       padding: "8px 10px",
                       borderRadius: 12,
                       background: "rgba(150,30,55,0.06)",
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: 700,
                       color: "var(--wc-burgundy)",
                     }}
@@ -363,7 +363,7 @@ export default async function WorldcupResultPage({
               </div>
               <ul
                 style={{
-                  fontSize: 13.5,
+                  fontSize: 13,
                   lineHeight: 1.8,
                   color: "var(--wc-ink-2)",
                   paddingLeft: 18,
@@ -377,9 +377,7 @@ export default async function WorldcupResultPage({
                   <b>2·3위</b> — 아스날 2025-26 시즌 유니폼
                 </li>
               </ul>
-              <p
-                style={{ fontSize: 12.5, color: "var(--wc-mute)", marginTop: 10, lineHeight: 1.7 }}
-              >
+              <p style={{ fontSize: 12, color: "var(--wc-mute)", marginTop: 10, lineHeight: 1.7 }}>
                 당첨자께는 <b>가입하신 이메일로 개별 연락</b>드릴 예정입니다.
               </p>
             </div>
@@ -445,7 +443,7 @@ export default async function WorldcupResultPage({
                     </div>
                     <div
                       style={{
-                        fontSize: 12.5,
+                        fontSize: 12,
                         color: "var(--wc-mute)",
                         width: 64,
                         textAlign: "right",

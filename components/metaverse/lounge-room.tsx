@@ -387,13 +387,13 @@ export function LoungeRoom() {
           <>
             <button
               onClick={toggleSwitcher}
-              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[12px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
             >
               🚪 채널 목록
             </button>
             <button
               onClick={() => setShopOpen(true)}
-              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[12px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
             >
               👕 유니폼 상점
             </button>
@@ -414,7 +414,7 @@ export function LoungeRoom() {
             <button
               onClick={() => void refreshRoomCounts()}
               disabled={countsLoading}
-              className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+              className="rounded-full border border-white/12 px-2 py-0.5 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
             >
               {countsLoading ? "확인 중…" : "새로고침"}
             </button>
@@ -459,7 +459,7 @@ export function LoungeRoom() {
               )
             })}
           </div>
-          <p className="mt-2 text-[10px] leading-relaxed text-white/45">
+          <p className="mt-2 text-[12px] leading-relaxed text-white/45">
             채널 개수는 아스날 경기장 레벨(Lv.{loungeConfig.stadiumLevel})만큼 열려요
           </p>
         </div>

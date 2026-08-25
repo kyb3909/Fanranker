@@ -81,7 +81,7 @@ export function LeaderboardClient({
     return (
       <div style={{ ...cardStyle, padding: "22px 24px" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>데이터 없음</div>
-        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
           이벤트 또는 그룹 데이터가 없습니다. 마이그레이션이 적용됐는지 확인하세요.
         </p>
       </div>
@@ -133,14 +133,14 @@ export function LeaderboardClient({
                 >
                   {fmtProfit(stats.avgProfit)}
                 </b>
-                <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>평균 획득 점수</span>
+                <span style={{ fontSize: 12, color: "var(--wc-mute)" }}>평균 획득 점수</span>
               </div>
               <div
                 style={{
                   display: "flex",
                   gap: 16,
                   marginTop: 8,
-                  fontSize: 12.5,
+                  fontSize: 12,
                   color: "var(--wc-mute)",
                 }}
               >
@@ -209,7 +209,7 @@ export function LeaderboardClient({
                         display: "flex",
                         alignItems: "baseline",
                         gap: 14,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         color: "var(--wc-mute)",
                         flexShrink: 0,
                       }}
@@ -290,7 +290,7 @@ export function LeaderboardClient({
             <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
               아직 참가 신청 전이에요
             </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
               참가 신청하면 구너 평균과 내 위치를 볼 수 있어요.
             </p>
           </div>
@@ -300,7 +300,7 @@ export function LeaderboardClient({
         </div>
       )}
 
-      <p className="text-center text-[11px]" style={{ color: "var(--wc-mute)" }}>
+      <p className="text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
         {note ?? "구너 평균과 순위. 정식 집계는 32강부터 반영됩니다."}
       </p>
     </div>

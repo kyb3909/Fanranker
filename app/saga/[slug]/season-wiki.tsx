@@ -86,7 +86,7 @@ function EVENT_LABEL(ev: ChronicleEvent): string {
  */
 function EventChip({ ev }: { ev: ChronicleEvent }) {
   const base =
-    "inline-block shrink-0 rounded-[4px] px-[7px] py-[2px] text-[10.5px] leading-[1.5] font-extrabold"
+    "inline-block shrink-0 rounded-[4px] px-[7px] py-[2px] text-[12px] leading-[1.5] font-extrabold"
   const style: React.CSSProperties =
     ev.kind === "transfer" && ev.tier === "official"
       ? { background: "var(--wc-ink)", color: "var(--wc-card)" }
@@ -162,7 +162,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
         <section aria-label="연대기">
           {chronicle.length === 0 ? (
             <p
-              className="rounded-xl px-5 py-8 text-center text-[13.5px]"
+              className="rounded-xl px-5 py-8 text-center text-[13px]"
               style={{ ...card, color: "var(--wc-mute)" }}
             >
               아직 기록된 사료가 없습니다 — 경기가 열리고 이적 소식이 붙는 대로 이 연대기가 써
@@ -195,12 +195,12 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                       {newDay && (
                         <>
                           <p
-                            className="gn-num text-[18px] leading-none font-bold sm:text-[20px]"
+                            className="gn-num text-[20px] leading-none font-bold sm:text-[20px]"
                             style={{ color: "var(--wc-ink)" }}
                           >
                             {kstShortDate(ev.occurredAt)}
                           </p>
-                          <p className="mt-1 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                          <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
                             {kstWeekday(ev.occurredAt)}
                           </p>
                         </>
@@ -253,14 +253,14 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
         {squad.length > 0 && (
           <section className="mt-8 rounded-2xl px-5 py-4 sm:px-6" style={card} aria-label="스쿼드">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+              <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
                 스쿼드{" "}
-                <span className="gn-num text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                <span className="gn-num text-[12px]" style={{ color: "var(--wc-mute)" }}>
                   {squad.reduce((n, g) => n + g.players.length, 0)}
                 </span>
               </h2>
               {dbSquad?.coach && (
-                <span className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                <span className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
                   감독 <b style={{ color: "var(--wc-ink)" }}>{dbSquad.coach}</b>
                 </span>
               )}
@@ -269,7 +269,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
               {squad.map((group) => (
                 <div key={group.position}>
                   <p
-                    className="text-[11.5px] font-extrabold"
+                    className="text-[12px] font-extrabold"
                     style={{ color: "var(--wc-burgundy)", letterSpacing: "0.04em" }}
                   >
                     {group.label}{" "}
@@ -281,7 +281,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                     {group.players.map((p, i) => (
                       <li key={i} className="flex items-center gap-1.5 text-[13px]">
                         <span
-                          className="gn-num grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+                          className="gn-num grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full text-[12px] font-extrabold"
                           style={{
                             background: "var(--wc-wine-tint)",
                             color: "var(--wc-burgundy)",
@@ -328,10 +328,10 @@ function MatchEvent({
     our !== null && their !== null ? (our > their ? "승" : our < their ? "패" : "무") : null
   // 카드 껍데기 없음 — 레일이 이미 지면을 나눈다 (카드 안 카드 금지)
   return (
-    <div className="flex items-center gap-2 text-[15.5px]">
+    <div className="flex items-center gap-2 text-[16px]">
       {wdl && (
         <span
-          className="grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+          className="grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[12px] font-extrabold"
           style={{
             background: wdl === "승" ? "#2f7d5b1a" : wdl === "패" ? "#c2352f1a" : "var(--wc-soft)",
             color: wdl === "승" ? "#2f7d5b" : wdl === "패" ? "#c2352f" : "var(--wc-mute)",
@@ -347,7 +347,7 @@ function MatchEvent({
         </b>
         {m.away}
       </span>
-      <span className="ml-auto shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+      <span className="ml-auto shrink-0 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
         {m.leagueCode ?? ""}
       </span>
     </div>
@@ -367,7 +367,7 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
   return (
     <div>
       <p
-        className="text-[15.5px] leading-[1.45] font-bold"
+        className="text-[16px] leading-[1.45] font-bold"
         style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
       >
         {ev.headline}
@@ -396,7 +396,7 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
                 href={ev.url}
                 target="_blank"
                 rel="noreferrer nofollow"
-                className="self-start text-[11px] underline underline-offset-2"
+                className="self-start text-[12px] underline underline-offset-2"
                 style={{ color: "var(--wc-mute)" }}
               >
                 원본 데이터 (Soccerway) ↗
@@ -413,7 +413,7 @@ function ArticleEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "article" }>
   return (
     <Link href={`/post/${ev.postId}?utm_source=season_wiki`} className="block no-underline">
       <p
-        className="text-[15.5px] leading-[1.45] font-bold"
+        className="text-[16px] leading-[1.45] font-bold"
         style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
       >
         {ev.title}
@@ -428,7 +428,7 @@ function TransferEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "transfer" 
       <div>
         {/* 등급은 레일 칩이 이미 말한다 — 여기선 사가명과 현재 단계만.
             "루머 → 제안" 처럼 전이를 병기하면 무엇이 지금인지 안 읽힌다 */}
-        <div className="flex min-w-0 items-center gap-2 text-[11.5px]">
+        <div className="flex min-w-0 items-center gap-2 text-[12px]">
           {ev.stageAfter && (
             <span className="shrink-0 font-bold" style={{ color: "var(--wc-burgundy)" }}>
               {STAGE_LABEL[ev.stageAfter] ?? ev.stageAfter}
@@ -439,7 +439,7 @@ function TransferEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "transfer" 
           </span>
         </div>
         <p
-          className="mt-1 text-[15.5px] leading-[1.45] font-bold"
+          className="mt-1 text-[16px] leading-[1.45] font-bold"
           style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
         >
           {ev.headline}

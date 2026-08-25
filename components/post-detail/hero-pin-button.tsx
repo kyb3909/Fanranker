@@ -61,7 +61,7 @@ export function HeroPinButton({ postId }: { postId: string }) {
       type="button"
       onClick={toggle}
       disabled={busy}
-      className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-bold disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-bold disabled:opacity-50"
       style={{
         borderColor: data.isHero ? "var(--wc-burgundy)" : "var(--wc-line)",
         color: data.isHero ? "var(--wc-burgundy)" : "var(--wc-mute)",

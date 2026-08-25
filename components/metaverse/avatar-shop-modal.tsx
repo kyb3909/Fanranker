@@ -233,7 +233,7 @@ export function AvatarShopModal({
                     {item.description ? (
                       <p className="mt-0.5 text-xs text-white/60">{item.description}</p>
                     ) : null}
-                    <p className="mt-1 text-[10px] text-white/40">
+                    <p className="mt-1 text-[12px] text-white/40">
                       {item.isDefault ? "기본 제공" : `${item.priceGold.toLocaleString()} 골드`}
                     </p>
                   </div>
@@ -254,7 +254,7 @@ export function AvatarShopModal({
           </ul>
         )}
 
-        <p className="mt-4 text-[10px] text-white/40">
+        <p className="mt-4 text-[12px] text-white/40">
           * 장착 변경 시 캐릭터 재생성을 위해 씬이 재시작됩니다.
         </p>
       </div>

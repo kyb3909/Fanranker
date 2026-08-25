@@ -148,7 +148,7 @@ export default async function SagaPreviewPage({
           </h1>
           {saga.summary && (
             <p
-              className="mt-1.5 text-[14.5px]"
+              className="mt-1.5 text-[14px]"
               style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
             >
               {saga.summary}
@@ -234,7 +234,7 @@ export default async function SagaPreviewPage({
               aria-label="기사"
             >
               <span
-                className="inline-flex rounded-full px-2.5 py-1 text-[11.5px] font-extrabold"
+                className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-extrabold"
                 style={{ background: "rgba(139,30,63,.08)", color: "var(--wc-burgundy)" }}
               >
                 지금 읽는 중
@@ -283,7 +283,7 @@ export default async function SagaPreviewPage({
                           aria-hidden
                         />
                         <p
-                          className="mb-2 text-[13.5px] font-extrabold"
+                          className="mb-2 text-[13px] font-extrabold"
                           style={{ color: "var(--wc-ink)" }}
                         >
                           {kstDateLabel(e.occurred_at)}
@@ -310,7 +310,7 @@ export default async function SagaPreviewPage({
                           </span>
                           <div className="min-w-0 flex-1">
                             <h3
-                              className="text-[14.5px] leading-snug font-bold"
+                              className="text-[14px] leading-snug font-bold"
                               style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
                             >
                               {e.headline}
@@ -335,7 +335,7 @@ export default async function SagaPreviewPage({
                           </a>
                         </div>
                         <div
-                          className="mt-1.5 flex items-center gap-2 text-[11.5px] font-bold"
+                          className="mt-1.5 flex items-center gap-2 text-[11px] font-bold"
                           style={{ color: "var(--wc-mute)" }}
                         >
                           {e.stage_after && (
@@ -359,7 +359,7 @@ export default async function SagaPreviewPage({
                             a.contentHtml && (
                               <details key={a.postId} className="group mt-2">
                                 <summary
-                                  className="cursor-pointer list-none text-[12.5px] font-bold select-none"
+                                  className="cursor-pointer list-none text-[12px] font-bold select-none"
                                   style={{ color: "var(--wc-burgundy)" }}
                                 >
                                   <span className="group-open:hidden">
@@ -391,7 +391,7 @@ export default async function SagaPreviewPage({
                           style={{ borderColor: "var(--wc-line)" }}
                         >
                           <summary
-                            className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-[12.5px] font-bold select-none"
+                            className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-[12px] font-bold select-none"
                             style={{ color: "var(--wc-mute)" }}
                           >
                             외신 {e.echoes.length}곳이 받아씀

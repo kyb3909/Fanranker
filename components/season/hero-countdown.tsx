@@ -33,7 +33,7 @@ export function HeroCountdown({ target, label }: { target: string; label: string
       style={{ background: "rgba(255,255,255,.06)", border: "1px solid var(--gn-night-line)" }}
     >
       <span
-        className="text-[12.5px] leading-tight font-bold"
+        className="text-[12px] leading-tight font-bold"
         style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
       >
         {label}
@@ -58,7 +58,7 @@ export function HeroCountdown({ target, label }: { target: string; label: string
                 {parts ? parts[i] : "--"}
               </span>
               <span
-                className="mt-1 text-[10px] font-bold"
+                className="mt-1 text-[12px] font-bold"
                 style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.08em" }}
               >
                 {u}

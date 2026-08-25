@@ -101,8 +101,8 @@ export function ChatOverlay({ canSend = true }: { canSend?: boolean }) {
 
   if (!isOpen) {
     return (
-      <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-[11px] text-white/55 backdrop-blur-sm">
-        <kbd className="rounded border border-white/20 px-1.5 text-[10px] font-semibold text-white/80">
+      <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-[12px] text-white/55 backdrop-blur-sm">
+        <kbd className="rounded border border-white/20 px-1.5 text-[12px] font-semibold text-white/80">
           Enter
         </kbd>
         <span className="ml-2">키를 눌러 채팅</span>
@@ -133,17 +133,17 @@ export function ChatOverlay({ canSend = true }: { canSend?: boolean }) {
         maxLength={METAVERSE.BUBBLE_MAX_CHARS}
         aria-label="월드 채팅 입력"
       />
-      <span className="text-[10px] text-white/40 tabular-nums">{charsLeft}</span>
+      <span className="text-[12px] text-white/40 tabular-nums">{charsLeft}</span>
       <button
         onClick={send}
         disabled={remaining > 0}
-        className="rounded bg-white/10 px-2 py-1 text-[11px] text-white transition-colors hover:bg-white/20 disabled:opacity-40"
+        className="rounded bg-white/10 px-2 py-1 text-[12px] text-white transition-colors hover:bg-white/20 disabled:opacity-40"
       >
         전송
       </button>
       <button
         onClick={close}
-        className="rounded px-2 py-1 text-[11px] text-white/50 transition-colors hover:text-white"
+        className="rounded px-2 py-1 text-[12px] text-white/50 transition-colors hover:text-white"
       >
         Esc
       </button>

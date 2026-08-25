@@ -100,11 +100,11 @@ export function HeroVsVote({
   return (
     <div className="mt-3 block max-w-[430px]">
       <span
-        className="mb-1.5 flex items-baseline gap-2 text-[12.5px] font-bold"
+        className="mb-1.5 flex items-baseline gap-2 text-[12px] font-bold"
         style={{ color: "var(--gn-cream)" }}
       >
         <span
-          className="rounded px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider"
+          className="rounded px-1.5 py-0.5 text-[12px] font-extrabold tracking-wider"
           style={{ background: "rgba(150,30,55,.35)", color: "#e8a0b0" }}
         >
           오늘의 쟁점
@@ -114,7 +114,7 @@ export function HeroVsVote({
 
       {/* 게이지 — 결과는 항상 공개(소표본만 % 숨김) */}
       <span
-        className="flex h-[22px] overflow-hidden rounded-md text-[11px] font-extrabold"
+        className="flex h-[22px] overflow-hidden rounded-md text-[12px] font-extrabold"
         style={{ color: "var(--gn-cream)" }}
         role="img"
         aria-label={
@@ -162,7 +162,7 @@ export function HeroVsVote({
               onClick={() => vote(key)}
               disabled={busy}
               aria-pressed={mine}
-              className="min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-[11.5px] font-bold transition-all disabled:opacity-70"
+              className="min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-[12px] font-bold transition-all disabled:opacity-70"
               style={{
                 background: mine ? tint : "rgba(255,255,255,.07)",
                 border: `1px solid ${mine ? color : "rgba(255,255,255,.16)"}`,
@@ -177,7 +177,7 @@ export function HeroVsVote({
         })}
       </div>
 
-      <p className="mt-1.5 text-[11px]" style={{ color: "var(--gn-cream-dim)" }}>
+      <p className="mt-1.5 text-[12px]" style={{ color: "var(--gn-cream-dim)" }}>
         {total === 0 ? "첫 표를 던져보세요" : `참여 ${total.toLocaleString()}명`}
         {!isSignedIn && " · 투표는 로그인 후"}
         {" · "}

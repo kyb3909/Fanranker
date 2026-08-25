@@ -120,7 +120,7 @@ export function MiniGameLeaderboard({ game }: { game: MiniGameId }) {
                 </span>
                 <span className="min-w-0 flex-1 truncate">
                   {entry.nickname}
-                  {isMe && <span className="ml-1 text-[11px] text-amber-600">(나)</span>}
+                  {isMe && <span className="ml-1 text-[12px] text-amber-600">(나)</span>}
                 </span>
                 <span className="text-muted-foreground shrink-0 text-[12px]">{entry.plays}판</span>
                 <span className="w-16 shrink-0 text-right font-bold tabular-nums">
