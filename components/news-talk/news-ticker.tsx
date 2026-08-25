@@ -104,6 +104,12 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [selectedItem, setSelectedItem] = useState<TickerItem | null>(null)
   const [tickerItems, setTickerItems] = useState<TickerItem[]>([])
+  /**
+   * ⚠️ **로딩과 "소식 없음"을 구분한다** (2026-08-25 외부 감사).
+   *    종전엔 둘 다 빈 배열이라 화면이 "실시간 소식을 불러오는 중…" 을 **영원히** 띄웠다.
+   *    아스날 게시판이 그 상태로 며칠 있었고, 고장인지 아닌지 아무도 알 수 없었다.
+   */
+  const [loading, setLoading] = useState(true)
 
   // Fetch real data from API, fallback to mock
   useEffect(() => {
@@ -127,9 +133,11 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
       }
     }
 
-    fetchTicker()
+    const run = () => fetchTicker().finally(() => !cancelled && setLoading(false))
+
+    run()
     // Refresh every 5 minutes
-    const interval = setInterval(fetchTicker, 5 * 60 * 1000)
+    const interval = setInterval(run, 5 * 60 * 1000)
     return () => {
       cancelled = true
       clearInterval(interval)
@@ -189,8 +197,9 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
   // (useEffect 에서 fetch) → return null 하면 skeleton 64px → 0 → 43px 두 번 시프트 발생.
   // 외부 구조 유지하고 안쪽만 invisible 로 자리 잡아둠.
   if (tickerItems.length === 0) {
-    // 로딩/콘텐츠 없음: 검은 빈 띠 대신 LIVE 뱃지 + 안내를 넣어 "깨진 영역" 인상을 방지.
     // 높이는 동일하게 유지해 CLS 방지(return null 하면 64→0→43 두 번 시프트).
+    // ⚠️ 문구는 **상태에 따라 다르다.** 소식이 없는데 "불러오는 중"이라고 하면
+    //    고장으로 읽힌다 — 실제로 그렇게 읽혔다.
     return (
       <div
         className="w-full overflow-hidden border-b border-neutral-800 bg-neutral-900"
@@ -199,7 +208,9 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
         <div className="container mx-auto flex min-h-11 max-w-[1280px] items-center gap-2 px-4 py-2.5 sm:min-h-0">
           <Zap className="h-4 w-4 shrink-0 text-amber-400" />
           <span className="text-[12px] font-bold tracking-wide text-white">LIVE</span>
-          <span className="truncate text-[12px] text-neutral-400">실시간 소식을 불러오는 중…</span>
+          <span className="truncate text-[12px] text-neutral-400">
+            {loading ? "실시간 소식을 불러오는 중…" : "지금은 새 소식이 없습니다"}
+          </span>
         </div>
       </div>
     )
