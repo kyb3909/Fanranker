@@ -5,7 +5,13 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTransferBatch, type ExtractedTransfer } from "@/lib/saga/extract"
 import { classifyTier } from "@/lib/saga/tier"
 import { identityKey, normalizePlayerKey, transferClusterKey } from "@/lib/saga/identity"
-import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/canonical"
+import {
+  buildAliasIndex,
+  canonicalizePlayer,
+  isGroundedInSource,
+  recoverPlayerFromSource,
+  type AliasRow,
+} from "@/lib/saga/canonical"
 import { SAGA_WINDOW_KEY } from "@/lib/saga/config"
 import { publishReservoirItem } from "@/lib/saga/publish"
 import { isWomensFootball } from "@/lib/news/quality-gate"
@@ -103,10 +109,40 @@ async function cronGet(request: Request) {
           continue
         }
 
-        const canon = canonicalizePlayer(ex.player, aliasIndex)
+        // ⚠️ 아래 근거 검증이 문자열을 전제한다 — 여기서 좁혀둔다
+        const rawPlayer = ex.player ?? ""
+        const canon = canonicalizePlayer(rawPlayer, aliasIndex)
         if (canon.matched) {
           ex.player = canon.key
           if (canon.ko) ex.player_kr = canon.ko
+        } else if (!isGroundedInSource(rawPlayer, row.title)) {
+          /**
+           * ⚠️ **사전에도 없고 원문에도 없는 이름은 신원이 될 수 없다** (2026-08-25 실사고).
+           *
+           * "Tottenham sign Savinho from Man City" 에서 추출기가 `fabinho` 를 냈고,
+           * 그 문자열이 그대로 기본키가 돼 같은 이적이 두 사가로 갈렸다.
+           * 프롬프트로는 확률을 낮출 뿐 못 막는다 — 여기서 결정적으로 잘라낸다.
+           */
+          const recovered = recoverPlayerFromSource(row.title, aliasIndex)
+          if (recovered) {
+            console.warn(
+              `[saga-extract] 지어낸 선수명 복구: "${rawPlayer}" → "${recovered.key}" (원문: ${row.title})`
+            )
+            ex.player = recovered.key
+            ex.player_kr = recovered.ko ?? ex.player_kr
+          } else {
+            // 복구도 못 하면 **사가를 만들지 않는다.** 근거 없는 신원으로 문서를 여는
+            // 것보다 재료를 남겨두는 편이 낫다 (unknown_player 재평가가 나중에 집는다).
+            console.warn(
+              `[saga-extract] 근거 없는 선수명 — 보류: "${rawPlayer}" (원문: ${row.title})`
+            )
+            await supabase
+              .from("saga_reservoir")
+              .update({ status: "unknown_player", updated_at: new Date().toISOString() })
+              .eq("id", row.id)
+            autoHeld++
+            continue
+          }
         }
 
         const src = (row.source ?? {}) as Record<string, unknown>

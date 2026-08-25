@@ -15,6 +15,7 @@ import { gatedStageSignal, STAGE_FLOW, STAGE_LABEL } from "@/lib/saga/stages"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
+import { findIdentityMismatches } from "@/lib/saga/identity-audit"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -257,6 +258,53 @@ async function handler(req: NextRequest) {
     }
   } catch (e) {
     checkErrors.push(`saga_stage_regressed: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 사가 신원 불변식: 한글 표기와 로마자 키가 같은 사람인가 ──
+  /**
+   * 2026-08-25 실사고: "Tottenham sign **Savinho** from Man City" 기사에서 추출기가
+   * `fabinho`(파비뉴 — 다른 선수)를 냈고, 그 문자열이 그대로 기본키가 돼 같은 이적이
+   * **두 사가로 갈렸다.** 화면엔 "사비뉴 이적 사가"가 둘 떠 있었고, 운영자가 눈으로 찾았다.
+   *
+   * canonical.ts 의 근거 검증이 앞으로 들어올 것을 막는다면, 이 검사는 **이미 들어와
+   * 있는 것**을 찾는다. 검증을 붙이기 전에 생긴 데이터는 검증이 못 잡기 때문이다.
+   */
+  try {
+    const { data: idSagas } = await supabase
+      .from("sagas")
+      .select("slug, subject, entry_count")
+      .eq("saga_type", "transfer")
+
+    // ⚠️ 사전은 notation 모듈로만 읽는다 — 직접 조회는 아키텍처 가드가 막는다.
+    //    사전 읽는 경로가 7개로 갈라져 하루에 표기 사고가 다섯 번 났던 적이 있다.
+    const idNotation = await loadNotation(supabase)
+    const idAliases = idNotation.persons.map((e) => ({
+      romanized: e.romanized,
+      preferredKo: e.preferred_ko,
+    }))
+
+    const mismatches = findIdentityMismatches(
+      (idSagas ?? []).map((s) => {
+        const subj = (s.subject ?? {}) as { player_key?: string; player_name_kr?: string }
+        return {
+          slug: s.slug as string,
+          playerKey: subj.player_key ?? "",
+          playerNameKr: subj.player_name_kr ?? null,
+          entryCount: (s.entry_count as number) ?? 0,
+        }
+      }),
+      idAliases
+    )
+    for (const m of mismatches) {
+      findings.push({
+        invariant: "saga_identity_mismatch",
+        fingerprint: `saga_identity_mismatch:${m.slug}`,
+        summary: `사가 신원 어긋남 — 화면엔 "${m.koName}" 인데 키는 "${m.sagaKey}" (사전: ${m.dictKeys.join(", ")}) (/saga/${m.slug})`,
+        detail: { slug: m.slug, saga_key: m.sagaKey, ko_name: m.koName, dict_keys: m.dictKeys },
+      })
+    }
+  } catch (e) {
+    checkErrors.push(`saga_identity_mismatch: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // ── 원장 반영: 신규/재발만 알림, 사라진 위반은 resolved ──
