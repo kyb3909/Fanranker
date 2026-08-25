@@ -4,6 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -171,6 +172,7 @@ JSON으로 응답해:
     }
 
     const data = await res.json()
+    logUsage("reddit-seed", OPENAI_MODEL, data)
     const content = data.choices?.[0]?.message?.content
     if (!content) return null
 

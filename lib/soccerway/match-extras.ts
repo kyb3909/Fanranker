@@ -12,6 +12,7 @@ import {
   cachedPersons,
   cachedSquadPairs,
 } from "@/lib/soccerway/lineup-lookup"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * 매치 부가정보 — 기초 스탯 + 경기 리포트 (2026-08-16, 운영자 요청).
@@ -215,6 +216,7 @@ async function callLLM(
   })
   if (!res.ok) return null
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+  logUsage("match-report", model, data)
   return data.choices?.[0]?.message?.content ?? null
 }
 
@@ -534,7 +536,7 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
     // v10: 이름 확정 3단 폴백 (라인업 → 표기 사전 → 스쿼드 사전)
-    ["match-report-v11", eventId],
+    ["match-report-v12", eventId],
     // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
     { revalidate: 1800 }
   )

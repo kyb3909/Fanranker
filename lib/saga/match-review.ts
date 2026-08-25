@@ -3,6 +3,7 @@ import "server-only"
 import { chatParams } from "@/lib/llm/openai-params"
 import { leagueLabel } from "@/lib/match/leagues"
 import { getLfaMatchInfo, type LfaStatRow } from "@/lib/lfa/match"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * 경기 리뷰 카드 — 시즌 실록의 엔트리 (D17, 2026-08-17).
@@ -99,6 +100,7 @@ async function callLLM(system: string, user: unknown): Promise<string | null> {
     })
     if (!res.ok) return null
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("saga-match-review", MODEL, data)
     return data.choices?.[0]?.message?.content ?? null
   } catch {
     return null

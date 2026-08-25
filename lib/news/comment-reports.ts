@@ -1,5 +1,6 @@
 import "server-only"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * 독자 오류 제보 감지 (2026-08-07 운영자: "기사 잘못됐다는 댓글 자동 반영 —
@@ -100,6 +101,7 @@ export async function classifyErrorReports(
       return null
     }
     const json = await res.json()
+    logUsage("news-comment-reports", MODEL, json)
     const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}") as {
       results?: { idx?: number; is_report?: boolean; claim?: string }[]
     }

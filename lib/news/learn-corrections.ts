@@ -2,6 +2,7 @@ import "server-only"
 import { createHash } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * 데스킹 학습 — 검수자가 봇 기사를 고쳐서 발행하면, 그 수정에서 **표기 교정**만
@@ -240,6 +241,7 @@ export async function learnFromDeskEdit(
       return empty
     }
     const json = await res.json()
+    logUsage("news-learn-corrections", MODEL, json)
     parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}")
   } catch (e) {
     console.error("[desk-learn] extract failed:", e)

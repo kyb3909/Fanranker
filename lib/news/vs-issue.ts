@@ -3,6 +3,7 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import { chatParams } from "@/lib/llm/openai-params"
 import { isClubName } from "@/lib/naming/pick"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * VS 쟁점 생성 — 발행된 뉴스에 찬반 대결 폴 + 3줄 요약을 붙인다.
@@ -67,6 +68,7 @@ async function generateVsIssue(title: string, content: unknown): Promise<VsIssue
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[]
     }
+    logUsage("news-vs-issue", "gpt-4o-mini", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       no_issue?: boolean
       question?: string

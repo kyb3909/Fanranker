@@ -1,6 +1,7 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * 운영 인사이트 — "무엇을 주목하고, 다음에 무엇을 할지".
@@ -156,6 +157,7 @@ export async function generateInsight(
       return null
     }
     const json = await res.json()
+    logUsage("admin-insight", DEFAULT_MODEL, json)
     const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}") as Partial<Insight>
 
     // 형태 검증 — LLM 이 스키마를 어겨도 화면이 깨지지 않게 정규화한다

@@ -11,6 +11,7 @@ import "server-only"
 
 import { extractClubName, pickWinner, type SpellingVerdict } from "./pick"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 interface SpellingProposal {
   /** 영문 표준 표기 (사전 romanized 키용) */
@@ -57,6 +58,7 @@ JSON만: {"romanized": "...", "candidates": ["표기1", "표기2", "표기3"]}`,
     })
     if (!res.ok) return empty
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("naming-verify", "gpt-4o-mini", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       romanized?: unknown
       candidates?: unknown[]

@@ -15,6 +15,7 @@ import { registerVerifiedPlayer } from "@/lib/news/naming-verify-loop"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -77,6 +78,7 @@ async function extractNames(
     })
     if (!res.ok) return empty
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("naming-audit", "gpt-4o-mini", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       players?: unknown[]
       coaches?: unknown[]

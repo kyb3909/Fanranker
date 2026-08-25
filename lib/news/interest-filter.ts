@@ -10,6 +10,7 @@
 import { chatParams } from "@/lib/llm/openai-params"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /** LLM 에 딸려 보낼 본문 앞부분 — 제목만으론 농도를 못 가린다 */
 export const LEAD_CHARS = 180
@@ -179,6 +180,7 @@ export async function judgeInterest(
       return items.map(() => null)
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("news-interest-filter", model, data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       items?: { i?: number; keep?: boolean; reason?: string }[]
     }

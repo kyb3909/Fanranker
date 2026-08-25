@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api-error"
 import { assertPublicUrl, SsrfBlockedError } from "@/lib/ssrf-guard"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 export const runtime = "nodejs"
 
@@ -250,6 +251,7 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
     })
     if (!res.ok) return null
     const data = await res.json()
+    logUsage("og-image", "gpt-4o-mini", data)
     const content = data.choices?.[0]?.message?.content
     if (!content) return null
     const parsed = JSON.parse(content) as { lines?: unknown }

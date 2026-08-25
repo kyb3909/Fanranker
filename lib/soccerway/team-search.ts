@@ -13,6 +13,7 @@
  */
 
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage } from "@/lib/llm/usage-log"
 
 const SEARCH_BASE = "https://s.livesport.services/api/v2/search/"
 const SOCCERWAY_PROJECT_ID = "2020"
@@ -138,6 +139,7 @@ export async function proposeSearchQueries(
     })
     if (!res.ok) return []
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("team-search", "gpt-4o-mini", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       queries?: unknown[]
     }

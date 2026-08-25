@@ -2,6 +2,7 @@ import "server-only"
 
 import { chatParams } from "@/lib/llm/openai-params"
 import { normalizeForMatch, verifyQuote } from "./scout"
+import { logUsage } from "@/lib/llm/usage-log"
 
 /**
  * 발췌관(拔萃官) + 역관(譯官) — 인터뷰 카드의 LLM 단 2회 호출.
@@ -53,6 +54,7 @@ async function extractQuotes(title: string, material: string): Promise<Extracted
     })
     if (!res.ok) return null
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("interview-extract", MODEL, data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       speaker?: unknown
       quotes?: unknown
@@ -117,6 +119,7 @@ export async function translateQuotes(
     })
     if (!res.ok) return null
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("interview-extract", MODEL, data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       headline_ko?: unknown
       speaker_ko?: unknown
