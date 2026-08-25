@@ -17,7 +17,9 @@
  */
 const INJURY_TERMS: [RegExp, string][] = [
   // 통 문장형 사유 — 부분 치환보다 먼저 통째로 잡는다 (2026-08-18 실측 미번역분)
-  [/\bnot included in the (?:match )?squad\b/gi, "명단 제외"],
+  // ⚠️ `the` 는 **선택**이다 (2026-08-25 실측). 종전엔 필수라 피드의 실제 문구
+  //    "Not Included in Match Squad"(the 없음)가 안 걸려 영문 그대로 나갔다.
+  [/\bnot included in (?:the )?(?:match )?squad\b/gi, "명단 제외"],
   [/\bimpact[- ]related\b/gi, "타박"],
   [/\black of match fitness\b/gi, "경기 감각 부족"],
   [/\bknock\b/gi, "타박"],
@@ -79,6 +81,12 @@ const INJURY_TERMS: [RegExp, string][] = [
   // "종아리 stress" 가 그대로 노출되고 있었다. 한국어 화면에 영어 의학 용어가 남는 건
   // 사전이 부족해서지 구조 문제가 아니다.
   [/\bstress\b/gi, "피로"],
+  // 2026-08-25 2차 — **누락 감지 경고가 잡아낸 것들**. 저장분 재번역을 돌리자 콘솔에
+  // 그대로 찍혔다. 사전 방식은 구멍이 나는 게 정상이고, 그 구멍이 보이면 이렇게 메운다.
+  // (`Not Included in Match Squad` 는 위 규칙의 `the` 필수 조건을 고쳐서 해결)
+  [/\bineligible\b/gi, "출전 자격 없음"],
+  [/\bheart disease\b/gi, "심장 질환"],
+  [/\bdisease\b/gi, "질환"],
   [/\bcontusion\b|\bbruise\b/gi, "타박상"],
   [/\bvirus\b/gi, "바이러스 감염"],
   [/\bcovid(?:-19)?\b/gi, "코로나"],

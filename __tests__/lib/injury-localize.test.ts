@@ -53,3 +53,27 @@ describe("localizeInjuryStatus", () => {
     expect(warn).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * 2026-08-25 2차 — 저장분 재번역을 돌리다 **누락 경고가 잡아낸** 구멍들.
+ * 경고를 심어두지 않았으면 이것들도 조용히 영문으로 나갔을 것이다.
+ */
+describe("localizeInjuryStatus — 2차 보강", () => {
+  it("⚠️`the` 는 선택이다 — 피드 실제 문구에 the 가 없었다", () => {
+    // 종전 규칙이 `in the (match )?squad` 라 the 가 없는 실제 문구를 놓쳤다
+    expect(localizeInjuryStatus("Not Included in Match Squad")).toBe("명단 제외")
+    expect(localizeInjuryStatus("Not Included in the Squad")).toBe("명단 제외")
+  })
+
+  it("출전 자격·질환", () => {
+    expect(localizeInjuryStatus("Ineligible")).toBe("출전 자격 없음")
+    expect(localizeInjuryStatus("Heart disease")).toBe("심장 질환")
+  })
+
+  it("⭐이미 한글화된 값에 다시 돌려도 안전하다 (저장분 재번역이 이걸 전제한다)", () => {
+    // 실사고 형태: 일부만 번역돼 "허벅지 근육 stress" 로 굳은 것
+    const once = localizeInjuryStatus("Thigh Muscle Stress")
+    expect(localizeInjuryStatus(once)).toBe(once)
+    expect(localizeInjuryStatus("허벅지 근육 stress")).toBe("허벅지 근육 피로")
+  })
+})
