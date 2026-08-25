@@ -3,7 +3,7 @@
 import { Suspense } from "react"
 import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Sparkles, Target, User } from "lucide-react"
+import { CalendarDays, Compass, LayoutGrid, Sparkles, Target, User } from "lucide-react"
 
 const tabs = [
   {
@@ -17,6 +17,22 @@ const tabs = [
     icon: Compass,
     label: "운동장",
     match: (p: string) => p.startsWith("/explore") || p.startsWith("/community"),
+  },
+  {
+    /**
+     * ⚠️ 경기 — **데스크톱 GNB 에는 있는데 여기만 없었다** (2026-08-25 외부 감사).
+     *
+     * 매치센터·일정을 보는 동안 하단 탭바에서 현재 위치를 찾을 수 없었다. 탭바의
+     * 존재 이유가 "내가 어디 있는지 + 어디로 갈 수 있는지" 인데 둘 다 실패한 상태였다.
+     * GNB(담벼락·운동장·경기·승부예측)와 같은 순서로 끼워 넣는다.
+     *
+     * ⚠️ 타로를 빼서 5개를 유지하는 선택지도 있었지만 **노출 결정은 운영자 몫**이라
+     *    제거 대신 추가로 맞춘다.
+     */
+    href: "/matches",
+    icon: CalendarDays,
+    label: "경기",
+    match: (p: string) => p.startsWith("/matches") || p.startsWith("/match/"),
   },
   {
     // 승부예측 → 이벤트 페이지 (2026-08-14, GNB 와 같은 이유: 예측이 이벤트 전용이라
