@@ -29,5 +29,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "public/**", "supabase/functions/**"]
+  "exclude": ["node_modules", "public/**", "supabase/functions/**", "tools/oxlint/anti-slop/**"]
 }

@@ -24,6 +24,7 @@
     "test:e2e": "playwright test --config=playwright.e2e.config.ts",
     "test:e2e:report": "tsx scripts/generate-e2e-report.ts",
     "test:e2e:cleanup": "tsx tests/e2e/setup/bot-factory-cli.ts cleanup",
+    "lint:slop": "node scripts/lint-slop.mjs",
     "design:check": "node scripts/check-design-tokens.mjs",
     "design:report": "node scripts/check-design-tokens.mjs --report"
   },
@@ -87,6 +88,7 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.1",
+    "@oxlint/plugins": "1.80.0",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@tailwindcss/typography": "^0.5.20",
@@ -106,6 +108,7 @@
     "knip": "^6.7.0",
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",
+    "oxlint": "1.80.0",
     "playwright": "^1.57.0",
     "postcss": "^8.5",
     "postcss-load-config": "^6.0.1",

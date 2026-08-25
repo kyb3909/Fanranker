@@ -1,2 +1,5 @@
 scripts/
 public/
+
+# anti-slop Oxlint 플러그인 (상류 코드 — 우리 규칙으로 검사하지 않는다)
+tools/oxlint/anti-slop/

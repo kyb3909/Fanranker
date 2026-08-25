@@ -208,6 +208,7 @@ regression 위험이 더 크다.
 - deadcode: pnpm exec knip
 - circular: pnpm exec madge --circular .
 - design: pnpm design:check  (디자인 시스템 래칫 — 위 §디자인 시스템 참조)
+- slop: pnpm lint:slop  (anti-slop Oxlint — **계측용, warn 전용. 빌드를 깨지 않는다.** 2,301건 계류 중이라 "0건 만들기"가 목표가 아니다. 볼 값어치가 있는 건 `no-chained-type-assertions`(`as unknown as` 79건) 하나 — 나머지 판정은 커밋 메시지 참조)
 
 ## Saga Engine
 - 스펙: docs/saga/SAGA_ENGINE_PRD.md — §3 결정 로그는 재논의 금지

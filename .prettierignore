@@ -4,3 +4,6 @@ coverage
 pnpm-lock.yaml
 *.md
 public/
+
+# anti-slop Oxlint 플러그인 (상류에서 그대로 가져온 코드 — 재포맷하면 갱신 diff 가 지저분해진다)
+tools/oxlint/anti-slop/
