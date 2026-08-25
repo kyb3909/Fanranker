@@ -13,7 +13,8 @@ import {
 import { rehostExternalImage } from "@/lib/images/rehost"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import {
-  inspectDraft,
+  extractPersonNames,
+  hasGamblingPromo,
   inspectImage,
   PERSONAL_BLOG_RE,
   isWomensFootball,
@@ -454,7 +455,6 @@ async function run(request: NextRequest) {
     // 남은 문: 검사관(본문·이미지)·표기 사전·중복·개인 블로그·여자 축구.
     // 사가 쪽 D7(미확정 루머 noindex + 배너)은 그대로 유효하다.
 
-    // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등.
     // ⚠️ 이 전이만 즉시 기록한다. publishNewsDraft 가 발행 성공 시 published 를 자체
     // flush 하므로, 여기서 배치 배열에 담으면 run 끝 flush 가 published 를 덮어
     // 발행된 후보가 fact_checking 으로 남는다 (2026-08-05 실측 8건). 순서를 지키려면
@@ -466,13 +466,21 @@ async function run(request: NextRequest) {
           reservoir_id: row.id,
           to_state: "fact_checking",
           actor: "news-auto-publish",
-          reason_code: "quality_gate_started",
+          reason_code: "name_extract_started",
           run_id: ledgerRunId,
         },
       ])) && ledgerHealthy
-    const verdict = await inspectDraft(title, content)
-    let failReasons = verdict.pass ? [] : verdict.reasons
-    if (verdict.pass) {
+    /**
+     * 본문 품질 검사관은 폐지했다 (2026-08-25 운영자). 사유는 quality-gate.ts 상단 참조 —
+     * 작성 모델을 terra 로 올렸는데 검사관도 terra 라 자기가 쓴 걸 자기가 검사하게 됐다.
+     * 여기서는 **이름만 뽑아** 표기 검증 루프에 넣는다. 남은 문은 표기 사전·중복·
+     * 개인 블로그·여자 축구·이미지 검사관, 그리고 스캐너의 날짜·이름 검증이다.
+     */
+    const verdict = await extractPersonNames(title, content)
+    // 폐지한 검사관이 보던 항목 중 유일하게 대체가 필요했던 것 (quality-gate.ts 참조)
+    const promo = hasGamblingPromo(title, content)
+    let failReasons: string[] = promo ? [promo] : []
+    {
       // ── 발행 전 표기 검증 루프 (2026-08-07 운영자: "루프 다 돌고 무결 검증 후 발행") ──
       // 미등재 이름을 곧장 보류하지 않고 네이버 검증 루프를 먼저 돈다. 승자가 나오면
       // 사전에 등재되고(기사 표기는 alt), 발행 초크의 사전 치환이 본문을 대표 표기로

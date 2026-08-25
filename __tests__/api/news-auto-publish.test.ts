@@ -33,9 +33,10 @@ vi.mock("@/lib/cron/log-run", () => ({
 }))
 const inspectImageMock = vi.fn()
 vi.mock("@/lib/news/quality-gate", () => ({
-  inspectDraft: vi
-    .fn()
-    .mockResolvedValue({ pass: true, reasons: [], playerNamesKr: [], coachNamesKr: [] }),
+  // 본문 품질 검사관은 2026-08-25 폐지 — 이름 추출만 남았다 (quality-gate.ts 상단 참조)
+  extractPersonNames: vi.fn().mockResolvedValue({ playerNamesKr: [], coachNamesKr: [] }),
+  // 검사관 대체 — 도박 홍보 낱말 검사 (기본은 통과)
+  hasGamblingPromo: vi.fn().mockReturnValue(null),
   inspectImage: (url: string) => inspectImageMock(url),
   unknownPlayerNames: vi.fn().mockReturnValue([]),
   PERSONAL_BLOG_RE: /substack\.com/i,

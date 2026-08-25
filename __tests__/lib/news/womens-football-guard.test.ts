@@ -127,3 +127,28 @@ describe("여자 월드컵·리그 표기 (패턴 누락 실사고)", () => {
     expect(isWomensFootball("아스날 맥스 도우먼, 프리미어리그 데뷔")).toBe(false)
   })
 })
+
+import { hasGamblingPromo } from "@/lib/news/quality-gate"
+
+/**
+ * 2026-08-25: 본문 품질 검사관(LLM)을 폐지하면서 그 판정 6번("도박/베팅 홍보")이
+ * 같이 사라질 뻔했다. 아키텍처 가드가 잡아줬고, 낱말 검사로 대체했다.
+ */
+describe("hasGamblingPromo", () => {
+  const doc = (t: string) => ({
+    type: "doc",
+    content: [{ type: "paragraph", content: [{ type: "text", text: t }] }],
+  })
+
+  it("홍보 꼴을 잡는다", () => {
+    expect(hasGamblingPromo("제목", doc("최고의 베팅 사이트 추천"))).toContain("도박")
+    expect(hasGamblingPromo("먹튀 없는 곳", doc("본문"))).toContain("도박")
+    expect(hasGamblingPromo("제목", doc("가입 머니 3만원 지급"))).toContain("도박")
+  })
+
+  it("⚠️축구 기사에 정상적으로 나오는 말은 막지 않는다", () => {
+    expect(hasGamblingPromo("제목", doc("우승 배당률이 가장 낮았다"))).toBeNull()
+    expect(hasGamblingPromo("제목", doc("스포츠토토 매출이 늘었다"))).toBeNull()
+    expect(hasGamblingPromo("제목", doc("아스널이 2-1로 이겼다"))).toBeNull()
+  })
+})
