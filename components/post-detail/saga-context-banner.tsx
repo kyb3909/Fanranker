@@ -36,7 +36,7 @@ export function SagaContextBanner({ sagas }: { sagas: SagaContextItem[] }) {
           >
             <span
               className="shrink-0 rounded px-2 py-0.5 text-[12px] font-extrabold"
-              style={{ background: "rgba(139,30,63,.08)", color: "var(--wc-burgundy)" }}
+              style={{ background: "rgba(150,30,55,.08)", color: "var(--wc-burgundy)" }}
             >
               {s.saga_type === "season" ? "시즌 사가" : "이적 사가"}
             </span>

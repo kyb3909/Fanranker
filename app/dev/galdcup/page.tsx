@@ -14,7 +14,7 @@ import { useState } from "react"
 
 const C = {
   goBg: "#FBF0F3",
-  goText: "#8B1E3F",
+  goText: "#961E37",
   goBar: "#9F2242",
   stayBg: "#F1F4F9",
   stayText: "#1E3A5F",

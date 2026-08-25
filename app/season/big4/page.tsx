@@ -163,15 +163,15 @@ export default function Big4PromoPage() {
           </h2>
           <ol className="mt-4 grid gap-4 text-[14px] leading-relaxed text-[#4a3a3f] sm:grid-cols-3">
             <li>
-              <b className="text-[#8b1e3f]">01 · 팀 선택</b>
+              <b className="text-[#961e37]">01 · 팀 선택</b>
               <br />네 팬덤 중 하나를 골라 등록합니다. 한 번 고르면 시즌 끝까지.
             </li>
             <li>
-              <b className="text-[#8b1e3f]">02 · 승부예측</b>
+              <b className="text-[#961e37]">02 · 승부예측</b>
               <br />매 라운드 경기를 예측합니다. 내 적중이 곧 팬덤의 성적.
             </li>
             <li>
-              <b className="text-[#8b1e3f]">03 · 팬덤 대항</b>
+              <b className="text-[#961e37]">03 · 팬덤 대항</b>
               <br />
               활동하면 경품 추첨 자격이 생깁니다. 순위는 팬덤의 자존심으로.
             </li>
@@ -179,7 +179,7 @@ export default function Big4PromoPage() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href="/season"
-              className="rounded-full bg-[#8b1e3f] px-5 py-2.5 text-[14px] font-bold text-white"
+              className="rounded-full bg-[#961e37] px-5 py-2.5 text-[14px] font-bold text-white"
             >
               지금 열려 있는 대항전 보기 →
             </Link>

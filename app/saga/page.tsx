@@ -123,7 +123,7 @@ export default async function SagaIndexPage() {
                     <span
                       className="rounded px-1.5 py-0.5 text-[12px] font-extrabold"
                       style={{
-                        background: closed ? "var(--wc-line)" : "rgba(139,30,63,.08)",
+                        background: closed ? "var(--wc-line)" : "rgba(150,30,55,.08)",
                         color: closed ? "var(--wc-mute)" : "var(--wc-burgundy)",
                       }}
                     >

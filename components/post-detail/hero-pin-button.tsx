@@ -65,7 +65,7 @@ export function HeroPinButton({ postId }: { postId: string }) {
       style={{
         borderColor: data.isHero ? "var(--wc-burgundy)" : "var(--wc-line)",
         color: data.isHero ? "var(--wc-burgundy)" : "var(--wc-mute)",
-        background: data.isHero ? "rgba(139,30,63,.06)" : "transparent",
+        background: data.isHero ? "rgba(150,30,55,.06)" : "transparent",
       }}
       aria-pressed={data.isHero}
     >

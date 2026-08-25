@@ -9,7 +9,7 @@ import { useAuth, useClerk } from "@clerk/nextjs"
  * 섹션 제목 + 큰 % 타이포 + 아웃라인 투표 버튼. 프리뷰 검증용 (analytics 미발화).
  */
 
-const GO = "var(--wc-burgundy, #8B1E3F)"
+const GO = "var(--wc-burgundy, #961E37)"
 const STAY = "#2B4C7E"
 
 interface Props {

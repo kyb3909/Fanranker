@@ -146,7 +146,7 @@ export function WeeklyDrawReveal({
       <div className="mb-5 text-center">
         <p
           className="text-[12px] font-extrabold"
-          style={{ color: "var(--wc-burgundy, #8b1e3f)", letterSpacing: "0.18em" }}
+          style={{ color: "var(--wc-burgundy, #961e37)", letterSpacing: "0.18em" }}
         >
           THIS WEEK&apos;S WINNERS
         </p>
@@ -164,8 +164,8 @@ export function WeeklyDrawReveal({
               key={w.user_id}
               className="flex min-h-[96px] flex-col items-center justify-center rounded-xl px-2 transition-all duration-300"
               style={{
-                background: isLocked ? "rgba(139,30,63,.22)" : "rgba(255,255,255,.04)",
-                border: `1px solid ${isLocked ? "rgba(139,30,63,.9)" : "rgba(255,255,255,.08)"}`,
+                background: isLocked ? "rgba(150,30,55,.22)" : "rgba(255,255,255,.04)",
+                border: `1px solid ${isLocked ? "rgba(150,30,55,.9)" : "rgba(255,255,255,.08)"}`,
                 transform: isLocked ? "scale(1)" : "scale(.97)",
               }}
             >
@@ -185,7 +185,7 @@ export function WeeklyDrawReveal({
                 style={{
                   fontSize: "clamp(15px, 1.6vw, 20px)",
                   color: isLocked ? "#fff" : "rgba(245,239,231,.45)",
-                  textShadow: isLocked ? "0 2px 18px rgba(139,30,63,.8)" : "none",
+                  textShadow: isLocked ? "0 2px 18px rgba(150,30,55,.8)" : "none",
                 }}
               >
                 {isLocked ? w.nickname : rolling[i] || "…"}
@@ -226,7 +226,7 @@ export function WeeklyDrawReveal({
                       style={{
                         fontSize: "clamp(15px, 1.5vw, 19px)",
                         color: won ? "#fff" : "rgba(245,239,231,.45)",
-                        textShadow: won ? "0 2px 14px rgba(139,30,63,.8)" : "none",
+                        textShadow: won ? "0 2px 14px rgba(150,30,55,.8)" : "none",
                       }}
                     >
                       {s.nickname}

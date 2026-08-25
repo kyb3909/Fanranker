@@ -16,7 +16,7 @@ import { trackEvent } from "@/lib/analytics/events"
  * 댓글의 스탠스 스냅샷(D10)은 작성 시점 값이라 소환의 무결성은 깨지지 않는다.
  */
 
-const GO_COLOR = "var(--wc-burgundy, #8B1E3F)"
+const GO_COLOR = "var(--wc-burgundy, #961E37)"
 const STAY_COLOR = "#2B4C7E"
 
 interface Props {

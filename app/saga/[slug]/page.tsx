@@ -123,7 +123,7 @@ export async function generateMetadata({
 const TIER_LABEL = { official: "오피셜", tier1: "유력", rumor: "루머" } as const
 const TIER_STYLE = {
   official: { color: "#0E7A3C", bg: "rgba(14,122,60,.08)" },
-  tier1: { color: "var(--wc-burgundy, #8B1E3F)", bg: "rgba(139,30,63,.07)" },
+  tier1: { color: "var(--wc-burgundy, #961E37)", bg: "rgba(150,30,55,.07)" },
   rumor: { color: "#946A12", bg: "rgba(148,106,18,.09)" },
 } as const
 
@@ -219,7 +219,7 @@ export default async function SagaDetailPage({
                       width: current ? 14 : 11,
                       height: current ? 14 : 11,
                       background: reached ? "var(--wc-burgundy)" : "#D4D4D8",
-                      boxShadow: current ? "0 0 0 4px rgba(139,30,63,.15)" : undefined,
+                      boxShadow: current ? "0 0 0 4px rgba(150,30,55,.15)" : undefined,
                     }}
                     aria-hidden
                   />
@@ -270,7 +270,7 @@ export default async function SagaDetailPage({
             >
               <span
                 className="inline-flex rounded-full px-2.5 py-1 text-[12px] font-extrabold"
-                style={{ background: "rgba(139,30,63,.08)", color: "var(--wc-burgundy)" }}
+                style={{ background: "rgba(150,30,55,.08)", color: "var(--wc-burgundy)" }}
               >
                 지금 읽는 중
               </span>
@@ -381,7 +381,7 @@ export default async function SagaDetailPage({
                             <span
                               className="rounded px-1 py-px whitespace-nowrap"
                               style={{
-                                background: "rgba(139,30,63,.07)",
+                                background: "rgba(150,30,55,.07)",
                                 color: "var(--wc-burgundy)",
                               }}
                             >
