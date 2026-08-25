@@ -20,6 +20,8 @@ export interface NotationEntry {
   romanized: string | null
   surfaces: string[] | null
   hangul_alts: string[] | null
+  /** 소속팀 표기 `|` 구분 — 성씨 한 토막을 그 팀 기사에서만 믿게 하는 열쇠 */
+  disambiguation?: string | null
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -376,8 +378,21 @@ export function findUniqueRomanizedMatch<T extends Pick<NotationEntry, "romanize
 
 export interface NotationHint {
   ko: string
-  /** 영어 원문에 실제로 나타날 수 있는 형태만 */
+  /** 영어 원문에 실제로 나타날 수 있는 형태만. **어디에 나와도** 이 사람으로 본다 */
   en: string[]
+  /**
+   * 팀이 같이 언급될 때만 믿는 표기 — 보통 성씨 한 토막이다.
+   *
+   * ⚠️ 이게 왜 따로인가 (2026-08-25 실사고): 맨시티 이적 기사의 "Savio" 가 "사비오" 로
+   *    나갔다. 정답(사비뉴)은 스쿼드 사전에 있었는데 **뉴스 사전에 그 철자가 없었다.**
+   *    그렇다고 성씨 한 토막을 전역으로 풀면 더 나빠진다 — 실측으로 `savio` 를 전역
+   *    조회하면 J리그 우라와 레드의 **마테우스 사비우**가 나온다. 맨시티 기사에
+   *    일본 리그 선수 이름이 박힐 뻔했다.
+   *    그래서 성씨는 **그 선수의 팀이 같은 글에 있을 때만** 쓴다.
+   */
+  enTeam?: string[]
+  /** 위 조건을 여는 열쇠 — 소속팀을 가리키는 표기들(영문·한글) */
+  team?: string[]
 }
 
 /**
@@ -387,16 +402,38 @@ export interface NotationHint {
  *  - 3자 이하는 제외 — 'as'·'om' 같은 약어가 아무 문장에나 걸린다 (라벨 키와 같은 규율)
  */
 export function buildNotationHints(
-  rows: Pick<NotationEntry, "preferred_ko" | "romanized" | "surfaces">[]
+  rows: Pick<NotationEntry, "preferred_ko" | "romanized" | "surfaces" | "disambiguation">[]
 ): NotationHint[] {
   const out: NotationHint[] = []
   for (const row of rows) {
     const ko = row.preferred_ko?.trim()
     if (!ko) continue
-    const en = [...new Set([row.romanized ?? "", ...(row.surfaces ?? [])])]
+    const all = [...new Set([row.romanized ?? "", ...(row.surfaces ?? [])])]
       .map((s) => s.trim().toLowerCase())
       .filter((s) => s.length > 3 && !s.includes(".") && !/[가-힣]/.test(s))
-    if (en.length > 0) out.push({ ko, en })
+
+    /**
+     * 소속팀 표기 — 스쿼드 동기화가 `disambiguation` 에 `|` 로 넣어둔다.
+     * ⚠️ 옛 항목의 `disambiguation` 은 "Spurs" 같은 **메모**다. 그건 팀 열쇠로 쓰기엔
+     *    거칠지만, 아래에서 팀 표기는 **성씨를 잠그는 용도로만** 쓰이므로
+     *    (없으면 성씨를 안 쓸 뿐) 틀린 표기를 주입하지는 않는다.
+     */
+    const team = (row.disambiguation ?? "")
+      .split("|")
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 3)
+
+    /**
+     * 성씨 한 토막(공백 없음)은 팀이 있어야 믿는다 — 위 `enTeam` 주석의 사고 방지.
+     * ⚠️ 팀 정보가 없는 **옛 항목은 종전대로 전역**이다. 'simons'·'savinho' 처럼
+     *    사람이 넣어 잘 돌던 표기까지 갑자기 막으면 멀쩡한 교정이 사라진다.
+     */
+    const scoped = team.length > 0
+    const en = all.filter((s) => !scoped || s.includes(" "))
+    const enTeam = scoped ? all.filter((s) => !s.includes(" ")) : []
+
+    if (en.length === 0 && enTeam.length === 0) continue
+    out.push(enTeam.length > 0 ? { ko, en, enTeam, team } : { ko, en })
   }
   return out
 }

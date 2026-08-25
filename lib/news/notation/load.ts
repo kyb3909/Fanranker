@@ -31,7 +31,7 @@ const NOTATION_CATEGORIES = [...PERSON_CATEGORIES, ...LABEL_CATEGORIES] as const
 
 export type PersonCategory = (typeof PERSON_CATEGORIES)[number]
 
-const COLUMNS = "id, category, preferred_ko, romanized, surfaces, hangul_alts"
+const COLUMNS = "id, category, preferred_ko, romanized, surfaces, hangul_alts, disambiguation"
 
 /** 한 번 읽어 만든 사전 뷰 — 소비자는 필요한 조각만 꺼내 쓴다 */
 interface Notation {

@@ -101,16 +101,39 @@ export async function syncSquadNamesToNews(
   supabase: SupabaseClient,
   opts: { apply?: boolean } = {}
 ): Promise<SyncResult> {
-  const squads: { name_en: string; name_kr: string }[] = []
+  /**
+   * ⚠️ `status` 로 거르지 않는다 — **`name_kr` 은 이미 화면에 나가 있다.**
+   *
+   * 라인업·매치센터는 status 를 안 보고 `name_kr` 을 그대로 그린다. 그래서 확정
+   * 79명만 흘려보내던 종전 규칙은 "라인업에는 사비뉴로 띄우면서 기사 사전에는 안
+   * 주는" 상태를 만들었다 — 같은 사이트가 같은 선수를 두 이름으로 부른 것이다.
+   * 실측 2026-08-25: 한글 이름이 붙은 3,636명 중 **2,318명이 뉴스 사전에 없었다.**
+   *
+   * ⚠️ 대신 `name_kr_draft` 는 **절대 안 보낸다.** 그건 검수 대기 중인 기계 추정치라
+   *    기사에 나가면 [[project-dictionary-poisoning]] 이 그대로 재현된다.
+   */
+  const squads: { soccerway_team_id: string; name_en: string; name_kr: string }[] = []
   for (let from = 0; ; from += 1000) {
     const { data } = await supabase
       .from("team_squads")
-      .select("name_en, name_kr")
-      .eq("status", "confirmed")
+      .select("soccerway_team_id, name_en, name_kr")
       .not("name_kr", "is", null)
+      .neq("name_kr", "")
       .range(from, from + 999)
-    squads.push(...((data ?? []) as { name_en: string; name_kr: string }[]))
+    squads.push(...((data ?? []) as (typeof squads)[number][]))
     if (!data || data.length < 1000) break
+  }
+
+  // 팀 표기 — 성씨 한 토막을 "그 팀 기사에서만" 믿게 하는 열쇠가 된다
+  const { data: teamRows } = await supabase
+    .from("team_dictionary")
+    .select("soccerway_team_id, name_en, name_kr, short_kr, aliases_kr")
+  const teamLabels = new Map<string, string[]>()
+  for (const t of teamRows ?? []) {
+    const labels = [t.name_en, t.name_kr, t.short_kr, ...((t.aliases_kr as string[]) ?? [])]
+      .filter((v): v is string => typeof v === "string" && v.trim().length >= 3)
+      .map((v) => v.trim())
+    if (labels.length) teamLabels.set(String(t.soccerway_team_id), [...new Set(labels)])
   }
 
   const news: { id: string; romanized: string; preferred_ko: string }[] = []
@@ -120,10 +143,30 @@ export async function syncSquadNamesToNews(
       .select("id, romanized, preferred_ko")
       .eq("category", "player")
       .range(from, from + 999)
-    news.push(...((data ?? []) as { id: string; romanized: string; preferred_ko: string }[]))
+    news.push(...((data ?? []) as (typeof news)[number][]))
     if (!data || data.length < 1000) break
   }
   const newsByKey = new Map(news.map((n) => [romanKey(n.romanized), n]))
+
+  /**
+   * 팀 안에서 **한 사람만** 가진 성씨 토막을 고른다.
+   *
+   * 팀으로 좁혀도 같은 팀에 동명이인(형제·동성)이 있으면 여전히 못 가른다.
+   * 그때는 아무 것도 주지 않는다 — 모호하면 원문 유지가 [[project-squad-dictionary]]
+   * 에서 두 번 데이고 얻은 규칙이다.
+   */
+  const tokenOwners = new Map<string, Map<string, Set<string>>>()
+  for (const s of squads) {
+    const team = String(s.soccerway_team_id)
+    const m = tokenOwners.get(team) ?? new Map<string, Set<string>>()
+    for (const tok of romanKey(s.name_en).split(" ")) {
+      if (tok.length <= 3) continue // 힌트 하한과 같은 규율 — 'de'·'van' 은 아무나 문다
+      const owners = m.get(tok) ?? new Set<string>()
+      owners.add(s.name_kr)
+      m.set(tok, owners)
+    }
+    tokenOwners.set(team, m)
+  }
 
   const out: SyncResult = { inserted: 0, existing: 0, conflicts: [] }
   const seen = new Set<string>()
@@ -147,17 +190,26 @@ export async function syncSquadNamesToNews(
       continue
     }
 
+    const team = String(s.soccerway_team_id)
+    const labels = teamLabels.get(team) ?? []
+    const owned = tokenOwners.get(team)
+    const tokens = labels.length
+      ? key.split(" ").filter((t) => t.length > 3 && owned?.get(t)?.size === 1 && t !== key)
+      : []
+
     if (opts.apply) {
       const { error } = await supabase.from("news_alias_dictionary").insert({
         id: newsId(s.name_en),
         category: "player",
         preferred_ko: s.name_kr,
         romanized: s.name_en,
-        // surfaces = 기사에서 이 사람을 가리킬 수 있는 표면형. 기존 항목과 같은 문법
-        surfaces: [key, s.name_kr],
+        // 전체 이름(공백 포함)은 전역, 성씨 한 토막은 팀이 있어야 열린다 —
+        // 이 구분은 buildNotationHints 가 "공백 유무 + disambiguation" 으로 읽는다
+        surfaces: [key, s.name_kr, ...tokens],
         hangul_alts: [],
+        disambiguation: labels.join("|") || null,
         confidence: 0.8,
-        notes: "스쿼드 사전 동기화 — 운영자가 검수 화면에서 확정한 표기",
+        notes: "스쿼드 사전 동기화 — 라인업·매치센터에 이미 쓰이는 표기",
       })
       if (error) continue
     }

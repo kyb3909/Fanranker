@@ -855,10 +855,29 @@ function buildNamingHints(naming, sourceText) {
   for (const row of naming) {
     if (!row?.ko || !Array.isArray(row.en)) continue
     // 긴 표기부터 — "manchester united"가 "manchester"보다 먼저 잡히게
-    const matched = [...row.en]
-      .filter((en) => !AMBIGUOUS_EN.has(en))
-      .sort((a, b) => b.length - a.length)
-      .find((en) => includesProperNoun(sourceText, lower, en))
+    const pick = (list) =>
+      [...list]
+        .filter((en) => !AMBIGUOUS_EN.has(en))
+        .sort((a, b) => b.length - a.length)
+        .find((en) => includesProperNoun(sourceText, lower, en))
+
+    let matched = pick(row.en)
+
+    /**
+     * 성씨 한 토막은 **소속팀이 같은 글에 있을 때만** 쓴다 (2026-08-25 실사고).
+     *
+     * 맨시티 이적 기사의 "Savio"가 "사비오"로 나갔다. 정답(사비뉴)은 스쿼드 사전에
+     * 있었는데 뉴스 사전에 그 철자가 없었다. 그렇다고 성씨를 전역으로 풀면 더 나쁘다 —
+     * `savio`를 전역 조회하면 J리그 우라와 레드의 **마테우스 사비우**가 나온다.
+     * 팀이라는 열쇠가 있어야 "그 savio가 누구인지" 좁혀진다.
+     */
+    if (!matched && Array.isArray(row.enTeam) && row.enTeam.length > 0) {
+      const teamSeen = (row.team ?? []).some(
+        (t) => t && (includesProperNoun(sourceText, lower, t.toLowerCase()) || sourceText.includes(t))
+      )
+      if (teamSeen) matched = pick(row.enTeam)
+    }
+
     if (matched) hits.push({ en: matched, ko: row.ko })
   }
   if (hits.length === 0) return ""
