@@ -6,6 +6,7 @@ import { chatParams } from "@/lib/llm/openai-params"
 import { findUniqueRomanizedMatch } from "@/lib/news/notation"
 import { matchByNickname } from "@/lib/soccerway/nickname-match"
 import { wrongScore } from "@/lib/soccerway/score-gate"
+import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
 import {
   getLineupForGame,
   resolveMatchEvent,
@@ -491,7 +492,7 @@ function cachedReport(
   gameId: string,
   homeTeam: string,
   awayTeam: string,
-  /** betman 확정 스코어 — 없으면 종전대로 기사 추출값을 쓴다 */
+  /** betman 확정 스코어. ⚠️ null 이면 리포트를 아예 만들지 않는다 (아래 fail-closed) */
   finalScore: string | null
 ) {
   return unstable_cache(
@@ -516,13 +517,34 @@ function cachedReport(
           `[match-report] 이름 확정 ${grounded}/${total} (event ${eventId}, 라인업 ${lineup.status})`
         )
       }
+      /**
+       * ⚠️⚠️ **확정 스코어가 없으면 리포트를 쓰지 않는다** (2026-08-25 2차 실사고).
+       *
+       * 아래 스코어 게이트는 `finalScore` 가 있을 때만 돈다. 없으면 통째로 건너뛰고
+       * LLM 이 기사에서 뽑은 값을 그대로 썼다 — **사고를 냈던 그 경로가 폴백으로
+       * 남아 있었다.** 실제로 그리로 새어나갔다: 오사수나 0-0 레반테 경기에
+       * "3-0 승리…멀티골 활약" 리포트가 저장됐다. 득점 장면 셋을 지어냈고,
+       * 같은 사이트의 MoTM 투표판은 같은 경기를 0-0 이라고 적고 있었다.
+       *
+       * 스코어는 FT 뒤 잠깐 비어 있다가 채워진다. 그때까지 **안 쓰는 게 맞다** —
+       * 위 주석 그대로 "틀린 리포트는 없는 리포트보다 나쁘다". TTL(30분) 뒤 재시도한다.
+       */
+      if (!finalScore) return null
+
+      /**
+       * 운영자 지정 구단이 뛴 경기만 쓴다 (2026-08-25).
+       * 재료가 얇은 경기일수록 빈칸을 메우려는 힘이 세진다 — 위 오사수나 사고가 그랬다.
+       * LLM 을 부르기 **전에** 끊어야 크레딧도 아낀다.
+       */
+      if (!isReportWorthyMatch(homeTeam, awayTeam)) return null
+
       const stats = await cachedStats(eventId)().catch(() => null)
       // ⚠️⚠️ 스코어는 **우리 DB 가 정본**이다 (2026-08-25).
       //    종전엔 LLM 이 기사에서 뽑은 `extracted.score` 를 그대로 썼는데, 같은 경기를
       //    3회 생성했더니 제목이 "3-2 첼시 승" / "3-2 첼시 승" / "3-3 무승부" 로 갈렸다.
       //    실제는 풀럼 2-3 첼시 — **승패 자체가 틀린 리포트**가 검증을 통과했다.
       //    숫자 게이트가 "3" 과 "3" 이 근거에 있는지만 보고 스코어 조합은 안 봤기 때문이다.
-      const score = finalScore ?? extracted.score
+      const score = finalScore
       const sources = { paragraphs: body.paragraphs, events, stats, score }
 
       // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
