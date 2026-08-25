@@ -475,8 +475,12 @@ async function run(request: NextRequest) {
      * 잠깐 폐지했다가 되돌렸다: 없애면 번역 누락·오타·무내용·제목불일치·수치모순을
      * 아무도 안 보게 된다. 문제는 "검사한다"가 아니라 "자기가 쓴 걸 자기가 검사한다"였다.
      * 도박 홍보만 낱말 검사로 뺐다 — 결정론이 더 확실하다.
+     *
+     * ⚠️ **원문을 함께 넘긴다** (2026-08-25). 종전 검사관은 원문을 안 받아서 "기사 내부
+     *    정합성"만 봤고, 그래서 원문에 없는 이적설이 붙어도 구조적으로 알 수 없었다.
+     *    지어내기를 잡으려면 대조할 원본이 있어야 한다.
      */
-    const verdict = await inspectDraft(title, content)
+    const verdict = await inspectDraft(title, content, row.raw?.source_text)
     const promo = hasGamblingPromo(title, content)
     let failReasons: string[] = promo ? [promo] : verdict.pass ? [] : verdict.reasons
     if (verdict.pass && !promo) {

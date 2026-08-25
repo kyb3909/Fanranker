@@ -397,6 +397,33 @@ function isBsky(u) {
   return /bsky\.app\/profile\/[^/]+\/post\/[a-zA-Z0-9]+/i.test(u || "")
 }
 // 스트리머블 = 인터뷰/기자회견 클립 영상. 원문이 곧 영상이라 임베드가 본체다.
+/**
+ * 재료가 **기사가 아니라 차단·안내 페이지**인가 (2026-08-25 실사고).
+ *
+ * 실제로 이런 재료로 기사가 발행됐다 — 313자짜리 봇 차단 안내문:
+ *   "This takes a couple of seconds and happens automatically. ...
+ *    reference ID: no_id_generated"
+ * 그런데 발행된 기사엔 마르티넬리 이적료 6,000만 유로, 이투아노 수수료 15~20% 까지
+ * 적혀 있었다. **재료에 아무것도 없으니 전부 지어낸 것이다.**
+ *
+ * 재료가 쓰레기면 아무리 좋은 모델을 써도 결과는 환각이다. 모델·프롬프트로 풀 문제가
+ * 아니라 **입구에서 막을 문제**다. 실측 889건 중 7건(발행 4건) — 드물지만 걸리면 100%다.
+ *
+ * ⚠️ 낱말이 **본문 어딘가에 있는지**로 보면 안 된다. 멀쩡한 기사 뒤에 사이트 위젯 문구가
+ *    붙는 일이 흔해서 정상 기사를 죽인다 (실측: 포함으로 세면 10%가 걸리는데 열어보니
+ *    전부 멀쩡했다).
+ *    가르는 기준은 **위치**다 — 차단 페이지는 그 문구로 **시작하고**, 정상 기사는 끝에
+ *    덧붙는다. 그래서 재료 **앞머리**에 있을 때만 차단으로 본다.
+ */
+const BLOCK_PAGE_RE =
+  /automated checks|checking your browser|verify (?:you are|that you are) (?:a )?human|please enable javascript|reference id:\s*no_id|access denied|are you a robot|subscribe to continue reading|sign in to read/i
+
+function isBlockPage(text) {
+  const t = String(text || "").replace(/^\s*\[기사 발췌\]\s*/, "")
+  const head = t.slice(0, 150) // 차단 페이지는 첫 문장부터 안내다. 250 이면 기사 뒤 위젯까지 물었다(실측)
+  return BLOCK_PAGE_RE.test(head)
+}
+
 function isStreamable(u) {
   return /streamable\.com\/(?:[eosm]\/)?[a-zA-Z0-9]+/i.test(u || "")
 }
@@ -1119,6 +1146,12 @@ async function main() {
       // 내용이라 예외. LLM 호출 전에 거르므로 비용도 아낀다.
       if (!material && !isStreamable(p.url)) {
         log(`skip(재료없음) [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)}`)
+        continue
+      }
+      // 재료가 차단·안내 페이지면 **없는 것만 못하다** — 위 isBlockPage 주석 참조.
+      // 있는 줄 알고 쓰기 시작하면 LLM 이 빈칸을 전부 지어낸다.
+      if (material && isBlockPage(material.text)) {
+        log(`skip(차단페이지) [${p.subreddit}/${p.id}] ${material.text.slice(0, 60)}`)
         continue
       }
       llmCalls++
