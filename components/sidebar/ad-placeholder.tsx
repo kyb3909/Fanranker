@@ -32,7 +32,21 @@ const VARIANT_CONFIG = {
   },
 } as const
 
+/**
+ * ⚠️ 광고 네트워크가 붙기 전까지 **프로덕션에서는 아무것도 그리지 않는다** (2026-08-25).
+ *
+ * 종전엔 "광고 · Medium Rectangle · 300×250" 라벨이 박힌 회색 상자를 실서비스에 그렸다.
+ * 홈·승부예측·운동장·글 상세 **네 지면**에 떠 있었고, 방문자는 이걸 "아직 공사 중인
+ * 사이트" 로 읽는다 — 잘 만든 나머지까지 그 한 장면에 끌려 내려간다. 광고가 없으면
+ * 자리를 비워두고 이름표를 다는 게 아니라 **접는 게** 맞다.
+ *
+ * 슬롯 자체(호출부 3곳)는 그대로 둔다 — 네트워크가 붙으면 이 가드만 풀면 된다.
+ * 개발 환경에서는 계속 보인다: 레이아웃을 짤 때는 자리가 보여야 하므로.
+ */
+const SHOW_PLACEHOLDER = process.env.NODE_ENV !== "production"
+
 export function AdPlaceholder({ variant }: AdPlaceholderProps) {
+  if (!SHOW_PLACEHOLDER) return null
   const config = VARIANT_CONFIG[variant]
 
   return (

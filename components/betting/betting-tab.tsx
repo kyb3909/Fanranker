@@ -98,7 +98,11 @@ export function BettingTab({
           )}
           {lastUpdated && (
             <span style={{ fontSize: 12, letterSpacing: "0.04em" }}>
-              업데이트 · {lastUpdated.toLocaleTimeString("ko-KR")}
+              {/* ⚠️ 초는 빼고 시·분만 (2026-08-25). 종전엔 "오후 2:31:19" 처럼 초까지
+                  찍었는데, 유저가 초 단위를 알아야 할 이유가 없고 데이터는 30초 주기라
+                  숫자만 요란했다. 갱신 시각의 용도는 "얼마나 최신인가" 감각이지 시계가 아니다. */}
+              업데이트 ·{" "}
+              {lastUpdated.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" })}
             </span>
           )}
         </div>

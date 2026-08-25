@@ -3,6 +3,7 @@
 import { TrendingUp, Target, Coins, LayoutGrid } from "lucide-react"
 import { BoardIcon } from "@/components/sidebar/board-icon"
 import { SPORT_TABS } from "@/types/betting"
+import { leagueLabel } from "@/lib/match/leagues"
 
 interface BettingHeaderProps {
   activeTab: "betting" | "ranking" | "stats" | "mypage"
@@ -71,7 +72,11 @@ export function SportLeagueFilter({
         <div className="wc-chip-tabs sub" role="group" aria-label="리그 필터">
           {[
             { id: "all", label: "전체" },
-            ...availableLeagues.map((l) => ({ id: l, label: l })),
+            /* ⚠️ id 는 betman 코드 그대로(필터 키), **label 만** 지면 표기로 바꾼다
+               (2026-08-25). 종전엔 코드를 그대로 찍어서 "잉리그컵"·"프리그1"·"분데스리"
+               같은 내부 약어가 유저에게 노출됐다. `leagueLabel()` 이 이미 있는데
+               이 지면만 안 쓰고 있었다 — 한 줄로 전 리그가 같이 고쳐진다. */
+            ...availableLeagues.map((l) => ({ id: l, label: leagueLabel(l) })),
           ].map((tab) => (
             <button
               key={tab.id}

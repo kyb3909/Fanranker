@@ -21,6 +21,14 @@ export function useBettingMatches(
     "축구"
   )
   const [leagueFilter, setLeagueFilter] = useState<"all" | string>("all")
+  /**
+   * ⚠️ 이것도 렌더 중 `new Date()` 라 이론상 서버·클라이언트가 갈린다. 다만 **일부러
+   *    남겨 둔다** (2026-08-25): 이 값은 화면에 찍히는 게 아니라 만료 경기를 걸러내는
+   *    **필터**다. 서버·클라이언트 시각차는 보통 수 초라 같은 목록이 나오고, 어긋나는 건
+   *    킥오프 경계에 걸친 경기 한 건뿐이다.
+   *    마운트 게이트를 걸면 그 대가로 **만료 경기가 한 번 번쩍였다 사라진다** — 드문
+   *    불일치보다 매번 보이는 깜빡임이 더 나쁘다. 고치려면 서버 시각을 내려보낼 것.
+   */
   const [currentTime, setCurrentTime] = useState(() => new Date())
 
   const [deadlineCountdown, setDeadlineCountdown] = useState<string | null>(null)
@@ -59,7 +67,20 @@ export function useBettingMatches(
   const groupedMatches = useMemo<GroupedMatch[]>(() => gamesData?.groupedGames ?? [], [gamesData])
   const earliestBetClose: string | null = gamesData?.earliestBetClose ?? null
   const error: string | null = gamesError ? "경기 데이터를 불러오는데 실패했습니다." : null
-  const lastUpdated: Date | null = useMemo(() => (gamesData ? new Date() : null), [gamesData])
+  /**
+   * ⚠️ **렌더 중에 `new Date()` 를 부르지 않는다** (2026-08-25 하이드레이션 #418).
+   *
+   * 종전엔 `useMemo(() => gamesData ? new Date() : null, [gamesData])` 였다. useMemo 는
+   * 렌더 중에 실행되므로 서버가 찍은 시각과 브라우저가 찍은 시각이 **다른 문자열**이 되고,
+   * 그대로 화면에 출력돼 텍스트 불일치(#418)가 났다. 프로덕션 콘솔에 상주하던 그 에러다.
+   *
+   * effect 로 옮기면 서버·첫 클라이언트 렌더가 둘 다 null 로 **일치**하고, 마운트 후에만
+   * 값이 채워진다. "마지막으로 데이터를 받은 시각" 이라는 의미에도 이쪽이 맞다.
+   */
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  useEffect(() => {
+    if (gamesData) setLastUpdated(new Date())
+  }, [gamesData])
 
   const isLoading = gamesLoading || (gamesValidating && !gamesData)
 

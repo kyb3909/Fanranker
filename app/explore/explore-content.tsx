@@ -160,7 +160,12 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
         description="게시판 디렉토리. 관심 게시판을 팔로우하면 그 글이 담벼락으로 올라온다."
         aside={
           categories.length > 0 ? (
-            <PageBandStat value={categories.length} label="Open Boards" />
+            /* ⚠️ 1개일 때 "Open Boards" 는 틀린 영어다 (2026-08-25). 실데이터가 1개인
+               구간이 실제로 있어서 "1 OPEN BOARDS" 가 지면에 떴다. */
+            <PageBandStat
+              value={categories.length}
+              label={categories.length === 1 ? "Open Board" : "Open Boards"}
+            />
           ) : undefined
         }
       >
