@@ -174,6 +174,23 @@ export default async function MatchesPage({
   }
   const ordered = [...sections.entries()].sort((a, b) => leagueOrder(a[0]) - leagueOrder(b[0]))
 
+  /**
+   * ⚠️ 밴드 숫자는 **첫 화면에 실제로 펼쳐지는 경기 수**여야 한다 (2026-08-25 외부 감사).
+   *
+   * 종전엔 `fixtures.length` 전부를 크게 적었다. 실측(8/25): 헤더는 "43 MATCHES" 인데
+   * 화면에 펼쳐진 경기는 **4개**였다 — 나머지 39개가 FA컵 22 · 카라바오컵 17의 하부 라운드라
+   * 접혀 있었기 때문이다. 숫자는 거짓이 아니지만 **화면과 어긋나면 부풀린 것으로 읽힌다.**
+   * (외부 감사자가 정확히 그렇게 읽었다.)
+   *
+   * 접힌 경기는 사라지지 않는다 — 각 섹션의 "N경기 — 하부 라운드 포함 · 모두 보기" 가
+   * 그대로 안내한다. 헤더는 화면과 일치시키고, 총계는 그쪽에 맡긴다.
+   */
+  const shownCount = ordered.reduce(
+    (n, [code, rows]) => n + (collapsed(code, rows.length) ? 0 : rows.length),
+    0
+  )
+  const hiddenCount = fixtures.length - shownCount
+
   // 지면 표기는 사전 통칭으로 (2026-08-19 운영자: "인테르나치오날레 그냥 인테르").
   // ⚠️ 라벨만 바꾼다 — m.homeTeam 원문은 LFA 해석 키라 건드리면 경기 매칭이 깨진다.
   const shortNames = await loadTeamShortMap()
@@ -184,8 +201,12 @@ export default async function MatchesPage({
       <PageBand
         kicker="Fixtures"
         title="경기 일정"
-        description="챔피언스리그 · 유로파리그 · 유럽 5대 리그와 주요 컵대회"
-        aside={<PageBandStat value={fixtures.length} label="MATCHES" />}
+        description={
+          hiddenCount > 0
+            ? `챔피언스리그 · 유로파리그 · 유럽 5대 리그와 주요 컵대회 (하부 라운드 ${hiddenCount}경기는 접어 뒀어요)`
+            : "챔피언스리그 · 유로파리그 · 유럽 5대 리그와 주요 컵대회"
+        }
+        aside={<PageBandStat value={shownCount} label={shownCount === 1 ? "MATCH" : "MATCHES"} />}
       />
 
       <main className="mx-auto max-w-[760px] px-4 py-6 sm:px-6">

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, memo, Fragment } from "react"
+import { usePathname } from "next/navigation"
 import { MessageSquare, Loader2 } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
@@ -58,6 +59,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
   // 이전엔 빈 배열로 시작 후 useEffect 에서 채우는 패턴 → hydration 후 sidebar 높이
   // 증가로 데스크톱 CLS 0.21+ 발생. lazy init 으로 SSR HTML 에 이미 댓글이 들어가
   // 시프트 제거.
+  const pathname = usePathname()
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>(() => {
     if (initialRecentComments && initialRecentComments.length > 0) {
       return mapApiPostsToRecentPosts(
@@ -109,6 +111,21 @@ export const ActivitySidebar = memo(function ActivitySidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecentComments])
 
+  /**
+   * ⚠️ **지금 보고 있는 글은 목록에서 뺀다** (2026-08-25 외부 감사).
+   *
+   * 글 상세에서 이 위젯의 첫 항목이 **그 글 자신**인 경우가 있었다. "다른 글 보러 가세요"
+   * 하면서 제자리를 가리키는 셈이라 링크가 낭비된다 — 마침 활동이 활발한 글일수록
+   * (= 댓글이 막 달린 글일수록) 자기 자신이 위로 올라와서 더 자주 그랬다.
+   *
+   * ⚠️ 필터는 렌더 때만 한다 — 원본 `recentPosts` 는 그대로 두어야 캐시를 다른 지면과
+   *    공유할 수 있다(같은 응답을 홈·예측 페이지가 함께 쓴다).
+   */
+  const currentPostId = pathname?.startsWith("/post/") ? pathname.split("/")[2] : null
+  const visiblePosts = currentPostId
+    ? recentPosts.filter((p) => p.id !== currentPostId)
+    : recentPosts
+
   return (
     <div ref={stickyRef} className="sticky space-y-4" style={{ top: `${stickyTop}px` }}>
       {/* ===== 이달의 상품 배너 (메인 페이지만) ===== */}
@@ -152,8 +169,8 @@ export const ActivitySidebar = memo(function ActivitySidebar({
                 style={{ color: "var(--wc-mute)" }}
               />
             </div>
-          ) : recentPosts.length > 0 ? (
-            recentPosts.map((post, idx) => (
+          ) : visiblePosts.length > 0 ? (
+            visiblePosts.map((post, idx) => (
               <Fragment key={post.id}>
                 {idx > 0 && (
                   <div className="mx-4" style={{ borderTop: "1px solid var(--wc-line)" }} />

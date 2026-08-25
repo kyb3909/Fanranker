@@ -140,6 +140,8 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
   }, [hotPosts, sortTab])
 
   const isContentLoading = isLoading && !postsData
+  /** 인기글이 하나도 없는 상태 — 2열을 유지하면 좌측에 655px 흰 벽이 남는다 */
+  const isBoardEmpty = !isContentLoading && sortedPosts.length === 0
 
   const SORT_TABS: { key: SortTab; label: string; icon: typeof ThumbsUp }[] = [
     { key: "upvotes", label: "추천순", icon: ThumbsUp },
@@ -257,8 +259,19 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
         className="container mx-auto max-w-[1280px] px-4 pt-[72px] pb-10 sm:px-6"
         tabIndex={-1}
       >
+        {/*
+          ⚠️ **인기글이 0개면 2열을 포기한다** (2026-08-25 외부 감사).
+
+          실측: 좌측 콘텐츠는 752px 에서 끝나는데 우측 레일은 1407px 까지 이어져
+          **655px 짜리 흰 벽**이 생겼다. 화면 반쪽이 아무것도 없이 비었다.
+          여백의 미가 아니라 그냥 구멍이다 — 여백은 의도가 있어야 여백이다.
+
+          이건 레이아웃 버그가 아니라 **빈 상태 처리 누락**이다. 그리드를 고쳐도
+          콘텐츠가 없으면 또 빈다. 그래서 빌 때는 1열로 떨어뜨려 빈 상태가 폭을 다 쓰고,
+          사이드바는 그 아래로 흐르게 한다. (DESIGN_SYSTEM.md §빈 상태도 화면이다)
+        */}
         <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 xl:col-span-9">
+          <div className={isBoardEmpty ? "col-span-12" : "col-span-12 xl:col-span-9"}>
             {/* 실시간 인기글 */}
             <div
               className="overflow-hidden rounded-xl"
@@ -350,8 +363,8 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
             </div>
           </div>
 
-          {/* Right Sidebar */}
-          <aside className="col-span-3 hidden xl:block">
+          {/* Right Sidebar — 인기글이 비면 아래로 흘려보낸다 (위 주석 참조) */}
+          <aside className={isBoardEmpty ? "col-span-12" : "col-span-3 hidden xl:block"}>
             <ActivitySidebar />
           </aside>
         </div>
