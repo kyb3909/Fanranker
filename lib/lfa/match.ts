@@ -548,13 +548,17 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
     if (!d) return info
 
     if (live) {
-      // 경기 분 + 상세의 최신 스코어 — day 목록(5분 캐시)보다 상세(60초 캐시)가 새롭다.
-      // 라이브 중 골이 day 목록에 늦게 반영되어 스코어가 뒷걸음치는 것을 막는다.
       info.minute = d.header?.status?.minute?.trim() || null
+      // ⚠️⚠️ 스코어는 **뒤로 가지 않는다** (2026-08-25 TTL 분리).
+      //    종전엔 상세(60초)가 목록(5분)보다 새로워서 상세 값으로 덮어썼다. 이제
+      //    목록이 45초, 상세가 90초라 **관계가 뒤집혔다** — 그대로 덮으면 상세의 낡은
+      //    스코어가 목록의 새 골을 지운다(1-1 로 봤다가 0-1 로 뒷걸음).
+      //    그래서 **더 큰 값만** 받는다. 축구 스코어는 단조 증가라 이 규칙이 안전하다
+      //    (VAR 취소는 드물고, 다음 갱신에서 목록이 바로잡는다).
       const dh = toNum(d.header?.home?.score)
       const da = toNum(d.header?.away?.score)
-      if (dh != null) info.homeScore = dh
-      if (da != null) info.awayScore = da
+      if (dh != null && (info.homeScore == null || dh > info.homeScore)) info.homeScore = dh
+      if (da != null && (info.awayScore == null || da > info.awayScore)) info.awayScore = da
     }
 
     for (const [en, ko] of STAT_LABELS) {

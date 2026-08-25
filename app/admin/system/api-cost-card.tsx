@@ -19,6 +19,14 @@ interface TaskRow {
   costUsd: number
 }
 
+export interface DailyRow {
+  day: string
+  lfaCredits: number
+  lfaCallsToday: number
+  llmUsd: number
+  llmCalls: number
+}
+
 export interface ApiCostData {
   lfa: {
     callsToday: number
@@ -35,6 +43,8 @@ export interface ApiCostData {
     hasData: boolean
     byTask: TaskRow[]
   }
+  /** 최근 7일 일별 추이 — 운영자: "하루에 얼마씩 쓰는지 로그를 계속" */
+  daily: DailyRow[]
 }
 
 const usd = (n: number) => `$${n.toFixed(n < 1 ? 4 : 2)}`
@@ -106,6 +116,44 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
           )}
         </div>
       </div>
+
+      {/* ── 일별 추이 ──
+          ⚠️ 축구는 **크레딧**, OpenAI 는 **달러**다. 한 표에 놓되 열을 분명히 갈라
+             같은 척도로 읽히지 않게 한다. */}
+      {data.daily.length > 0 && (
+        <div className="border-border bg-card overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm" style={{ minWidth: 520 }}>
+            <thead>
+              <tr className="border-border text-muted-foreground border-b text-xs">
+                <th className="px-3 py-2 text-left font-bold">날짜 (KST)</th>
+                <th className="px-3 py-2 text-right font-bold">축구 크레딧</th>
+                <th className="px-3 py-2 text-right font-bold">축구 호출</th>
+                <th className="px-3 py-2 text-right font-bold">OpenAI $</th>
+                <th className="px-3 py-2 text-right font-bold">OpenAI 호출</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.daily.map((r) => (
+                <tr key={r.day} className="border-border border-b last:border-0">
+                  <td className="text-foreground px-3 py-2 font-semibold">{r.day}</td>
+                  <td className="text-foreground px-3 py-2 text-right font-bold tabular-nums">
+                    {num(r.lfaCredits)}
+                  </td>
+                  <td className="text-muted-foreground px-3 py-2 text-right tabular-nums">
+                    {num(r.lfaCallsToday)}
+                  </td>
+                  <td className="text-foreground px-3 py-2 text-right font-bold tabular-nums">
+                    {usd(r.llmUsd)}
+                  </td>
+                  <td className="text-muted-foreground px-3 py-2 text-right tabular-nums">
+                    {num(r.llmCalls)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* ── 작업별 내역 ── */}
       {llm.byTask.length > 0 && (
