@@ -5,16 +5,19 @@ import { chatParams } from "@/lib/llm/openai-params"
 /**
  * 발행 전 문지기 (2026-08-04 도입 → 2026-08-25 개편).
  *
- * ## 본문 품질 검사관은 폐지했다 (운영자 확정)
+ * ## 검사관은 유지하되 **모델을 갈랐다** (2026-08-25)
  * 도입 당시 논리는 "작성자가 자기 글을 심사하면 못 잡는다" 였고 그래서 **작성과 별도의
- * LLM** 을 세웠다. 그런데 작성 모델을 gpt-5.6-terra 로 올리면서 검사관도 terra 라
- * **전제가 뒤집혔다** — 자기가 쓴 글을 자기가 검사하게 됐다.
+ * LLM** 을 세웠다. 작성 모델을 gpt-5.6-terra 로 올리면서 검사관도 terra 라 그 전제가
+ * 뒤집혔는데 — 답은 검사를 없애는 게 아니라 **검사관을 다른 모델로 돌리는 것**이었다.
+ * 잠깐 폐지했다가 되돌렸다. 폐지하면 번역 누락·오타·무내용·제목불일치·수치모순을
+ * **아무도 안 보게 된다** (운영자 지적: "지금 왜 안 봐").
  *
- * 그 판정에 기대는 대신 결정론 가드에 맡긴다: 날짜 검증·이름 검증(스캐너),
- * 표기 사전·중복·개인 블로그·여자 축구(여기 아래), 그리고 이미지 검사관.
- * ⚠️ 이름 **추출**은 살렸다 — 표기 검증 루프(네이버 대조 → 사전 자동 등재)의 재료다.
- *    검사관을 통째로 지웠다면 그 파이프라인이 같이 죽었을 것이다.
- * ⚠️ 이미지 검사관은 남긴다 — 이미지는 작성 모델이 만든 게 아니라 자기검사가 아니다.
+ * ⚠️ 검사관은 **gpt-4o-mini** 다. 작성(terra)보다 약하지만 상관없다 — 여기 항목들은
+ *    작성자를 이겨야 아는 것이 아니라 **눈에 보이는 표면 결함**이다. 영어 문장이
+ *    남았는지, 본문에 내용이 없는지는 약한 모델도 안다. 중요한 건 **다른 눈**이라는 것.
+ * ⚠️ 이름 추출을 같은 호출에 얹었다 — 표기 검증 루프의 재료다. 추가 비용 0.
+ * ⚠️ 도박 홍보는 프롬프트에서 뺐다 — 아래 `hasGamblingPromo` 낱말 검사가 더 확실하다.
+ * ⚠️ 이미지 검사관은 terra 그대로 — 이미지는 작성 모델이 만든 게 아니라 자기검사가 아니다.
  */
 
 /**
@@ -28,7 +31,9 @@ import { chatParams } from "@/lib/llm/openai-params"
  *    ⚠️ 이미지 검사관(inspectImage)은 남긴다 — 이미지는 작성 모델이 만든 게 아니라
  *       자기검사가 아니다.
  */
-interface PersonNames {
+interface QualityVerdict {
+  pass: boolean
+  reasons: string[]
   /** 기사에 등장하는 선수 한글 표기 — 사전 게이트(미등재 선수명 차단)의 재료 */
   playerNamesKr: string[]
   /**
@@ -40,17 +45,36 @@ interface PersonNames {
   coachNamesKr: string[]
 }
 
-const NAMES_PROMPT = `너는 한국어 스포츠 기사에서 **인물 이름만 뽑아내는** 추출기다.
-판정하지 말고, 고치지 말고, 오직 추출만 하라.
+const INSPECT_PROMPT = `너는 한국어 스포츠 기사 발행 전 품질 검사관이다. 기사를 고치지 말고 판정만 하라.
 
-기사에 등장하는 **인물 이름의 한글 표기**를 기사에 적힌 그대로 뽑는다 (구단명·대회명은 제외).
+⚠️ 절대 규칙: 네가 아는 축구 지식(누가 어느 팀인지, 어떤 이적이 있었는지)으로 사실을
+검증하지 마라. 네 지식은 낡았고 기사가 최신이다. 판정 근거는 **이 기사 텍스트 내부의
+정합성**뿐이다.
+
+다음 결함이 하나라도 있으면 불통과(pass=false)이고, reasons 에 짧게 사유를 적는다:
+1. 번역 누락 — 영어 문장/구절이 번역 안 된 채 남아 있음 (매체명·선수명·대회명 고유명사는 허용)
+2. 심각한 오타·문법 오류 — 독자가 어색함을 느낄 수준 (한두 글자 경미한 것은 통과)
+3. 제목-본문 불일치 — 제목의 주장에 대응하는 내용이 본문에 아예 없음 (본문에 있으면 통과 — 사실 여부는 판정 대상 아님)
+4. 무내용 — 원문에서 옮긴 **사실이 없고 원문을 소개만** 하는 글. "자세한 내용은 기사에서
+   확인" 류 채움말이 본문의 핵심이거나, "~에 대한 분석이 포함되어 있습니다 / 논의가
+   이루어졌습니다"처럼 **기사에 무엇이 실렸는지만 서술**하고 정작 그 내용(수치·발언·경위)은
+   없는 경우
+
+⚠️ **금액이 여러 개 나오는 것은 결함이 아니다.** 다른 선수·다른 조항·다른 통화의 금액이
+   한 기사에 함께 나오는 건 정상이다. 수치 대조는 하지 마라 (2026-08-25 실측: 4o-mini 가
+   "브라이턴 제안 3,400만 유로"와 "제노아 이적료 1,600만 유로"를 모순으로 잡아 멀쩡한
+   기사를 반려했고, "4,000만 파운드 ≈ 4,700만 유로" 환산도 모순으로 잡았다).
+
+reasons 에는 범주명만 쓰지 말고 근거를 한 줄로 (예: "본문 3번째 문장이 영어 그대로").
+
+또한 기사에 등장하는 **인물 이름의 한글 표기**를 기사에 적힌 그대로 뽑는다 (구단명·대회명은 제외).
 역할에 따라 배열을 나눈다 — 표기 사전이 선수와 감독을 다르게 관리하기 때문이다:
 - player_names_kr: 선수 (현역·은퇴 불문)
 - coach_names_kr: 감독·수석코치
 어느 쪽이든 해당자가 없으면 빈 배열. 역할이 불확실하면 선수로 넣어라.
 ⚠️ 기자·매체 이름은 넣지 마라. 기사에 없는 이름을 만들어 넣지 마라.
 
-JSON만 출력: {"player_names_kr": ["..."], "coach_names_kr": ["..."]}`
+JSON만 출력: {"pass": boolean, "reasons": ["..."], "player_names_kr": ["..."], "coach_names_kr": ["..."]}`
 
 /**
  * 도박·베팅 홍보 차단 — **폐지한 검사관이 보던 항목 중 유일하게 대체가 필요했던 것.**
@@ -73,20 +97,25 @@ ${extractTextFromTipTapJSON(content as TipTapNode)}`
 }
 
 /**
- * 기사에서 인물 이름을 뽑는다. 실패는 **빈 배열**이다 — 추출 실패가 발행을 막으면
- * 안 된다 (종전 검사관은 fail-closed 였지만 그건 판정이 있을 때 얘기다).
- * 이름을 못 뽑으면 표기 루프가 돌지 않을 뿐이고, 그건 표기 감사가 소급해서 잡는다.
+ * 발행 전 검사 + 인물 이름 추출 (한 호출에서 같이 한다 — 추가 비용 0).
  *
- * ⚠️ 모델은 **작성 모델과 다른 것**을 쓴다. 추출은 기계적인 일이라 4o-mini 로 충분하고,
- *    같은 모델로 돌리면 자기가 쓴 표기를 그대로 되읊을 뿐이다.
+ * ⚠️ **fail-closed** 다. 호출 실패·파싱 실패는 불통과 → 사람 검수 큐로 강등된다.
+ *    검사관이 죽었는데 조용히 통과시키면 검사관이 없는 것과 같다.
+ * ⚠️ 모델은 **작성 모델(terra)과 다른** gpt-4o-mini 다. 사유는 파일 상단 참조.
  */
-export async function extractPersonNames(title: string, content: unknown): Promise<PersonNames> {
-  const empty: PersonNames = { playerNamesKr: [], coachNamesKr: [] }
+export async function inspectDraft(title: string, content: unknown): Promise<QualityVerdict> {
+  const fail = (reason: string): QualityVerdict => ({
+    pass: false,
+    reasons: [reason],
+    playerNamesKr: [],
+    coachNamesKr: [],
+  })
+
   const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return empty
+  if (!apiKey) return fail("검사관 미가동(OPENAI_API_KEY 없음)")
 
   const body = extractTextFromTipTapJSON(content as TipTapNode).slice(0, 4000)
-  if (!body || body.length < 50) return empty
+  if (!body || body.length < 50) return fail("본문이 너무 짧음")
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -94,10 +123,10 @@ export async function extractPersonNames(title: string, content: unknown): Promi
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(20000),
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0, max_tokens: 500 }),
+        ...chatParams("gpt-4o-mini", { temperature: 0, max_tokens: 700 }),
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: NAMES_PROMPT },
+          { role: "system", content: INSPECT_PROMPT },
           {
             role: "user",
             content: `제목: ${title}
@@ -108,16 +137,20 @@ ${body}`,
         ],
       }),
     })
-    if (!res.ok) return empty
+    if (!res.ok) return fail(`검사관 호출 실패(HTTP ${res.status})`)
     // ⚠️ 여기서 사용량 로깅(logUsage)을 부르지 않는다 — 그 모듈이 server-only 라
     //    import 하는 순간 이 파일이 env 의존이 되고, isWomensFootball 을 쓰는
     //    테스트 5개가 통째로 죽는다 (2026-08-25 실측). 순수하게 유지한다.
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
+      pass?: boolean
+      reasons?: unknown[]
       player_names_kr?: unknown[]
       coach_names_kr?: unknown[]
     }
     return {
+      pass: parsed.pass === true,
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map(String).slice(0, 5) : [],
       playerNamesKr: Array.isArray(parsed.player_names_kr)
         ? parsed.player_names_kr.map(String).slice(0, 20)
         : [],
@@ -126,7 +159,7 @@ ${body}`,
         : [],
     }
   } catch {
-    return empty
+    return fail("검사관 호출 실패(타임아웃/파싱)")
   }
 }
 

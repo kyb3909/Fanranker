@@ -13,7 +13,7 @@ import {
 import { rehostExternalImage } from "@/lib/images/rehost"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import {
-  extractPersonNames,
+  inspectDraft,
   hasGamblingPromo,
   inspectImage,
   PERSONAL_BLOG_RE,
@@ -466,21 +466,20 @@ async function run(request: NextRequest) {
           reservoir_id: row.id,
           to_state: "fact_checking",
           actor: "news-auto-publish",
-          reason_code: "name_extract_started",
+          reason_code: "quality_gate_started",
           run_id: ledgerRunId,
         },
       ])) && ledgerHealthy
     /**
-     * 본문 품질 검사관은 폐지했다 (2026-08-25 운영자). 사유는 quality-gate.ts 상단 참조 —
-     * 작성 모델을 terra 로 올렸는데 검사관도 terra 라 자기가 쓴 걸 자기가 검사하게 됐다.
-     * 여기서는 **이름만 뽑아** 표기 검증 루프에 넣는다. 남은 문은 표기 사전·중복·
-     * 개인 블로그·여자 축구·이미지 검사관, 그리고 스캐너의 날짜·이름 검증이다.
+     * 품질 검사관 — **작성 모델(terra)과 다른 gpt-4o-mini** 가 본다 (2026-08-25 개편).
+     * 잠깐 폐지했다가 되돌렸다: 없애면 번역 누락·오타·무내용·제목불일치·수치모순을
+     * 아무도 안 보게 된다. 문제는 "검사한다"가 아니라 "자기가 쓴 걸 자기가 검사한다"였다.
+     * 도박 홍보만 낱말 검사로 뺐다 — 결정론이 더 확실하다.
      */
-    const verdict = await extractPersonNames(title, content)
-    // 폐지한 검사관이 보던 항목 중 유일하게 대체가 필요했던 것 (quality-gate.ts 참조)
+    const verdict = await inspectDraft(title, content)
     const promo = hasGamblingPromo(title, content)
-    let failReasons: string[] = promo ? [promo] : []
-    {
+    let failReasons: string[] = promo ? [promo] : verdict.pass ? [] : verdict.reasons
+    if (verdict.pass && !promo) {
       // ── 발행 전 표기 검증 루프 (2026-08-07 운영자: "루프 다 돌고 무결 검증 후 발행") ──
       // 미등재 이름을 곧장 보류하지 않고 네이버 검증 루프를 먼저 돈다. 승자가 나오면
       // 사전에 등재되고(기사 표기는 alt), 발행 초크의 사전 치환이 본문을 대표 표기로
