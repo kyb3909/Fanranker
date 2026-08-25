@@ -23,7 +23,9 @@
     "audit:parse": "tsx tests/audit/lib/parse-events.ts",
     "test:e2e": "playwright test --config=playwright.e2e.config.ts",
     "test:e2e:report": "tsx scripts/generate-e2e-report.ts",
-    "test:e2e:cleanup": "tsx tests/e2e/setup/bot-factory-cli.ts cleanup"
+    "test:e2e:cleanup": "tsx tests/e2e/setup/bot-factory-cli.ts cleanup",
+    "design:check": "node scripts/check-design-tokens.mjs",
+    "design:report": "node scripts/check-design-tokens.mjs --report"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

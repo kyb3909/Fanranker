@@ -160,6 +160,52 @@ production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
 - **Canonical 도메인**: `gongnori.fan`. `*.vercel.app`은 deploy artifact — QA·벤치마크는 항상 `gongnori.fan` 기준으로 수행.
 - Vercel이 PR마다 preview 배포 생성. GitHub Actions가 lint/test 실행.
 
+## 🎨 디자인 시스템 (UI 작업 전 필독)
+
+**정본: `docs/design-system/DESIGN_SYSTEM.md`** — UI를 만지기 전에 읽을 것.
+(하위: `TOKENS.md` · `TYPOGRAPHY.md` · `COMPONENTS.md` · `RESPONSIVE.md`)
+
+2026-08-25 감사 실측: 토큰이 **171개** 있는데도 유저 지면 TSX에 raw hex **677회/185종**,
+브랜드 와인색이 **두 값**(`#961e37`·`#8b1e3f`)으로 갈려 있었다. 토큰이 없어서가 아니라
+**컴포넌트가 토큰을 안 거쳐서** 생긴 문제다.
+
+### 규칙 10
+
+1. **새 UI를 만들기 전에 `COMPONENTS.md`에서 기존 컴포넌트를 먼저 찾는다.**
+2. 기존 컴포넌트로 되면 새로 만들지 않는다.
+3. **raw 색상 값을 추가하지 않는다.** `var(--wc-*)` 토큰을 쓴다.
+   폴백을 붙일 거면 **토큰의 실제 값과 같아야 한다** (다르면 그건 버그다 — 실제로 있었다).
+4. 임의 spacing(`p-[13px]`)을 추가하지 않는다. Tailwind 기본 스케일을 쓴다.
+5. **폰트 크기는 8단계만**: 12 / 13 / 14 / 16 / 20 / 26 / 31 / 42.
+6. Button·Input·Card·Modal 등 base 컴포넌트 스타일을 페이지에서 override하지 않는다.
+7. 새 토큰이 필요하면 **기존 토큰으로 안 되는 이유**를 먼저 확인한다.
+8. 새 UI 패턴을 도입하면 **디자인 시스템 문서도 같이 갱신**한다.
+9. 기존 디자인과 다른 시각적 결정을 임의로 내리지 않는다.
+10. 디자인 수정 시 **global 컴포넌트인지 local 예외인지** 먼저 판단한다.
+
+### 금지 (운영자 확정 — 예외 없음)
+
+- 🚫 **한쪽 면 액센트 보더** (`border-left: 3px solid …` 류). 위계는 배경 틴트·칩·굵기로만.
+- 🚫 **베팅·픽 카드에 다크 배경.** 다크는 밴드·푸터 등 "선언 영역"에만.
+- 🚫 라틴 키커 슬롯(`.gn-num`, Barlow Condensed)에 **한글 혼입** — 자간 0.2em이라 깨진다.
+
+### 가드
+
+```bash
+node scripts/check-design-tokens.mjs            # 검사 (래칫 — 늘어나면 실패)
+node scripts/check-design-tokens.mjs --report   # 위반 위치
+node scripts/check-design-tokens.mjs --update   # 줄었을 때 상한 재잠금
+```
+
+⚠️ 전면 금지가 아니라 **래칫**이다. 현재 숫자가 상한이고, 늘리면 실패한다.
+줄이면 `--update`로 다시 잠근다. 기존 위반을 한 번에 다 고치라는 뜻이 **아니다** —
+regression 위험이 더 크다.
+
+### 예외가 허용되는 곳
+
+`app/admin` · `app/dev` · `components/ui`(shadcn base) · `app/games/draft`(자체 스코프).
+**나머지는 전부 토큰만.**
+
 ## Skill 라우팅 (요약)
 사용자 요청이 다음과 매치되면 **다른 도구보다 먼저** Skill 도구로 호출:
 - 제품 아이디어/브레인스토밍 → `office-hours`
@@ -182,6 +228,7 @@ production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
 - test: pnpm test
 - deadcode: pnpm exec knip
 - circular: pnpm exec madge --circular .
+- design: pnpm design:check  (디자인 시스템 래칫 — 위 §디자인 시스템 참조)
 
 ## Saga Engine
 - 스펙: docs/saga/SAGA_ENGINE_PRD.md — §3 결정 로그는 재논의 금지
