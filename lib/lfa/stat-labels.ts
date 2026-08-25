@@ -8,7 +8,7 @@
  *
  * ## 무슨 사고였나 (2026-08-25 ~ 08-26)
  * LFA 백엔드는 터키어고 영어 라벨이 **기계번역**이었다 (`"PLAYING THE BALL"` = 점유율,
- * `"Receiving the Ball in the Opponent's Penalty Area"` = 상대 박스 침투, 값은 `"%41"`
+ * `"Receiving the Ball in the Opponent's Penalty Area"` = 상대 박스 터치, 값은 `"%41"`
  * 처럼 퍼센트가 앞에 붙고 소수점이 쉼표). 2026-08-25 03:09(UTC) 무렵 그쪽이 영어를
  * 제대로 된 축구 용어로 정리했다.
  *
@@ -42,7 +42,7 @@ export const STAT_LABELS: StatLabelDef[] = [
   { ko: "유효 슈팅", en: ["Shots on Target", "Accurate Shot"] },
   { ko: "코너킥", en: ["Corners", "corner"] },
   {
-    ko: "상대 박스 침투",
+    ko: "상대 박스 터치",
     en: ["Touches in Opposition Box", "Receiving the Ball in the Opponent's Penalty Area"],
   },
   { ko: "패스 성공률", en: ["Passing Accuracy", "Pass Accuracy%"], percent: true },
