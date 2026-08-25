@@ -144,14 +144,64 @@ const csvImportSchema = z.object({
   dry_run: z.boolean().optional(),
 })
 
+/**
+ * 화면에서 직접 고친 것만 반영 (2026-08-25 운영자 요청:
+ * "내가 수정할 것만 고친 다음에 수정 반영할 수 있게끔").
+ *
+ * CSV 왕복은 엑셀을 한 번 거쳐야 해서, 몇 명만 고칠 때 배보다 배꼽이 크다.
+ * 표에서 고친 행만 모아 보낸다 — 규칙(한글 형식·confirmed 승격)은 CSV 경로와 **같다**.
+ */
+const inlineSaveSchema = z.object({
+  action: z.literal("inline_save"),
+  rows: z
+    .array(
+      z.object({
+        soccerway_team_id: z.string().min(1),
+        player_slug: z.string().min(1),
+        name_kr: z.string().min(1),
+      })
+    )
+    .min(1)
+    .max(200), // 한 번에 200행 — 팀 하나 스쿼드가 40행대라 넉넉하다
+})
+
 export async function POST(req: NextRequest) {
   const auth = await requireStaffApi()
   if (auth instanceof NextResponse) return auth
   const { supabase } = auth
 
   const body = await req.json().catch(() => null)
+
+  // ── 인라인 저장 ──
+  const inline = inlineSaveSchema.safeParse(body)
+  if (inline.success) {
+    const updates: { team: string; slug: string; nameKr: string }[] = []
+    const skipped: string[] = []
+    for (const r of inline.data.rows) {
+      const nameKr = r.name_kr.trim()
+      // ⚠️ CSV 경로와 **같은 검사**를 쓴다. 여기만 느슨하면 우회로가 된다.
+      if (!/^[가-힣·\s-]{2,20}$/.test(nameKr)) {
+        skipped.push(`${r.player_slug} (한글명 형식 아님: ${nameKr})`)
+        continue
+      }
+      updates.push({ team: r.soccerway_team_id, slug: r.player_slug, nameKr })
+    }
+    let updated = 0
+    const failed: string[] = []
+    for (const u of updates) {
+      const { error, count } = await supabase
+        .from("team_squads")
+        .update({ name_kr: u.nameKr, status: "confirmed", updated_at: new Date().toISOString() })
+        .eq("soccerway_team_id", u.team)
+        .eq("player_slug", u.slug)
+      if (error) failed.push(`${u.slug}: ${error.message}`)
+      else updated += count ?? 1
+    }
+    return NextResponse.json({ updated, failed, skipped })
+  }
+
   const parsed = csvImportSchema.safeParse(body)
-  if (!parsed.success) return apiBadRequest("csv_import 형식이 아닙니다")
+  if (!parsed.success) return apiBadRequest("csv_import 또는 inline_save 형식이 아닙니다")
   const { csv, dry_run } = parsed.data
 
   const rows = parseCsv(csv)

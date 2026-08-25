@@ -43,8 +43,52 @@ export function TeamSquadsManager() {
   const [csvText, setCsvText] = useState("")
   const [csvPlan, setCsvPlan] = useState<CsvResult | null>(null)
   const [openTeam, setOpenTeam] = useState<string | null>(null)
+  /** 화면에서 고친 값 — `팀id|player_slug` → 한글명. 저장 전까지 여기에만 있다 */
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows])
+
+  /** 실제로 바뀐 것만 센다 — 눌러만 보고 원래대로 둔 건 제외 */
+  const dirtyRows = useMemo(() => {
+    const byKey = new Map(rows.map((r) => [`${r.soccerway_team_id}|${r.player_slug}`, r]))
+    return Object.entries(drafts)
+      .filter(([k, v]) => {
+        const r = byKey.get(k)
+        return r && v.trim() && v.trim() !== r.name_kr
+      })
+      .map(([k, v]) => {
+        const [soccerway_team_id, player_slug] = k.split("|")
+        return { soccerway_team_id, player_slug, name_kr: v.trim() }
+      })
+  }, [drafts, rows])
+  const dirtyCount = dirtyRows.length
+
+  const saveDrafts = async () => {
+    if (busy || dirtyCount === 0) return
+    setBusy(true)
+    try {
+      const res = await fetch("/api/admin/team-squads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "inline_save", rows: dirtyRows }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error ?? "저장 실패")
+      const skipped = (json.skipped ?? []) as string[]
+      toast({
+        title: `${json.updated ?? 0}명 반영`,
+        description: skipped.length
+          ? `건너뜀 ${skipped.length}건: ${skipped[0]}`
+          : "확정되었습니다",
+      })
+      setDrafts({})
+      await mutate()
+    } catch (e) {
+      toast({ title: "저장 실패", description: e instanceof Error ? e.message : "알 수 없는 오류" })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // 팀별 커버리지 — 비는 팀부터 보이게 정렬
   const teams = useMemo(() => {
@@ -230,22 +274,70 @@ export function TeamSquadsManager() {
                 </span>
               </button>
               {openTeam === t.id && (
-                <ul className="bg-muted/20 px-4 py-2 text-xs">
-                  {rows
-                    .filter((r) => r.soccerway_team_id === t.id)
-                    .map((r) => (
-                      <li key={r.player_slug} className="flex justify-between py-0.5">
-                        <span className="text-muted-foreground">
-                          {r.jersey != null ? `${r.jersey} ` : ""}
-                          {r.position} · {r.name_en}
-                        </span>
-                        <span className={r.name_kr ? "" : "text-red-600"}>
-                          {r.name_kr || "빈칸"}
-                          {r.status === "confirmed" && " ✓"}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
+                <div className="bg-muted/20 px-4 py-3">
+                  {/* ⚠️ 종전엔 읽기 전용이었다 — 한 명만 고쳐도 CSV 를 내려받아 엑셀로 열고
+                      다시 붙여넣어야 했다 (2026-08-25 운영자: "수정할 것만 고친 다음에
+                      반영"). 여기서 바로 고친다. 규칙(한글 형식·confirmed 승격)은 CSV 경로와
+                      **같은 것**을 쓴다 — 여기만 느슨하면 우회로가 된다. */}
+                  <ul className="space-y-1 text-xs">
+                    {rows
+                      .filter((r) => r.soccerway_team_id === t.id)
+                      .map((r) => {
+                        const key = `${r.soccerway_team_id}|${r.player_slug}`
+                        const edited = drafts[key]
+                        const value = edited ?? r.name_kr
+                        const dirty = edited != null && edited !== r.name_kr
+                        return (
+                          <li key={r.player_slug} className="flex items-center gap-2">
+                            <span className="text-muted-foreground w-8 shrink-0 text-right tabular-nums">
+                              {r.jersey ?? ""}
+                            </span>
+                            <span className="text-muted-foreground w-8 shrink-0">{r.position}</span>
+                            <span className="min-w-0 flex-1 truncate" title={r.name_en}>
+                              {r.name_en}
+                            </span>
+                            <input
+                              value={value}
+                              onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
+                              placeholder="한글명"
+                              aria-label={`${r.name_en} 한글명`}
+                              className={`w-40 shrink-0 rounded border px-2 py-1 ${
+                                dirty
+                                  ? "border-amber-400 bg-amber-50"
+                                  : r.name_kr
+                                    ? "bg-background"
+                                    : "border-red-300 bg-red-50"
+                              }`}
+                            />
+                            <span className="w-4 shrink-0 text-emerald-600">
+                              {r.status === "confirmed" ? "✓" : ""}
+                            </span>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                  <div className="mt-3 flex items-center gap-3">
+                    <button
+                      onClick={saveDrafts}
+                      disabled={busy || dirtyCount === 0}
+                      className="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+                    >
+                      {dirtyCount > 0 ? `수정한 ${dirtyCount}명 반영` : "수정한 항목 없음"}
+                    </button>
+                    {dirtyCount > 0 && (
+                      <button
+                        onClick={() => setDrafts({})}
+                        disabled={busy}
+                        className="text-muted-foreground text-xs underline"
+                      >
+                        되돌리기
+                      </button>
+                    )}
+                    <span className="text-muted-foreground text-xs">
+                      반영하면 <b>confirmed</b> 로 확정돼 자동 수확이 덮어쓰지 않습니다.
+                    </span>
+                  </div>
+                </div>
               )}
             </li>
           ))}
