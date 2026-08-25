@@ -3,6 +3,10 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaFetch } from "@/lib/lfa/client"
+// 결장 사유 한글화는 순수 모듈로 분리했다 (2026-08-25) — 이 파일은 Supabase 를
+// import 하므로 테스트가 env 없이 못 돈다. 기존 import 경로 호환을 위해 re-export.
+import { localizeInjuryStatus } from "@/lib/lfa/injury-terms"
+export { localizeInjuryStatus } from "@/lib/lfa/injury-terms"
 
 /**
  * 경기 부가 정보 — 심판·부상·최근 폼·상대 전적 (2026-08-17, 매치 센터).
@@ -50,82 +54,6 @@ const ROLE_LABELS: Record<string, string> = {
   YES: "VAR",
   VAR: "VAR",
   AVAR: "AVAR",
-}
-
-/**
- * 결장 사유 한글화 (2026-08-17 운영자: "결장 이유도 모두 한글로").
- *
- * 어휘가 닫혀 있어(부위 + 유형 조합) 사전이 아니라 **부분 치환**으로 처리한다:
- * "Thigh Muscle Strain" → "허벅지 근육 염좌". 못 바꾼 토큰은 그대로 남겨
- * 정보가 사라지지 않게 한다 (빈칸보다 영문이 낫다).
- * 긴 표현부터 치환해야 "Hamstring Injury" 가 "Injury" 에 먼저 걸리지 않는다.
- */
-const INJURY_TERMS: [RegExp, string][] = [
-  // 통 문장형 사유 — 부분 치환보다 먼저 통째로 잡는다 (2026-08-18 실측 미번역분)
-  [/\bnot included in the (?:match )?squad\b/gi, "명단 제외"],
-  [/\bimpact[- ]related\b/gi, "타박"],
-  [/\black of match fitness\b/gi, "경기 감각 부족"],
-  [/\bknock\b/gi, "타박"],
-  // 상태·유형 (먼저)
-  [/\bcruciate ligament\b/gi, "십자인대"],
-  [/\bligament\b/gi, "인대"],
-  [/\bmuscle strain\b/gi, "근육 염좌"],
-  [/\bmuscular problems?\b/gi, "근육 문제"],
-  [/\bstrain\b/gi, "염좌"],
-  [/\brupture\b/gi, "파열"],
-  [/\btear\b/gi, "파열"],
-  [/\bfracture\b/gi, "골절"],
-  [/\bbroken\b/gi, "골절"],
-  [/\bsurgery\b/gi, "수술"],
-  [/\bconcussion\b/gi, "뇌진탕"],
-  [/\billness\b/gi, "질병"],
-  [/\bfitness\b/gi, "컨디션"],
-  [/\bsuspend(?:ed|ision)?\b/gi, "출전정지"],
-  [/\bsuspension\b/gi, "출전정지"],
-  [/\bred card\b/gi, "퇴장 징계"],
-  [/\bdoubtful\b/gi, "출전 불투명"],
-  [/\bunknown\b/gi, "사유 미상"],
-  [/\bpersonal reasons?\b/gi, "개인 사정"],
-  [/\binternational duty\b/gi, "대표팀 차출"],
-  [/\bproblems?\b/gi, "문제"],
-  [/\binjur(?:y|ies|ed)\b/gi, "부상"],
-  [/\bout\b/gi, "결장"],
-  // 부위
-  [/\bhamstring\b/gi, "햄스트링"],
-  [/\bachilles\b/gi, "아킬레스건"],
-  [/\bthigh\b/gi, "허벅지"],
-  [/\bcalf\b/gi, "종아리"],
-  [/\bgroin\b/gi, "사타구니"],
-  [/\bknee\b/gi, "무릎"],
-  [/\bankle\b/gi, "발목"],
-  [/\bfoot\b/gi, "발"],
-  [/\btoe\b/gi, "발가락"],
-  [/\bhip\b/gi, "고관절"],
-  [/\bback\b/gi, "허리"],
-  [/\bshoulder\b/gi, "어깨"],
-  [/\belbow\b/gi, "팔꿈치"],
-  [/\bwrist\b/gi, "손목"],
-  [/\bhand\b/gi, "손"],
-  [/\bhead\b/gi, "머리"],
-  [/\bface\b/gi, "얼굴"],
-  [/\bnose\b/gi, "코"],
-  [/\brib\b/gi, "갈비뼈"],
-  [/\bchest\b/gi, "가슴"],
-  [/\babdominal\b/gi, "복부"],
-  [/\bpubic\b/gi, "치골"],
-  [/\bmeniscus\b/gi, "반월판"],
-  [/\bmuscle\b/gi, "근육"],
-]
-
-export function localizeInjuryStatus(raw: string): string {
-  let s = String(raw ?? "").trim()
-  if (!s) return s
-  for (const [re, ko] of INJURY_TERMS) s = s.replace(re, ko)
-  // "허벅지/고관절 부상" 처럼 슬래시 구분은 가운뎃점이 한국어에서 자연스럽다
-  return s
-    .replace(/\s*\/\s*/g, "·")
-    .replace(/\s{2,}/g, " ")
-    .trim()
 }
 
 function toFormMatches(raw: unknown): FormMatch[] {
