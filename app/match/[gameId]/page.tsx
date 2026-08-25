@@ -28,6 +28,7 @@ import { getMotmPollByMatchKey } from "@/lib/motm/poll"
 import { MotmCard } from "@/components/motm/motm-card"
 import { findSeasonSagasForTeams } from "@/lib/saga/season"
 import { isEventLive } from "@/lib/event/gunners-season"
+import { pickScore } from "@/lib/match/score-precedence"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -94,9 +95,11 @@ export default async function MatchPage({ params }: Props) {
   // 라이브 (2026-08-20 운영자: "경기 중엔 실시간 스탯과 점수가 보여야 매치센터지") —
   // LFA 라이브 스코어·분·스탯을 그대로 낸다. 갱신은 LiveRefresher(60초 router.refresh).
   const live = !finished && lfa?.live === true
-  // 라이브 중 스코어는 LFA 가 정본 — betman 은 종료 후에나 채워진다
-  const homeScore = live ? (lfa?.homeScore ?? null) : (match.homeScore ?? lfa?.homeScore ?? null)
-  const awayScore = live ? (lfa?.awayScore ?? null) : (match.awayScore ?? lfa?.awayScore ?? null)
+  // 라이브 중 스코어는 LFA 가 정본 — betman 은 종료 후에나 채워진다.
+  // ⚠️ 규칙은 `lib/match/score-precedence.ts` 한 곳에 있다. 여기 있던 규칙을 일정
+  //    페이지(`/matches`)가 안 따라와서 같은 경기를 두 스코어로 말했다 (감사 P0-2).
+  const homeScore = pickScore(live, lfa?.homeScore, match.homeScore)
+  const awayScore = pickScore(live, lfa?.awayScore, match.awayScore)
   const hasLfaStats = (lfa?.stats.length ?? 0) > 0
 
   // 지면 표기는 사전 통칭 — 원문(match.homeTeam)은 LFA·soccerway 해석 키라 그대로 둔다

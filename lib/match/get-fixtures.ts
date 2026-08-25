@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
 import { cachedTeamEn, teamMatches } from "@/lib/lfa/match"
+import { isLiveState, pickScore } from "@/lib/match/score-precedence"
 
 /**
  * 일정 페이지 데이터 — **매치데이 하루**의 대상 리그 경기 전부 (2026-08-17 개정).
@@ -233,16 +234,25 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       continue
     }
     consumed.add(hit)
-    // betman 이 있으면 그쪽 한글 팀명·gameId 를 쓴다. 스코어·상태는 앞선 쪽 우선
+    // betman 이 있으면 그쪽 한글 팀명·gameId 를 쓴다. 상태는 앞선 쪽 우선
+    const status = STATUS_RANK[b.status] > STATUS_RANK[hit.status] ? b.status : hit.status
+    /**
+     * ⚠️ 스코어는 **우선순위 모듈에 맡긴다** (2026-08-25 외부 감사 P0-2).
+     *    종전엔 여기서 `b.homeScore ?? hit.homeScore` 였는데, 와이즈토토는 라이브 점수를
+     *    주지 않아 경기 중엔 낡은 값이 남아 있고 `??` 는 null 이 아니면 이긴다. 그래서
+     *    이 페이지가 "경기 중 2-1", 같은 시각 매치센터가 "FT 2-2" 를 말했다.
+     *    매치센터엔 이미 맞는 규칙이 있었는데 이쪽에만 없었다 — 규칙을 한 곳에 뒀다.
+     */
+    const live = isLiveState(status)
     merged.push({
       ...hit,
       matchKey: b.matchKey,
       gameId: b.gameId,
       homeTeam: b.homeTeam,
       awayTeam: b.awayTeam,
-      status: STATUS_RANK[b.status] > STATUS_RANK[hit.status] ? b.status : hit.status,
-      homeScore: b.homeScore ?? hit.homeScore,
-      awayScore: b.awayScore ?? hit.awayScore,
+      status,
+      homeScore: pickScore(live, hit.homeScore, b.homeScore),
+      awayScore: pickScore(live, hit.awayScore, b.awayScore),
     })
   }
   for (const row of byLfaId.values()) if (!consumed.has(row)) merged.push(row)
