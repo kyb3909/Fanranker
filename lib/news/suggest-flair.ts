@@ -46,20 +46,44 @@ interface SuggestedFlairs {
 export function suggestFlairs(title: string, flairs: FlairOption[]): SuggestedFlairs {
   const t = title || ""
 
-  // 1) 팀 말머리 매칭 (team_id 가 있는 것 우선, 그다음 리그/기타). name + 별칭.
+  /**
+   * 1) 팀 말머리 — **제목에서 먼저 나온 팀**이 이긴다 (2026-08-25 외부 감사 P1-12).
+   *
+   * ⚠️ 종전엔 말머리 **목록 순서**로 먼저 걸린 팀을 썼다. 그래서 한 기사에 두 구단이
+   *    나오면 주인공이 아닌 쪽이 붙었다 — 감사 실측: 홈 MATCHDAY 카드가 라벨은 "첼시"인데
+   *    엠블럼은 아스널이고 리드는 마르티넬리였다. 독자에겐 그냥 틀린 카드다.
+   *
+   * 한국어 스포츠 헤드라인은 **주어가 맨 앞**이다 ("아스널, 첼시 수비수 영입 추진").
+   * 그러니 제목에서의 등장 위치가 곧 주인공 순서다.
+   *
+   * 같은 자리에서 갈리면: ① 별칭이 긴 쪽(더 구체적 — "맨체스터 유나이티드" > "맨체스터")
+   * ② team_id 가 있는 쪽(리그·기타보다 구단이 구체적).
+   */
   let teamFlairId: string | null = null
-  const teamCandidates = [...flairs].sort((a, b) => {
-    // team_id 있는 팀을 먼저 검사 (더 구체적)
-    const at = a.team_id ? 0 : 1
-    const bt = b.team_id ? 0 : 1
-    return at - bt
-  })
-  for (const f of teamCandidates) {
+  let best: { at: number; len: number; specific: number } | null = null
+  for (const f of flairs) {
     if (f.name === "이적" || f.name === "뉴스") continue // 성격 말머리는 팀 매칭에서 제외
     const aliases = [f.name, ...(TEAM_ALIASES[f.name] ?? [])]
-    if (aliases.some((a) => a && t.includes(a))) {
-      teamFlairId = f.id
-      break
+    for (const a of aliases) {
+      /**
+       * ⚠️ 한 글자 말머리는 제목 부분 문자열로 매칭하지 않는다 — 한글엔 낱말 경계가 없어
+       *    "록" 이 "기**록**" 에 걸린다 (2026-08-25 실측). 오늘 이름 가드에서 겪은 것과
+       *    같은 병이다. 호출부가 게시판별로 좁혀 넘기므로 평소엔 안 만나지만,
+       *    범위가 한 번만 새면 바로 터진다.
+       */
+      if (!a || a.length < 2) continue
+      const at = t.indexOf(a)
+      if (at < 0) continue
+      const cand = { at, len: a.length, specific: f.team_id ? 0 : 1 }
+      const wins =
+        !best ||
+        cand.at < best.at ||
+        (cand.at === best.at &&
+          (cand.len > best.len || (cand.len === best.len && cand.specific < best.specific)))
+      if (wins) {
+        best = cand
+        teamFlairId = f.id
+      }
     }
   }
 
