@@ -241,17 +241,25 @@ export async function generateMetadata({
   return {
     title: post.title || "게시글",
     description,
+    /**
+     * ⚠️ `images` 를 여기서 지정하지 않는다 (2026-08-25). 지정하면 같은 폴더의
+     *    `opengraph-image.tsx` 가 만든 카드를 **덮어쓴다.**
+     *
+     * 종전엔 원문에서 긁어온 사진(`post.image`)을 그대로 내보냈는데, 그게 거의 전부
+     * webp 였고(최근 30일 851건 중 846건) **카카오톡은 미리보기에서 webp 를 렌더하지
+     * 않는다** — 기사 링크를 공유하면 이미지가 아예 안 떴다. 이제 우리가 PNG 카드를
+     * 그려 내보내므로 형식도, 품질도, 저작권도 우리 손에 있다.
+     */
     openGraph: {
       type: "article",
       title: post.title,
       description,
-      images: post.image ? [post.image] : undefined,
     },
     twitter: {
-      card: post.image ? "summary_large_image" : "summary",
+      // 카드를 늘 만들어 내보내므로 항상 큰 이미지형이다
+      card: "summary_large_image",
       title: post.title || "게시글",
       description,
-      images: post.image ? [post.image] : undefined,
     },
     alternates: { canonical: `/post/${id}` },
   }

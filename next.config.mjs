@@ -59,6 +59,15 @@ const nextConfig = {
     // 잡힌다 — 둘 다 건다 (한쪽은 no-op, 비용 없음)
     "/opengraph-image": ["./app/_og/*.ttf"],
     "/opengraph-image/route": ["./app/_og/*.ttf"],
+    /**
+     * ⚠️ 카드 라우트가 늘면 **여기도 같이 늘려야 한다** (2026-08-25). 안 걸면 로컬에선
+     *    되는데 Vercel 에서만 폰트를 못 찾아 satori 기본 웨이트로 떨어진다 — 워드마크가
+     *    라이트로 렌더되는 그 증상이다. 글로브로 한 번에 건다.
+     */
+    "/post/[id]/opengraph-image": ["./app/_og/*.ttf"],
+    "/post/[id]/opengraph-image/route": ["./app/_og/*.ttf"],
+    "/match/[gameId]/opengraph-image": ["./app/_og/*.ttf"],
+    "/match/[gameId]/opengraph-image/route": ["./app/_og/*.ttf"],
   },
   // Next.js 15 스트리밍 메타데이터: 일반 UA는 메타데이터(description/og/canonical 등)를 <body>로
   // 스트림하고 브라우저가 <head>로 hoist. 아래 매칭 봇은 blocking 렌더 → 메타데이터를 <head>에

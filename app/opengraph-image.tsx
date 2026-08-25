@@ -1,28 +1,9 @@
 import { ImageResponse } from "next/og"
-import { readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { loadOgFonts } from "@/app/_og/shared"
 
 export const alt = "공놀이 — 그깟 공놀이에 진심인 팬들의 놀이터"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
-
-/**
- * satori 는 woff2 를 못 읽는다 — `public/fonts/*.woff2` 를 ttf 로 풀어 `app/_og/` 에
- * 두고 임베드한다 (fontTools 1회 변환, 2026-08-20). 임베드가 없으면 satori 기본
- * 폰트의 단일 웨이트로 떨어져 워드마크 800 이 라이트로 렌더된다 (실측).
- * Vercel 번들 포함은 next.config.mjs `outputFileTracingIncludes` 가 보장한다.
- */
-async function loadFonts() {
-  const dir = join(process.cwd(), "app", "_og")
-  const [aggro, suit] = await Promise.all([
-    readFile(join(dir, "aggro-bold.ttf")),
-    readFile(join(dir, "suit-700.ttf")),
-  ])
-  return [
-    { name: "Aggro", data: aggro, weight: 800 as const, style: "normal" as const },
-    { name: "SUIT", data: suit, weight: 700 as const, style: "normal" as const },
-  ]
-}
 
 /**
  * 사이트 기본 공유 카드 (2026-08-20 P2 — "공유 얼굴" 교체).
@@ -130,6 +111,6 @@ export default async function OgImage() {
         그깟 공놀이에 진심인 팬들의 놀이터
       </div>
     </div>,
-    { ...size, fonts: await loadFonts() }
+    { ...size, fonts: await loadOgFonts() }
   )
 }
