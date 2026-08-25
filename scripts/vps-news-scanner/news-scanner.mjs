@@ -1131,27 +1131,46 @@ async function main() {
       const tweetData = isTweet(p.url) ? await fetchTweetData(p.url) : null
       const bskyData = isBsky(p.url) ? await fetchBskyData(p.url) : null
       const articleBody = isExternalArticle(p.url) ? await fetchArticleBody(p.url) : null
-      const material = articleBody
+      let material = articleBody
         ? { kind: "article", text: articleBody }
         : tweetData?.text
           ? { kind: "tweet", text: tweetData.text, author: tweetData.author }
           : bskyData?.text
             ? { kind: "bsky", text: bskyData.text, author: bskyData.author }
             : null
+      /**
+       * 재료가 차단·안내 페이지면 **재료를 버리고 제목만으로 짧게 쓴다**
+       * (2026-08-25 운영자 확정).
+       *
+       * ⚠️ 처음엔 통째로 건너뛰게 만들었는데 그건 틀렸다. 실측 7건의 레딧 제목이
+       *    전부 알맹이가 있었다 — 기자명·이적료·발언·협상 상대. 껍데기가 아니다.
+       *    ("[HandofArsenal] 마르티넬리, 알 힐랄과 개인 조건 합의 임박…이적료 약 6,000만 유로")
+       *
+       * 진짜 문제는 기사가 아니라 **지시**였다. 차단 페이지도 material 이 "있는" 것으로
+       * 취급돼 장문(500~1,000자) 경로로 갔고, 제목 한 줄로 500자를 채우라니 모델이
+       * 자기 지식에서 배경을 끌어왔다("이투아노가 이익의 15~20%를 받는다" — 사실이지만
+       * 원문 근거는 없다). 재료를 null 로 만들면 장문 지시가 사라지므로 그 압력이 없어진다.
+       *
+       * ⚠️ 재료가 **아예 없는** 경우(위 skip)와 다르게 취급하는 이유: 차단 페이지는
+       *    "기사는 있는데 우리가 못 읽은" 것이고, 레딧 제목 자체가 기자 보도다.
+       */
+      let titleOnly = false
+      if (material && isBlockPage(material.text)) {
+        log(`재료버림(차단페이지) [${p.subreddit}/${p.id}] 제목만으로 작성`)
+        material = null
+        titleOnly = true
+      }
+
       // ── 재료 없으면 초안을 만들지 않는다 (운영자 2026-08-21) ─────────────────
       // "[미러] 마스터스 성명" 실사고 — 본문 추출 실패(차단/JS렌더) 시 종전 정책은
       // "제목만으로 짧게 나간다"였고, 그 결과가 제목을 두 문장으로 재진술한 **정보 0
       // 껍데기 발행**이었다. 껍데기는 놓치는 것보다 비싸다 — 같은 사안은 대개 다른
       // 소스(타 매체·기자 트윗)로 다시 들어온다. streamable 은 영상 임베드 자체가
       // 내용이라 예외. LLM 호출 전에 거르므로 비용도 아낀다.
-      if (!material && !isStreamable(p.url)) {
+      // ⚠️ titleOnly(차단 페이지)는 예외다 — 위 블록 주석 참조. 재료를 못 읽었을 뿐
+      //    제목 자체가 기자 보도라, 여기서 버리면 알맹이 있는 소식이 통째로 사라진다.
+      if (!material && !titleOnly && !isStreamable(p.url)) {
         log(`skip(재료없음) [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)}`)
-        continue
-      }
-      // 재료가 차단·안내 페이지면 **없는 것만 못하다** — 위 isBlockPage 주석 참조.
-      // 있는 줄 알고 쓰기 시작하면 LLM 이 빈칸을 전부 지어낸다.
-      if (material && isBlockPage(material.text)) {
-        log(`skip(차단페이지) [${p.subreddit}/${p.id}] ${material.text.slice(0, 60)}`)
         continue
       }
       llmCalls++
