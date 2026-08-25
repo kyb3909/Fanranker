@@ -30,10 +30,15 @@ allowed-tools: Read, Edit, Grep, Bash
 
 클라이언트가 부를 수 있는 것은 **`/api/sports/*` 와 `/api/live-scores/*` 뿐**이다.
 
+`next.config.mjs` `rewrites()`:
+
 ```
-/api/sports/*       →  /api/betman/*      (rewrite)
+/api/sports/*       →  /api/betman/*
 /api/live-scores/*  →  /api/wisetoto/*
+/storage/*          →  ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/*
 ```
+
+`/storage/*` 도 같은 이유다 — Supabase 도메인을 감춘다. 업로드 이미지는 이 경로로 낸다.
 
 `betman`·`wisetoto` 를 외부에 노출하면 크롤링 출처가 드러난다. 컴포넌트·훅에서
 직접 경로를 쓰지 않는다. (지금은 테스트와 `rate-limit-guard` 에만 직접 경로가 있다.)

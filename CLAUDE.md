@@ -33,10 +33,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 타입 체크: `pnpm exec tsc --noEmit` (별도 script 없음 — strict 모드)
 - `pnpm test` / `pnpm test:watch` / `pnpm test:coverage`
 - 단일 unit 테스트: `pnpm vitest run __tests__/lib/foo.test.ts` (또는 `-t "test name"`)
-- **Playwright 설정 3개 분리** (testDir·목적·포트가 다름 — 섞지 말 것):
-  - `playwright.config.ts` (`e2e/`) — 스모크/회귀. `pnpm exec playwright test e2e/home.spec.ts --project=chromium`, `BASE_URL=https://gongnori.fan pnpm exec playwright test`로 외부 URL 대상 (webServer 스킵). ko-KR / Asia/Seoul, 5 projects.
-  - `playwright.e2e.config.ts` (`tests/e2e/journeys/`) — guest/member/admin 여정 검증. `pnpm test:e2e`. **격리 원칙**: 포트 3100 + `tests/e2e/.env.e2e`의 로컬 Supabase로 구동 → `pnpm dev`(3000)·프로덕션과 안 부딪힘. 봇 팩토리(Clerk sign-in token)로 로그인 유저 생성, `globalSetup`/`globalTeardown`로 정리. `next build && next start`로 구동(10워커 부하에 Turbopack이 못 버팀). 리포트: `pnpm test:e2e:report`, 봇 정리: `pnpm test:e2e:cleanup`.
-  - `playwright.audit.config.ts` (`tests/audit/`) — 아래 Audit harness 참조.
+- **Playwright 설정 3개** (`playwright.config.ts` / `.e2e.` / `.audit.`) — 섞지 말 것. 구분·실행법 → `gongnori-e2e` 스킬
+  - `pnpm test:e2e` / `pnpm test:e2e:report` / `pnpm test:e2e:cleanup`
 - 임의 스크립트: `pnpm exec tsx scripts/<name>.ts` (env는 `dotenv`로 자동 로드)
 - `pnpm reddit-seed` — Reddit 시딩 (`scripts/reddit-seed-bot.ts`)
 - `pnpm betman-fetch` — betman 경기/배당 동기화 (`scripts/betman-fetch-games.ts`)
@@ -79,47 +77,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 새 가드는 `lib/middleware/`에 추가하고 `middleware.ts` 체인에 끼워넣을 것. matcher가 정적 자산을 제외하므로 `/api/*`와 페이지에만 동작.
 
-### URL 리라이트 / 프록시 (`next.config.mjs`)
-- `/storage/*` → `https://ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/*` (Supabase 도메인 은닉)
-- `/api/sports/*` → `/api/betman/*` (크롤링 출처 은닉)
-- `/api/live-scores/*` → `/api/wisetoto/*` (동일)
-- 클라이언트 코드는 `/api/sports`, `/api/live-scores`만 호출할 것. 외부에 betman/wisetoto 노출 금지.
+### API 라우트 (`next.config.mjs`)
+캐시 헤더 분류·출처 은닉 리라이트(`/api/sports`·`/api/live-scores`·`/storage`)·rate-limit
+→ **`gongnori-api-route` 스킬**
 
-### Vercel Cron (`vercel.json`)
-앱 내부 작업용. **Vultr cron(betman 크롤)·pg_cron(온도 등 6종, `docs/PG_CRON_JOBS.md`)과 별개 레이어** — 셋이 공존하는 다층 구조. 전수 목록은 `vercel.json`(28개)이 정본 — 대표만:
-- `/api/cron/daily-token-reset` — 매일 14:00 UTC (KST 23:00) 토큰 리셋
-- `/api/cron/betman-sync` — 30분마다 (Vultr 2시간 sync의 보조)
-- `/api/wisetoto/sync` — 매분 라이브 스코어
-- `/api/cron/news-auto-publish` — :07/:37 뉴스 자동발행 / `/api/cron/saga-*` — 사가 수집·추출·마감
-- `/api/cron/invariant-audit` — 매시 :44 불변식 감사(2층) / `/api/cron/ops-monitor` — 30분마다 헬스 감시
-- `/api/cron/weekly-analytics` — 매주 월요일 00:00 UTC
-
-새 cron 추가는 `vercel.json`에 path + schedule 등록. 라우트는 `app/api/cron/<name>/route.ts`에 구현하고 `verifyCronSecret` + `withCronLog` 필수 (로그가 없으면 invariant-audit 심박 감시가 오탐).
-
-### Cache 헤더 정책 (`next.config.mjs`)
-- 읽기 API (`/api/posts|communities|profiles`): `s-maxage=30, swr=120`
-- Feed: `s-maxage=15, swr=60`
-- Standings/ranking/betman games: `s-maxage=60, swr=300`
-- Mutation/auth (`upload|payments|tokens|admin|cron|auth`): `no-store`
-- CSP report (`/api/security/*`): `no-store`
-- 새 API 추가 시 위 패턴에 맞춰 분류.
+### 주기 작업
+3층이 공존한다: Vercel Cron(`vercel.json`, 36개) · Vultr 서울 VPS(betman 크롤·뉴스 스캐너) · pg_cron(`docs/PG_CRON_JOBS.md`, 6종).
+전수 목록은 `vercel.json`이 정본. 추가·수정 규약 → **`gongnori-cron` 스킬**
 
 ### 보안 헤더 / CSP (`next.config.mjs`)
-- 전 라우트에 `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geo 차단), HSTS 2년 + preload 적용.
-- **CSP 듀얼 모드**: 운영 정책(`Content-Security-Policy`, `unsafe-inline`/`unsafe-eval` 허용 — TipTap/광고 호환) + 관측용 strict 정책(`Content-Security-Policy-Report-Only`, 인라인 차단). 위반은 `/api/security/csp-report`로 수집.
-- 외부 스크립트/iframe/connect 추가 시 두 정책 **모두** 화이트리스트 갱신 필요. 1~2주 strict가 clean하면 enforce로 교체.
-- 이미지: `next/image` `remotePatterns`에 등록된 호스트만 허용 (YouTube, Instagram, Twitter, Supabase, Clerk avatars). 새 외부 호스트 사용 시 추가.
+전 라우트에 `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`(camera/mic/geo 차단), HSTS 2년 + preload.
+외부 스크립트·iframe·이미지 호스트 추가 → **`gongnori-external-resource` 스킬** (CSP가 듀얼 모드라 두 정책을 함께 고쳐야 한다)
 
 ### Auth + DB
-- 로그인은 Clerk. 백엔드에서는 Clerk JWT로 Supabase RLS 인증.
+- 로그인은 Clerk. 백엔드에서는 Clerk JWT로 Supabase RLS 인증 — **Supabase Auth는 안 씀**
 - 서버 컴포넌트/route handler: `import { createClient } from "@/lib/supabase/server"`
 - 클라이언트 컴포넌트: `import { createClient } from "@/lib/supabase/client"`
 - service role 필요 시: `lib/supabase/admin.ts` (절대 클라이언트로 새지 않게)
-- 새 마이그레이션: `supabase/migrations/`에 기존 번호 규칙(`NNN_…` 또는 `YYYYMMDD_…`)으로 파일 추가 후, Supabase MCP(`mcp__supabase__apply_migration`) 또는 Management API(`POST https://api.supabase.com/v1/projects/ekysrlhdrapmsnrkytif/database/query`)로 적용.
-- `lib/supabase/database.types.ts`는 스키마 변경 후 갱신 필요 (RPC/테이블 추가 시).
+- 스키마 변경·마이그레이션 → **`gongnori-migration` 스킬**
 
 ### 주요 서브시스템
-- **LLM 호출 규약** (`lib/llm/openai-params.ts`) — OpenAI 호출은 반드시 `...chatParams(model, { temperature, max_tokens })` 로 파라미터를 넘길 것. 모델별로 받는 파라미터가 다르다(실측: `gpt-5.6-terra` 는 `temperature`≠1·`top_p`·`max_tokens` 를 전부 400 으로 거부, `max_completion_tokens` 를 요구). 직접 `temperature:` 를 적으면 모델 교체 시 400 → **fail-closed 경로에서 발행이 조용히 멈춘다**. VPS 스캐너(`scripts/vps-news-scanner/`)는 무의존 단일 파일이라 같은 함수를 복제해 둠 — 한쪽 고치면 양쪽 고칠 것. 모델 요율표는 `lib/news/assignment-desk.ts` `MODEL_RATES_USD_PER_MTOK`.
+- **LLM 호출 규약** (`lib/llm/openai-params.ts`) — OpenAI 호출·모델 교체 → **`gongnori-llm-call` 스킬**
 - **News Agents** (`data/agents/`) — fetch → credibility → korean naming → desk review → summary → reservoir. Phase A: r/soccer만, drafted 정지, 수동 검수, 한국어만.
 - **News Crawlers** (`data/crawlers/`) — Reddit 44 + Naver News 11 = 55개 소스, 하루 1회. Vultr VPS에서 cron. Agents 안정화 후 deprecate.
 - **Betman Sync** (`lib/betman/`, `scripts/betman-*.ts`) — Vultr 서울 VPS cron (`/opt/betman/sync.sh`, 2시간 간격). Vercel은 해외 IP라 betman.co.kr 직접 접근 불가.
@@ -142,14 +120,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - **UI**: 마이페이지 "내 팬 정체성" 섹션 (`components/profile/settings/fan-identity-section.tsx`), post-card-header 작성자 옆 amber 뱃지, public profile 가입일 옆 호칭 + flair top 5 카드, stadium-room 상단 "랭킹" 버튼 + Dialog (`components/stadium/contributors-leaderboard.tsx`).
 
 ### Audit Harness (`tests/audit/`)
-production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
-- **Spec**: `tests/audit/full-app-audit.spec.ts` (BFS 크롤 + 안전장치 + UI 관찰 + 모바일 패스), `tests/audit/cwv.spec.ts` (Core Web Vitals).
-- **Config**: `playwright.audit.config.ts` (e2e 와 분리, testDir 별도).
-- **Lib**: `tests/audit/lib/parse-events.ts` (JSONL → issues + severity), `tests/audit/lib/compare-runs.ts` (resolved/newly/persisting/regressed + health.json 누적).
-- **안전장치**: 삭제/탈퇴/결제/구매/로그아웃 등 키워드 차단, 외부 도메인 자동 복귀.
-- **사용자 메뉴 감지**: 로그인 후 `aria-label="사용자 메뉴"` 트리거 명시 wait. 캡처 실패 시 `FALLBACK_USER_PATHS` (/games, /my-posts, /write 등) 강제 큐 추가.
-- **False positive 가드**: `<article>` / `group block` 부모, `<span absolute>` hit area span 인식.
-- **상세**: `tests/audit/README.md` 가이드.
+production 사이트 회귀 자동 감지 + 사이클 운영. 프로덕션을 실제로 돌아다니므로 안전장치(삭제·탈퇴·결제·로그아웃 키워드 차단)를 우회하지 말 것.
+내부 구조·헛짚음 가드 상세는 `tests/audit/README.md`. 실행법·설정 구분 → **`gongnori-e2e` 스킬**
 
 ### Sentry / 환경
 - `next.config.mjs`가 `withSentryConfig`로 감싸져 있음. `SENTRY_*` env가 없으면 빌드는 통과하지만 소스맵 업로드는 스킵.
@@ -207,6 +179,13 @@ regression 위험이 더 크다.
 **나머지는 전부 토큰만.**
 
 ## Skill 라우팅 (요약)
+
+### 이 저장소 전용 (`.claude/skills/` — 알아서 발동한다)
+`gongnori-llm-call` · `gongnori-api-route` · `gongnori-migration` · `gongnori-cron` · `gongnori-e2e` · `gongnori-external-resource`
+
+상황별 규약은 이쪽에 있다. 이 문서에는 포인터만 두고 **중복해 적지 않는다** — 양쪽에 두면 갈라지고, 그때 어느 쪽이 정본인지 아무도 모른다.
+
+### 공용 (부르면 발동)
 사용자 요청이 다음과 매치되면 **다른 도구보다 먼저** Skill 도구로 호출:
 - 제품 아이디어/브레인스토밍 → `office-hours`
 - 버그/500/원인 추적 → `investigate`
