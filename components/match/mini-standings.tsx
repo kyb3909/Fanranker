@@ -111,7 +111,17 @@ export async function MatchMiniStandings({
       }
     >
       <div className="flex items-baseline justify-between">
-        <h2 className="sheet-lab">순위</h2>
+        {/* ⚠️ **발췌라는 사실을 말로 적는다** (2026-08-25 외부 감사).
+            이 표는 두 팀 ±1 행만 오려 온다(의도된 설계). 건너뛴 자리에 점선을 긋고
+            있었지만 그 신호가 너무 약해서, 외부 감사자가 "6·7·8 다음에 11? 9·10이
+            사라졌다 = 버그" 로 읽었다. 잘 만든 기능이 고장으로 보이면 기능이 아니라
+            **라벨이 실패한 것**이다. */}
+        <h2 className="sheet-lab">
+          순위{" "}
+          <span className="font-medium" style={{ color: "var(--wc-mute-2)" }}>
+            · 두 팀 주변
+          </span>
+        </h2>
         <Link
           href={`/standings/${league.slug}`}
           className="text-[12px] font-bold no-underline"

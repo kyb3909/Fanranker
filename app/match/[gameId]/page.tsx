@@ -9,6 +9,7 @@ import { BridgeRow } from "@/components/bridge-row"
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
+import { lineupConfidence, lineupConfidenceLabel } from "@/lib/match/lineup-confidence"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
 import { MatchHeader } from "./match-header"
@@ -254,6 +255,36 @@ export default async function MatchPage({ params }: Props) {
               }
               lineup={
                 <section>
+                  {/* ⚠️ **예상인지 확정인지 먼저 말한다** (2026-08-25 외부 감사).
+                      종전엔 선발 11명을 아무 단서 없이 보여줬다. 실측으로 발렌시아전
+                      라인업은 킥오프 **22시간 전**에 받아온 것 — 공식 발표(킥오프 1시간
+                      전)보다 한참 이르니 확정일 수가 없는데 화면은 확정처럼 보였다.
+                      축구 팬에게 예상과 확정은 다른 정보다. 구분이 없으면 라인업 자체가
+                      쓸모없어지고, 나아가 데이터 전체를 안 믿게 된다. */}
+                  {lineupInitial?.status === "ready" &&
+                    (() => {
+                      const confidence = lineupConfidence({
+                        kickoff: lineupInitial.kickoff,
+                        fetchedAt: lineupInitial.fetchedAt,
+                      })
+                      const predicted = confidence === "predicted"
+                      return (
+                        <p
+                          className="mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold"
+                          style={{
+                            background: predicted
+                              ? "color-mix(in srgb, var(--wc-gold) 18%, transparent)"
+                              : "color-mix(in srgb, var(--wc-burgundy) 8%, transparent)",
+                            color: predicted ? "var(--wc-ink)" : "var(--wc-burgundy)",
+                          }}
+                        >
+                          {lineupConfidenceLabel(confidence)}
+                          <span className="font-medium" style={{ color: "var(--wc-mute)" }}>
+                            {predicted ? "· 공식 발표 전이라 바뀔 수 있어요" : "· 공식 발표"}
+                          </span>
+                        </p>
+                      )
+                    })()}
                   <MatchLineup
                     gameId={match.gameId}
                     matchTime={match.matchTime}
@@ -261,12 +292,6 @@ export default async function MatchPage({ params }: Props) {
                     alwaysOpen
                     withPitch
                   />
-                  {/* 대기 블록(match-lineup 내부)이 같은 안내를 하므로 ready 일 때만 각주 */}
-                  {lineupInitial?.status === "ready" && (
-                    <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
-                      일부 경기는 라인업이 제공되지 않을 수 있습니다.
-                    </p>
-                  )}
                 </section>
               }
               stats={
