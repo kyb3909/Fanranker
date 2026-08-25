@@ -77,3 +77,16 @@ describe("localizeInjuryStatus — 2차 보강", () => {
     expect(localizeInjuryStatus("허벅지 근육 stress")).toBe("허벅지 근육 피로")
   })
 })
+
+describe("localizeInjuryStatus — 3차 (저장분 점검에서 나온 것)", () => {
+  it("⚠️사유 자리의 복귀 예정일을 슬래시 규칙이 뭉개고 있었다", () => {
+    // 실측: "23/08/2026" → "23·08·2026" 으로 나가 날짜로 안 읽혔다
+    expect(localizeInjuryStatus("23/08/2026")).toBe("2026-08-23 복귀 예정")
+  })
+  it("부위 앞뒤 표현", () => {
+    expect(localizeInjuryStatus("Posterior Muscle")).toBe("후면 근육")
+  })
+  it("날짜가 아닌 슬래시는 종전대로 가운뎃점", () => {
+    expect(localizeInjuryStatus("Thigh/Hip Injury")).toBe("허벅지·고관절 부상")
+  })
+})

@@ -15,9 +15,12 @@
  * 다시 나간다. 그런데 우리가 고친 건 **번역뿐**이고 원본 데이터는 이미 손에 있다.
  * 그래서 payload 안의 문자열에 **새 번역만 다시 적용**한다 — LFA 호출 0.
  *
- * ⚠️ 팀명·선수명은 여기서 못 고친다. 그건 사전 조회(Supabase)가 필요한데 저장분에는
- *    원문이 안 남아 있다("Teruel" 이 이미 번역 실패한 결과값이다). 부상 사유만 처리하고,
- *    팀·선수 이름은 **다음 재구매 때** 새 코드로 다시 번역된다(미완료 경기 6시간 주기).
+ * ## ⭐ 팀명도 고칠 수 있다 — 실패한 번역은 **원문을 그대로 남긴다**
+ * 처음엔 못 고친다고 봤지만 실물을 열어보니 아니었다: "Seville"·"Eibar" 는 번역
+ * **결과**가 아니라 매칭에 실패해 그대로 남은 **원문**이다. 그러니 고친 사전으로
+ * 다시 돌리면 걸린다. (성공했던 것들은 이미 한글이라 이번 통과에서 그냥 지나간다.)
+ *
+ * ⚠️ 선수명은 못 고친다 — "G. Petit" 처럼 축약된 채 들어와 대조할 전체 이름이 없다.
  *
  * 실행:
  *   pnpm exec tsx scripts/relocalize-preview-cache.ts          # 미리보기
@@ -26,6 +29,7 @@
 import "dotenv/config"
 import { createClient } from "@supabase/supabase-js"
 import { localizeInjuryStatus } from "../lib/lfa/injury-terms"
+import { localizeTeam } from "../lib/lfa/name-match"
 
 const APPLY = process.argv.includes("--apply")
 
@@ -42,6 +46,9 @@ interface InjuryRow {
 }
 interface Preview {
   injuries?: { home?: InjuryRow[]; away?: InjuryRow[] }
+  h2h?: unknown
+  homeForm?: unknown
+  awayForm?: unknown
   [k: string]: unknown
 }
 
@@ -49,17 +56,53 @@ async function main() {
   const { data, error } = await supabase.from("match_preview_cache").select("lfa_match_id, payload")
   if (error) throw error
 
+  // 팀 사전 — 매치센터가 쓰는 것과 같은 두 출처를 합친다
+  const pairs: [string, string][] = []
+  const { data: td } = await supabase
+    .from("team_dictionary")
+    .select("name_en, name_kr")
+    .not("name_kr", "is", null)
+  for (const t of td ?? []) if (t.name_en) pairs.push([t.name_en, t.name_kr as string])
+  const { data: lt } = await supabase.from("lfa_team_names").select("lfa_name, name_kr")
+  for (const t of lt ?? []) if (t.lfa_name && t.name_kr) pairs.push([t.lfa_name, t.name_kr])
+  const teamPairs = pairs
+
   let touched = 0
   let fields = 0
+  let teamFields = 0
   const samples: string[] = []
+  const teamSamples: string[] = []
+  const stuck = new Set<string>()
 
   for (const row of data ?? []) {
     const payload = row.payload as Preview | null
-    if (!payload?.injuries) continue
+    if (!payload) continue
 
     let changed = false
+
+    // 팀명 — 실패해 영문으로 남은 것만 다시 대조한다
+    for (const key of ["h2h", "homeForm", "awayForm"] as const) {
+      const list = payload[key]
+      if (!Array.isArray(list)) continue
+      for (const m of list as { home?: { name?: string }; away?: { name?: string } }[]) {
+        for (const side of ["home", "away"] as const) {
+          const before = m[side]?.name
+          if (!before || !/[A-Za-z]{3,}/.test(before)) continue
+          const after = localizeTeam(before, teamPairs)
+          if (after !== before) {
+            if (teamSamples.length < 10) teamSamples.push(`${before}  →  ${after}`)
+            m[side]!.name = after
+            changed = true
+            teamFields++
+          } else if (!stuck.has(before)) {
+            stuck.add(before)
+          }
+        }
+      }
+    }
+
     for (const side of ["home", "away"] as const) {
-      const list = payload.injuries[side]
+      const list = payload.injuries?.[side]
       if (!Array.isArray(list)) continue
       for (const r of list) {
         const before = String(r.status ?? "")
@@ -86,8 +129,14 @@ async function main() {
     }
   }
 
-  console.log(`저장분 ${data?.length ?? 0}건 중 ${touched}건 / 필드 ${fields}개 재번역`)
+  console.log(
+    `저장분 ${data?.length ?? 0}건 중 ${touched}건 재번역 — 사유 ${fields}개 / 팀명 ${teamFields}개`
+  )
   samples.forEach((s) => console.log("  ", s))
+  teamSamples.forEach((s) => console.log("  ", s))
+  if (stuck.size)
+    console.log(`
+사전에 없어 그대로 둔 팀 ${stuck.size}개: ${[...stuck].join(", ")}`)
   console.log(APPLY ? "\n반영 완료 (LFA 호출 0)" : "\n미리보기 — --apply 로 반영")
 }
 

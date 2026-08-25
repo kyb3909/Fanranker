@@ -85,6 +85,9 @@ const INJURY_TERMS: [RegExp, string][] = [
   // 그대로 찍혔다. 사전 방식은 구멍이 나는 게 정상이고, 그 구멍이 보이면 이렇게 메운다.
   // (`Not Included in Match Squad` 는 위 규칙의 `the` 필수 조건을 고쳐서 해결)
   [/\bineligible\b/gi, "출전 자격 없음"],
+  // 부위를 앞뒤로 가리키는 수식어 — "Posterior Muscle" 이 "Posterior 근육" 으로 나갔다
+  [/\bposterior\b/gi, "후면"],
+  [/\banterior\b/gi, "전면"],
   [/\bheart disease\b/gi, "심장 질환"],
   [/\bdisease\b/gi, "질환"],
   [/\bcontusion\b|\bbruise\b/gi, "타박상"],
@@ -106,6 +109,15 @@ export function localizeInjuryStatus(raw: string): string {
   let s = String(raw ?? "").trim()
   if (!s) return s
   for (const [re, ko] of INJURY_TERMS) s = s.replace(re, ko)
+  /**
+   * ⚠️ 사유 자리에 **복귀 예정일**이 오는 경우가 있다 ("23/08/2026").
+   *    아래 슬래시 규칙이 이걸 "23·08·2026" 으로 뭉개고 있었다 (2026-08-25 실측).
+   *    날짜는 날짜로 읽히게 두는 게 맞다.
+   */
+  const asDate = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/)
+  if (asDate)
+    return `${asDate[3]}-${asDate[2].padStart(2, "0")}-${asDate[1].padStart(2, "0")} 복귀 예정`
+
   // "허벅지/고관절 부상" 처럼 슬래시 구분은 가운뎃점이 한국어에서 자연스럽다
   s = s
     .replace(/\s*\/\s*/g, "·")
