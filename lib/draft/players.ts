@@ -41,7 +41,15 @@ export async function loadPlayers(dataFile: string = DEFAULT_DATA_FILE): Promise
   if (_loadingPromise && _loadedFile === dataFile) return _loadingPromise
   _loadedFile = dataFile
   _players = null
-  _loadingPromise = fetch(`/data/${dataFile}`)
+  /**
+   * ⚠️ JSON 을 직접 안 읽는다 — API 를 거친다 (2026-08-25).
+   *
+   * 종전엔 `/data/<파일>.json` 을 그대로 가져와서 선수 이름이 JSON 에 박힌 값으로
+   * 고정됐다. 어드민에서 사전을 고쳐도 판타지는 안 바뀌었다. 이 라우트가 이름만
+   * 사전으로 보정해 준다 — 몸값·포인트 등 FPL 고유 데이터는 그대로다.
+   * 사전을 못 읽으면 원본을 그대로 돌려주므로(fail-open) 게임이 멈추지 않는다.
+   */
+  _loadingPromise = fetch(`/api/draft/players?file=${encodeURIComponent(dataFile)}`)
     .then((r) => {
       if (!r.ok) throw new Error(`${dataFile} load failed: ${r.status}`)
       return r.json() as Promise<Player[]>
