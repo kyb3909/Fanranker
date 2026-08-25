@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
 import { findUniqueRomanizedMatch } from "@/lib/news/notation"
 import { matchByNickname } from "@/lib/soccerway/nickname-match"
+import { wrongScore } from "@/lib/soccerway/score-gate"
 import {
   getLineupForGame,
   resolveMatchEvent,
@@ -370,6 +371,9 @@ async function composeReportKo(
   그려지게는 쓴다. 기사체 평서문.
 - 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
 - 팀 이름: 홈팀 "${homeTeam}", 원정팀 "${awayTeam}".
+- ⚠️ **최종 스코어는 ${score ?? "(미확정)"} 이다 — 홈 ${homeTeam} 기준이다.** 이 스코어와
+  다른 조합을 제목이나 본문에 절대 쓰지 마라. 사건 목록의 골 수를 세어 다른 값이
+  나오더라도 **이 스코어가 정본**이다 (목록에 누락된 골이 있을 수 있다). 승패도 여기서 나온다.
 - 시간 순서대로 2~3문단, 문단당 2~3문장.
 - 제목: 간결하되 사실 왜곡 금지 — 퇴장·수적 열세는 어느 팀 것인지 분명히.
 - 출력: {"title": "...", "paragraphs": ["...", ...]} JSON.`,
@@ -482,7 +486,14 @@ async function verifyReport(
  *    걸리던 정체가 이것이다 (2026-08-18 운영자: "넘어가는데 시간이 너무 오래 걸려").
  *    성공분은 `match_reports` 에 영구 저장되므로, 여기 TTL 은 **재시도 간격**일 뿐이다.
  */
-function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTeam: string) {
+function cachedReport(
+  eventId: string,
+  gameId: string,
+  homeTeam: string,
+  awayTeam: string,
+  /** betman 확정 스코어 — 없으면 종전대로 기사 추출값을 쓴다 */
+  finalScore: string | null
+) {
   return unstable_cache(
     async (): Promise<MatchReport | null> => {
       // 기사가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다 (호출 2회)
@@ -506,25 +517,30 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
         )
       }
       const stats = await cachedStats(eventId)().catch(() => null)
-      const sources = { paragraphs: body.paragraphs, events, stats, score: extracted.score }
+      // ⚠️⚠️ 스코어는 **우리 DB 가 정본**이다 (2026-08-25).
+      //    종전엔 LLM 이 기사에서 뽑은 `extracted.score` 를 그대로 썼는데, 같은 경기를
+      //    3회 생성했더니 제목이 "3-2 첼시 승" / "3-2 첼시 승" / "3-3 무승부" 로 갈렸다.
+      //    실제는 풀럼 2-3 첼시 — **승패 자체가 틀린 리포트**가 검증을 통과했다.
+      //    숫자 게이트가 "3" 과 "3" 이 근거에 있는지만 보고 스코어 조합은 안 봤기 때문이다.
+      const score = finalScore ?? extracted.score
+      const sources = { paragraphs: body.paragraphs, events, stats, score }
 
       // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
       // 재검증까지 실패하면 미노출(fail-closed) — 틀린 리포트는 없는 리포트보다 나쁘다.
       let feedback: string[] = []
       for (let attempt = 0; attempt < 3; attempt++) {
-        const ko = await composeReportKo(
-          homeTeam,
-          awayTeam,
-          extracted.score,
-          events,
-          stats,
-          feedback
-        )
+        const ko = await composeReportKo(homeTeam, awayTeam, score, events, stats, feedback)
         if (!ko) break
         const gate = numbersGate(ko, sources)
-        const verdict = gate.ok
-          ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats })
-          : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
+        // ⚠️ 스코어 게이트 — LLM 판단 이전의 **결정론** 검사. 확정 스코어가 있는데
+        //    리포트가 다른 조합을 적으면 그 자리에서 떨어뜨린다. 숫자 게이트는 개별
+        //    숫자만 보므로 "3-3" 같은 **조합 오류**를 못 잡는다 (실사고).
+        const scoreProblem = finalScore ? wrongScore(ko, finalScore) : null
+        const verdict = scoreProblem
+          ? { pass: false, problems: [scoreProblem] }
+          : gate.ok
+            ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats })
+            : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
         if (verdict.pass) return ko
         // 서버 로그만 — 화면은 fail-open 계약대로 침묵. 반복되면 프롬프트 튜닝 신호다.
         console.warn(
@@ -536,7 +552,7 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
     // v10: 이름 확정 3단 폴백 (라인업 → 표기 사전 → 스쿼드 사전)
-    ["match-report-v12", eventId],
+    ["match-report-v13", eventId],
     // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
     { revalidate: 1800 }
   )
@@ -600,9 +616,15 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
     cachedStats(resolved.eventId)().catch(() => null),
     stored
       ? Promise.resolve(null)
-      : cachedReport(resolved.eventId, gameId, resolved.homeTeam, resolved.awayTeam)().catch(
-          () => null
-        ),
+      : cachedReport(
+          resolved.eventId,
+          gameId,
+          resolved.homeTeam,
+          resolved.awayTeam,
+          resolved.homeScore != null && resolved.awayScore != null
+            ? `${resolved.homeScore}-${resolved.awayScore}`
+            : null
+        )().catch(() => null),
   ])
   if (fresh) await storeReport(gameId, resolved.eventId, fresh).catch(() => {})
   return { stats, report: stored ?? fresh }

@@ -240,7 +240,7 @@ async function resolveEventCore(
   // ① 경기 확인 + 킥오프 창 게이트 (창 밖이면 아웃바운드 0)
   const { data: game } = await supabase
     .from("betman_games")
-    .select("id, sport, home_team_name, away_team_name, match_time")
+    .select("id, sport, home_team_name, away_team_name, match_time, home_score, away_score")
     .eq("id", gameId)
     .maybeSingle()
   if (!game || game.sport !== "축구" || !game.match_time) return { status: "none" }
@@ -306,16 +306,25 @@ async function resolveEventCore(
 }
 
 /** 매치 부가정보(스탯·리포트)가 같은 해석을 재사용한다 — match-extras.ts 소비 */
-export async function resolveMatchEvent(
-  gameId: string
-): Promise<{ eventId: string; homeTeam: string; awayTeam: string } | null> {
+export async function resolveMatchEvent(gameId: string): Promise<{
+  eventId: string
+  homeTeam: string
+  awayTeam: string
+  /** ⚠️ betman 확정 스코어. 리포트가 기사에서 뽑은 값 대신 **이걸** 써야 한다
+   *  (2026-08-25: 같은 경기를 3회 생성했더니 3-2 / 3-2 / 3-3 으로 갈렸다). */
+  homeScore: number | null
+  awayScore: number | null
+} | null> {
   try {
     const r = await resolveEventCore(gameId)
     if (r.status !== "ok") return null
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null)
     return {
       eventId: r.eventId,
       homeTeam: r.game.home_team_name,
       awayTeam: r.game.away_team_name,
+      homeScore: num((r.game as { home_score?: unknown }).home_score),
+      awayScore: num((r.game as { away_score?: unknown }).away_score),
     }
   } catch {
     return null
