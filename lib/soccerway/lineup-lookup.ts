@@ -240,6 +240,9 @@ interface ResolvedEvent {
     away_team_name: string
     home_score: number | null
     away_score: number | null
+    /** 산 피드(LFA) 하루치 색인과 조인하는 데 필요하다 — 리포트 스코어 교차검증 */
+    league_code: string | null
+    match_time: string
   }
   attempt: { page_home_en: string; page_away_en: string; home_away_flip: boolean | null }
 }
@@ -252,7 +255,9 @@ async function resolveEventCore(
   // ① 경기 확인 + 킥오프 창 게이트 (창 밖이면 아웃바운드 0)
   const { data: game } = await supabase
     .from("betman_games")
-    .select("id, sport, home_team_name, away_team_name, match_time, home_score, away_score")
+    .select(
+      "id, sport, home_team_name, away_team_name, match_time, home_score, away_score, league_code"
+    )
     .eq("id", gameId)
     .maybeSingle()
   if (!game || game.sport !== "축구" || !game.match_time) return { status: "none" }
@@ -310,6 +315,8 @@ async function resolveEventCore(
       away_team_name: String(game.away_team_name),
       home_score: typeof game.home_score === "number" ? game.home_score : null,
       away_score: typeof game.away_score === "number" ? game.away_score : null,
+      league_code: game.league_code ? String(game.league_code) : null,
+      match_time: String(game.match_time),
     },
     attempt: {
       page_home_en: String(attempt.page_home_en),
@@ -328,6 +335,9 @@ export async function resolveMatchEvent(gameId: string): Promise<{
    *  (2026-08-25: 같은 경기를 3회 생성했더니 3-2 / 3-2 / 3-3 으로 갈렸다). */
   homeScore: number | null
   awayScore: number | null
+  /** 산 피드 교차검증용 (lookupLfaDayEntry 가 이 둘로 조인한다) */
+  leagueCode: string | null
+  matchTime: string
 } | null> {
   try {
     const r = await resolveEventCore(gameId)
@@ -341,6 +351,8 @@ export async function resolveMatchEvent(gameId: string): Promise<{
       //    읽어도 에러가 안 나서 게이트가 조용히 죽었다). 타입에 실려 있어야 한다.
       homeScore: num(r.game.home_score),
       awayScore: num(r.game.away_score),
+      leagueCode: r.game.league_code,
+      matchTime: r.game.match_time,
     }
   } catch {
     return null

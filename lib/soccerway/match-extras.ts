@@ -7,6 +7,8 @@ import { findUniqueRomanizedMatch } from "@/lib/news/notation"
 import { matchByNickname } from "@/lib/soccerway/nickname-match"
 import { wrongScore } from "@/lib/soccerway/score-gate"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
+import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
+import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import {
   getLineupForGame,
   resolveMatchEvent,
@@ -531,13 +533,6 @@ function cachedReport(
        */
       if (!finalScore) return null
 
-      /**
-       * 운영자 지정 구단이 뛴 경기만 쓴다 (2026-08-25).
-       * 재료가 얇은 경기일수록 빈칸을 메우려는 힘이 세진다 — 위 오사수나 사고가 그랬다.
-       * LLM 을 부르기 **전에** 끊어야 크레딧도 아낀다.
-       */
-      if (!isReportWorthyMatch(homeTeam, awayTeam)) return null
-
       const stats = await cachedStats(eventId)().catch(() => null)
       // ⚠️⚠️ 스코어는 **우리 DB 가 정본**이다 (2026-08-25).
       //    종전엔 LLM 이 기사에서 뽑은 `extracted.score` 를 그대로 썼는데, 같은 경기를
@@ -625,6 +620,29 @@ async function storeReport(gameId: string, eventId: string, report: MatchReport)
     )
 }
 
+/**
+ * 산 피드(LFA)의 그 경기 스코어. 하루치 색인을 쓴다 — 경기별 호출이면 크레딧이 20~30배다.
+ * 실패는 null (fail-open) → 교차검증이 성립 안 하므로 리포트가 안 나갈 뿐이다.
+ */
+async function lookupLfaScore(
+  leagueCode: string | null,
+  matchTime: string
+): Promise<(ScoreSide & { finished: boolean }) | null> {
+  if (!leagueCode || !matchTime) return null
+  try {
+    // KST 달력 하루 — 색인이 그 기준으로 만들어진다
+    const dateKst = new Date(new Date(matchTime).getTime() + 9 * 3600_000)
+      .toISOString()
+      .slice(0, 10)
+    const index = await getLfaDayIndex(dateKst)
+    const hit = lookupLfaDayEntry(index, { leagueCode, matchTime })
+    if (!hit) return null
+    return { home: hit.homeScore, away: hit.awayScore, finished: hit.finished }
+  } catch {
+    return null
+  }
+}
+
 export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
   // ⚠️ 저장분을 **해석보다 먼저** 본다. soccerway 해석에는 킥오프 +24시간 창이 걸려 있어,
   //    창을 벗어나면 resolveMatchEvent 가 null 이 되고 리포트·스탯이 통째로 사라졌다.
@@ -634,19 +652,36 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
   const resolved = await resolveMatchEvent(gameId)
   if (!resolved) return { stats: null, report: stored }
 
+  /**
+   * 확정 스코어 = **산 피드 기준 + 와이즈토토 교차검증** (2026-08-25 운영자).
+   *
+   * 종전엔 `betman_games` 값 하나만 썼다(그 칼럼을 채우는 건 와이즈토토 sync 다).
+   * 이제 돈 주고 산 피드(LFA)를 기준으로 두고, 둘이 맞을 때만 확정한다.
+   *
+   * ⚠️ 저장분이 있으면 아예 계산하지 않는다 — 리포트를 다시 만들 일이 없는데
+   *    하루치 색인을 부르면 크레딧만 나간다.
+   * ⚠️ 대상 구단이 아니면 그것도 먼저 끊는다 (같은 이유).
+   */
+  const needReport = !stored && isReportWorthyMatch(resolved.homeTeam, resolved.awayTeam)
+  let confirmedScore: string | null = null
+  if (needReport) {
+    const lfa = await lookupLfaScore(resolved.leagueCode, resolved.matchTime)
+    const verdict = confirmScore(lfa, { home: resolved.homeScore, away: resolved.awayScore })
+    if (verdict.ok) confirmedScore = verdict.score
+    else console.warn(`[match-report] 스코어 확정 실패 (${gameId}): ${verdict.reason}`)
+  }
+
   const [stats, fresh] = await Promise.all([
     cachedStats(resolved.eventId)().catch(() => null),
-    stored
-      ? Promise.resolve(null)
-      : cachedReport(
+    needReport
+      ? cachedReport(
           resolved.eventId,
           gameId,
           resolved.homeTeam,
           resolved.awayTeam,
-          resolved.homeScore != null && resolved.awayScore != null
-            ? `${resolved.homeScore}-${resolved.awayScore}`
-            : null
-        )().catch(() => null),
+          confirmedScore
+        )().catch(() => null)
+      : Promise.resolve(null),
   ])
   if (fresh) await storeReport(gameId, resolved.eventId, fresh).catch(() => {})
   return { stats, report: stored ?? fresh }
