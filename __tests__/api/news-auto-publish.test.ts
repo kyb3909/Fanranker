@@ -466,10 +466,17 @@ describe("GET /api/cron/news-auto-publish", () => {
 
   it("같은 run 안에서 같은 URL 두 초안이면 첫 건만 발행한다", async () => {
     const url = "https://www.theguardian.com/football/2026/aug/04/same-article"
+    /**
+     * ⚠️ 나이를 **명시**한다. 큐는 만료 임박군 밖에서 최신순이므로 "첫 건"은 더 새 쪽이다.
+     *    둘 다 `ageHours` 를 생략하면 각자 호출 시점의 `Date.now()` 를 쓰는데, 그 사이에
+     *    밀리초가 넘어가면 b 가 1ms 더 최신이 되어 **순서가 뒤집힌다** — a 가 중복 판정을
+     *    받고 이 단언이 깨진다. CI 를 빨갛게 만들던 깜빡임의 정체였다 (2026-08-26).
+     *    제품이 아니라 시험이 순서를 가정만 하고 고정하지 않은 것이다.
+     */
     drafts = [
-      { ...draft("a", visualDoc), urls: { source: url } },
+      { ...draft("a", visualDoc, 0), urls: { source: url } },
       {
-        ...draft("b", visualDoc),
+        ...draft("b", visualDoc, 1),
         urls: { source: url },
         draft: { title: "표현을 바꿔 쓴 같은 기사", content: visualDoc },
       },
