@@ -31,6 +31,7 @@ import {
   fetchLeagueClubs,
   fetchSquadDocText,
   LEAGUE_DOCS,
+  closeNamuBrowser,
 } from "../lib/namu/league-clubs"
 
 const APPLY = process.argv.includes("--apply")
@@ -479,7 +480,11 @@ async function main() {
   console.log(`\n합계 ${totalFilled}명 대조${APPLY ? " (적용됨)" : " — 드라이런, --apply 로 반영"}`)
 }
 
-main().catch((e) => {
-  console.error("[fatal]", e)
-  process.exit(1)
-})
+main()
+  .catch((e) => {
+    console.error("[fatal]", e)
+    process.exitCode = 1
+  })
+  // ⚠️ 나무위키가 Cloudflare 로 막아 브라우저 경유로 받는다 (2026-08-25). 재사용 브라우저를
+  //    안 닫으면 창이 남고 프로세스가 안 끝난다.
+  .finally(() => closeNamuBrowser())

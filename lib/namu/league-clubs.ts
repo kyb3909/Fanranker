@@ -20,6 +20,87 @@ const HEADERS = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 }
 
+/**
+ * ⚠️⚠️ **나무위키가 평범한 fetch 를 막는다** (2026-08-25 실측).
+ *
+ * `fetch` 로 문서를 받으면 **403 + Cloudflare 챌린지**(`<title>Just a moment...</title>`,
+ * 본문 5.7KB)가 온다. 정규식은 멀쩡한데 파싱할 HTML 자체가 안 온다 —
+ * 그래서 두 수확기가 **조용히 "참가 구단 0개"** 로 끝나고 있었다(라리가·튀르키예 모두 0).
+ * 실패가 아니라 빈 성공으로 보여서 아무도 못 알아챘다.
+ *
+ * 2026-08-18 당시엔 fetch 로 됐다(그때 `namu_league` 로 1,357명이 들어왔다).
+ * 즉 우리 코드가 아니라 **저쪽 차단 정책이 바뀐 것**이다.
+ *
+ * 그래서 실제 브라우저로 받는다. Playwright 는 **스크립트 실행 시점에만** 동적 import 한다 —
+ * 이 모듈이 앱 번들에 끌려들어가지 않게(현재 임포터는 scripts 두 개뿐이지만 규율로 지킨다).
+ */
+async function fetchNamuHtml(url: string): Promise<string | null> {
+  // 1차: 평범한 fetch. 차단이 풀리면 이쪽이 훨씬 빠르므로 먼저 시도한다.
+  try {
+    const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(20000) })
+    if (res.ok) {
+      const html = await res.text()
+      if (!/Just a moment|cf-browser-verification|challenge-platform/i.test(html)) return html
+    }
+  } catch {
+    /* 아래 브라우저 경로로 */
+  }
+
+  // 2차: 실제 브라우저 — Cloudflare 챌린지를 통과한다
+  //
+  // ⚠️ **headless 로는 못 뚫는다** (2026-08-25 실측). `chromium.launch()` 기본값(headless)은
+  //    `net::ERR_TIMED_OUT` 으로 끝나고, 같은 URL 을 headed 브라우저로 열면 1.2MB 본문이
+  //    정상 수신된다. Cloudflare 가 headless 를 식별해 붙잡는다.
+  //    그래서 창을 띄운다 — 수확기는 사람이 돌리는 CLI 라 창이 떠도 무방하다.
+  //    (CI·크론에서 돌릴 일이 생기면 그때는 다른 우회가 필요하다. 지금은 수동 전용.)
+  try {
+    const browser = await getBrowser()
+    const page = await browser.newPage({ userAgent: HEADERS["User-Agent"], locale: "ko-KR" })
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 })
+      // 챌린지가 끼면 몇 초 뒤 본문으로 넘어간다
+      await page.waitForTimeout(3000)
+      const html = await page.content()
+      if (/Just a moment|challenge-platform/i.test(html)) {
+        await page.waitForTimeout(5000)
+        return await page.content()
+      }
+      return html
+    } finally {
+      await page.close()
+    }
+  } catch (e) {
+    console.warn(`[namu] 문서 수신 실패: ${url} — ${e instanceof Error ? e.message : e}`)
+    return null
+  }
+}
+
+/**
+ * ⚠️ 브라우저는 **한 번만 띄우고 재사용**한다. 문서마다 launch/close 하면 문서당 5초씩
+ *    붙어 리그 하나(구단 20개 × 문서 2~3개)에 몇 분이 그냥 사라진다.
+ *    프로세스가 끝날 때 `closeNamuBrowser()` 로 닫는다 — 안 닫으면 창이 남는다.
+ */
+let browserPromise: Promise<import("playwright").Browser> | null = null
+async function getBrowser() {
+  if (!browserPromise) {
+    browserPromise = import("playwright").then((pw) =>
+      pw.chromium.launch({
+        headless: false,
+        args: ["--disable-blink-features=AutomationControlled"],
+      })
+    )
+  }
+  return browserPromise
+}
+
+/** 수확 스크립트 종료 시 호출 — 안 부르면 브라우저 창이 남는다 */
+export async function closeNamuBrowser(): Promise<void> {
+  if (!browserPromise) return
+  const b = await browserPromise.catch(() => null)
+  browserPromise = null
+  await b?.close().catch(() => {})
+}
+
 export interface NamuClub {
   /** 나무위키 문서명 (예: "비야레알 CF") */
   doc: string
@@ -45,22 +126,28 @@ export async function fetchLeagueClubs(
   { sectionHint = "시즌 참가", window = 40000 } = {}
 ): Promise<NamuClub[]> {
   const url = `https://namu.wiki/w/${encodeURIComponent(leagueDoc)}`
-  const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(20000) })
-  if (!res.ok) return []
-  const html = await res.text()
+  const html = await fetchNamuHtml(url)
+  if (!html) return []
 
+  // ⚠️ 브라우저로 받으면 속성이 **큰따옴표**로 정규화된다. 서버 HTML(작은따옴표)과
+  //    둘 다 받아야 한다 — 한쪽만 보면 경로에 따라 0개가 된다.
   const start = html.indexOf(sectionHint)
   const seg = start >= 0 ? html.slice(start, start + window) : html
 
-  // ⚠️ 작은따옴표 속성 — 큰따옴표로 짜면 거의 안 잡힌다
-  const re = /href='\/w\/([^']+)'\s+title='([^']+)'/g
+  // 서버 HTML 은 작은따옴표, 브라우저 content() 는 큰따옴표로 정규화된다 — 둘 다 훑는다
+  const patterns = [
+    /href='\/w\/([^']+)'\s+title='([^']+)'/g,
+    /href="\/w\/([^"]+)"\s+title="([^"]+)"/g,
+  ]
   const out: NamuClub[] = []
   const seen = new Set<string>()
-  for (const m of seg.matchAll(re)) {
-    const doc = decodeURIComponent(m[1]).replace(/#.*$/, "")
-    if (seen.has(doc) || !isClubDoc(doc)) continue
-    seen.add(doc)
-    out.push({ doc, title: m[2], url: `https://namu.wiki/w/${encodeURIComponent(doc)}` })
+  for (const re of patterns) {
+    for (const m of seg.matchAll(re)) {
+      const doc = decodeURIComponent(m[1]).replace(/#.*$/, "")
+      if (seen.has(doc) || !isClubDoc(doc)) continue
+      seen.add(doc)
+      out.push({ doc, title: m[2], url: `https://namu.wiki/w/${encodeURIComponent(doc)}` })
+    }
   }
   return out
 }
@@ -88,14 +175,10 @@ function stripNamuHtml(html: string): string {
   )
 }
 
-/** 나무위키 문서 본문 텍스트 */
+/** 나무위키 문서 본문 텍스트 — 리그 문서와 같은 차단을 받으므로 같은 경로를 쓴다 */
 export async function fetchNamuDocText(doc: string): Promise<string | null> {
-  const res = await fetch(`https://namu.wiki/w/${encodeURIComponent(doc)}`, {
-    headers: HEADERS,
-    signal: AbortSignal.timeout(25000),
-  })
-  if (!res.ok) return null
-  return stripNamuHtml(await res.text())
+  const html = await fetchNamuHtml(`https://namu.wiki/w/${encodeURIComponent(doc)}`)
+  return html ? stripNamuHtml(html) : null
 }
 
 /**
@@ -132,11 +215,9 @@ export async function fetchSquadDocText(clubDoc: string): Promise<string | null>
   const parts: string[] = []
 
   // ① 구단 문서 본문 — 표가 여기 실려 있는 구단이 있다
-  const res = await fetch(`https://namu.wiki/w/${encodeURIComponent(clubDoc)}`, {
-    headers: HEADERS,
-    signal: AbortSignal.timeout(25000),
-  })
-  const html = res.ok ? await res.text() : ""
+  // ⚠️ 여기도 같은 차단을 받는다. 리그 문서만 고치고 이 줄을 놔뒀다가
+  //    `UND_ERR_CONNECT_TIMEOUT` 으로 스크립트가 통째로 죽었다 (2026-08-25).
+  const html = (await fetchNamuHtml(`https://namu.wiki/w/${encodeURIComponent(clubDoc)}`)) ?? ""
   const body = html ? stripNamuHtml(html) : null
   if (hasSquadTable(body)) parts.push(body)
 
@@ -146,7 +227,10 @@ export async function fetchSquadDocText(clubDoc: string): Promise<string | null>
 
   // ③ 규칙이 빗나가면 본문의 "스쿼드" 링크를 따라간다
   if (parts.length === 0 && html) {
-    const m = html.match(/href='\/w\/(%ED%8B%80[^']+)'[^>]*>스쿼드<\/a>/)
+    // 서버 HTML(작은따옴표)·브라우저 content()(큰따옴표) 둘 다 대응
+    const m =
+      html.match(/href='\/w\/(%ED%8B%80[^']+)'[^>]*>스쿼드<\/a>/) ??
+      html.match(/href="\/w\/(%ED%8B%80[^"]+)"[^>]*>스쿼드<\/a>/)
     if (m) {
       const linked = await fetchNamuDocText(decodeURIComponent(m[1]))
       if (hasSquadTable(linked)) parts.push(linked)
