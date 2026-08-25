@@ -63,12 +63,12 @@ const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판�
  * 이 가드가 없으면 SCANNER_MODEL_LONG 을 terra 로 바꾸는 순간 그 글들이 전건 실패한다.
  */
 function chatParams(model, params = {}) {
-  const { temperature, max_tokens: maxTokens } = params
-  const limit = maxTokens === undefined ? {} : { max_tokens: maxTokens }
-  if (!/^gpt-5/i.test(model)) {
-    return { model, ...(temperature === undefined ? {} : { temperature }), ...limit }
-  }
-  return { model, ...(maxTokens === undefined ? {} : { max_completion_tokens: maxTokens }) }
+  if (!/^gpt-5/i.test(model)) return { model, ...params }
+
+  const { temperature: _temperature, top_p: _topP, max_tokens: maxTokens, ...rest } = params
+  return maxTokens === undefined
+    ? { model, ...rest }
+    : { model, ...rest, max_completion_tokens: maxTokens }
 }
 
 const LOOKBACK_HOURS = 24 // 이보다 오래된 글은 무시 (신선도)
