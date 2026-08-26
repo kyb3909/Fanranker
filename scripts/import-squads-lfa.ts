@@ -238,6 +238,11 @@ async function main() {
         player_id: String(p.id),
       })
       if (APPLY) {
+        // ⚠️ ignoreDuplicates 필수 (2026-08-27 사고). 이게 없으면 ON CONFLICT DO UPDATE 가
+        //    되어, LFA 가 이름 포맷을 바꿔 재등장한 기존 선수(같은 player_id)의 행을
+        //    name_kr=null·status=proposed 로 **통째로 덮어쓴다** — 확정된 한글명 995행이
+        //    실제로 이렇게 지워졌다. alreadyHave() 는 축약명("M. Kudus")+짧은 성에서
+        //    기존 선수를 못 알아본다. DO NOTHING 이면 그 오판이 나도 기존 행은 무사하다.
         const { error } = await supabase.from("team_squads").upsert(
           {
             soccerway_team_id: t.soccerway_team_id,
@@ -250,7 +255,7 @@ async function main() {
             status: "proposed",
             source: "lfa",
           },
-          { onConflict: "soccerway_team_id,player_id" }
+          { onConflict: "soccerway_team_id,player_id", ignoreDuplicates: true }
         )
         if (error) continue
       }

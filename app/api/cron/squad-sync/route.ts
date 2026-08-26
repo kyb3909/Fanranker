@@ -106,27 +106,35 @@ async function cronGet(request: NextRequest) {
         continue
       }
 
+      // ⚠️ 대조 키는 이름이 아니라 player_id (2026-08-27 사고 교훈).
+      //    LFA 는 이름 포맷을 예고 없이 바꾼다 ("Mohammed Kudus" → "M. Kudus" 실사고).
+      //    slug(이름 기반)로 대조하면 포맷 변경 한 번에 전원이 "새 선수 + 전원 이탈" 로
+      //    오판되어, 중복행 대량 삽입 + 멀쩡한 행 전부 left 처리가 된다.
+      const feedIds = new Set<string>()
       const feedSlugs = new Set<string>()
       for (const p of players) {
-        if (!p.name) continue
-        feedSlugs.add(slugOf(String(p.name)))
+        if (p.player_id) feedIds.add(String(p.player_id))
+        if (p.name) feedSlugs.add(slugOf(String(p.name)))
       }
 
       const { data: existing } = await supabase
         .from("team_squads")
-        .select("player_slug, status")
+        .select("player_id, player_slug, status, source")
         .eq("soccerway_team_id", teamId)
-      const known = new Map((existing ?? []).map((r) => [String(r.player_slug), String(r.status)]))
+      const knownIds = new Set((existing ?? []).map((r) => String(r.player_id)))
+      const knownSlugs = new Set((existing ?? []).map((r) => String(r.player_slug)))
 
-      // ② 새로 온 선수 — name_kr 은 비워 둔다. 발음을 여기서 지어내지 않는다
+      // ② 새로 온 선수 — name_kr 은 비워 둔다. 발음을 여기서 지어내지 않는다.
+      //    id 가 이미 있으면 표기만 바뀐 기존 선수다 — 건드리지 않는다.
       for (const p of players) {
         if (!p.name) continue
+        const pid = p.player_id ? String(p.player_id) : slugOf(String(p.name))
         const slug = slugOf(String(p.name))
-        if (!slug || known.has(slug)) continue
+        if (!slug || knownIds.has(pid) || knownSlugs.has(slug)) continue
         const { error } = await supabase.from("team_squads").insert({
           soccerway_team_id: teamId,
           player_slug: slug,
-          player_id: p.player_id ? String(p.player_id) : slug,
+          player_id: pid,
           name_en: String(p.name),
           jersey_number: p.shirt_number ? Number(p.shirt_number) || null : null,
           position: p.position ? String(p.position) : "",
@@ -136,14 +144,18 @@ async function cronGet(request: NextRequest) {
         if (!error) added++
       }
 
-      // ③ 떠난 선수 — 지우지 않고 표시만. 과거 경기 이름이 살아 있어야 한다
-      for (const [slug, status] of known) {
-        if (feedSlugs.has(slug) || status === "left" || status === "rejected") continue
+      // ③ 떠난 선수 — 지우지 않고 표시만. 과거 경기 이름이 살아 있어야 한다.
+      //    ⚠️ 판정은 source='lfa' 행에만 — 나무위키·soccerway 행의 id 는 LFA 피드에
+      //    영영 안 나오므로, 포함하면 그 행 전부가 매번 "이탈" 로 오판된다.
+      for (const r of existing ?? []) {
+        if (String(r.source) !== "lfa") continue
+        const status = String(r.status)
+        if (feedIds.has(String(r.player_id)) || status === "left" || status === "rejected") continue
         const { error } = await supabase
           .from("team_squads")
           .update({ status: "left", updated_at: new Date().toISOString() })
           .eq("soccerway_team_id", teamId)
-          .eq("player_slug", slug)
+          .eq("player_id", String(r.player_id))
         if (!error) left++
       }
     }
