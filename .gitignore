@@ -154,3 +154,15 @@ public/images/_news-team-raw/
 missing-teams.csv
 missing-players.csv
 public/images/_polish-raw/
+
+# 스크래치/드래프트 스크립트 (밑줄 접두사 = 임시, 커밋 대상 아님)
+scripts/_*
+
+# 브레인스토밍/조사 세션 산출물 (날짜별 디베이트·리뷰 마크다운, CSV)
+workspace/
+
+# 임시 probe/캡처 산출물
+.playwright-cli/
+arsenal-results-raw.json
+match-ft.html
+match-upcoming.html

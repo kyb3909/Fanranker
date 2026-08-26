@@ -35,7 +35,7 @@ import {
 } from "../lib/draft/engine"
 
 const RUNS = Number(process.argv[2] || 30)
-const BUDGETS = [65, 68, 70, 72, 75]
+const BUDGETS = [70, 76, 78, 80, 82, 85, 90]
 const STAR = 8 // £8 이상 = 스타 (609명 중 12명뿐)
 
 function runOne(budget: number) {
