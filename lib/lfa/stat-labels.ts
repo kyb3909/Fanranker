@@ -55,8 +55,8 @@ export const STAT_LABELS: StatLabelDef[] = [
   { ko: "세트피스 기대득점", en: ["xG from Set Pieces"] },
   { ko: "빗나간 슈팅", en: ["Shots off Target"] },
   { ko: "막힌 슈팅", en: ["Blocked Shots"] },
-  { ko: "골대 강타", en: ["Hit Woodwork"] },
-  { ko: "놓친 결정적 기회", en: ["Big Chances Missed"] },
+  { ko: "골대", en: ["Hit Woodwork"] },
+  { ko: "빅찬스 미스", en: ["Big Chances Missed"] },
   // 전개
   { ko: "총 패스", en: ["Total Passes"] },
   { ko: "성공한 패스", en: ["Successful Passes"] },
@@ -64,11 +64,11 @@ export const STAT_LABELS: StatLabelDef[] = [
   { ko: "성공한 크로스", en: ["Successful Crosses"] },
   { ko: "드리블 성공", en: ["Successful Dribbles"] },
   // 경합·수비
-  { ko: "경합 승리", en: ["Duels Won", "Winning a Duo Challenge"] },
-  { ko: "공중볼 경합 승리", en: ["Aerial Duels Won"] },
+  { ko: "듀얼 승리", en: ["Duels Won", "Winning a Duo Challenge"] },
+  { ko: "공중 듀얼 승리", en: ["Aerial Duels Won"] },
   { ko: "태클 성공", en: ["Successful Tackles"] },
   { ko: "가로채기", en: ["Interceptions"] },
-  { ko: "걷어내기", en: ["Clearances"] },
+  { ko: "클리어링", en: ["Clearances"] },
   // 재개
   { ko: "스로인", en: ["Throw-ins"] },
   { ko: "골킥", en: ["Goal Kicks"] },
