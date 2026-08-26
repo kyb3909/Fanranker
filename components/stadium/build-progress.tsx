@@ -76,9 +76,11 @@ export function BuildProgress({
     if (snap.nextRequired == null) return 100
     const range = snap.nextRequired - snap.currentRequired
     if (range <= 0) return 100
+    // 하한 0 — 운영자가 레벨을 수동으로 올려둔 팀은 총점이 레벨 시작점보다 낮아
+    // 음수가 나온다 (아스널 Lv.3 임시 세팅에서 -47.8% 실측)
     return Math.min(
       100,
-      Math.round(((snap.totalPoints - snap.currentRequired) / range) * 1000) / 10
+      Math.max(0, Math.round(((snap.totalPoints - snap.currentRequired) / range) * 1000) / 10)
     )
   }, [snap])
 
