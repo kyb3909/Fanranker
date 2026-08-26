@@ -36,7 +36,7 @@ function calcProgressPct(level: number, totalPoints: number): number {
   if (!current || !next) return level >= 10 ? 100 : 0
   const range = next.requiredPoints - current.requiredPoints
   if (range <= 0) return 100
-  return Math.min(100, ((totalPoints - current.requiredPoints) / range) * 100)
+  return Math.min(100, Math.max(0, ((totalPoints - current.requiredPoints) / range) * 100))
 }
 
 export function RegionMapClient({ regionName, league, leagueId, mapImage }: Props) {

@@ -39,7 +39,8 @@ export default async function StadiumDetailPage({
   if (nextLevel && currentLevel) {
     const range = nextLevel.requiredPoints - currentLevel.requiredPoints
     const progress = stadiumData.total_points - currentLevel.requiredPoints
-    progressPct = range > 0 ? Math.min(100, Math.round((progress / range) * 1000) / 10) : 100
+    progressPct =
+      range > 0 ? Math.min(100, Math.max(0, Math.round((progress / range) * 1000) / 10)) : 100
   }
 
   // 기여자 Top 10

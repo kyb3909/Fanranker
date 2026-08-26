@@ -68,7 +68,8 @@ export async function GET(
     if (nextLevel && currentLevel) {
       const range = nextLevel.required_points - currentLevel.required_points
       const progress = stadiumData.total_points - currentLevel.required_points
-      progressPct = range > 0 ? Math.min(100, Math.round((progress / range) * 1000) / 10) : 100
+      progressPct =
+        range > 0 ? Math.min(100, Math.max(0, Math.round((progress / range) * 1000) / 10)) : 100
     }
 
     // 3. 최근 기여자 (상위 10명)

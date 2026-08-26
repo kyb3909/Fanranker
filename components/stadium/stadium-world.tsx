@@ -34,7 +34,8 @@ function calcProgressPct(level: number, totalPoints: number): number {
   if (!current || !next) return level >= 10 ? 100 : 0
   const range = next.requiredPoints - current.requiredPoints
   if (range <= 0) return 100
-  return Math.min(100, ((totalPoints - current.requiredPoints) / range) * 100)
+  // 수동 레벨 조정으로 totalPoints 가 현재 레벨 기준점보다 낮을 수 있다 — 음수 방지
+  return Math.min(100, Math.max(0, ((totalPoints - current.requiredPoints) / range) * 100))
 }
 
 const ANIM_DURATION = 400
