@@ -134,8 +134,11 @@ async function main() {
     const entryId = `player_auto_${normalizePlayerKey(romanized).replace(/-/g, "_")}`.slice(0, 60)
     for (const c of sorted.slice(1)) {
       if (c.total >= ABSORB_MIN_TOTAL && c.candidate !== winner) {
-        const absorbError = await absorbAliasIntoEntry(supabase, entryId, c.candidate)
-        if (absorbError) console.log(`  별칭 흡수 실패(${c.candidate}): ${absorbError}`)
+        const absorbed = await absorbAliasIntoEntry(supabase, entryId, c.candidate)
+        if (!absorbed.ok) {
+          const 말 = absorbed.kind === "rejected" ? "거부" : "실패"
+          console.log(`  별칭 흡수 ${말}(${c.candidate}): ${absorbed.reason}`)
+        }
       }
     }
 

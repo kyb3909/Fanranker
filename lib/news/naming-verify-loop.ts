@@ -18,6 +18,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { canAbsorbAlias } from "@/lib/news/alias-safety"
 import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName, decidePreferred } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
@@ -147,10 +148,18 @@ export async function resolveUnknownPlayersViaNaver(
     if (!absorbTarget) absorbTarget = findUniqueRomanizedMatch(dictionary, v.romanized)
 
     if (absorbTarget && absorbTarget.preferred_ko !== name) {
-      const absorbError = await absorbAliasIntoEntry(supabase, absorbTarget.id, name)
-      if (absorbError) {
-        memo.set(name, "infra")
-        result.infraFailed.push(name)
+      const absorbed = await absorbAliasIntoEntry(supabase, absorbTarget.id, name)
+      if (!absorbed.ok) {
+        // ⚠️ 거부는 재시도 대상이 아니다 — 결과가 같다. "모르는 이름"으로 남겨
+        //    발행 게이트가 잡게 한다. 억지로 붙이는 것보다 안 붙는 편이 안전하다
+        //    (2026-08-26: 붙였다가 기사 4건에 엉뚱한 사람이 박혔다).
+        if (absorbed.kind === "rejected") {
+          memo.set(name, "unknown")
+          result.stillUnknown.push(name)
+        } else {
+          memo.set(name, "infra")
+          result.infraFailed.push(name)
+        }
         continue
       }
       memo.set(name, { preferred: absorbTarget.preferred_ko })
@@ -212,25 +221,60 @@ export async function resolveUnknownPlayersViaNaver(
   return result
 }
 
-/** 기존 사전 항목에 표기 변형을 별칭으로 흡수 (admin 1클릭 alias 모드와 동일 효과) */
+/**
+ * 흡수 결과 — **거부**와 **인프라 실패**를 구분한다.
+ *
+ * 종전엔 둘 다 문자열 하나로 돌려줘서 호출부가 전부 "인프라 실패 → 다음 회차 재시도"
+ * 로 취급했다. 영원히 붙으면 안 되는 이름을 매 회차 다시 시도하는 셈이다.
+ */
+export type AbsorbResult =
+  | { ok: true }
+  /** 붙이면 안 되는 조합 — 재시도해도 결과가 같다 */
+  | { ok: false; kind: "rejected"; reason: string }
+  /** DB 오류 등 — 다음 회차에 다시 시도할 값이 있다 */
+  | { ok: false; kind: "infra"; reason: string }
+
+/**
+ * 기존 사전 항목에 표기 변형을 별칭으로 흡수 (admin 1클릭 alias 모드와 동일 효과).
+ *
+ * ⚠️ 여기가 **자동 학습이 사전을 건드리는 유일한 길목**이다. 2026-08-26 사고
+ *    (루벤 디아스 ← 아모림·로프터스-치크 등 5건, 발행 기사 4건 오염)의 통과 지점이라
+ *    `canAbsorbAlias` 판정을 여기에 건다. 호출부가 여러 곳이라 각자 검사하게 두면
+ *    한 곳만 빠뜨려도 오염이 다시 들어온다.
+ */
 export async function absorbAliasIntoEntry(
   supabase: ServiceClient,
   entryId: string,
   alias: string
-): Promise<string | null> {
+): Promise<AbsorbResult> {
   const { data: existing, error: readError } = await (supabase as SupabaseClient)
     .from("news_alias_dictionary")
-    .select("hangul_alts")
+    .select("hangul_alts, preferred_ko, romanized")
     .eq("id", entryId)
     .maybeSingle()
-  if (readError) return readError.message
-  if (!existing) return "entry_not_found"
+  if (readError) return { ok: false, kind: "infra", reason: readError.message }
+  if (!existing) return { ok: false, kind: "infra", reason: "entry_not_found" }
+
+  const preferred = String(existing.preferred_ko ?? "").trim()
+  // ⚠️ 정본을 못 읽었으면 **판정 불가**지 거부가 아니다. 거부로 돌리면 사전 읽기가
+  //    한 번 흔들릴 때 흡수가 전건 막히고, 그건 조용한 전멸이다 (재시도할 값이 있다).
+  if (!preferred) return { ok: false, kind: "infra", reason: "preferred_ko 를 못 읽었다" }
+
+  const verdict = canAbsorbAlias(
+    { preferred_ko: preferred, romanized: (existing.romanized as string | null) ?? null },
+    alias
+  )
+  if (!verdict.ok) {
+    console.warn(`[naming] 별칭 흡수 거부 — ${entryId} ← "${alias}": ${verdict.reason}`)
+    return { ok: false, kind: "rejected", reason: verdict.reason }
+  }
+
   const merged = Array.from(new Set([...((existing.hangul_alts as string[] | null) ?? []), alias]))
   const { error } = await (supabase as SupabaseClient)
     .from("news_alias_dictionary")
     .update({ hangul_alts: merged, updated_at: new Date().toISOString() })
     .eq("id", entryId)
-  return error ? error.message : null
+  return error ? { ok: false, kind: "infra", reason: error.message } : { ok: true }
 }
 
 /**
@@ -265,7 +309,9 @@ export async function registerVerifiedPlayer(
     .maybeSingle()
   if (existing) {
     if (input.articleName !== input.preferred) {
-      return absorbAliasIntoEntry(supabase, id, input.articleName)
+      const absorbed = await absorbAliasIntoEntry(supabase, id, input.articleName)
+      // 거부는 실패가 아니다 — 항목은 이미 있고, 위험한 별칭만 안 붙였을 뿐이다
+      return absorbed.ok || absorbed.kind === "rejected" ? null : absorbed.reason
     }
     return null
   }
@@ -276,7 +322,16 @@ export async function registerVerifiedPlayer(
     preferred_ko: input.preferred,
     romanized: input.romanized,
     surfaces: [romanKey.replace(/-/g, " "), input.preferred],
-    hangul_alts: input.preferred !== input.articleName ? [input.articleName] : [],
+    // ⚠️ 신규 항목도 같은 판정을 거친다 — "성만 있는 정본에 풀네임" 같은 조합은
+    //    첫 등재 순간부터 오염이다 (레온 ← 라파엘 레앙 이 그랬다).
+    hangul_alts:
+      input.preferred !== input.articleName &&
+      canAbsorbAlias(
+        { preferred_ko: input.preferred, romanized: input.romanized },
+        input.articleName
+      ).ok
+        ? [input.articleName]
+        : [],
     confidence: 0.7,
     notes: input.notes,
   })

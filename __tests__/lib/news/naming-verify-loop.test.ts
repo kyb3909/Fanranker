@@ -49,8 +49,19 @@ function makeSupabase() {
   }
 }
 
-/** 흡수 경로용 — 사전 행 조회가 기존 항목(hangul_alts)을 돌려준다 */
-function makeSupabaseWithDict() {
+/**
+ * 흡수 경로용 — 사전 행 조회가 기존 항목을 돌려준다.
+ *
+ * ⚠️ `preferred_ko`·`romanized` 도 돌려줘야 한다. 흡수 전 `canAbsorbAlias` 판정이
+ *    이 두 값을 보기 때문이다 (2026-08-26 사전 오염 대책). 안 돌려주면 판정 불가로
+ *    떨어져 흡수가 안 된다 — 가짜 DB 도 진짜 코드가 읽는 것은 줘야 한다.
+ */
+function makeSupabaseWithDict(
+  entry: { preferred_ko: string; romanized: string | null } = {
+    preferred_ko: "비니시우스 주니오르",
+    romanized: "Vinicius Junior",
+  }
+) {
   const inserts: Record<string, unknown>[] = []
   const updates: Record<string, unknown>[] = []
   return {
@@ -64,7 +75,7 @@ function makeSupabaseWithDict() {
         },
         select: () => ({
           eq: () => ({
-            maybeSingle: async () => ({ data: { hangul_alts: [] }, error: null }),
+            maybeSingle: async () => ({ data: { hangul_alts: [], ...entry }, error: null }),
           }),
         }),
         update: (row: Record<string, unknown>) => ({
