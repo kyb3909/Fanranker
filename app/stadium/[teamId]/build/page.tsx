@@ -1,17 +1,17 @@
 import { createAnonClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { STADIUM_LEVELS } from "@/lib/constants/stadium-levels"
+import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
 import { BuildProgress } from "@/components/stadium/build-progress"
 
 /**
- * 경기장 건설 현황 — 격리 지면 (2026-08-27 단계 0).
+ * 경기장 건설 현황 — 격리 지면 (2026-08-27 단계 0 → 벽돌 단위 투자로 확장).
  *
- * 워크스페이스 stadium-build-FINAL-20260827.md 의 단계 0: 기존 기부 인프라
- * (team_stadiums.total_points + donate_flair_score_to_team RPC) 위에
- * 진행률 게이지 + 원탭 기부 + 최근 기여자만 얹는다. 신규 테이블·엔진 없음.
+ * 활동 점수로 벽돌을 "개" 단위로 사서 경기장을 함께 짓는다. 완공까지 오래 걸리는 것이
+ * 설계의 일부 — 팬들이 몇 달에 걸쳐 쌓아가는 서사 (2026-08-27 운영자 확정).
  *
- * ⚠️ 메타버스 전례를 따르는 격리 원칙 — GNB·피드·사이드바 어디에도 배선하지 않는다.
- *    직접 URL(/stadium/{teamId}/build)로만 접근. 노출 지면은 운영자가 정한다.
+ * ⚠️ 격리 원칙 — GNB·피드·사이드바 어디에도 배선하지 않는다. 직접 URL 전용.
+ *    노출 지면은 운영자가 정한다.
  */
 export const revalidate = 30
 
@@ -42,28 +42,39 @@ export default async function StadiumBuildPage({
     STADIUM_LEVELS.find((l) => l.level === stadiumData.level) ?? STADIUM_LEVELS[0]
   const nextLevel = STADIUM_LEVELS.find((l) => l.level === stadiumData.level + 1) ?? null
 
-  // 최근 기여자 — 부모 페이지의 누적 Top 10 과 달리 여기는 "방금 누가 얹었나"가 본체다.
-  // last_synced_at 이 기부마다 갱신되므로 그대로 최근 순 정렬에 쓴다.
-  const { data: recent } = await supabase
+  // 투자자 랭킹 — 누적 기여점수 순 (벽돌 이전의 기부도 포함해야 공정하다).
+  // 표기는 벽돌 환산(points / BRICK_PRICE)으로 통일한다.
+  const { data: ranking } = await supabase
     .from("stadium_contributions")
-    .select("user_id, points_contributed, last_synced_at")
+    .select("user_id, points_contributed")
     .eq("team_id", teamId)
     .gt("points_contributed", 0)
-    .order("last_synced_at", { ascending: false })
+    .order("points_contributed", { ascending: false })
     .limit(10)
 
-  let profiles: { user_id: string; nickname: string; avatar_url: string | null }[] = []
-  if (recent && recent.length > 0) {
+  // 최근 투자 — 벽돌 구매 이벤트 (구매 1건 = 1행, 순번 포함)
+  const { data: recentBricks } = await supabase
+    .from("stadium_bricks")
+    .select("user_id, brick_count, start_index, created_at")
+    .eq("team_id", teamId)
+    .order("id", { ascending: false })
+    .limit(10)
+
+  const userIds = [
+    ...new Set([
+      ...(ranking ?? []).map((r) => r.user_id),
+      ...(recentBricks ?? []).map((r) => r.user_id),
+    ]),
+  ]
+  let profiles: { user_id: string; nickname: string }[] = []
+  if (userIds.length > 0) {
     const { data } = await supabase
       .from("profiles")
-      .select("user_id, nickname, avatar_url")
-      .in(
-        "user_id",
-        recent.map((c) => c.user_id)
-      )
+      .select("user_id, nickname")
+      .in("user_id", userIds)
     profiles = data ?? []
   }
-  const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
+  const nickOf = new Map(profiles.map((p) => [p.user_id, p.nickname]))
 
   return (
     <BuildProgress
@@ -80,12 +91,17 @@ export default async function StadiumBuildPage({
         nextRequired: nextLevel?.requiredPoints ?? null,
         nextLevelName: nextLevel?.nameKo ?? null,
       }}
-      recentContributors={(recent ?? []).map((c) => ({
-        userId: c.user_id,
-        nickname: profileMap.get(c.user_id)?.nickname ?? "익명",
-        avatarUrl: profileMap.get(c.user_id)?.avatar_url ?? null,
-        points: c.points_contributed,
-        lastAt: c.last_synced_at,
+      investors={(ranking ?? []).map((r, i) => ({
+        rank: i + 1,
+        nickname: nickOf.get(r.user_id) ?? "익명",
+        bricks: Math.floor(r.points_contributed / BRICK_PRICE),
+        points: r.points_contributed,
+      }))}
+      recentBuys={(recentBricks ?? []).map((r) => ({
+        nickname: nickOf.get(r.user_id) ?? "익명",
+        bricks: r.brick_count,
+        startIndex: r.start_index,
+        at: r.created_at,
       }))}
     />
   )

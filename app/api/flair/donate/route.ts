@@ -6,7 +6,9 @@ import { z } from "zod"
 
 const Body = z.object({
   flair_id: z.string().uuid(),
-  amount: z.number().int().min(1, "최소 1점 이상 기부해야 합니다."),
+  amount: z.number().int().min(1, "최소 1점 이상 기부해야 합니다.").optional(),
+  /** 벽돌 단위 구매 (2026-08-27) — 있으면 amount 대신 buy_stadium_bricks 경로 */
+  bricks: z.number().int().min(1).max(1000).optional(),
 })
 
 /**
@@ -40,12 +42,23 @@ export async function POST(request: NextRequest) {
       return apiBadRequest(parsed.error.issues[0]?.message || "잘못된 입력입니다.")
     }
 
+    if (!parsed.data.amount && !parsed.data.bricks) {
+      return apiBadRequest("amount 또는 bricks 가 필요합니다.")
+    }
+
     const supabase = createServiceRoleClient()
-    const { data, error } = await supabase.rpc("donate_flair_score_to_team", {
-      p_user_id: user.id,
-      p_flair_id: parsed.data.flair_id,
-      p_amount: parsed.data.amount,
-    })
+    // 벽돌 단위 구매 — 점수 차감·경기장 반영은 내부에서 기존 기부 RPC 를 그대로 탄다
+    const { data, error } = parsed.data.bricks
+      ? await supabase.rpc("buy_stadium_bricks", {
+          p_user_id: user.id,
+          p_flair_id: parsed.data.flair_id,
+          p_brick_count: parsed.data.bricks,
+        })
+      : await supabase.rpc("donate_flair_score_to_team", {
+          p_user_id: user.id,
+          p_flair_id: parsed.data.flair_id,
+          p_amount: parsed.data.amount!,
+        })
 
     if (error) {
       return apiError("기부 처리 중 오류가 발생했습니다.", 500, error)
@@ -61,6 +74,11 @@ export async function POST(request: NextRequest) {
       stadium_level?: number
       leveled_up?: boolean
       fan_count?: number
+      /** bricks 경로 전용 */
+      brick_count?: number
+      brick_price?: number
+      start_index?: number
+      my_total_bricks?: number
     } | null
 
     if (!result?.ok) {

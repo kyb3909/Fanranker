@@ -5,9 +5,10 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, HandCoins, LogIn } from "lucide-react"
+import { Loader2, HandCoins, LogIn, Trophy } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { formatRelativeTime } from "@/lib/utils/date"
+import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
 
 interface FlairScore {
   flair_id: string
@@ -18,6 +19,14 @@ interface FlairScore {
 
 interface MeTitlesResponse {
   flair_scores: FlairScore[]
+}
+
+interface MyBricksResponse {
+  my_bricks: number
+  my_points_spent: number
+  rank: number | null
+  investor_count: number
+  recent: { bricks: number; points: number; start_index: number; at: string }[]
 }
 
 interface StadiumSnapshot {
@@ -31,33 +40,41 @@ interface StadiumSnapshot {
   nextLevelName: string | null
 }
 
-interface Contributor {
-  userId: string
+interface Investor {
+  rank: number
   nickname: string
-  avatarUrl: string | null
+  bricks: number
   points: number
-  lastAt: string
 }
 
-/** 원탭 프리셋 — 잔액에 따라 실제 가능한 것만 보여준다 */
-const PRESETS = [10, 100, 1000]
+interface RecentBuy {
+  nickname: string
+  bricks: number
+  startIndex: number
+  at: string
+}
+
+/** 벽돌 구매 프리셋 — 잔액으로 살 수 있는 것만 노출된다 */
+const BRICK_PRESETS = [1, 5, 10]
 
 export function BuildProgress({
   teamId,
   teamName,
   teamColor,
   initial,
-  recentContributors,
+  investors,
+  recentBuys,
 }: {
   teamId: string
   teamName: string
   teamColor: string
   initial: StadiumSnapshot
-  recentContributors: Contributor[]
+  investors: Investor[]
+  recentBuys: RecentBuy[]
 }) {
   const [snap, setSnap] = useState(initial)
-  const [donating, setDonating] = useState<number | null>(null)
-  // 로그인 안 했으면 401 — 게이지·기여자는 그대로 보이고 기부 영역만 로그인 안내로 바뀐다
+  const [buying, setBuying] = useState<number | null>(null)
+  // 로그인 안 했으면 401 — 게이지·랭킹은 그대로 보이고 구매 영역만 로그인 안내로 바뀐다
   const {
     data: me,
     error: meError,
@@ -66,57 +83,65 @@ export function BuildProgress({
     revalidateOnFocus: false,
     shouldRetryOnError: false,
   })
+  const { data: myBricks, mutate: mutateMyBricks } = useSWR<MyBricksResponse>(
+    me ? `/api/stadiums/${teamId}/my-bricks` : null,
+    fetcher,
+    { revalidateOnFocus: false, shouldRetryOnError: false }
+  )
 
   const myFlair = useMemo(
     () => me?.flair_scores.find((f) => f.team_id === teamId) ?? null,
     [me, teamId]
   )
+  const affordable = myFlair ? Math.floor(myFlair.score_balance / BRICK_PRICE) : 0
 
   const progressPct = useMemo(() => {
     if (snap.nextRequired == null) return 100
     const range = snap.nextRequired - snap.currentRequired
     if (range <= 0) return 100
-    // 하한 0 — 운영자가 레벨을 수동으로 올려둔 팀은 총점이 레벨 시작점보다 낮아
-    // 음수가 나온다 (아스널 Lv.3 임시 세팅에서 -47.8% 실측)
+    // 하한 0 — 운영자가 레벨을 수동으로 올려둔 팀은 총점이 레벨 시작점보다 낮을 수 있다
     return Math.min(
       100,
       Math.max(0, Math.round(((snap.totalPoints - snap.currentRequired) / range) * 1000) / 10)
     )
   }, [snap])
 
-  async function donate(amount: number) {
-    if (!myFlair || amount <= 0 || amount > myFlair.score_balance) return
-    setDonating(amount)
+  const totalBricks = Math.floor(snap.totalPoints / BRICK_PRICE)
+
+  async function buy(bricks: number) {
+    if (!myFlair || bricks <= 0 || bricks > affordable) return
+    setBuying(bricks)
     try {
       const res = await fetch("/api/flair/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flair_id: myFlair.flair_id, amount }),
+        body: JSON.stringify({ flair_id: myFlair.flair_id, bricks }),
       })
       const j = await res.json()
-      if (!res.ok || !j?.ok) throw new Error(j?.error || "기부 실패")
-      // 응답이 새 총점·레벨을 주므로 게이지를 즉시 갱신 — 새로고침 없이 차오르는 걸 보여준다
+      if (!res.ok || !j?.ok) throw new Error(j?.error || "구매 실패")
       setSnap((s) => ({
         ...s,
         totalPoints: j.stadium_total_points ?? s.totalPoints,
         level: j.stadium_level ?? s.level,
         fanCount: j.fan_count ?? s.fanCount,
       }))
+      const nth = (j.start_index ?? 0) + 1
       toast({
-        title: `${teamName} 경기장에 ${amount.toLocaleString()}p 기부 완료`,
-        description: j.leveled_up ? `🎉 경기장 레벨업: Lv.${j.stadium_level}` : undefined,
+        title: `${teamName}의 ${nth.toLocaleString()}번째 벽돌을 얹었습니다`,
+        description:
+          `내 벽돌 총 ${(j.my_total_bricks ?? bricks).toLocaleString()}개` +
+          (j.leveled_up ? ` · 🎉 경기장 레벨업 Lv.${j.stadium_level}` : ""),
       })
-      await mutate()
+      await Promise.all([mutate(), mutateMyBricks()])
     } catch (e) {
-      toast({ title: "기부 실패", description: (e as Error).message, variant: "destructive" })
+      toast({ title: "구매 실패", description: (e as Error).message, variant: "destructive" })
     } finally {
-      setDonating(null)
+      setBuying(null)
     }
   }
 
   return (
     <main className="mx-auto w-full max-w-lg px-4 py-8">
-      {/* 헤더 */}
       <header className="mb-6">
         <p className="text-muted-foreground text-[13px]">경기장 건설 현황</p>
         <h1 className="text-foreground text-[26px] leading-tight font-bold">{teamName}</h1>
@@ -139,7 +164,7 @@ export function BuildProgress({
         </div>
 
         <div className="bg-muted mt-4 h-3 overflow-hidden rounded-full">
-          {/* 팀 컬러가 없는 핀(웸블리 등)은 bg-primary 폴백 — 없으면 바가 투명해진다 */}
+          {/* 팀 컬러가 없는 핀은 bg-primary 폴백 — 없으면 바가 투명해진다 */}
           <div
             className="bg-primary h-full rounded-full transition-all duration-700"
             style={{ width: `${progressPct}%`, backgroundColor: teamColor || undefined }}
@@ -147,7 +172,10 @@ export function BuildProgress({
         </div>
 
         <div className="text-muted-foreground mt-2 flex items-center justify-between text-[12px] tabular-nums">
-          <span>{snap.totalPoints.toLocaleString()}p</span>
+          <span>
+            벽돌 <span className="text-foreground font-bold">{totalBricks.toLocaleString()}</span>장
+            ({snap.totalPoints.toLocaleString()}p)
+          </span>
           <span>
             {snap.nextRequired != null ? `${snap.nextRequired.toLocaleString()}p` : "최고 레벨"}
           </span>
@@ -160,18 +188,19 @@ export function BuildProgress({
         </p>
       </Card>
 
-      {/* 원탭 기부 */}
+      {/* 벽돌 구매 */}
       <Card className="mt-4 p-5">
         <div className="flex items-center gap-2">
           <HandCoins className="text-muted-foreground h-4 w-4" />
           <p className="text-foreground text-[14px] font-bold">벽돌 얹기</p>
+          <p className="text-muted-foreground ml-auto text-[12px]">벽돌 1장 = {BRICK_PRICE}p</p>
         </div>
 
         {meError || (me && !myFlair) ? (
           <p className="text-muted-foreground mt-3 text-[13px]">
             {meError
-              ? "로그인하면 활동 점수로 경기장 건설에 참여할 수 있습니다."
-              : "이 팀 말머리로 활동하면 쌓이는 점수로 참여할 수 있습니다. 게시판에서 글·댓글을 써보세요."}
+              ? "로그인하면 활동 점수로 벽돌을 살 수 있습니다."
+              : "이 팀 말머리로 활동하면 쌓이는 점수로 벽돌을 삽니다. 게시판에서 글·댓글을 써보세요."}
           </p>
         ) : !me ? (
           <div className="text-muted-foreground mt-3 flex items-center gap-2 text-[13px]">
@@ -184,40 +213,36 @@ export function BuildProgress({
               <span className="text-foreground font-bold tabular-nums">
                 {myFlair!.score_balance.toLocaleString()}p
               </span>{" "}
-              — 기부해도 호칭 진행엔 영향이 없습니다
+              = 벽돌 {affordable.toLocaleString()}장 어치 — 사도 호칭 진행엔 영향이 없습니다
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {PRESETS.filter((p) => p <= myFlair!.score_balance).map((p) => (
+              {BRICK_PRESETS.filter((n) => n <= affordable).map((n) => (
                 <Button
-                  key={p}
+                  key={n}
                   size="sm"
                   variant="outline"
-                  disabled={donating != null}
-                  onClick={() => donate(p)}
+                  disabled={buying != null}
+                  onClick={() => buy(n)}
                 >
-                  {donating === p ? (
+                  {buying === n ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    `+${p.toLocaleString()}p`
+                    `벽돌 +${n} (${(n * BRICK_PRICE).toLocaleString()}p)`
                   )}
                 </Button>
               ))}
-              {myFlair!.score_balance > 0 && (
-                <Button
-                  size="sm"
-                  disabled={donating != null}
-                  onClick={() => donate(myFlair!.score_balance)}
-                >
-                  {donating === myFlair!.score_balance ? (
+              {affordable > 0 && (
+                <Button size="sm" disabled={buying != null} onClick={() => buy(affordable)}>
+                  {buying === affordable ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    "전부 얹기"
+                    `전부 (${affordable.toLocaleString()}장)`
                   )}
                 </Button>
               )}
-              {myFlair!.score_balance === 0 && (
+              {affordable === 0 && (
                 <p className="text-muted-foreground text-[13px]">
-                  잔액이 없습니다 — 글·댓글·추천으로 점수를 모아보세요.
+                  잔액이 부족합니다 — 글(+10)·댓글(+1)·추천(+1)으로 점수를 모아보세요.
                 </p>
               )}
             </div>
@@ -233,22 +258,79 @@ export function BuildProgress({
         )}
       </Card>
 
-      {/* 최근 기여자 */}
+      {/* 내 투자 */}
+      {myBricks && myBricks.my_bricks > 0 && (
+        <Card className="mt-4 p-5">
+          <p className="text-foreground text-[14px] font-bold">내 투자</p>
+          <p className="text-muted-foreground mt-2 text-[13px]">
+            벽돌{" "}
+            <span className="text-foreground text-[16px] font-bold tabular-nums">
+              {myBricks.my_bricks.toLocaleString()}
+            </span>
+            장 · {myBricks.my_points_spent.toLocaleString()}p 투자
+            {myBricks.rank != null && (
+              <>
+                {" "}
+                · 투자자 {myBricks.investor_count.toLocaleString()}명 중{" "}
+                <span className="text-foreground font-bold">{myBricks.rank}위</span>
+              </>
+            )}
+          </p>
+          {myBricks.recent.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {myBricks.recent.slice(0, 5).map((r, i) => (
+                <li key={i} className="text-muted-foreground flex justify-between text-[12px]">
+                  <span>
+                    {(r.start_index + 1).toLocaleString()}번째 자리부터 {r.bricks}장
+                  </span>
+                  <span suppressHydrationWarning>{formatRelativeTime(new Date(r.at))}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
+      {/* 투자자 랭킹 */}
       <Card className="mt-4 p-5">
-        <p className="text-foreground text-[14px] font-bold">최근 벽돌을 얹은 팬</p>
-        {recentContributors.length === 0 ? (
+        <div className="flex items-center gap-2">
+          <Trophy className="text-muted-foreground h-4 w-4" />
+          <p className="text-foreground text-[14px] font-bold">투자자 랭킹</p>
+        </div>
+        {investors.length === 0 ? (
           <p className="text-muted-foreground mt-3 text-[13px]">
             아직 아무도 없습니다 — 첫 벽돌의 주인공이 되어보세요.
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {recentContributors.map((c) => (
-              <li key={c.userId} className="flex items-center justify-between text-[13px]">
-                <span className="text-foreground min-w-0 truncate font-medium">{c.nickname}</span>
+            {investors.map((v) => (
+              <li key={v.rank} className="flex items-center justify-between text-[13px]">
+                <span className="text-foreground min-w-0 truncate">
+                  <span className="text-muted-foreground mr-2 tabular-nums">{v.rank}</span>
+                  <span className="font-medium">{v.nickname}</span>
+                </span>
                 <span className="text-muted-foreground ml-3 shrink-0 tabular-nums">
-                  누적 {c.points.toLocaleString()}p ·{" "}
-                  {/* 상대시간은 서버 렌더 시점과 어긋날 수 있다 — 경고만 눌러둔다 */}
-                  <span suppressHydrationWarning>{formatRelativeTime(new Date(c.lastAt))}</span>
+                  벽돌 {v.bricks.toLocaleString()}장
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* 최근 투자 */}
+      <Card className="mt-4 p-5">
+        <p className="text-foreground text-[14px] font-bold">최근 벽돌을 얹은 팬</p>
+        {recentBuys.length === 0 ? (
+          <p className="text-muted-foreground mt-3 text-[13px]">아직 벽돌 구매 기록이 없습니다.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {recentBuys.map((b, i) => (
+              <li key={i} className="flex items-center justify-between text-[13px]">
+                <span className="text-foreground min-w-0 truncate font-medium">{b.nickname}</span>
+                <span className="text-muted-foreground ml-3 shrink-0 tabular-nums">
+                  {(b.startIndex + 1).toLocaleString()}번째부터 {b.bricks}장 ·{" "}
+                  <span suppressHydrationWarning>{formatRelativeTime(new Date(b.at))}</span>
                 </span>
               </li>
             ))}
