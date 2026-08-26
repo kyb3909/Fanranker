@@ -139,8 +139,9 @@ export function BuildProgress({
         </div>
 
         <div className="bg-muted mt-4 h-3 overflow-hidden rounded-full">
+          {/* 팀 컬러가 없는 핀(웸블리 등)은 bg-primary 폴백 — 없으면 바가 투명해진다 */}
           <div
-            className="h-full rounded-full transition-all duration-700"
+            className="bg-primary h-full rounded-full transition-all duration-700"
             style={{ width: `${progressPct}%`, backgroundColor: teamColor || undefined }}
           />
         </div>
@@ -245,7 +246,9 @@ export function BuildProgress({
               <li key={c.userId} className="flex items-center justify-between text-[13px]">
                 <span className="text-foreground min-w-0 truncate font-medium">{c.nickname}</span>
                 <span className="text-muted-foreground ml-3 shrink-0 tabular-nums">
-                  누적 {c.points.toLocaleString()}p · {formatRelativeTime(new Date(c.lastAt))}
+                  누적 {c.points.toLocaleString()}p ·{" "}
+                  {/* 상대시간은 서버 렌더 시점과 어긋날 수 있다 — 경고만 눌러둔다 */}
+                  <span suppressHydrationWarning>{formatRelativeTime(new Date(c.lastAt))}</span>
                 </span>
               </li>
             ))}
