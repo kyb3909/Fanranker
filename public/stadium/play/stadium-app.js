@@ -410,7 +410,23 @@
 
   /* ── three 셋업 ── */
   var canvas = document.getElementById("scene");
-  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  } catch (e) {
+    // ⚠️ 여기서 던지면 스크립트가 통째로 멈춰 window.__setup 이 정의되지 않는다.
+    //    그런데 <script> 는 실행 중 예외를 던져도 load 가 발화하므로 지면의 error
+    //    핸들러가 안 뜬다 — 실패를 알릴 유일한 통로가 이 플래그다 (감리 C12).
+    window.__stadiumError = "webgl-unavailable: " + (e && e.message ? e.message : e);
+    return;
+  }
+  /**
+   * 이 앱은 즉시실행 1회성이라 렌더러가 **첫 마운트의 캔버스**를 영구히 붙든다.
+   * 클라이언트 내비게이션으로 다시 들어오면 DOM 은 새 캔버스인데 렌더러는 옛것을
+   * 그린다 — HUD 만 갱신되고 3D 는 죽는다 (감리 C11). 지면이 이 값을 대조해
+   * 어긋나면 스스로 알아채도록 노출한다.
+   */
+  window.__stadiumCanvas = canvas;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x14161d);
@@ -659,8 +675,10 @@
     screenGroup.position.set(-(g.OHX - 3) * WS, (g.ROOF_Y - 4) * WS, 0);
     drawScreen();
     document.getElementById("stName").textContent = cfg.name;
+    // 새 메쉬는 전부 숨김 상태로 만들어졌다 — 카운터도 0 에서 시작한다.
+    // ⚠️ 여기서 시안 데모값(34%)을 미리 세우면 안 된다. applyCount 는 증분 함수라
+    //    호출자가 이후에 카운터를 위조하면 되돌리는 분기가 통째로 죽는다 (감리 C1).
     builtCount = 0;
-    applyCount(Math.floor(TOTAL * 0.34));
     setNight(isNight);
   }
 
@@ -671,26 +689,25 @@
     var cx = camT.x + Math.cos(az) * r;
     var cy = camT.y + y;
     var cz = camT.z + Math.sin(az) * r;
-    // 걷기 모드 카메라
+    // 걷기 모드 카메라 — 뒤에서 추적하되 막히면 당긴다.
+    //
+    // ⚠️ 분기를 두지 않는다. 예전에는 "스탠드 위" 전용 분기가 원점 기준 atan2 로
+    //    방위를 따로 잡았는데 (a) 드래그 각(az)을 무시해 조작과 화면이 어긋나고
+    //    (b) 중앙선을 지날 때 시점이 180° 뒤집히고 (c) 그 분기엔 충돌 회피 루프가
+    //    없어 카메라가 좌석 안에 박혔다 (감리 C7). 방위는 az 하나만 쓴다.
     if (walkMode && player) {
       var ph = groundHeightAt(player.position.x, player.position.z);
-      if (ph !== Infinity && ph > 0.5) {
-        // 스탠드 위: 구장 중앙 쪽에서 바라본다 — 등반 장면이 관중석을 배경으로 잡힌다
-        var ca = Math.atan2(player.position.z, player.position.x);
-        cx = camT.x - Math.cos(ca) * r;
-        cz = camT.z - Math.sin(ca) * r;
-        cy = camT.y + Math.max(y, 2.5);
-      } else {
-        // 평지: 뒤에서 추적하되 막히면 당긴다
-        for (var kk = 1; kk >= 0.2; kk -= 0.12) {
-          var tx = camT.x + Math.cos(az) * r * kk;
-          var ty = camT.y + y * kk;
-          var tz = camT.z + Math.sin(az) * r * kk;
-          var g2 = groundHeightAt(tx, tz);
-          cx = tx; cz = tz;
-          if (g2 !== Infinity && ty >= g2 + 1.2) { cy = ty; break; }
-          cy = g2 === Infinity ? ty : Math.max(ty, g2 + 1.2);
-        }
+      // 잔디는 SURFACE(=1), 첫 계단은 WS+SURFACE(=3) — 그 사이를 문턱으로
+      var onStand = ph !== Infinity && ph > SURFACE + 0.5;
+      var minLift = onStand ? 2.5 : 0; // 스탠드에선 좌석 너머가 보이게 더 띄운다
+      for (var kk = 1; kk >= 0.2; kk -= 0.12) {
+        var tx = camT.x + Math.cos(az) * r * kk;
+        var ty = camT.y + Math.max(y * kk, minLift);
+        var tz = camT.z + Math.sin(az) * r * kk;
+        var g2 = groundHeightAt(tx, tz);
+        cx = tx; cz = tz;
+        if (g2 !== Infinity && ty >= g2 + 1.2) { cy = ty; break; }
+        cy = g2 === Infinity ? ty : Math.max(ty, g2 + 1.2);
       }
     }
     camera.position.set(cx, cy, cz);
@@ -796,8 +813,14 @@
       camera.updateProjectionMatrix();
     }
   }
+  var rafId = 0;
+  /** 루프 정지 — 지면 언마운트 시 호출한다 (유령 컨텍스트가 GPU 를 태우는 걸 막는다) */
+  window.__stadiumStop = function () {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+  };
   function tick() {
-    requestAnimationFrame(tick);
+    rafId = requestAnimationFrame(tick);
     resize();
     var dt = clock.getDelta();
     if (autoRotate) az += dt * 0.12;
@@ -824,7 +847,6 @@
     }
     updateWalk(dt);
     updateBall(dt);
-    updateScreen(dt);
     applyCamera();
     renderer.render(scene, camera);
   }
@@ -903,6 +925,13 @@
     player.position.set(0, SURFACE, 4);
     player.visible = true;
     walkMode = true;
+    // 조작을 알려주는 자리가 화면 어디에도 없었다 — 걷기 모드는 이 지면의 유일한
+    // 체류 장치인데 진입 직후에 막혔다 (감리 C13)
+    showToast(
+      matchMedia("(pointer: coarse)").matches
+        ? "D패드로 이동 · ⚽ 로 슛"
+        : "WASD·방향키 이동 · Space 점프 · F 슛"
+    );
     autoRotate = false;
     dist = 12; pol = 1.18;
     resetBall();
@@ -926,15 +955,39 @@
   document.getElementById("enter").addEventListener("click", function () {
     if (walkMode) exitWalk(); else enterWalk();
   });
+  /**
+   * 이동키.
+   *
+   * ⚠️ e.key 로 받으면 한글 IME 에서 W 가 "ㅈ" 으로 와 전부 죽는다. 이 화면은 걷는
+   *    내내 채팅창을 띄우므로 한 번 치면 IME 가 한글로 남아 그 뒤 WASD 가 먹통이
+   *    된다 — 유저는 "입장했는데 안 움직인다" 로만 겪는다 (감리 C14).
+   *    같은 파일의 점프·슛이 이미 e.code 를 쓰고 있었다. 여기도 code 로 통일한다.
+   *    ⚠️ keys 의 키 이름을 바꾸면 updateWalk 와 D패드 data-k 도 같이 바꿔야 한다.
+   */
+  var MOVE_CODES = {
+    KeyW: "up", ArrowUp: "up",
+    KeyS: "down", ArrowDown: "down",
+    KeyA: "left", ArrowLeft: "left",
+    KeyD: "right", ArrowRight: "right",
+  };
+  function isTyping() {
+    var el = document.activeElement;
+    return !!el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
+  }
   window.addEventListener("keydown", function (e) {
-    if (document.activeElement === document.getElementById("chatInput")) return;
-    var k = e.key.toLowerCase();
-    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].indexOf(k) >= 0) {
+    if (isTyping()) return;
+    var k = MOVE_CODES[e.code];
+    if (k) {
       keys[k] = true;
       if (walkMode) e.preventDefault();
     }
   });
-  window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
+  window.addEventListener("keyup", function (e) {
+    var k = MOVE_CODES[e.code];
+    if (k) keys[k] = false;
+  });
+  // 창 밖으로 나가는 사이 keyup 을 못 받으면 키가 눌린 채 고착된다
+  window.addEventListener("blur", function () { keys = {}; });
   Array.prototype.forEach.call(document.querySelectorAll("#dpad button"), function (btn) {
     var k = btn.getAttribute("data-k");
     function on(e) { e.preventDefault(); keys[k] = true; }
@@ -947,7 +1000,10 @@
   /* 지형 높이 — 피치 0, 스탠드는 계단 (점프로 한 칸씩 오른다) */
   function groundHeightAt(px, pz) {
     if (!terr) return SURFACE;
-    var bx = px / WS, bz = pz / WS;
+    // ⚠️ 렌더는 정수 격자에 블록을 놓는데 판정은 연속 좌표로 초타원식을 다시 푼다.
+    //    티어 폭이 1.22칸이라 0.22 주기로 어긋나고, 그만큼 캐릭터가 좌석에 파묻힌다
+    //    (감리 C8). 같은 정수를 넣어 판정과 렌더를 맞춘다 — 정본은 높이맵(2차).
+    var bx = Math.round(px / WS), bz = Math.round(pz / WS);
     if (inSuper(bx, bz, terr.arx, terr.arz)) return SURFACE;
     var maxT = terr.tiers + terr.bigExtra;
     for (var t = 0; t < maxT; t++) {
@@ -967,8 +1023,8 @@
 
   function updateWalk(dt) {
     if (!walkMode || !player) return;
-    var fwd = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
-    var strafe = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+    var fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+    var strafe = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     var moving = fwd !== 0 || strafe !== 0;
     if (moving) {
       var dirX = -Math.cos(az) * fwd + Math.sin(az) * strafe;
@@ -999,7 +1055,8 @@
     }
     /* 중력 + 지형 착지 */
     var floorH = groundHeightAt(player.position.x, player.position.z);
-    if (floorH === Infinity) floorH = 0;
+    // ⚠️ 0 이 아니라 SURFACE. 0 은 잔디 윗면보다 반 칸 아래라 처박힌다 (감리 G5)
+    if (floorH === Infinity) floorH = SURFACE;
     player.position.y += pvy * dt;
     pvy -= 26 * dt;
     if (player.position.y <= floorH) {
@@ -1097,7 +1154,7 @@
     }
     ball.position.y += bvel.y * dt;
     var floorB = groundHeightAt(ball.position.x, ball.position.z);
-    if (floorB === Infinity) floorB = 0;
+    if (floorB === Infinity) floorB = SURFACE;
     if (ball.position.y < floorB + 0.62) {
       ball.position.y = floorB + 0.62;
       bvel.y = Math.abs(bvel.y) > 1.2 ? -bvel.y * 0.55 : 0;
@@ -1136,7 +1193,7 @@
   }
   window.addEventListener("keydown", function (e) {
     if (!walkMode) return;
-    if (document.activeElement === document.getElementById("chatInput")) return;
+    if (isTyping()) return;
     if (e.code === "Space") {
       e.preventDefault();
       if (player && onGround) pvy = 12;
@@ -1157,53 +1214,42 @@
   scrCanvas.width = 512; scrCanvas.height = 288;
   var scrTex = new THREE.CanvasTexture(scrCanvas);
   var curAbbr = "ARS";
-  var scrElapsed = 0, scrRedraw = 0;
-  var TICKER = [
-    "숨막히는 공방전이 이어집니다",
-    "코너킥 찬스!",
-    "슈팅! 골키퍼 슈퍼 세이브",
-    "새벽 4시, 함께 보는 중입니다",
-    "골대를 스치는 아까운 슈팅!",
-    "분위기가 최고조에 달했습니다",
-  ];
+  /** 전광판에 띄우는 벽돌 수 — __setup 이 채운다 */
+  var scrBricks = 0;
+  /**
+   * 전광판.
+   *
+   * ⚠️ 예전에는 로드 시각부터 도는 가짜 경기 시계(04:00 KST · 저절로 오르는 스코어 ·
+   *    "코너킥 찬스!" 티커)를 그렸다. 라이브 스코어를 유료 피드로 실제 공급하는
+   *    서비스에서 실재하지 않는 경기 결과를 띄우는 것이라 통째로 걷어냈다 (감리 C10).
+   *    실제 중계는 나중에 DB 정본 경로로만 붙인다 — 화면 경로에서 외부 API 직접 호출 금지.
+   *
+   * 지금은 사실만 그린다: 구단 약칭 + 쌓인 벽돌. 값이 바뀔 때만 다시 그린다.
+   */
   function drawScreen() {
     var ctx = scrCanvas.getContext("2d");
-    var min = Math.floor((scrElapsed * 0.5) % 95);
-    var hs = (min > 23 ? 1 : 0) + (min > 67 ? 1 : 0);
-    var as2 = min > 51 ? 1 : 0;
     ctx.fillStyle = "#080b12";
     ctx.fillRect(0, 0, 512, 288);
     ctx.strokeStyle = "#2a3143";
     ctx.lineWidth = 6;
     ctx.strokeRect(3, 3, 506, 282);
-    /* LIVE + 시각 */
-    ctx.fillStyle = "#d0323f";
-    ctx.beginPath();
-    ctx.arc(38, 40, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#e8e6e0";
-    ctx.font = "700 30px 'Barlow Condensed', sans-serif";
-    ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.fillText("LIVE", 58, 41);
-    ctx.textAlign = "right";
-    ctx.fillText("04:00 KST", 480, 41);
-    /* 스코어 */
+
     ctx.textAlign = "center";
-    ctx.font = "700 92px 'Barlow Condensed', sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e8e6e0";
+    ctx.font = "700 64px 'Barlow Condensed', sans-serif";
+    ctx.fillText(curAbbr, 256, 84);
+
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(curAbbr + "  " + hs + " : " + as2 + "  GNR", 256, 128);
-    /* 경기 분 */
-    ctx.font = "700 44px 'Barlow Condensed', sans-serif";
-    ctx.fillStyle = "#d0323f";
-    ctx.fillText(min + "'", 256, 192);
-    /* 문자중계 티커 */
-    ctx.fillStyle = "#141926";
-    ctx.fillRect(8, 232, 496, 46);
-    ctx.fillStyle = "#cfd2d8";
-    ctx.font = "700 26px 'IBM Plex Sans KR', sans-serif";
-    ctx.fillText(TICKER[Math.floor(scrElapsed / 6) % TICKER.length], 256, 256);
+    ctx.font = "700 92px 'Barlow Condensed', sans-serif";
+    ctx.fillText(scrBricks.toLocaleString(), 256, 176);
+
+    ctx.fillStyle = "#8a8d98";
+    ctx.font = "700 30px 'IBM Plex Sans KR', sans-serif";
+    ctx.fillText("팬들이 쌓은 벽돌", 256, 240);
     scrTex.needsUpdate = true;
   }
+
   var screenGroup = new THREE.Group();
   (function () {
     var SW = 26, SH = 14.6;
@@ -1228,13 +1274,14 @@
     });
   })();
   scene.add(screenGroup);
-  function updateScreen(dt) {
-    scrElapsed += dt;
-    scrRedraw += dt;
-    if (scrRedraw > 1) {
-      scrRedraw = 0;
-      drawScreen();
-    }
+  /**
+   * 전광판 갱신 — 값이 바뀔 때만. 매 프레임 도는 루프를 두지 않는다.
+   * (상시 애니메이션 금지 판정 · 감리 G16)
+   */
+  function setScreenBricks(n) {
+    if (n === scrBricks) return;
+    scrBricks = n;
+    drawScreen();
   }
 
   /* ── 골대 (양쪽, 실규격 비례) + 골 판정 ── */
@@ -1320,7 +1367,7 @@
   window.__shot = function (o) {
     o = o || {};
     if (o.team) initStadium(o.team);
-    if (o.pct != null) { builtCount = 0; applyCount(Math.round(TOTAL * o.pct)); }
+    if (o.pct != null) applyCount(Math.round(TOTAL * o.pct));
     // 청사진(미시공) 블록 표시 여부 — 스틸샷은 끈 상태로 찍는다
     if (ghostMesh) ghostMesh.visible = o.ghost === true;
     if (o.az != null) az = o.az;
@@ -1347,9 +1394,16 @@
       if (sel) sel.value = o.team;
       initStadium(o.team);
     }
-    if (o.pct != null) { builtCount = 0; applyCount(Math.round(TOTAL * o.pct)); }
+    if (o.pct != null) applyCount(Math.round(TOTAL * o.pct));
     if (ghostMesh) ghostMesh.visible = o.ghost !== false;
+    // 전광판은 레벨 6 보상이다 (lib/constants/stadium-levels.ts) — 그 전엔 없다.
+    // 시안은 시공률과 무관하게 항상 띄워 레벨 사다리를 스스로 무의미하게 만들었다.
+    if (o.level != null) screenGroup.visible = o.level >= 6;
+    if (o.bricks != null) setScreenBricks(o.bricks);
     applyCamera();
+    // 루프가 멈춰 있으면 되살린다 — 지면이 언마운트에서 세우고 다시 들어오는 경우
+    // (개발 모드 StrictMode 의 이중 마운트 포함) 화면이 멈춘 채 남는 걸 막는다.
+    if (!rafId) tick();
     return { total: TOTAL, built: builtCount };
   };
 

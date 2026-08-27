@@ -3,6 +3,7 @@
 import { Suspense } from "react"
 import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
+import { isStadiumPlayRoute } from "@/lib/stadium/routes"
 import { CalendarDays, Compass, LayoutGrid, Sparkles, Target, User } from "lucide-react"
 
 const tabs = [
@@ -63,6 +64,9 @@ function MobileTabBarContent() {
   const pathname = usePathname()
 
   if (pathname.startsWith("/admin")) return null
+  // 경기장 입장은 풀스크린 3D — 탭바가 HUD 버튼을 덮는다 (감리 C3).
+  // 탈출구는 지면이 자체 [지도로] 로 준다.
+  if (isStadiumPlayRoute(pathname)) return null
   // 메타버스는 홈페이지 서비스의 일부 — 모바일 탭바 유지해 다른 섹션 이동 가능.
   // Phaser canvas 는 /metaverse 페이지 내부에서 safe-area + tab bar 높이만큼 뺀
   // viewport 사용 (아래 app/metaverse/*/page 참고).

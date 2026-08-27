@@ -151,8 +151,11 @@ export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
           <div className="mt-5 flex gap-2">
             {/* 완공 전에도 들어갈 수 있다 — 지금 쌓인 만큼만 서 있는 구장을 보는 게
                 이 루프의 보상이다 (평가 R1-P1-7: 건설 중일수록 보여줄 게 많다) */}
+            {/* ⚠️ <Link>(클라이언트 내비) 가 아니라 <a> 다. 3D 렌더러가 즉시실행
+                1회성이라 클라이언트 내비로 재진입하면 옛 캔버스를 붙든 채 화면이
+                죽는다 (감리 C11). 문서 이동이라야 매번 새로 선다. */}
             <Button asChild variant="outline" className="flex-1">
-              <Link href={`/stadium/${row.teamId}/enter`}>경기장 입장</Link>
+              <a href={`/stadium/${row.teamId}/enter`}>경기장 입장</a>
             </Button>
             <Button
               asChild

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { findMapTeam, MAP_TEAM_IDS } from "@/lib/stadium/map-teams"
 import { PLAY_SCENE, buildFraction } from "@/lib/stadium/build-progress-scale"
+import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
 import { StadiumPlay } from "@/components/stadium/stadium-play"
 import "./play.css"
 
@@ -36,11 +37,13 @@ export default async function StadiumEnterPage({
   const supabase = createAnonClient()
   const { data } = await supabase
     .from("team_stadiums")
-    .select("level")
+    .select("level, total_points")
     .eq("team_id", teamId)
     .maybeSingle()
 
   const level = data?.level ?? 1
+  // 전광판에는 렌더 블록 수가 아니라 **실제 벽돌 수**를 띄운다 — 건설 지면과 같은 단위
+  const bricks = Math.floor((data?.total_points ?? 0) / BRICK_PRICE)
 
   return (
     <StadiumPlay
@@ -49,6 +52,7 @@ export default async function StadiumEnterPage({
       stadiumName={team.stadiumName}
       scene={scene}
       level={level}
+      bricks={bricks}
       built={buildFraction(level)}
     />
   )

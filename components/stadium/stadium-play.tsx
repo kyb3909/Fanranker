@@ -12,17 +12,27 @@ interface Props {
   /** 시안 앱의 구장 키 (emirates·anfield …) */
   scene: string
   level: number
+  /** 실제로 쌓인 벽돌 수 (렌더 블록 수가 아니다) */
+  bricks: number
   /** 지금까지 지은 비율 0~1 */
   built: number
 }
 
 declare global {
   interface Window {
-    __setup?: (o: { team?: string; pct?: number; ghost?: boolean }) => {
-      total: number
-      built: number
-    }
+    __setup?: (o: {
+      team?: string
+      pct?: number
+      ghost?: boolean
+      level?: number
+      bricks?: number
+    }) => { total: number; built: number }
     __toggleGhost?: () => boolean
+    /** 렌더러가 못 뜬 이유 — 정의돼 있으면 3D 는 죽은 것이다 */
+    __stadiumError?: string
+    /** 렌더러가 실제로 붙든 캔버스 — 지금 DOM 의 것과 다르면 3D 는 죽어 있다 */
+    __stadiumCanvas?: HTMLCanvasElement
+    __stadiumStop?: () => void
   }
 }
 
@@ -43,7 +53,11 @@ function loadScript(src: string): Promise<void> {
       el.dataset.ready = "1"
       resolve()
     })
-    el.addEventListener("error", () => reject(new Error(src)))
+    el.addEventListener("error", () => {
+      // 실패한 태그를 남기면 재마운트가 이미 끝난 요청의 load 를 영영 기다린다
+      el.remove()
+      reject(new Error(src))
+    })
     document.head.appendChild(el)
   })
 }
@@ -58,8 +72,8 @@ function loadScript(src: string): Promise<void> {
  * 지도 모달의 스틸과 같은 시공률로 열린다 — 지금 우리가 쌓은 만큼만 서 있는
  * 구장에 걸어 들어가는 것이 이 지면의 전부다.
  */
-export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, built }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null)
+export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, bricks, built }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading")
   const [ghost, setGhost] = useState(false)
 
@@ -70,8 +84,18 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, built
         await loadScript("/stadium/play/three.min.js")
         await loadScript("/stadium/play/stadium-app.js")
         if (!alive) return
-        // 앱은 즉시실행이라 로드 직후 바로 준비된다
-        window.__setup?.({ team: scene, pct: built, ghost: false })
+        // ⚠️ optional chaining 으로 삼키면 안 된다. 앱이 죽어도 undefined 가 조용히
+        //    돌아와 커버가 걷히고, 계측까지 성공으로 잡혀 실패율이 지표에서 사라진다.
+        const ready = window.__setup?.({ team: scene, pct: built, ghost: false, level, bricks })
+        // 렌더러가 붙든 캔버스가 지금 DOM 의 것과 다르면 3D 는 이미 죽어 있다.
+        // (앱이 즉시실행 1회성이라 클라이언트 내비로 재진입하면 벌어진다 — 감리 C11)
+        // 지금은 진입 링크를 문서 이동으로 두어 이 경우가 나오지 않지만, 링크가
+        // 하나라도 <Link> 로 되돌아가면 여기서 조용히 죽는 대신 폴백으로 잡는다.
+        const bound = window.__stadiumCanvas
+        if (!ready || window.__stadiumError || (bound && bound !== canvasRef.current)) {
+          setState("failed")
+          return
+        }
         setState("ready")
         trackEvent({ name: "stadium_enter", params: { team_id: teamId, level } })
       } catch {
@@ -80,12 +104,14 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, built
     })()
     return () => {
       alive = false
+      // 루프를 세워 둔다 — 안 그러면 떠난 뒤에도 rAF 가 돌며 GPU·배터리를 태운다
+      window.__stadiumStop?.()
     }
-  }, [scene, built, teamId, level])
+  }, [scene, built, teamId, level, bricks])
 
   return (
-    <div ref={hostRef} className="stadium-play-scope">
-      <canvas id="scene" />
+    <div className="stadium-play-scope">
+      <canvas id="scene" ref={canvasRef} />
 
       <div className="hud brief">
         {/* ⚠️ #stName 은 시안 앱이 구장명으로 덮어쓴다 — 여기 팀명을 넣으면 지워진다 */}
@@ -145,9 +171,12 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, built
             <option value="etihad">에티하드</option>
             <option value="spurs">토트넘</option>
           </select>
-          <Link href="/stadium" className="play-back">
+          {/* ⚠️ <Link>(클라이언트 내비) 로 바꾸지 말 것 — 렌더러가 즉시실행 1회성이라
+              다시 들어올 때 3D 가 죽는다 (감리 C11). 문서 이동이라야 컨텍스트가 정리된다 */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 문서 이동이 목적이다 */}
+          <a href="/stadium" className="play-back">
             지도로
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -191,19 +220,19 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, built
       </div>
 
       <div className="dpad" id="dpad">
-        <button className="up" data-k="w" type="button">
+        <button className="up" data-k="up" type="button" aria-label="앞으로">
           ▲
         </button>
-        <button className="lf" data-k="a" type="button">
+        <button className="lf" data-k="left" type="button" aria-label="왼쪽">
           ◀
         </button>
-        <button className="dn" data-k="s" type="button">
+        <button className="dn" data-k="down" type="button" aria-label="뒤로">
           ▼
         </button>
-        <button className="rt" data-k="d" type="button">
+        <button className="rt" data-k="right" type="button" aria-label="오른쪽">
           ▶
         </button>
-        <button className="kick" id="kick" type="button">
+        <button className="kick" id="kick" type="button" aria-label="슛">
           ⚽
         </button>
       </div>
@@ -217,10 +246,17 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, built
             <p>구장을 세우는 중…</p>
           ) : (
             <div>
-              <p>이 기기에서는 3D 구장을 열 수 없습니다.</p>
-              <Link href={`/stadium/${teamId}/build`} className="play-cover__link">
-                벽돌 쌓으러 가기
-              </Link>
+              <p>구장을 여는 데 실패했습니다.</p>
+              <button
+                type="button"
+                className="play-cover__link"
+                onClick={() => window.location.reload()}
+              >
+                다시 열기
+              </button>
+              <p style={{ marginTop: 10 }}>
+                <Link href={`/stadium/${teamId}/build`}>벽돌 쌓으러 가기</Link>
+              </p>
             </div>
           )}
         </div>

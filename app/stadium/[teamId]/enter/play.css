@@ -7,6 +7,9 @@
  */
 .stadium-play-scope {
   & {
+    /* ⚠️ 시안 원본의 body { color } 가 스코프 중첩으로 옮기면서 유실됐다.
+       개별 요소에 색을 덧대 때우지 말 것 — 루트가 비면 또 샌다 (감리 C6) */
+    color: var(--text);
     --ground: #14161d;
     --panel: rgba(24, 27, 36, 0.82);
     --line: rgba(232, 230, 224, 0.12);
