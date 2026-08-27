@@ -25,7 +25,9 @@
   var STADIUMS = {
     emirates: {
       name: "에미레이츠 스타디움", abbr: "ARS", n: 2.35, tiers: 17, boxRows: [8, 9],
-      seat: [0xc2273a, 0xb92336, 0xcb2f42], apron: [0x5a2330, 0x54202c],
+      // ⚠️ 어프론을 팀 색으로 두면 좌석 그늘과 같은 톤이라 트랙이 안 갈린다.
+      //    아스날 정체성은 좌석·배너·엠블럼이 이미 진다 (감리 M2)
+      seat: [0xc2273a, 0xb92336, 0xcb2f42], apron: [0x3a3d44, 0x35383f],
       banner: [0xa3202f, 0x9c1d2b], muralFig: [0xe8e2d8, 0xe2dcd0],
       facade: "emirates", roofColor: "roofDeck", trusses: true,
       emblem: { pal: { W: 0xf2efe6, R: 0xb01e2e, G: 0xd9b45b }, art: [
@@ -226,7 +228,11 @@
       for (var z = -PZ; z <= PZ; z++) {
         var line =
           Math.abs(x) === PX || Math.abs(z) === PZ || x === 0 ||
-          (Math.round(Math.sqrt(x * x + z * z)) === 11 && Math.abs(x) > 0) ||
+          // 센터 서클 — 규정 9.15m. 블록당 1.6m 이므로 반지름 6 (예전 11 은 1.9배였다)
+          (Math.round(Math.sqrt(x * x + z * z)) === 6 && Math.abs(x) > 0) ||
+          // 페널티 아크 · 코너 아크
+          (Math.round(Math.hypot(Math.abs(x) - (PX - 7), z)) === 6 && Math.abs(x) < PX - 10) ||
+          Math.round(Math.hypot(Math.abs(x) - PX, Math.abs(z) - PZ)) === 1 ||
           (Math.abs(x) >= PX - 10 && Math.abs(z) === 12) ||
           (Math.abs(x) === PX - 10 && Math.abs(z) <= 12) ||
           (Math.abs(x) >= PX - 3 && Math.abs(z) === 5) ||
@@ -260,9 +266,15 @@
     function tierType(t, x2, z2) {
       if (boxSet[t]) return "box";
       var ang = Math.atan2(z2, x2);
-      var radial = Math.abs((((ang * 12) / Math.PI) % 1 + 1) % 1 - 0.5) < 0.045;
+      // 방사 통로. 폭을 각도로 고정하면 안쪽 티어에서 한 블록에 못 미쳐 통로가
+      // 끊긴 흰 점으로 흩어지고 바깥에서만 이어진다 — 반경에 반비례시켜
+      // **호 길이**를 일정하게 잡는다. 개수도 24 → 12 로 줄인다 (감리 M2)
+      var r = Math.hypot(x2, z2) || 1;
+      var halfw = Math.min(0.045 * (ARX / r), 0.2);
+      var radial = Math.abs((((ang * 6) / Math.PI) % 1 + 1) % 1 - 0.5) < halfw;
       if (radial) return "concrete";
-      if (t % 5 === 4) return "concrete";
+      // 수평 콘크리트 링 — 5칸마다면 방사 통로와 겹쳐 좌석이 격자로 잘게 쪼개진다
+      if (t % 8 === 4) return "concrete";
       return "seat";
     }
     var maxTiers = TIERS + (big ? big.extra : 0);
@@ -433,14 +445,26 @@
    */
   window.__stadiumCanvas = canvas;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x14161d);
   scene.fog = new THREE.Fog(0x14161d, 380, 780);
   var camera = new THREE.PerspectiveCamera(46, 1, 0.1, 1100);
 
-  var amb = new THREE.AmbientLight(0x6a7080, 1.05);
+  /**
+   * 조명 총량.
+   *
+   * 예전에는 amb 1.05 + sun 1.35 로 윗면 조도가 1.5 에 달했는데 톤매핑이 없어
+   * 1.0 을 넘는 만큼이 그대로 잘렸다 — 흰 라인 블록이 순백으로 포화돼 격자가
+   * 통째로 사라졌던 원인이다 (감리 G17).
+   *
+   * ⚠️ ACES 톤매핑으로 처리하는 길도 실측해 봤지만, 배경까지 같이 떠서 색이 바래고
+   *    이 지면의 어두운 정체성이 무너졌다. 조명을 낮추는 쪽을 택했다 — **둘 다
+   *    적용하면 안 된다**.
+   */
+  var amb = new THREE.AmbientLight(0x6a7080, 0.55);
   scene.add(amb);
-  var sun = new THREE.DirectionalLight(0xfff2dd, 1.35);
+  var sun = new THREE.DirectionalLight(0xfff2dd, 0.85);
   sun.position.set(60, 90, 40);
   scene.add(sun);
   var rim = new THREE.DirectionalLight(0x6db4ff, 0.35);
@@ -449,7 +473,9 @@
 
   var ground = new THREE.Mesh(
     new THREE.CircleGeometry(680, 48),
-    new THREE.MeshLambertMaterial({ color: 0x1a1d26 })
+    // 배경(0x14161d)과 거의 같아 지평선이 없었다. 밤 분위기는 지키되 경계는 만든다.
+    // (완전한 주간 하늘 전환은 지도·모달 스틸이 전부 다크라 운영자 판정 사항 — 감리 G19)
+    new THREE.MeshLambertMaterial({ color: 0x272d3a })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.51;
@@ -463,8 +489,31 @@
    * 반 칸씩 잔디에 잠긴다.
    */
   var SURFACE = WS / 2;
-  var unit = new THREE.BoxGeometry(0.96, 0.96, 0.96);
-  var builtMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  /**
+   * 블록 한 칸.
+   *
+   * ⚠️ 예전에는 0.96 이라 격자 간격 2.0(=WS) 위에 1.92 크기로 놓여 사방 0.08 의
+   *    **실제 빈 공간**이 남았다. 멀리서는 복셀 질감이지만 가까이서는 검은 격자선이
+   *    표면을 덮고, 계단 이음매로 캐릭터가 비쳐 나왔다 — 좌표는 맞는데 파묻힌 것처럼
+   *    보이던 원인 중 하나다 (감리 G21).
+   *
+   * 틈을 닫으면 경계가 사라져 붉은 젤리 덩어리가 되므로, **면별로 밝기를 구워 넣어**
+   * (윗면 1.0 / 옆면 0.72 / 바닥 0.45) 계단을 되살린다. 인스턴스 색과 곱해지므로
+   * 드로우콜은 그대로다 (감리 G18).
+   */
+  var unit = new THREE.BoxGeometry(1, 1, 1);
+  (function bakeAO() {
+    var pos = unit.attributes.position;
+    var col = new Float32Array(pos.count * 3);
+    for (var i = 0; i < pos.count; i++) {
+      // BoxGeometry 면 순서: +X, -X, +Y(윗면), -Y(바닥), +Z, -Z — 면당 4정점
+      var face = Math.floor(i / 4);
+      var k = face === 2 ? 1.0 : face === 3 ? 0.45 : 0.72;
+      col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = k;
+    }
+    unit.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  })();
+  var builtMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
   var ghostMat = new THREE.MeshLambertMaterial({
     color: 0x6db4ff, transparent: true, opacity: 0.13, depthWrite: false,
   });
@@ -605,9 +654,11 @@
     var bg = on ? 0x0a0c13 : 0x14161d;
     scene.background.setHex(bg);
     scene.fog.color.setHex(bg);
-    amb.intensity = on ? 0.55 : 1.05;
+    // ⚠️ 낮 값은 위 초기 조명과 반드시 같아야 한다 — 여기만 옛 값(1.05/1.35)으로
+    //    남으면 야간을 껐을 때 다시 클리핑된 화면으로 돌아간다 (감리 G17)
+    amb.intensity = on ? 0.55 : 0.55;
     amb.color.setHex(on ? 0x2c3348 : 0x6a7080);
-    sun.intensity = on ? 0.12 : 1.35;
+    sun.intensity = on ? 0.12 : 0.85;
     sun.color.setHex(on ? 0x8899cc : 0xfff2dd);
     rim.intensity = on ? 0.15 : 0.35;
     floods.forEach(function (s) { s.intensity = on ? 2.4 : 0; });
@@ -1349,9 +1400,48 @@
   /* ── 골대 (양쪽, 실규격 비례) + 골 판정 ── */
   var GOAL_X = 32 * WS, GOAL_Z = 4.4, GOAL_H = 3.0;
   var goalMat = new THREE.MeshLambertMaterial({ color: 0xf5f5f2 });
+  /**
+   * 골 네트.
+   *
+   * 예전에는 골대 뒤에 반투명 사각형 **한 장**뿐이라 유리 칸막이로 읽혔다. 슛의
+   * 목표물인데 목표물로 안 보이는 셈이다 (감리 M3). 격자 텍스처를 깔고 뒷판·좌우
+   * 사다리꼴·상면 네 장으로 골 박스를 감싼다.
+   */
+  var netCanvas = document.createElement("canvas");
+  netCanvas.width = netCanvas.height = 128;
+  (function drawNet() {
+    var c = netCanvas.getContext("2d");
+    c.clearRect(0, 0, 128, 128);
+    c.strokeStyle = "rgba(255,255,255,0.9)";
+    c.lineWidth = 2;
+    for (var i = 0; i <= 128; i += 10) {
+      c.beginPath(); c.moveTo(i, 0); c.lineTo(i, 128); c.stroke();
+      c.beginPath(); c.moveTo(0, i); c.lineTo(128, i); c.stroke();
+    }
+  })();
+  var netTex = new THREE.CanvasTexture(netCanvas);
+  netTex.wrapS = netTex.wrapT = THREE.RepeatWrapping;
+  /** 텍스처 한 장이 덮는 월드 길이 — 그물코 크기를 정한다 */
+  var NET_TILE = 4.5;
   var netMat = new THREE.MeshBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+    map: netTex, color: 0xffffff, transparent: true, opacity: 0.35,
+    side: THREE.DoubleSide, depthWrite: false,
   });
+  /** 네 꼭짓점(p0→p1 가로, p0→p3 세로)으로 네트 한 장. uv 는 월드 길이에 맞춰 편다 */
+  function netQuad(p0, p1, p2, p3) {
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([
+      p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], p2[0], p2[1], p2[2],
+      p0[0], p0[1], p0[2], p2[0], p2[1], p2[2], p3[0], p3[1], p3[2],
+    ]), 3));
+    var wu = Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]) / NET_TILE;
+    var hu = Math.hypot(p3[0] - p0[0], p3[1] - p0[1], p3[2] - p0[2]) / NET_TILE;
+    g.setAttribute("uv", new THREE.BufferAttribute(new Float32Array([
+      0, 0, wu, 0, wu, hu, 0, 0, wu, hu, 0, hu,
+    ]), 2));
+    g.computeVertexNormals();
+    return new THREE.Mesh(g, netMat);
+  }
   function buildGoal(sideX) {
     var g = new THREE.Group();
     function bar(w, h2, d, x, y, z) {
@@ -1362,10 +1452,13 @@
     bar(0.24, GOAL_H, 0.24, 0, GOAL_H / 2, -GOAL_Z);
     bar(0.24, GOAL_H, 0.24, 0, GOAL_H / 2, GOAL_Z);
     bar(0.24, 0.24, GOAL_Z * 2 + 0.24, 0, GOAL_H, 0);
-    var back = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_Z * 2, GOAL_H), netMat);
-    back.rotation.y = Math.PI / 2;
-    back.position.set(sideX > 0 ? 1.6 : -1.6, GOAL_H / 2, 0);
-    g.add(back);
+    var D = sideX > 0 ? 1.6 : -1.6;   // 골 깊이 (바깥쪽)
+    var hb = GOAL_H * 0.55;            // 뒷면 높이 — 위가 안쪽으로 기운 사다리꼴
+    var GZ = GOAL_Z;
+    g.add(netQuad([D, 0, -GZ], [D, 0, GZ], [D, hb, GZ], [D, hb, -GZ]));          // 뒷판
+    g.add(netQuad([0, 0, GZ], [D, 0, GZ], [D, hb, GZ], [0, GOAL_H, GZ]));        // 우측면
+    g.add(netQuad([0, 0, -GZ], [D, 0, -GZ], [D, hb, -GZ], [0, GOAL_H, -GZ]));    // 좌측면
+    g.add(netQuad([0, GOAL_H, -GZ], [0, GOAL_H, GZ], [D, hb, GZ], [D, hb, -GZ])); // 상면
     g.position.x = sideX;
     g.position.y = SURFACE;
     scene.add(g);
@@ -1426,10 +1519,20 @@
    * 렌더 훅 — scripts/render-stadiums.mjs 가 이 함수로 한 장씩 찍는다.
    * team: 구장 키 · pct: 시공률(0~1) · 카메라는 고정 프리셋.
    */
+  /**
+   * 전광판은 레벨 6 보상이다 (lib/constants/stadium-levels.ts) — 그 전엔 없다.
+   *
+   * ⚠️ 규칙을 여기 한 곳에 둔다. 예전에는 입장 화면(__setup)에만 있어서, 같은
+   *    구장을 그리는 모달 스틸(__shot)은 레벨 3 에도 전광판을 달고 있었다.
+   */
+  function setScreenLevel(level) {
+    if (level != null) screenGroup.visible = level >= 6;
+  }
   window.__shot = function (o) {
     o = o || {};
     if (o.team) initStadium(o.team);
     if (o.pct != null) applyCount(Math.round(TOTAL * o.pct));
+    setScreenLevel(o.level);
     // 청사진(미시공) 블록 표시 여부 — 스틸샷은 끈 상태로 찍는다
     if (ghostMesh) ghostMesh.visible = o.ghost === true;
     if (o.az != null) az = o.az;
@@ -1458,9 +1561,7 @@
     }
     if (o.pct != null) applyCount(Math.round(TOTAL * o.pct));
     if (ghostMesh) ghostMesh.visible = o.ghost !== false;
-    // 전광판은 레벨 6 보상이다 (lib/constants/stadium-levels.ts) — 그 전엔 없다.
-    // 시안은 시공률과 무관하게 항상 띄워 레벨 사다리를 스스로 무의미하게 만들었다.
-    if (o.level != null) screenGroup.visible = o.level >= 6;
+    setScreenLevel(o.level);
     if (o.bricks != null) setScreenBricks(o.bricks);
     setHud(o);
     if (!userZoomed && !walkMode) dist = fitDistance();

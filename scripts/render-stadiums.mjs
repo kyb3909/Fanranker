@@ -80,11 +80,13 @@ let bytes = 0
 for (const team of TEAMS) {
   for (let level = 1; level <= 10; level++) {
     const info = await page.evaluate(
-      ([scene, pct, cam]) =>
+      ([scene, pct, cam, lv]) =>
         // ghost:false — 아직 안 지은 부분은 안 보이게 (운영자 확정). 시안 앱에는
         // 청사진 표시 토글이 있고, 스틸샷은 끈 쪽을 쓴다.
-        window.__shot({ team: scene, pct, hideUI: true, ghost: false, ...cam }),
-      [team.scene, buildFraction(level), CAM]
+        // level — 전광판은 레벨 6 보상이라 그 전엔 안 달린다. 안 넘기면 스틸만
+        // 레벨 3 에도 전광판을 달고 나온다 (입장 화면과 어긋난다).
+        window.__shot({ team: scene, pct, level: lv, hideUI: true, ghost: false, ...cam }),
+      [team.scene, buildFraction(level), CAM, level]
     )
     // 한 프레임 더 — 지오메트리 교체 직후 첫 렌더가 비는 경우가 있다
     await page.waitForTimeout(180)
