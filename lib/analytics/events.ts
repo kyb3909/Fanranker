@@ -130,6 +130,14 @@ type AnalyticsEvent =
   // surface: cardnews=홈 떡밥 피드 주입 / post=봇 기사 상세 하단
   | { name: "wall_now_open_post"; params: { post_id: string; surface: "cardnews" | "post" } }
   | { name: "wall_now_open_board"; params: { surface: "cardnews" | "post" } }
+  // ── 경기장 지도 (2026-08-27 /stadium 복셀 지도 개편) ──
+  // 판정 지표는 마커 오픈율(marker_open / stadium_map_view ≥ 50%) 과
+  // 벽돌 전환율(brick_purchase / brick_cta_click ≥ 10%). 소급 계측이 안 되므로
+  // 지면과 같이 나간다 — 미달이면 모바일 리스트형(C안) 재검토 트리거.
+  | { name: "stadium_map_view"; params: { team_count: number } }
+  | { name: "marker_open"; params: { team_id: string } }
+  | { name: "brick_cta_click"; params: { team_id: string; first_brick: boolean } }
+  | { name: "brick_purchase"; params: { team_id: string; bricks: number } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

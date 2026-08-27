@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2, HandCoins, LogIn, Trophy } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { trackEvent } from "@/lib/analytics/events"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
 
@@ -125,6 +126,8 @@ export function BuildProgress({
         level: j.stadium_level ?? s.level,
         fanCount: j.fan_count ?? s.fanCount,
       }))
+      // 지도 KPI 의 분자 — 벽돌 전환율(brick_purchase / brick_cta_click)
+      trackEvent({ name: "brick_purchase", params: { team_id: teamId, bricks } })
       const nth = (j.start_index ?? 0) + 1
       toast({
         title: `${teamName}의 ${nth.toLocaleString()}번째 벽돌을 얹었습니다`,

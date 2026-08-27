@@ -7872,6 +7872,13 @@ export type Database = {
           success: boolean
         }[]
       }
+      stadium_bricks_today: {
+        Args: never
+        Returns: {
+          bricks: number
+          team_id: string
+        }[]
+      }
       sync_live_room_status: { Args: never; Returns: undefined }
       sync_stadium_contribution: {
         Args: { p_new_points: number; p_team_id: string; p_user_id: string }

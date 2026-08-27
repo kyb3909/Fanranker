@@ -1,0 +1,201 @@
+/*
+ * 경기장 지도 디자인 토큰 (/stadium 복셀 지도)
+ *
+ * 격리 규칙 (worldcup/wc-tokens.css 선례를 따른다):
+ * - 모든 변수에 --st-* prefix
+ * - .stadium-map-scope wrapper 안에서만 유효
+ * - 글로벌/shadcn 토큰·헤더·사이드바에 영향 없음
+ *
+ * 이 지면은 사이트에서 유일하게 "밤하늘 위" 다크 표면이다. 라이트·웜 본편 토큰을
+ * 그대로 쓰면 바다 위에서 글자가 죽어서, 지도 전용 스코프를 따로 둔다.
+ * (본편 다크 금지 규칙의 예외가 아니라 — 여기는 밴드·선언 영역과 같은 성격의 지면이다)
+ */
+
+.stadium-map-scope {
+  /* 라벨 표면 */
+  --st-panel: rgba(16, 18, 26, 0.92);
+  --st-panel-line: rgba(242, 239, 232, 0.22);
+  --st-ink: #f2efe8;
+  --st-ink-mute: #a7a49c;
+  --st-ink-dark: #171a22; /* 밝은 팀컬러 칩 위의 글자 */
+
+  /* 상태 */
+  --st-today: #2e9e5b; /* 오늘 쌓인 벽돌 */
+  --st-behind: #f0a24b; /* 격차 — 뒤짐 */
+  --st-ahead: #7fbf8e; /* 격차 — 앞섬 */
+  --st-gold: #ffd27a; /* 완공 */
+  --st-gold-ink: #4a3a10;
+  --st-lead: rgba(242, 239, 232, 0.45); /* 리더 라인 */
+
+  /* 지면 배경 — 캔버스 바다색과 맞춘다 (lib/stadium/voxel-draw.ts SEA_A) */
+  --st-void: #121b28;
+
+  /* 손가락 하한 · 글자 하한 — 라벨이 이 밑으로 내려가지 못하게 잠근다 */
+  --st-touch: 44px;
+  --st-font-min: 12px;
+}
+
+/* ── 팀 라벨 스택 ───────────────────────────────────────
+ * 칩 · 오늘 배지 · 격차 배지가 한 버튼 안에 세로로 쌓인다.
+ * 한 덩어리라 서로를 가릴 수 없다 — 평가 3라운드 N2 의 구조적 해법. */
+.stadium-label {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  min-height: var(--st-touch);
+}
+.stadium-label:focus-visible {
+  outline: 2px solid var(--st-ink);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+.stadium-label__chip {
+  border-radius: 11px;
+  padding: 7px 11px 8px;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.45);
+  border: 2px solid rgb(20 22 29 / 0.35);
+}
+.stadium-label[data-selected="true"] .stadium-label__chip {
+  border-color: var(--st-ink);
+}
+
+.stadium-label__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.stadium-label__name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.stadium-label__lv {
+  font-size: var(--st-font-min);
+  font-weight: 700;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.stadium-label__bar {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.stadium-label__track {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.3);
+  overflow: hidden;
+}
+.stadium-label__chip[data-dark="true"] .stadium-label__track {
+  background: rgb(23 26 34 / 0.25);
+}
+.stadium-label__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+}
+.stadium-label__pct {
+  font-size: var(--st-font-min);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stadium-label__done {
+  margin-top: 6px;
+  display: block;
+  border-radius: 999px;
+  background: var(--st-gold);
+  color: var(--st-gold-ink);
+  font-size: var(--st-font-min);
+  font-weight: 700;
+  text-align: center;
+  padding: 3px 0 4px;
+}
+
+.stadium-label__today {
+  align-self: flex-end;
+  border-radius: 999px;
+  background: var(--st-today);
+  color: var(--st-ink);
+  border: 1.5px solid rgb(255 255 255 / 0.5);
+  font-size: var(--st-font-min);
+  font-weight: 700;
+  padding: 2px 9px 3px;
+  white-space: nowrap;
+}
+
+/* 격차 배지 — 카피가 데이터 상태에 따라 갈린다 (앞섬/뒤짐/1위/완공) */
+.stadium-label__gap {
+  border-radius: 999px;
+  background: var(--st-panel);
+  border: 2px solid var(--st-gap-tone, var(--st-ink-mute));
+  color: var(--st-ink);
+  font-size: var(--st-font-min);
+  font-weight: 800;
+  padding: 4px 10px 5px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.5);
+}
+.stadium-label__gap[data-tone="behind"] {
+  --st-gap-tone: var(--st-behind);
+}
+.stadium-label__gap[data-tone="ahead"] {
+  --st-gap-tone: var(--st-ahead);
+}
+.stadium-label__gap[data-tone="lead"] {
+  --st-gap-tone: var(--st-gold);
+}
+
+/* ── 범례 ── */
+.stadium-legend {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 5;
+  max-width: 30rem;
+  border-radius: 12px;
+  background: var(--st-panel);
+  border: 1px solid var(--st-panel-line);
+  color: var(--st-ink);
+  padding: 9px 14px 10px;
+  pointer-events: none;
+}
+.stadium-legend__title {
+  font-size: 13px;
+  font-weight: 700;
+}
+.stadium-legend__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 3px;
+  font-size: var(--st-font-min);
+  color: var(--st-ink-mute);
+}
+.stadium-legend__keys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.stadium-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}

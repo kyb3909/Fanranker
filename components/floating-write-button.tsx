@@ -5,7 +5,16 @@ import { usePathname } from "next/navigation"
 import { Pencil } from "lucide-react"
 import { SignedIn, SignedOut, useClerk } from "@clerk/nextjs"
 
-const HIDDEN_PATHS = ["/write", "/admin", "/sign-up", "/settings", "/games", "/art", "/metaverse"]
+const HIDDEN_PATHS = [
+  "/write",
+  "/admin",
+  "/sign-up",
+  "/settings",
+  "/games",
+  "/art",
+  "/metaverse",
+  "/stadium",
+]
 
 /**
  * 글쓰기 FAB — 우하단 floating action button.
