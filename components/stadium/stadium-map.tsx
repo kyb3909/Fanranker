@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { trackEvent } from "@/lib/analytics/events"
 import { cellHeight, computeTransform, project } from "@/lib/stadium/map-projection"
 import { findMapTeam, MAP_TEAM_BOUNDS, type StadiumMapRow } from "@/lib/stadium/map-teams"
-import { stadiumExtent } from "@/lib/stadium/voxel-draw"
+import { PIN_HEIGHT } from "@/lib/stadium/voxel-draw"
 import { layoutLabels, leaderPoint, type LabelSeed, type Rect } from "@/lib/stadium/label-layout"
 import { StadiumTeamModal } from "./stadium-team-modal"
 
@@ -152,9 +152,9 @@ export function StadiumMap({ rows, myTeamId, myBrickBudget }: Props) {
         const team = findMapTeam(r.teamId)
         if (!team) return null
         const ground = cellHeight(team.gx, team.gy)
-        const ext = stadiumExtent(r.level, team.bowl)
-        const topH = ground + ext.topH
-        return { r, team, ground, ext, anchor: project(transform, team.gx, team.gy, topH), topH }
+        const base = project(transform, team.gx, team.gy, ground)
+        // 앵커는 핀 꼭대기 — 리더선이 핀 머리에 닿는다
+        return { r, team, base, anchor: { x: base.x, y: base.y - PIN_HEIGHT } }
       })
       .filter((x): x is NonNullable<typeof x> => x !== null)
 
@@ -163,14 +163,12 @@ export function StadiumMap({ rows, myTeamId, myBrickBudget }: Props) {
     const reach = Math.max(120, Math.min(230, size.w * 0.16))
 
     for (const a of anchored) {
-      const halfW = a.ext.halfX * transform.s
-      const top = project(transform, a.team.gx, a.team.gy - a.ext.halfZ, a.topH)
-      const bot = project(transform, a.team.gx, a.team.gy + a.ext.halfZ, a.ground)
+      // 핀이 가려지지 않도록 핀 상자를 장애물로 둔다
       obstacles.push({
-        x: a.anchor.x - halfW,
-        y: top.y,
-        w: halfW * 2,
-        h: Math.max(14, bot.y - top.y),
+        x: a.base.x - 16,
+        y: a.anchor.y - 6,
+        w: 32,
+        h: PIN_HEIGHT + 12,
       })
 
       let dx = a.anchor.x - cx

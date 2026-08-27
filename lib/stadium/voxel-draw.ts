@@ -5,6 +5,11 @@
  * 사각형** 두 장으로 끝난다(옆면은 정면 투영이라 보이지 않는다). 지형은 정적이므로
  * 오프스크린에 한 번 굽고 그 뒤로는 복사만 한다 — 매 프레임 도는 루프가 없다.
  * (상시 애니메이션 금지는 평가 3라운드 판정 완료 사항)
+ *
+ * 역할 분담 (2026-08-27 운영자 확정):
+ *   지도  — 팀 자리는 **핀**으로만 찍는다. 40px 짜리 구장 미니어처는 정보도 없이
+ *           지저분하기만 했다.
+ *   모달  — 구장 한 채를 3/4 로 세워 크게 보여준다. 여기가 구장을 보는 자리다.
  */
 import { SNOW_LEVEL, TERRAIN_H, TERRAIN_W } from "./england-terrain"
 import {
@@ -96,30 +101,89 @@ export function drawTerrain(ctx: CanvasRenderingContext2D, t: MapTransform) {
   }
 }
 
-// ─── 구장 보울 ───────────────────────────────────────────
-//
-// 3D 시안(scratchpad stadium-3d-app.js)의 생성 규칙을 그대로 옮겼다: 초타원 링을
-// 한 단씩 밖으로·위로 쌓아 그릇을 만들고, 안쪽은 잔디, 바깥 테두리는 에이프런.
-// 상자 몇 개로 흉내내면 지도에서는 넘어가도 모달에서 정체가 드러난다 — 같은 모델을
-// 크기만 바꿔 두 곳에 쓴다.
+// ─── 지도 핀 ─────────────────────────────────────────────
+
+/** 핀 머리 반지름(px). 손가락 하한(44px)은 라벨 칩과 히트 반경이 맡는다 */
+const PIN_R = 9
+const PIN_LIFT = 2.3
+
+/** 핀 꼭대기까지의 화면 높이 — 라벨 리더선이 여기에 닿는다 */
+export const PIN_HEIGHT = PIN_R * PIN_LIFT + PIN_R
 
 /**
- * 구장 모델의 자체 좌표계 (월드 격자가 아니다).
- *
- * ⚠️ 화면에서 깊이가 DEPTH_K(0.62)만큼 눌리므로 **Z 를 그만큼 늘려서** 만든다.
- *    안 그러면 축구장이 가로로 퍼진 납작한 타원이 된다 (105:68 이 화면에서 2.4:1 이 됨).
+ * 팀 자리 핀. 지도에서는 이것만 찍는다.
+ * 완공(LV.10)은 금테로 구분한다 — 지도·칩·모달이 같은 기호를 쓴다.
  */
-const PITCH_RX = 7
-const PITCH_RZ = 7.2
-const BOWL_RX = 8.4
-const BOWL_RZ = 8.7
-const TIER_STEP = 0.9
-const TIER_STEP_Z = TIER_STEP / DEPTH_K
+export function drawPin(
+  ctx: CanvasRenderingContext2D,
+  t: MapTransform,
+  gx: number,
+  gy: number,
+  ground: number,
+  color: string,
+  opts: { done: boolean; selected: boolean }
+) {
+  const base = project(t, gx, gy, ground)
+  const cx = base.x
+  const cy = base.y - PIN_R * PIN_LIFT
 
-/** 모델 1칸 = 월드 몇 칸인가 (구장 하나의 반지름이 월드 3칸 남짓이 되도록) */
-const WORLD_PER_MODEL = 0.2
-/** 모델 높이 1단 = 월드 높이 얼마인가 */
-const WORLD_H_PER_MODEL = 0.3
+  ctx.save()
+
+  // 지면 그림자 — 핀이 어느 칸에 꽂혔는지 알려준다
+  ctx.fillStyle = "rgba(0,0,0,0.38)"
+  ctx.beginPath()
+  ctx.ellipse(cx, base.y, PIN_R * 0.85, PIN_R * 0.34, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  // 다리
+  ctx.fillStyle = shade(color, 0.72)
+  ctx.beginPath()
+  ctx.moveTo(cx - PIN_R * 0.42, cy)
+  ctx.lineTo(cx + PIN_R * 0.42, cy)
+  ctx.lineTo(cx, base.y)
+  ctx.closePath()
+  ctx.fill()
+
+  if (opts.selected) {
+    ctx.strokeStyle = "rgba(255,255,255,0.55)"
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.arc(cx, cy, PIN_R + 5, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  // 머리
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.arc(cx, cy, PIN_R, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.lineWidth = 2.5
+  ctx.strokeStyle = opts.done ? "#ffd27a" : "#f2efe8"
+  ctx.stroke()
+
+  // 속 점
+  ctx.fillStyle = opts.done ? "#ffd27a" : "rgba(242,239,232,0.9)"
+  ctx.beginPath()
+  ctx.arc(cx, cy, PIN_R * 0.32, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+// ─── 구장 보울 (모달 전용) ────────────────────────────────
+//
+// 3D 시안(scratchpad stadium-3d-app.js)의 generate() 를 옮겼다. 치수도 시안 값
+// 그대로다 — 잔디 32×21, 보울 37×26, 단 간격 1.22, 초타원 지수는 팀별.
+// 시안이 8점을 받은 그림이 이것이라, 근사하지 않고 규칙째로 가져온다.
+
+const M_PX = 32
+const M_PZ = 21
+const M_ARX = 37
+const M_ARZ = 26
+const M_STEP = 1.22
+
+/** 관중석 한 단의 높이 (모델 단위) */
+const M_TIER_H = 1.1
 
 const APRON_FALLBACK = "#39404f"
 const CONCRETE = "#9a9ca2"
@@ -132,46 +196,40 @@ const ROOF_DARK = "#565b66"
 const GOLD = "#ffd27a"
 const GHOST = "#9ccdff"
 
+/** 모달 시점 — 3/4 로 세워 본다. 깊이를 눌러 관중석 앞면이 보이게 */
+const HERO_DEPTH_K = 0.52
+const HERO_HEIGHT_K = 1.7
+/** 모델을 뜨는 간격 — 작을수록 촘촘하다 */
+const HERO_CELL = 1.35
+
 function inSuper(x: number, z: number, rx: number, rz: number, n: number): boolean {
   return Math.pow(Math.abs(x / rx), n) + Math.pow(Math.abs(z / rz), n) <= 1
 }
 
-/** 지도 위 구장이 차지하는 자리 — 레벨이 올라도 부지는 그대로, 관중석만 자란다 */
-export function stadiumScale(level: number): number {
-  return 1.35 + (Math.min(level, 10) / 10) * 0.3
-}
-
-/** 모델 최대 단수 — 실제 구장의 단수를 지도 크기에 맞게 접는다 */
-function modelTiers(cfg: BowlConfig): number {
-  return Math.max(3, Math.round(cfg.tiers / 3.4))
-}
-
 /**
  * 시공률 — 레벨 1 은 터파기(관중석 0단), 레벨 10 은 완공.
- * 단이 하나씩 실물로 바뀌는 것이 곧 "벽돌이 쌓인다"의 시각적 대응이다.
+ * 단이 하나씩 청사진에서 실물로 바뀌는 것이 "벽돌이 쌓인다"의 시각적 대응이다.
  */
 function buildFraction(level: number): number {
   return Math.min(1, 0.06 + ((Math.min(Math.max(level, 1), 10) - 1) / 9) * 0.94)
 }
 
-function extraTiers(cfg: BowlConfig): number {
-  return cfg.bigEnd ? Math.max(1, Math.round((cfg.bigExtra ?? 6) / 3.4)) : 0
+function tierCount(cfg: BowlConfig) {
+  const extra = cfg.bigEnd ? (cfg.bigExtra ?? 6) : 0
+  return { tiers: cfg.tiers, maxTiers: cfg.tiers + extra }
 }
 
-export function stadiumTopHeight(level: number, cfg: BowlConfig): number {
-  const roof = level >= 10 ? 1.6 : 0
-  return (1 + modelTiers(cfg) + extraTiers(cfg) + roof) * WORLD_H_PER_MODEL
-}
-
-/** 구장이 실제로 차지하는 월드 크기 — 모달 배율·라벨 회피 상자가 이 값을 쓴다 */
+/** 구장 한 채가 차지하는 모델 크기 — 모달이 배율을 역산할 때 쓴다 */
 export function stadiumExtent(level: number, cfg: BowlConfig) {
-  const sc = stadiumScale(level)
-  const rings = modelTiers(cfg) + extraTiers(cfg) + (level >= 10 ? 1.1 : 0)
-  const unit = WORLD_PER_MODEL * sc
+  const { maxTiers } = tierCount(cfg)
+  const done = level >= 10
+  const rings = maxTiers + (done ? 1.6 : 0)
   return {
-    halfX: (BOWL_RX + rings * TIER_STEP) * unit,
-    halfZ: (BOWL_RZ + rings * TIER_STEP_Z) * unit,
-    topH: stadiumTopHeight(level, cfg),
+    halfX: M_ARX + rings * M_STEP,
+    halfZ: M_ARZ + rings * M_STEP,
+    topH: (maxTiers + (done ? 2.4 : 0.8)) * M_TIER_H,
+    depthK: HERO_DEPTH_K,
+    heightK: HERO_HEIGHT_K,
   }
 }
 
@@ -181,22 +239,27 @@ interface Column {
   ghost: boolean
 }
 
+const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol
+
 /**
- * 구장 한 채를 기둥 격자로 만든다. 격자 한 칸이 화면에서 윗면·앞면 두 장이 된다.
+ * 구장 한 채를 기둥 격자로 만든다. 격자 한 칸이 화면에서 윗면·앞면 두 장이 되고,
  * 단이 밖으로 갈수록 높아지므로 앞면들이 계단처럼 겹쳐 관중석이 된다.
  */
 function buildColumns(cfg: BowlConfig, level: number) {
-  const tiers = modelTiers(cfg)
-  const maxTiers = tiers + extraTiers(cfg)
+  const { tiers, maxTiers } = tierCount(cfg)
+  const cs = HERO_CELL
   const built = buildFraction(level)
   const done = level >= 10
+  const tol = cs / 2
 
-  const MX = Math.ceil(BOWL_RX + maxTiers * TIER_STEP) + 1
-  const MZ = Math.ceil(BOWL_RZ + maxTiers * TIER_STEP_Z) + 1
-  const W = MX * 2 + 1
-  const grid: (Column | null)[] = new Array(W * (MZ * 2 + 1)).fill(null)
-  const put = (mx: number, mz: number, c: Column) => {
-    grid[(mz + MZ) * W + (mx + MX)] = c
+  const outerX = M_ARX + (maxTiers + (done ? 1.6 : 0)) * M_STEP
+  const outerZ = M_ARZ + (maxTiers + (done ? 1.6 : 0)) * M_STEP
+  const NX = Math.ceil(outerX / cs) + 1
+  const NZ = Math.ceil(outerZ / cs) + 1
+  const W = NX * 2 + 1
+  const grid: (Column | null)[] = new Array(W * (NZ * 2 + 1)).fill(null)
+  const put = (i: number, j: number, c: Column) => {
+    grid[(j + NZ) * W + (i + NX)] = c
   }
 
   const inSector = (x: number, z: number) => {
@@ -205,214 +268,157 @@ function buildColumns(cfg: BowlConfig, level: number) {
     return (x * cfg.bigEnd[0] + z * cfg.bigEnd[1]) / len > 0.62
   }
 
-  // 잔디 + 에이프런 (부지는 처음부터 있다 — 빈 땅이 아니라 "지을 자리")
-  for (let mz = -MZ; mz <= MZ; mz++) {
-    for (let mx = -MX; mx <= MX; mx++) {
-      if (Math.abs(mx) <= PITCH_RX && Math.abs(mz) <= PITCH_RZ) {
-        const ax = Math.abs(mx)
-        const az = Math.abs(mz)
+  // 잔디 + 에이프런 — 부지는 처음부터 있다 (빈 땅이 아니라 "지을 자리")
+  for (let j = -NZ; j <= NZ; j++) {
+    for (let i = -NX; i <= NX; i++) {
+      const x = i * cs
+      const z = j * cs
+      const ax = Math.abs(x)
+      const az = Math.abs(z)
+      if (ax <= M_PX + tol && az <= M_PZ + tol) {
+        // 시안의 라인 규칙 — 터치라인·하프웨이·센터서클·페널티·골에어리어
         const line =
-          mx === 0 || // 하프웨이
-          ax === PITCH_RX ||
-          az === PITCH_RZ || // 터치라인
-          Math.abs(Math.hypot(mx, mz * DEPTH_K) - 2.4) < 0.4 || // 센터서클
-          (ax === PITCH_RX - 2 && az <= 3) || // 페널티박스
-          (ax >= PITCH_RX - 2 && az === 3)
-        const stripe = Math.floor((mx + PITCH_RX) / 2) % 2 === 0
-        put(mx, mz, {
-          h: 0,
-          color: line ? PITCH_LINE : stripe ? PITCH_A : PITCH_B,
-          ghost: false,
-        })
-      } else if (inSuper(mx, mz, BOWL_RX, BOWL_RZ, cfg.n)) {
-        put(mx, mz, { h: 0, color: cfg.apron ?? APRON_FALLBACK, ghost: false })
+          near(ax, M_PX, tol) ||
+          near(az, M_PZ, tol) ||
+          near(x, 0, tol) ||
+          (near(Math.hypot(x, z), 11, tol) && ax > tol) ||
+          (ax >= M_PX - 10 - tol && near(az, 12, tol)) ||
+          (near(ax, M_PX - 10, tol) && az <= 12 + tol) ||
+          (ax >= M_PX - 3 - tol && near(az, 5, tol)) ||
+          (near(ax, M_PX - 3, tol) && az <= 5 + tol)
+        const stripe = Math.floor((x + M_PX) / 8) % 2 === 0
+        put(i, j, { h: 0, color: line ? PITCH_LINE : stripe ? PITCH_A : PITCH_B, ghost: false })
+      } else if (inSuper(x, z, M_ARX, M_ARZ, cfg.n)) {
+        put(i, j, { h: 0, color: cfg.apron ?? APRON_FALLBACK, ghost: false })
       }
     }
   }
 
   // 관중석 단 — 안에서 밖으로, 한 단씩 높아진다
   for (let t = 0; t < maxTiers; t++) {
-    const rx0 = BOWL_RX + t * TIER_STEP
-    const rz0 = BOWL_RZ + t * TIER_STEP_Z
-    const rx1 = rx0 + TIER_STEP
-    const rz1 = rz0 + TIER_STEP_Z
-    const h = 1 + t
+    const rx0 = M_ARX + t * M_STEP
+    const rz0 = M_ARZ + t * M_STEP
+    const rx1 = rx0 + M_STEP
+    const rz1 = rz0 + M_STEP
     const isBuilt = (t + 1) / maxTiers <= built
-    const lim = Math.ceil(rx1) + 1
-    const limz = Math.ceil(rz1) + 1
+    const lim = Math.ceil(rx1 / cs) + 1
+    const limz = Math.ceil(rz1 / cs) + 1
 
-    for (let mz = -limz; mz <= limz; mz++) {
-      for (let mx = -lim; mx <= lim; mx++) {
-        if (mx < -MX || mx > MX || mz < -MZ || mz > MZ) continue
-        if (!inSuper(mx, mz, rx1, rz1, cfg.n)) continue
-        if (inSuper(mx, mz, rx0, rz0, cfg.n)) continue
-        if (t >= tiers && !inSector(mx, mz)) continue
+    for (let j = -limz; j <= limz; j++) {
+      for (let i = -lim; i <= lim; i++) {
+        if (i < -NX || i > NX || j < -NZ || j > NZ) continue
+        const x = i * cs
+        const z = j * cs
+        if (!inSuper(x, z, rx1, rz1, cfg.n)) continue
+        if (inSuper(x, z, rx0, rz0, cfg.n)) continue
+        if (t >= tiers && !inSector(x, z)) continue
 
         let color: string
         if (!isBuilt) color = GHOST
-        else if (cfg.boxRow && t === Math.round(cfg.boxRow / 3.4)) color = BOX_SEAT
+        else if (cfg.boxRow && t === cfg.boxRow) color = BOX_SEAT
         else {
-          // 방사형 통로 — 좌석 사이를 콘크리트로 끊어 계단이 보이게 한다
-          const ang = Math.atan2(mz, mx)
-          const radial = Math.abs((((ang * 8) / Math.PI) % 1) - 0.5) < 0.07
-          color = radial ? CONCRETE : cfg.seat[hash(mx, mz) % cfg.seat.length]
+          // 방사형 통로 — 좌석을 끊어 계단이 보이게 한다 (시안 tierType)
+          const u = ((((Math.atan2(z, x) * 12) / Math.PI) % 1) + 1) % 1
+          const radial = Math.abs(u - 0.5) < 0.05
+          color =
+            radial || t % 5 === 4 ? CONCRETE : cfg.seat[Math.abs(i * 7 + j * 13) % cfg.seat.length]
         }
-        put(mx, mz, { h, color, ghost: !isBuilt })
+        put(i, j, { h: 1 + t, color, ghost: !isBuilt })
       }
     }
   }
 
-  // 지붕 — 완공한 구장만. 흰 데크 위에 금테 (완공 표식은 지도·칩·모달이 같은 기호를 쓴다)
+  // 지붕 — 완공한 구장만. 데크 위에 금테
   if (done) {
-    const rIn = BOWL_RX + (maxTiers - 0.1) * TIER_STEP
-    const rzIn = BOWL_RZ + (maxTiers - 0.1) * TIER_STEP_Z
-    const rOut = BOWL_RX + (maxTiers + 1.5) * TIER_STEP
-    const rzOut = BOWL_RZ + (maxTiers + 1.5) * TIER_STEP_Z
+    const rIn = M_ARX + (maxTiers - 0.1) * M_STEP
+    const rzIn = M_ARZ + (maxTiers - 0.1) * M_STEP
+    const rOut = M_ARX + (maxTiers + 1.6) * M_STEP
+    const rzOut = M_ARZ + (maxTiers + 1.6) * M_STEP
     const deck = cfg.roof === "dark" ? ROOF_DARK : ROOF_DECK
-    const lim = Math.ceil(rOut) + 1
-    const limz = Math.ceil(rzOut) + 1
-    for (let mz = -limz; mz <= limz; mz++) {
-      for (let mx = -lim; mx <= lim; mx++) {
-        if (mx < -MX || mx > MX || mz < -MZ || mz > MZ) continue
-        if (!inSuper(mx, mz, rOut, rzOut, cfg.n)) continue
-        if (inSuper(mx, mz, rIn, rzIn, cfg.n)) continue
-        const outer = !inSuper(mx, mz, rOut - 0.9, rzOut - 0.9, cfg.n)
-        put(mx, mz, { h: 1 + maxTiers + 0.6, color: outer ? GOLD : deck, ghost: false })
+    const lim = Math.ceil(rOut / cs) + 1
+    const limz = Math.ceil(rzOut / cs) + 1
+    for (let j = -limz; j <= limz; j++) {
+      for (let i = -lim; i <= lim; i++) {
+        if (i < -NX || i > NX || j < -NZ || j > NZ) continue
+        const x = i * cs
+        const z = j * cs
+        if (!inSuper(x, z, rOut, rzOut, cfg.n)) continue
+        if (inSuper(x, z, rIn, rzIn, cfg.n)) continue
+        const outer = !inSuper(x, z, rOut - M_STEP * 1.2, rzOut - M_STEP * 1.2, cfg.n)
+        put(i, j, { h: maxTiers + 2.4, color: outer ? GOLD : deck, ghost: false })
       }
     }
   }
 
-  return { grid, W, MX, MZ }
+  return { grid, W, NX, NZ, cs }
 }
 
+/**
+ * 구장 한 채를 그린다 (모달 히어로).
+ * origin.scale 은 모델 1 단위가 화면 몇 px 인가.
+ */
 export function drawStadium(
   ctx: CanvasRenderingContext2D,
-  t: MapTransform,
-  gx: number,
-  gy: number,
-  ground: number,
+  origin: { x: number; y: number; scale: number },
   level: number,
   cfg: BowlConfig
 ) {
-  const sc = stadiumScale(level)
-  const { grid, W, MX, MZ } = buildColumns(cfg, level)
-  const unit = WORLD_PER_MODEL * sc
-  const cellW = unit * t.s
-  const cellD = unit * t.s * DEPTH_K
-  const hUnit = WORLD_H_PER_MODEL * t.s * HEIGHT_K
+  const { grid, W, NX, NZ, cs } = buildColumns(cfg, level)
+  const s = origin.scale
+  const cellW = cs * s
+  const cellD = cs * s * HERO_DEPTH_K
+  const hUnit = M_TIER_H * s * HERO_HEIGHT_K
 
-  const at = (mx: number, mz: number) =>
-    mx < -MX || mx > MX || mz < -MZ || mz > MZ ? null : grid[(mz + MZ) * W + (mx + MX)]
+  const at = (i: number, j: number) =>
+    i < -NX || i > NX || j < -NZ || j > NZ ? null : grid[(j + NZ) * W + (i + NX)]
 
   // 뒤에서 앞으로 — 앞 기둥이 뒤 기둥의 아랫부분을 덮는다
-  for (let mz = -MZ; mz <= MZ; mz++) {
-    for (let mx = -MX; mx <= MX; mx++) {
-      const col = at(mx, mz)
+  for (let j = -NZ; j <= NZ; j++) {
+    for (let i = -NX; i <= NX; i++) {
+      const col = at(i, j)
       if (!col) continue
-      const wx = gx + mx * unit
-      const wy = gy + mz * unit
-      const p = project(t, wx, wy, ground + col.h * WORLD_H_PER_MODEL)
+      const sx = origin.x + i * cellW
+      const sy = origin.y + j * cellD - col.h * hUnit
 
       ctx.globalAlpha = col.ghost ? 0.5 : 1
       ctx.fillStyle = col.color
-      ctx.fillRect(p.x - 0.4, p.y - 0.4, cellW + 0.8, cellD + 0.8)
+      ctx.fillRect(sx - 0.4, sy - 0.4, cellW + 0.8, cellD + 0.8)
 
-      const front = at(mx, mz + 1)
+      const front = at(i, j + 1)
       const drop = col.h - (front ? front.h : 0)
       if (drop > 0) {
         ctx.fillStyle = col.ghost ? col.color : shade(col.color, FRONT_SHADE)
         ctx.globalAlpha = col.ghost ? 0.32 : 1
-        ctx.fillRect(p.x - 0.4, p.y + cellD - 0.4, cellW + 0.8, drop * hUnit + 0.8)
+        ctx.fillRect(sx - 0.4, sy + cellD - 0.4, cellW + 0.8, drop * hUnit + 0.8)
       }
     }
   }
   ctx.globalAlpha = 1
 }
 
-/**
- * 바닥 진행률 링 — 다음 레벨까지. 지면 원은 화면에서 타원이 된다.
- * 완공 팀에는 그리지 않는다(상태가 잠겼다는 표시 — 평가 R2-P1-1).
- */
-export function drawProgressRing(
-  ctx: CanvasRenderingContext2D,
-  t: MapTransform,
-  gx: number,
-  gy: number,
-  ground: number,
-  level: number,
-  pct: number,
-  color: string
-) {
-  if (level >= 10) return
-  const r = 3.4 * stadiumScale(level) * t.s
-  const c = project(t, gx, gy, ground)
-  const lw = Math.max(2, t.s * 0.42)
-
-  ctx.lineWidth = lw
-  ctx.strokeStyle = "rgba(242,239,232,0.3)"
-  ctx.beginPath()
-  ctx.ellipse(c.x, c.y, r, r * DEPTH_K, 0, 0, Math.PI * 2)
-  ctx.stroke()
-
-  if (pct > 0) {
-    ctx.strokeStyle = color
-    ctx.beginPath()
-    ctx.ellipse(
-      c.x,
-      c.y,
-      r,
-      r * DEPTH_K,
-      0,
-      -Math.PI / 2,
-      -Math.PI / 2 + Math.PI * 2 * Math.min(1, pct)
-    )
-    ctx.stroke()
-  }
-}
-
-/** 더비 점선 — 두 구장을 잇는다. 지형색과 싸우지 않게 밝은 분홍 */
+/** 더비 점선 — 두 핀을 잇는다. 지형색과 싸우지 않게 밝은 분홍 */
 export function drawDerbyLine(
   ctx: CanvasRenderingContext2D,
   t: MapTransform,
   a: { gx: number; gy: number; ground: number },
   b: { gx: number; gy: number; ground: number }
 ) {
-  const pa = project(t, a.gx, a.gy, a.ground + 1.2)
-  const pb = project(t, b.gx, b.gy, b.ground + 1.2)
+  const pa = project(t, a.gx, a.gy, a.ground)
+  const pb = project(t, b.gx, b.gy, b.ground)
   ctx.save()
   ctx.lineCap = "round"
-  ctx.strokeStyle = "rgba(255,130,150,0.34)"
-  ctx.lineWidth = Math.max(4, t.s * 0.9)
+  ctx.strokeStyle = "rgba(255,130,150,0.3)"
+  ctx.lineWidth = 5
   ctx.beginPath()
   ctx.moveTo(pa.x, pa.y)
   ctx.lineTo(pb.x, pb.y)
   ctx.stroke()
   ctx.strokeStyle = "#ffb3c0"
-  ctx.lineWidth = Math.max(1.5, t.s * 0.34)
-  ctx.setLineDash([Math.max(4, t.s * 1.1), Math.max(3, t.s * 0.7)])
+  ctx.lineWidth = 2
+  ctx.setLineDash([6, 4])
   ctx.beginPath()
   ctx.moveTo(pa.x, pa.y)
   ctx.lineTo(pb.x, pb.y)
-  ctx.stroke()
-  ctx.restore()
-}
-
-/** 선택된 구장 강조 — 지면 타원 하이라이트 */
-export function drawFocusRing(
-  ctx: CanvasRenderingContext2D,
-  t: MapTransform,
-  gx: number,
-  gy: number,
-  ground: number,
-  level: number
-) {
-  const r = 4.1 * stadiumScale(level) * t.s
-  const c = project(t, gx, gy, ground)
-  ctx.save()
-  ctx.strokeStyle = "rgba(255,255,255,0.85)"
-  ctx.lineWidth = Math.max(2, t.s * 0.4)
-  ctx.beginPath()
-  ctx.ellipse(c.x, c.y, r, r * DEPTH_K, 0, 0, Math.PI * 2)
   ctx.stroke()
   ctx.restore()
 }

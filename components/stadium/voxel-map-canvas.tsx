@@ -3,14 +3,7 @@
 import { useCallback, useEffect, useRef } from "react"
 import type { MapTeam } from "@/lib/stadium/map-teams"
 import { cellHeight, project, type MapTransform } from "@/lib/stadium/map-projection"
-import {
-  drawDerbyLine,
-  drawFocusRing,
-  drawProgressRing,
-  drawStadium,
-  drawTerrain,
-  stadiumScale,
-} from "@/lib/stadium/voxel-draw"
+import { drawDerbyLine, drawPin, drawTerrain, PIN_HEIGHT } from "@/lib/stadium/voxel-draw"
 
 export interface MapTeamState {
   team: MapTeam
@@ -93,15 +86,13 @@ export function VoxelMapCanvas({ teams, transform, width, height, selectedId, on
       )
     }
 
-    // ── 구장 (뒤에서 앞으로) ──
+    // ── 팀 핀 (뒤에서 앞으로) ──
     const ordered = [...teams].sort((a, b) => a.team.gy - b.team.gy)
     for (const s of ordered) {
-      const ground = groundOf(s.team)
-      drawProgressRing(ctx, transform, s.team.gx, s.team.gy, ground, s.level, s.pct, s.team.color)
-      if (selectedId === s.team.teamId) {
-        drawFocusRing(ctx, transform, s.team.gx, s.team.gy, ground, s.level)
-      }
-      drawStadium(ctx, transform, s.team.gx, s.team.gy, ground, s.level, s.team.bowl)
+      drawPin(ctx, transform, s.team.gx, s.team.gy, groundOf(s.team), s.team.color, {
+        done: s.level >= 10,
+        selected: selectedId === s.team.teamId,
+      })
     }
   }, [teams, transform, width, height, selectedId, groundOf])
 
@@ -115,12 +106,11 @@ export function VoxelMapCanvas({ teams, transform, width, height, selectedId, on
       let best: { id: string; d: number } | null = null
       for (const s of teams) {
         const ground = groundOf(s.team)
-        const c = project(transform, s.team.gx, s.team.gy, ground + 0.6)
+        const c = project(transform, s.team.gx, s.team.gy, ground)
         const dx = px - c.x
-        const dy = py - c.y
+        const dy = py - (c.y - PIN_HEIGHT * 0.6)
         const d = Math.hypot(dx, dy)
-        const radius = Math.max(MIN_HIT_PX, stadiumScale(s.level) * 3 * transform.s)
-        if (d <= radius && (!best || d < best.d)) best = { id: s.team.teamId, d }
+        if (d <= MIN_HIT_PX && (!best || d < best.d)) best = { id: s.team.teamId, d }
       }
       return best?.id ?? null
     },
