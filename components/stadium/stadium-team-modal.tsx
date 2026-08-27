@@ -6,9 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { trackEvent } from "@/lib/analytics/events"
 import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
-import { findMapTeam, type StadiumMapRow } from "@/lib/stadium/map-teams"
+import { findMapTeam, type BowlConfig, type StadiumMapRow } from "@/lib/stadium/map-teams"
 import { DEPTH_K, HEIGHT_K } from "@/lib/stadium/map-projection"
-import { drawStadium, stadiumScale, stadiumTopHeight } from "@/lib/stadium/voxel-draw"
+import { drawStadium, stadiumExtent } from "@/lib/stadium/voxel-draw"
 
 interface MyBricks {
   my_bricks: number
@@ -24,7 +24,7 @@ interface Props {
 }
 
 /** 모달 히어로 — 지도와 같은 모델을 크게 다시 그린다 (별도 에셋 없음) */
-function StadiumHero({ level, color }: { level: number; color: string }) {
+function StadiumHero({ level, bowl }: { level: number; bowl: BowlConfig }) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -42,17 +42,15 @@ function StadiumHero({ level, color }: { level: number; color: string }) {
     ctx.clearRect(0, 0, w, h)
 
     // 구장 실루엣이 프레임에 꼭 맞도록 배율을 역산한다 (모델 크기는 레벨마다 다르다)
-    const sc = stadiumScale(level)
-    const topH = stadiumTopHeight(level)
-    const spanX = 6.6 * sc
-    const spanY = 5.4 * sc * DEPTH_K + topH * HEIGHT_K
-    const s = Math.min((w * 0.84) / spanX, (h * 0.86) / spanY)
+    const { halfX, halfZ, topH } = stadiumExtent(level, bowl)
+    const spanY = 2 * halfZ * DEPTH_K + topH * HEIGHT_K
+    const s = Math.min((w * 0.92) / (2 * halfX), (h * 0.92) / spanY)
 
-    const yTop = (-2.7 * sc * DEPTH_K - topH * HEIGHT_K) * s
-    const yBottom = 2.7 * sc * DEPTH_K * s
+    const yTop = (-halfZ * DEPTH_K - topH * HEIGHT_K) * s
+    const yBottom = halfZ * DEPTH_K * s
     const t = { s, ox: w / 2, oy: h / 2 - (yTop + yBottom) / 2 }
-    drawStadium(ctx, t, 0, 0, 0, level, color)
-  }, [level, color])
+    drawStadium(ctx, t, 0, 0, 0, level, bowl)
+  }, [level, bowl])
 
   return <canvas ref={ref} className="h-full w-full" aria-hidden="true" />
 }
@@ -91,7 +89,7 @@ export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="stadium-map-scope max-w-md gap-0 overflow-hidden p-0">
         <div className="h-40 w-full" style={{ background: "var(--st-void)" }}>
-          <StadiumHero level={row.level} color={team.color} />
+          <StadiumHero level={row.level} bowl={team.bowl} />
         </div>
 
         <div className="p-5">

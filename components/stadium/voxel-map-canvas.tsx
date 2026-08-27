@@ -101,7 +101,7 @@ export function VoxelMapCanvas({ teams, transform, width, height, selectedId, on
       if (selectedId === s.team.teamId) {
         drawFocusRing(ctx, transform, s.team.gx, s.team.gy, ground, s.level)
       }
-      drawStadium(ctx, transform, s.team.gx, s.team.gy, ground, s.level, s.team.color)
+      drawStadium(ctx, transform, s.team.gx, s.team.gy, ground, s.level, s.team.bowl)
     }
   }, [teams, transform, width, height, selectedId, groundOf])
 
