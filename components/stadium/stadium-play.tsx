@@ -14,7 +14,11 @@ interface Props {
   level: number
   /** 실제로 쌓인 벽돌 수 (렌더 블록 수가 아니다) */
   bricks: number
-  /** 지금까지 지은 비율 0~1 */
+  /** 다음 레벨까지 남은 벽돌 */
+  nextBricks: number
+  /** 다음 레벨까지 진행률 0~1 — 지도 라벨과 같은 값 */
+  levelPct: number
+  /** 지금까지 지은 비율 0~1 (렌더 시공률 — 위 levelPct 와 다른 값이다) */
   built: number
 }
 
@@ -26,6 +30,9 @@ declare global {
       ghost?: boolean
       level?: number
       bricks?: number
+      nextBricks?: number
+      /** 레벨 진행률 — 위 pct(렌더 시공률)와 다른 값이다 */
+      levelPct?: number
     }) => { total: number; built: number }
     __toggleGhost?: () => boolean
     /** 렌더러가 못 뜬 이유 — 정의돼 있으면 3D 는 죽은 것이다 */
@@ -72,7 +79,17 @@ function loadScript(src: string): Promise<void> {
  * 지도 모달의 스틸과 같은 시공률로 열린다 — 지금 우리가 쌓은 만큼만 서 있는
  * 구장에 걸어 들어가는 것이 이 지면의 전부다.
  */
-export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, bricks, built }: Props) {
+export function StadiumPlay({
+  teamId,
+  teamName,
+  stadiumName,
+  scene,
+  level,
+  bricks,
+  nextBricks,
+  levelPct,
+  built,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading")
   const [ghost, setGhost] = useState(false)
@@ -86,7 +103,15 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, brick
         if (!alive) return
         // ⚠️ optional chaining 으로 삼키면 안 된다. 앱이 죽어도 undefined 가 조용히
         //    돌아와 커버가 걷히고, 계측까지 성공으로 잡혀 실패율이 지표에서 사라진다.
-        const ready = window.__setup?.({ team: scene, pct: built, ghost: false, level, bricks })
+        const ready = window.__setup?.({
+          team: scene,
+          pct: built,
+          ghost: false,
+          level,
+          bricks,
+          nextBricks,
+          levelPct,
+        })
         // 렌더러가 붙든 캔버스가 지금 DOM 의 것과 다르면 3D 는 이미 죽어 있다.
         // (앱이 즉시실행 1회성이라 클라이언트 내비로 재진입하면 벌어진다 — 감리 C11)
         // 지금은 진입 링크를 문서 이동으로 두어 이 경우가 나오지 않지만, 링크가
@@ -107,7 +132,7 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, brick
       // 루프를 세워 둔다 — 안 그러면 떠난 뒤에도 rAF 가 돌며 GPU·배터리를 태운다
       window.__stadiumStop?.()
     }
-  }, [scene, built, teamId, level, bricks])
+  }, [scene, built, teamId, level, bricks, nextBricks, levelPct])
 
   return (
     <div className="stadium-play-scope">
@@ -119,8 +144,15 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, brick
         <h1 id="stName">{stadiumName}</h1>
         <p>
           <span className="built-dot" />
-          쌓인 벽돌 <span className="ghost-dot" />
-          남은 자리(청사진)
+          쌓인 벽돌
+          {/* 청사진이 꺼져 있으면 화면에 없는 것을 설명하지 않는다 (감리 G12) */}
+          {ghost && (
+            <>
+              {" "}
+              <span className="ghost-dot" />
+              남은 자리(청사진)
+            </>
+          )}
         </p>
         <p className="long" style={{ marginTop: 6 }}>
           팬들이 얹은 벽돌만큼 서 있는 구장입니다. 드래그로 돌리고, 입장해서 걸어보세요.
@@ -135,7 +167,7 @@ export function StadiumPlay({ teamId, teamName, stadiumName, scene, level, brick
           <div className="nums">
             <span id="count">0</span>{" "}
             <small>
-              / <span id="total">0</span> 벽돌
+              벽돌 · 다음 레벨까지 <span id="total">0</span>장
             </small>
           </div>
           <div className="pct" id="pct">

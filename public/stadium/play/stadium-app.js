@@ -404,6 +404,11 @@
       blocks: blocks, COLORS: COLORS, ROOF_Y: ROOF_Y, OHX: OHX, OHZ: OHZ,
       plaza: cfg.statues ? Math.ceil(FRX) + 10 : null,
       arx: ARX, arz: ARZ, tiers: TIERS, step: STEP,
+      // 화면에 담아야 할 크기 — 가로/세로/높이를 따로 준다. 구장은 타원이라
+      // 하나의 반경으로 맞추면 세로 화면에서 여백만 커진다.
+      fitX: (FRX + 1.4) * WS,
+      fitZ: (FRZ + 1.4) * WS,
+      fitY: (ROOF_Y + 2) * WS,
       bigDir: big ? big.dir : null, bigExtra: big ? big.extra : 0,
     };
   }
@@ -569,13 +574,30 @@
       }
     }
     builtCount = n;
+    hmapDirty = true; // 딛는 면이 달라졌다 — 다음 조회 때 다시 만든다
     builtMesh.instanceMatrix.needsUpdate = true;
     ghostMesh.instanceMatrix.needsUpdate = true;
-    var pct = Math.round((builtCount / TOTAL) * 1000) / 10;
-    document.getElementById("count").textContent = builtCount.toLocaleString();
-    document.getElementById("total").textContent = TOTAL.toLocaleString();
-    document.getElementById("pct").textContent = pct + "%";
-    document.getElementById("fill").style.width = pct + "%";
+  }
+
+  /**
+   * HUD 수치.
+   *
+   * ⚠️ 예전에는 applyCount 가 **렌더 블록 수**(25,735)를 "벽돌"이라 찍었다. 실제 벽돌은
+   *    활동 점수 ÷ 단가라 건설 지면과 5~14배 어긋났고, 완공 목표치도 경제 정의와
+   *    달랐다 (감리 C2). 렌더 단위와 경제 단위를 섞지 않는다 — 숫자는 지면이 준다.
+   */
+  function setHud(o) {
+    if (o.bricks != null) document.getElementById("count").textContent = o.bricks.toLocaleString();
+    if (o.nextBricks != null) {
+      document.getElementById("total").textContent = o.nextBricks.toLocaleString();
+    }
+    // ⚠️ levelPct(레벨 진행률) 와 pct(렌더 시공률) 는 다른 값이다. HUD 가 말하는
+    //    진행률은 지도 라벨과 같은 레벨 진행률이어야 한다.
+    if (o.levelPct != null) {
+      var p = Math.round(o.levelPct * 1000) / 10;
+      document.getElementById("pct").textContent = p + "%";
+      document.getElementById("fill").style.width = p + "%";
+    }
   }
 
   function setNight(on) {
@@ -604,6 +626,9 @@
     plaza = g.plaza;
     walkB = { x: g.arx - 0.8, z: g.arz - 0.8 };
     terr = { arx: g.arx, arz: g.arz, tiers: g.tiers, step: g.step, bigDir: g.bigDir, bigExtra: g.bigExtra };
+    hmapDirty = true;
+    fitX = g.fitX; fitZ = g.fitZ; fitY = g.fitY;
+    userZoomed = false; // 새 구장 — 다시 화면에 맞춘다
 
     builtMesh = new THREE.InstancedMesh(unit, builtMat, TOTAL);
     builtMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -725,6 +750,7 @@
   window.addEventListener("mousemove", function (e) { onMove(e.clientX, e.clientY); });
   window.addEventListener("mouseup", function () { dragging = false; });
   canvas.addEventListener("wheel", function (e) {
+    userZoomed = true;
     e.preventDefault();
     dist = Math.max(20, Math.min(560, dist + e.deltaY * 0.08));
     autoRotate = false;
@@ -805,12 +831,34 @@
 
   /* ── 루프 ── */
   var clock = new THREE.Clock();
+  var fitX = 0, fitZ = 0, fitY = 0, userZoomed = false;
+  /**
+   * 구장이 화면에 다 들어오는 거리.
+   *
+   * ⚠️ 예전에는 거리가 260 으로 고정이라 데스크톱 비율에서만 맞았다. 세로 화면
+   *    (390×844, aspect 0.46)에서는 수평 시야가 좁아 **구장의 43% 만 프레임에
+   *    들어왔다** (감리 C5). 유저가 휠·핀치로 직접 맞춘 뒤에는 건드리지 않는다.
+   */
+  function fitDistance() {
+    if (!fitX) return dist;
+    var vt = Math.tan((camera.fov * Math.PI) / 360);
+    var ht = vt * camera.aspect;
+    // 화면 세로로 보이는 크기 = 깊이가 눕는 만큼 + 높이가 서는 만큼
+    var vertHalf = fitZ * Math.cos(pol) + fitY * Math.sin(pol);
+    // 세로 화면에서는 바깥 껍데기(대부분 청사진)를 조금 잘라야 구장이 커 보인다
+    var margin = camera.aspect < 0.75 ? 0.86 : 1.04;
+    return Math.max(fitX / ht, vertHalf / vt) * margin;
+  }
   function resize() {
     var w = canvas.clientWidth, h = canvas.clientHeight;
     if (canvas.width !== w || canvas.height !== h) {
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      if (!userZoomed && !walkMode) {
+        dist = fitDistance();
+        applyCamera();
+      }
     }
   }
   var rafId = 0;
@@ -997,28 +1045,42 @@
     btn.addEventListener("pointerleave", off);
     btn.addEventListener("pointercancel", off);
   });
-  /* 지형 높이 — 피치 0, 스탠드는 계단 (점프로 한 칸씩 오른다) */
-  function groundHeightAt(px, pz) {
-    if (!terr) return SURFACE;
-    // ⚠️ 렌더는 정수 격자에 블록을 놓는데 판정은 연속 좌표로 초타원식을 다시 푼다.
-    //    티어 폭이 1.22칸이라 0.22 주기로 어긋나고, 그만큼 캐릭터가 좌석에 파묻힌다
-    //    (감리 C8). 같은 정수를 넣어 판정과 렌더를 맞춘다 — 정본은 높이맵(2차).
-    var bx = Math.round(px / WS), bz = Math.round(pz / WS);
-    if (inSuper(bx, bz, terr.arx, terr.arz)) return SURFACE;
-    var maxT = terr.tiers + terr.bigExtra;
-    for (var t = 0; t < maxT; t++) {
-      var rx1 = terr.arx + (t + 1) * terr.step, rz1 = terr.arz + (t + 1) * terr.step;
-      if (inSuper(bx, bz, rx1, rz1)) {
-        if (t >= terr.tiers) {
-          // 대형 스탠드 섹터 밖이면 그 높이의 티어가 없다 — 벽 취급
-          if (!terr.bigDir) return Infinity;
-          var len = Math.hypot(bx, bz) || 1;
-          if ((bx * terr.bigDir[0] + bz * terr.bigDir[1]) / len <= 0.62) return Infinity;
-        }
-        return (1 + t) * WS + SURFACE;
-      }
+  /**
+   * 지형 높이 — **지금 지어진 블록**에서 읽는다.
+   *
+   * 예전에는 초타원 방정식을 연속 좌표로 다시 풀었다. 그 방식은 세 가지를 동시에 틀렸다:
+   *  1) 렌더는 정수 격자, 판정은 연속 — 티어 폭 1.22칸과 어긋나 캐릭터가 좌석에 파묻혔다
+   *  2) 시공률을 몰라 **아직 벽돌이 없는 스탠드 위를 걸을 수 있었다** — 이 지면의
+   *     명제("팬들이 얹은 벽돌만큼만 서 있다")를 화면이 직접 반증했다
+   *  3) 잔디는 직사각형인데 판정은 초타원이라 피치 네 모서리에 투명한 벽이 있었다
+   * (감리 C8 · C9 · G6)
+   *
+   * 그래서 blocks 에서 열별 최고 높이를 뽑아 쓴다. 지어진 개수가 바뀌면 무효화하고
+   * 다음 조회 때 다시 만든다 — 이 지면에서는 진입 시 한 번뿐이다.
+   */
+  var HM_OFF = 96, HM_W = HM_OFF * 2 + 1, HM_EMPTY = -32768;
+  var hmap = null, hmapDirty = true;
+  function hmIndex(x, z) { return (z + HM_OFF) * HM_W + (x + HM_OFF); }
+  function rebuildHeightMap() {
+    if (!hmap) hmap = new Int16Array(HM_W * HM_W);
+    hmap.fill(HM_EMPTY);
+    for (var i = 0; i < builtCount; i++) {
+      var b = blocks[i];
+      // 엠블럼 같은 반 블록은 벽에 박힌 장식이지 밟는 면이 아니다
+      if (b.s && b.s < 1) continue;
+      if (b.x < -HM_OFF || b.x > HM_OFF || b.z < -HM_OFF || b.z > HM_OFF) continue;
+      var ix = hmIndex(b.x, b.z);
+      if (b.y > hmap[ix]) hmap[ix] = b.y;
     }
-    return Infinity; // 파사드 밖 — 벽
+    hmapDirty = false;
+  }
+  function groundHeightAt(px, pz) {
+    if (!blocks || !blocks.length) return SURFACE;
+    if (hmapDirty) rebuildHeightMap();
+    var x = Math.round(px / WS), z = Math.round(pz / WS);
+    if (x < -HM_OFF || x > HM_OFF || z < -HM_OFF || z > HM_OFF) return Infinity;
+    var y = hmap[hmIndex(x, z)];
+    return y === HM_EMPTY ? Infinity : y * WS + SURFACE;
   }
 
   function updateWalk(dt) {
@@ -1400,6 +1462,8 @@
     // 시안은 시공률과 무관하게 항상 띄워 레벨 사다리를 스스로 무의미하게 만들었다.
     if (o.level != null) screenGroup.visible = o.level >= 6;
     if (o.bricks != null) setScreenBricks(o.bricks);
+    setHud(o);
+    if (!userZoomed && !walkMode) dist = fitDistance();
     applyCamera();
     // 루프가 멈춰 있으면 되살린다 — 지면이 언마운트에서 세우고 다시 들어오는 경우
     // (개발 모드 StrictMode 의 이중 마운트 포함) 화면이 멈춘 채 남는 걸 막는다.

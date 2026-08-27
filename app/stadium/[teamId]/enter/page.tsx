@@ -3,6 +3,7 @@ import { createAnonClient } from "@/lib/supabase/server"
 import { findMapTeam, MAP_TEAM_IDS } from "@/lib/stadium/map-teams"
 import { PLAY_SCENE, buildFraction } from "@/lib/stadium/build-progress-scale"
 import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
+import { STADIUM_LEVELS } from "@/lib/constants/stadium-levels"
 import { StadiumPlay } from "@/components/stadium/stadium-play"
 import "./play.css"
 
@@ -42,8 +43,16 @@ export default async function StadiumEnterPage({
     .maybeSingle()
 
   const level = data?.level ?? 1
-  // 전광판에는 렌더 블록 수가 아니라 **실제 벽돌 수**를 띄운다 — 건설 지면과 같은 단위
-  const bricks = Math.floor((data?.total_points ?? 0) / BRICK_PRICE)
+  const points = data?.total_points ?? 0
+  // ⚠️ 화면에 "벽돌" 이라 쓰는 값은 전부 **경제 단위**여야 한다 (활동 점수 ÷ 단가).
+  //    렌더 블록 수를 벽돌이라 부르면 건설 지면과 5~14배 어긋난다 (감리 C2).
+  const bricks = Math.floor(points / BRICK_PRICE)
+  const cur = STADIUM_LEVELS.find((l) => l.level === level)
+  const next = STADIUM_LEVELS.find((l) => l.level === level + 1)
+  const nextBricks = next ? Math.max(0, Math.ceil((next.requiredPoints - points) / BRICK_PRICE)) : 0
+  const range = next && cur ? next.requiredPoints - cur.requiredPoints : 0
+  const levelPct =
+    next && cur && range > 0 ? Math.min(1, Math.max(0, (points - cur.requiredPoints) / range)) : 1
 
   return (
     <StadiumPlay
@@ -53,6 +62,8 @@ export default async function StadiumEnterPage({
       scene={scene}
       level={level}
       bricks={bricks}
+      nextBricks={nextBricks}
+      levelPct={levelPct}
       built={buildFraction(level)}
     />
   )
