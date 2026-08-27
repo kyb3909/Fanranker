@@ -1110,12 +1110,28 @@
    *    깔린 그 경계에 세워졌다.
    */
   function findFooting(gx0, gz0) {
-    for (var r = 0; r <= 60; r++) {
-      for (var dx = -r; dx <= r; dx++) {
-        for (var dz = -r; dz <= r; dz++) {
-          if (r > 0 && Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue; // 테두리만
-          var h = groundHeightAt((gx0 + dx) * WS, (gz0 + dz) * WS);
-          if (h !== Infinity) return { x: (gx0 + dx) * WS, y: h, z: (gz0 + dz) * WS };
+    // 둘레 pad 칸이 전부 같은 높이로 지어져 있는가 — 사방으로 걸을 여유가 있는지
+    function roomy(gx, gz, pad) {
+      var h0 = groundHeightAt(gx * WS, gz * WS);
+      if (h0 === Infinity) return null;
+      for (var ax = -pad; ax <= pad; ax++) {
+        for (var az2 = -pad; az2 <= pad; az2++) {
+          if (groundHeightAt((gx + ax) * WS, (gz + az2) * WS) !== h0) return null;
+        }
+      }
+      return h0;
+    }
+    // 여유가 큰 자리부터 찾는다. pad 0 은 "지어지기만 했으면 된다" 는 마지막 수단.
+    for (var pi = 0; pi < 3; pi++) {
+      var pad = [3, 1, 0][pi];
+      for (var r = 0; r <= 60; r++) {
+        for (var dx = -r; dx <= r; dx++) {
+          for (var dz = -r; dz <= r; dz++) {
+            if (r > 0 && Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue; // 테두리만
+            var gx = gx0 + dx, gz = gz0 + dz;
+            var h = pad === 0 ? groundHeightAt(gx * WS, gz * WS) : roomy(gx, gz, pad);
+            if (h != null && h !== Infinity) return { x: gx * WS, y: h, z: gz * WS };
+          }
         }
       }
     }
