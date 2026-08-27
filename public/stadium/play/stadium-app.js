@@ -783,36 +783,14 @@
   canvas.addEventListener("touchend", function () { dragging = false; });
 
   /* ── UI ── */
-  var NICKS = ["벽돌장인", "골수팬", "북런던은빨강", "티에리앙리14", "스카우저",
-    "케빈더브라위너교", "브릿지주민", "화이트하트레인", "붉은악마전차", "발빠른백숙"];
-  var playing = false;
   var toastEl = document.getElementById("toast");
-  var toastTimer = null, nickIdx = 0;
+  var toastTimer = null;
   function showToast(msg) {
     toastEl.textContent = msg;
     toastEl.classList.add("on");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove("on"); }, 1800);
   }
-  var lastToast = 0;
-
-  var btnPlay = document.getElementById("play");
-  document.getElementById("done").addEventListener("click", function () {
-    playing = false;
-    btnPlay.textContent = "▶ 건설 재생";
-    applyCount(TOTAL);
-  });
-  document.getElementById("reset").addEventListener("click", function () {
-    playing = false;
-    btnPlay.textContent = "▶ 건설 재생";
-    applyCount(Math.floor(TOTAL * 0.34));
-  });
-  btnPlay.addEventListener("click", function () {
-    if (builtCount >= TOTAL) applyCount(Math.floor(TOTAL * 0.05));
-    playing = !playing;
-    btnPlay.textContent = playing ? "❚❚ 일시정지" : "▶ 건설 재생";
-  });
-
   document.getElementById("focus").addEventListener("click", function () {
     if (!plaza) return;
     focusOnStatue = !focusOnStatue;
@@ -827,13 +805,6 @@
       this.textContent = "동상 보기";
     }
   });
-  document.getElementById("stadium").addEventListener("change", function (e) {
-    if (walkMode) exitWalk();
-    playing = false;
-    btnPlay.textContent = "▶ 건설 재생";
-    initStadium(e.target.value);
-  });
-
   /* ── 루프 ── */
   var clock = new THREE.Clock();
   var fitX = 0, fitZ = 0, fitY = 0, userZoomed = false;
@@ -894,17 +865,10 @@
     rafId = requestAnimationFrame(tick);
     // ResizeObserver 가 없는 브라우저를 위한 보험 — 있으면 첫 프레임에만 일한다
     if (typeof ResizeObserver !== "function") resize();
-    var dt = clock.getDelta();
+    // ⚠️ 탭을 떠났다 돌아오면 dt 가 몇 초짜리로 들어온다. 그대로 쓰면 한 프레임에
+    //    캐릭터·공이 지형을 통째로 건너뛴다 (감리 G7)
+    var dt = Math.min(clock.getDelta(), 0.05);
     if (autoRotate) az += dt * 0.12;
-    if (playing) {
-      applyCount(builtCount + Math.max(6, Math.round(TOTAL * dt * 0.06)));
-      var now = performance.now();
-      if (now - lastToast > 700) {
-        showToast(NICKS[nickIdx++ % NICKS.length] + " 님이 벽돌을 얹었습니다 +10p");
-        lastToast = now;
-      }
-      if (builtCount >= TOTAL) { playing = false; btnPlay.textContent = "▶ 건설 재생"; }
-    }
     /* 완공 제막 — 100% 순간 동상 에셋이 한 번에 선다 */
     var wantStatues = plaza && builtCount >= TOTAL;
     if (wantStatues && statueScale < 1) {
@@ -1022,6 +986,7 @@
   }
   function exitWalk() {
     walkMode = false;
+    keys = {}; // 나가면서 누르고 있던 키가 남으면 다음 입장 때 혼자 걸어간다 (감리 G7)
     if (player) player.visible = false;
     ball.visible = false;
     camT.x = 0; camT.y = 16; camT.z = 0;
@@ -1072,7 +1037,11 @@
     var k = btn.getAttribute("data-k");
     function on(e) { e.preventDefault(); keys[k] = true; }
     function off(e) { e.preventDefault(); keys[k] = false; }
-    btn.addEventListener("pointerdown", on);
+    btn.addEventListener("pointerdown", function (e) {
+      // 누른 손가락을 이 버튼에 묶는다 — 밖으로 미끄러져도 up 이 여기로 온다
+      if (btn.setPointerCapture) { try { btn.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ } }
+      on(e);
+    });
     btn.addEventListener("pointerup", off);
     btn.addEventListener("pointerleave", off);
     btn.addEventListener("pointercancel", off);
@@ -1377,6 +1346,7 @@
     });
     screenGroup.add(screenLegs);
   })();
+  screenGroup.visible = false; // 구장이 서기 전에는 없다 — setScreenLevel 이 켠다
   scene.add(screenGroup);
   /**
    * 지지 기둥을 지금 시공된 높이 위에 다시 세운다.
@@ -1571,11 +1541,7 @@
    */
   window.__setup = function (o) {
     o = o || {};
-    if (o.team && STADIUMS[o.team]) {
-      var sel = document.getElementById("stadium");
-      if (sel) sel.value = o.team;
-      initStadium(o.team);
-    }
+    if (o.team && STADIUMS[o.team]) initStadium(o.team);
     if (o.pct != null) applyCount(Math.round(TOTAL * o.pct));
     if (ghostMesh) ghostMesh.visible = o.ghost !== false;
     setScreenLevel(o.level);
@@ -1596,7 +1562,9 @@
     return ghostMesh.visible;
   };
 
-  initStadium("emirates");
+  // ⚠️ 예전에는 여기서 에미레이츠를 미리 세웠다. 지면은 곧바로 __setup 으로 우리
+  //    팀 구장을 다시 세우므로, 첫 화면이 뜨기 전에 블록 2~3만 개를 두 번 만드는
+  //    셈이었다. 이제 __setup / __shot 이 부를 때 처음 선다 (감리 G15).
   applyCamera();
   tick();
 })();

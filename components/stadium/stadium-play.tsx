@@ -191,18 +191,6 @@ export function StadiumPlay({
           <button id="focus" type="button">
             동상 보기
           </button>
-          {/* 시안의 개발용 버튼들 — 앱이 id 로 찾으므로 두되 화면에서는 감춘다 */}
-          <button id="play" type="button" hidden />
-          <button id="done" type="button" hidden />
-          <button id="reset" type="button" hidden />
-          <select id="stadium" aria-label="구장" hidden defaultValue={scene}>
-            <option value="emirates">에미레이츠</option>
-            <option value="oldtrafford">올드 트래포드</option>
-            <option value="anfield">안필드</option>
-            <option value="bridge">스탬퍼드 브리지</option>
-            <option value="etihad">에티하드</option>
-            <option value="spurs">토트넘</option>
-          </select>
           {/* ⚠️ <Link>(클라이언트 내비) 로 바꾸지 말 것 — 렌더러가 즉시실행 1회성이라
               다시 들어올 때 3D 가 죽는다 (감리 C11). 문서 이동이라야 컨텍스트가 정리된다 */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 문서 이동이 목적이다 */}
