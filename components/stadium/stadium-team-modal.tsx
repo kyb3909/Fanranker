@@ -154,12 +154,13 @@ export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
             {/* ⚠️ <Link>(클라이언트 내비) 가 아니라 <a> 다. 3D 렌더러가 즉시실행
                 1회성이라 클라이언트 내비로 재진입하면 옛 캔버스를 붙든 채 화면이
                 죽는다 (감리 C11). 문서 이동이라야 매번 새로 선다. */}
-            <Button asChild variant="outline" className="flex-1">
+            <Button asChild variant="outline" className="min-h-11 flex-1">
               <a href={`/stadium/${row.teamId}/enter`}>경기장 입장</a>
             </Button>
             <Button
               asChild
-              className="flex-1"
+              /* 터치 타깃 44px — 모달의 행동은 이 둘뿐이다 (감리 G22) */
+              className="min-h-11 flex-1"
               onClick={() =>
                 trackEvent({
                   name: "brick_cta_click",

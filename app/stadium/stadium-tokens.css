@@ -102,6 +102,10 @@
   background: rgb(23 26 34 / 0.25);
 }
 .stadium-label__fill {
+  /* ⚠️ display 를 빼면 안 된다. 마크업이 <span> 이라 인라인이면 width·height 가
+     통째로 무시돼 채움이 0px 로 사라진다 — 트랙만 남아 0% 와 100% 가 똑같이
+     보였다. 트랙(부모)은 flex 아이템이라 블록화되지만 그 자식은 아니다. */
+  display: block;
   height: 100%;
   border-radius: 999px;
   background: currentColor;
@@ -198,4 +202,26 @@
   height: 8px;
   border-radius: 999px;
   display: inline-block;
+}
+
+/**
+ * 모달 닫기 버튼.
+ *
+ * ⚠️ shadcn 기본 닫기 버튼은 본문 글자색을 물려받는다. 이 모달의 윗칸은 어두운
+ *    구장 그림이라 near-black X 가 통째로 묻혀 보이지 않았다 (실측: color
+ *    rgb(17,17,17) on 어두운 히어로). 밝은 색과 옅은 그림자를 이 스코프에서만 준다.
+ */
+.stadium-map-scope [data-slot="dialog-close"] {
+  color: var(--st-ink);
+  opacity: 1;
+  /* 손가락이 닿는 크기 — 기본값은 24x24 라 44px 기준에 한참 못 미쳤다 (감리 G22) */
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgb(23 26 34 / 0.55);
+}
+.stadium-map-scope [data-slot="dialog-close"]:hover {
+  background: rgb(23 26 34 / 0.8);
 }

@@ -415,4 +415,39 @@
     font-weight: 700;
     text-decoration: none;
   }
+
+  /* ⚠️ 이 블록은 기본 규칙보다 **뒤**에 있어야 한다. 앞에 두면 같은 특정도라
+     뒤의 기본값이 이겨서 아무 효과가 없다 (실제로 그렇게 한 번 헛돌았다). */
+  @media (max-width: 640px) {
+    /**
+     * 걷기 모드 하단 정리.
+     *
+     * ⚠️ 예전에는 킷(bottom 20) · 진행바(20) · D패드(120) · 채팅(108) 이 전부 같은
+     *    띠에 겹쳐 쌓였다. 킷이 z-index 3 이라 z-index 2 인 진행바를 덮었고, 그 결과
+     *    **[나가기] 버튼에 손이 닿지 않았다** (실측: 390x844 에서 elementFromPoint 가
+     *    킷 패널을 잡는다). 겹치지 않게 아래에서부터 쌓는다.
+     *
+     * 킷(유니폼 고르기)은 이 좁은 화면에서 조작을 통째로 막을 만큼 중요하지 않다.
+     * 넓은 화면에서는 그대로 나온다.
+     */
+    .kit.on {
+      display: none;
+    }
+    .bar {
+      bottom: 16px;
+    }
+    .dpad {
+      bottom: 164px;
+    }
+    .chat {
+      bottom: 274px;
+    }
+    /* 손가락이 닿는 크기 — 걷기 모드의 유일한 탈출구가 [나가기] 다 (감리 G22) */
+    .btns button,
+    .btns .play-back {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+  }
 }
