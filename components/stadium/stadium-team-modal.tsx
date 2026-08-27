@@ -1,13 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import Image from "next/image"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { trackEvent } from "@/lib/analytics/events"
 import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
-import { findMapTeam, type BowlConfig, type StadiumMapRow } from "@/lib/stadium/map-teams"
-import { drawStadium, stadiumExtent } from "@/lib/stadium/voxel-draw"
+import { findMapTeam, type StadiumMapRow } from "@/lib/stadium/map-teams"
 
 interface MyBricks {
   my_bricks: number
@@ -22,35 +22,10 @@ interface Props {
   onClose: () => void
 }
 
-/** 모달 히어로 — 지도와 같은 모델을 크게 다시 그린다 (별도 에셋 없음) */
-function StadiumHero({ level, bowl }: { level: number; bowl: BowlConfig }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = ref.current
-    if (!canvas) return
-    const w = canvas.clientWidth
-    const h = canvas.clientHeight
-    if (!w || !h) return
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    canvas.width = Math.round(w * dpr)
-    canvas.height = Math.round(h * dpr)
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, w, h)
-
-    // 구장이 프레임에 꼭 맞도록 배율을 역산한다 (모델 크기는 팀·레벨마다 다르다)
-    const { halfX, halfZ, topH, depthK, heightK } = stadiumExtent(level, bowl)
-    const spanY = 2 * halfZ * depthK + topH * heightK
-    const scale = Math.min((w * 0.96) / (2 * halfX), (h * 0.94) / spanY)
-
-    const yTop = -halfZ * depthK - topH * heightK
-    const yBottom = halfZ * depthK
-    drawStadium(ctx, { x: w / 2, y: h / 2 - ((yTop + yBottom) / 2) * scale, scale }, level, bowl)
-  }, [level, bowl])
-
-  return <canvas ref={ref} className="h-full w-full" aria-hidden="true" />
+/** 레벨별 구장 스틸 — scripts/render-stadiums.mjs 가 미리 구워둔 것 */
+function heroSrc(teamId: string, level: number): string {
+  const lv = Math.min(10, Math.max(1, Math.round(level)))
+  return `/stadium/renders/${teamId}-${lv}.webp`
 }
 
 export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
@@ -87,7 +62,14 @@ export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="stadium-map-scope max-w-md gap-0 overflow-hidden p-0">
         <div className="relative h-56 w-full" style={{ background: "var(--st-void)" }}>
-          <StadiumHero level={row.level} bowl={team.bowl} />
+          <Image
+            src={heroSrc(row.teamId, row.level)}
+            alt={`${team.name} ${team.stadiumName} — 현재 건설 상태`}
+            width={960}
+            height={480}
+            className="h-full w-full object-cover"
+            priority
+          />
           <span
             className="absolute top-3 left-3 rounded-lg px-2.5 py-1 text-[13px] font-bold"
             style={{

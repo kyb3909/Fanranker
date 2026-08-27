@@ -10,27 +10,6 @@
  *    지형 격자에 직접 찍어 육지 위임을 보장한다.
  */
 
-/**
- * 구장 보울 파라미터 — 3D 시안(stadium-3d-app.js STADIUMS)의 값을 그대로 옮겼다.
- * n 이 작을수록 둥근 그릇, 클수록 네모난 스탠드. bigEnd 는 한쪽만 높은 구장(콥·스트렛퍼드 엔드).
- */
-export interface BowlConfig {
-  /** 초타원 지수 */
-  n: number
-  /** 실제 관중석 단수 (지도에서는 접어서 쓴다) */
-  tiers: number
-  /** 좌석 색 — 같은 팀 안에서 미세하게 갈라 복셀 질감을 낸다 */
-  seat: string[]
-  /** 트랙·외곽 바닥 */
-  apron: string
-  roof: "deck" | "dark"
-  /** 박스석이 들어가는 단 */
-  boxRow?: number
-  /** 한쪽만 높은 스탠드의 방향과 추가 단수 */
-  bigEnd?: [number, number]
-  bigExtra?: number
-}
-
 export interface MapTeam {
   teamId: string
   /** 지도·모달에 쓰는 짧은 한글 이름 */
@@ -48,8 +27,6 @@ export interface MapTeam {
   labelDy: number
   /** 격차 배지·점선을 그리는 더비 상대 */
   derby?: string
-  /** 구장 생김새 */
-  bowl: BowlConfig
 }
 
 export const MAP_TEAMS: readonly MapTeam[] = [
@@ -64,15 +41,6 @@ export const MAP_TEAMS: readonly MapTeam[] = [
     gy: 99,
     labelDx: -104,
     labelDy: -84,
-    bowl: {
-      n: 5.5,
-      tiers: 14,
-      seat: ["#bf2033", "#b61d2f", "#c82738"],
-      apron: "#3a3d44",
-      roof: "dark",
-      bigEnd: [0, -1],
-      bigExtra: 7,
-    },
   },
   {
     teamId: "epl_manutd",
@@ -85,16 +53,6 @@ export const MAP_TEAMS: readonly MapTeam[] = [
     labelDx: 8,
     labelDy: -122,
     derby: "epl_mancity",
-    bowl: {
-      n: 5.5,
-      tiers: 15,
-      seat: ["#c42b38", "#bb2734", "#cc3340"],
-      apron: "#3a3d44",
-      roof: "deck",
-      boxRow: 8,
-      bigEnd: [0, 1],
-      bigExtra: 6,
-    },
   },
   {
     teamId: "epl_mancity",
@@ -107,13 +65,6 @@ export const MAP_TEAMS: readonly MapTeam[] = [
     labelDx: 116,
     labelDy: -50,
     derby: "epl_manutd",
-    bowl: {
-      n: 2.1,
-      tiers: 16,
-      seat: ["#6cabdd", "#63a2d6", "#76b3e3"],
-      apron: "#2e3547",
-      roof: "deck",
-    },
   },
   // ── 동남 3 ──
   {
@@ -126,13 +77,6 @@ export const MAP_TEAMS: readonly MapTeam[] = [
     gy: 121,
     labelDx: -96,
     labelDy: -48,
-    bowl: {
-      n: 4,
-      tiers: 15,
-      seat: ["#1e4fa0", "#1a4794", "#2457ac"],
-      apron: "#2b3350",
-      roof: "deck",
-    },
   },
   {
     teamId: "epl_arsenal",
@@ -145,14 +89,6 @@ export const MAP_TEAMS: readonly MapTeam[] = [
     labelDx: -8,
     labelDy: -116,
     derby: "epl_tottenham",
-    bowl: {
-      n: 2.35,
-      tiers: 17,
-      seat: ["#c2273a", "#b92336", "#cb2f42"],
-      apron: "#5a2330",
-      roof: "deck",
-      boxRow: 8,
-    },
   },
   {
     teamId: "epl_tottenham",
@@ -165,15 +101,6 @@ export const MAP_TEAMS: readonly MapTeam[] = [
     labelDx: 112,
     labelDy: -74,
     derby: "epl_arsenal",
-    bowl: {
-      n: 2.5,
-      tiers: 16,
-      seat: ["#25355c", "#213154", "#2a3b66"],
-      apron: "#1c2438",
-      roof: "deck",
-      bigEnd: [-1, 0],
-      bigExtra: 6,
-    },
   },
 ]
 

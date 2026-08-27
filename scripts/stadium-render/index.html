@@ -1,0 +1,75 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>stadium render harness</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14161d; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hud, .hint, #toast, .kit, .chat, .dpad { display: none !important; }
+</style>
+<canvas id="scene"></canvas>
+
+<div class="hud brief">
+  <div class="kicker">Prototype · EPL Brick Stadiums</div>
+  <h1 id="stName">에미레이츠 스타디움</h1>
+  <p><span class="built-dot"></span>쌓인 벽돌 <span class="ghost-dot"></span>남은 자리(청사진)</p>
+  <p class="long" style="margin-top:6px">팬들이 활동 점수로 벽돌을 하나씩 얹어 경기장을 함께 완공하는 경험의 3D 시안입니다. 드래그로 돌리고, 휠/핀치로 확대해 보세요.</p>
+</div>
+
+<div class="hint">드래그 회전 · 휠 확대</div>
+<div id="toast" role="status"></div>
+
+<div class="hud bar">
+  <div class="row">
+    <div class="nums"><span id="count">0</span> <small>/ <span id="total">0</span> 벽돌</small></div>
+    <div class="pct" id="pct">0%</div>
+  </div>
+  <div class="track"><div id="fill" style="width:0%"></div></div>
+  <div class="btns">
+    <button id="play" type="button">▶ 건설 재생</button>
+    <button id="done" type="button">완공 보기</button>
+    <button id="reset" type="button">처음 상태</button>
+    <button id="focus" type="button">동상 보기</button>
+    <button id="enter" type="button">입장하기</button>
+    <select id="stadium" aria-label="구장 선택">
+      <option value="emirates">에미레이츠</option>
+      <option value="oldtrafford">올드 트래포드</option>
+      <option value="anfield">안필드</option>
+      <option value="bridge">스탬퍼드 브리지</option>
+      <option value="etihad">에티하드</option>
+      <option value="spurs">토트넘</option>
+    </select>
+  </div>
+</div>
+
+<div class="kit" id="kitPanel">
+  <h2>내 유니폼</h2>
+  <div class="row"><span>상의</span><input type="color" id="kShirt" value="#c2273a"></div>
+  <div class="row"><span>하의</span><input type="color" id="kShorts" value="#f2efe6"></div>
+  <div class="row"><span>스타킹</span><input type="color" id="kSocks" value="#c2273a"></div>
+  <div class="row"><span>등번호</span><input type="text" id="kNum" value="14" maxlength="2" inputmode="numeric"></div>
+  <select id="kPreset" aria-label="킷 프리셋">
+    <option value="">킷 프리셋…</option>
+    <option value="arsenal">아스날 홈</option>
+    <option value="utd">맨유 홈</option>
+    <option value="liverpool">리버풀 홈</option>
+    <option value="chelsea">첼시 홈</option>
+    <option value="city">맨시티 홈</option>
+    <option value="spurs">토트넘 홈</option>
+  </select>
+</div>
+
+<div class="chat" id="chatWrap">
+  <input id="chatInput" type="text" maxlength="18" placeholder="채팅 입력 후 Enter — 말풍선">
+</div>
+
+<div class="dpad" id="dpad">
+  <button class="up" data-k="w" type="button">▲</button>
+  <button class="lf" data-k="a" type="button">◀</button>
+  <button class="dn" data-k="s" type="button">▼</button>
+  <button class="rt" data-k="d" type="button">▶</button>
+  <button class="kick" id="kick" type="button">⚽</button>
+</div>
+
+
+<script src="./vendor/three.min.js"></script>
+<script src="./stadium-app.js"></script>
