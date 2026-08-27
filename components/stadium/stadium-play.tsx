@@ -90,16 +90,32 @@ export function StadiumPlay({
   levelPct,
   built,
 }: Props) {
+  const pctText = `${Math.round(levelPct * 1000) / 10}%`
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading")
   const [ghost, setGhost] = useState(false)
 
   useEffect(() => {
     let alive = true
+    let timeout = 0
     ;(async () => {
       try {
-        await loadScript("/stadium/play/three.min.js")
-        await loadScript("/stadium/play/stadium-app.js")
+        // 두 파일을 동시에 받는다. 실행 순서는 async=false 가 보장하므로
+        // (three 가 먼저 돌고 앱이 그 뒤) 순서를 위해 기다릴 이유가 없었다 —
+        // 600KB 를 다 받고 나서야 64KB 를 받기 시작하던 왕복 하나가 사라진다.
+        //
+        // 15초를 넘기면 실패로 본다. 안 그러면 스크립트 요청이 멈춘 채로 "구장을
+        // 세우는 중…" 이 영원히 떠 있고 빠져나갈 길이 없다 (감리 G24).
+        await Promise.race([
+          Promise.all([
+            loadScript("/stadium/play/three.min.js"),
+            loadScript("/stadium/play/stadium-app.js"),
+          ]),
+          new Promise((_, reject) => {
+            timeout = window.setTimeout(() => reject(new Error("timeout")), 15_000)
+          }),
+        ])
+        window.clearTimeout(timeout)
         if (!alive) return
         // ⚠️ optional chaining 으로 삼키면 안 된다. 앱이 죽어도 undefined 가 조용히
         //    돌아와 커버가 걷히고, 계측까지 성공으로 잡혀 실패율이 지표에서 사라진다.
@@ -129,6 +145,7 @@ export function StadiumPlay({
     })()
     return () => {
       alive = false
+      window.clearTimeout(timeout)
       // 루프를 세워 둔다 — 안 그러면 떠난 뒤에도 rAF 가 돌며 GPU·배터리를 태운다
       window.__stadiumStop?.()
     }
@@ -136,7 +153,12 @@ export function StadiumPlay({
 
   return (
     <div className="stadium-play-scope">
-      <canvas id="scene" ref={canvasRef} />
+      <canvas
+        id="scene"
+        ref={canvasRef}
+        role="img"
+        aria-label={`${stadiumName} — 팬들이 쌓은 벽돌만큼 지어진 3D 구장`}
+      />
 
       <div className="hud brief">
         {/* ⚠️ #stName 은 시안 앱이 구장명으로 덮어쓴다 — 여기 팀명을 넣으면 지워진다 */}
@@ -165,17 +187,26 @@ export function StadiumPlay({
       <div className="hud bar">
         <div className="row">
           <div className="nums">
-            <span id="count">0</span>{" "}
+            {/* 서버가 이미 아는 값이다 — 0 으로 그렸다가 앱이 덮어쓰면 숫자가 튄다 */}
+            <span id="count">{bricks.toLocaleString()}</span>{" "}
             <small>
-              벽돌 · 다음 레벨까지 <span id="total">0</span>장
+              벽돌 · 다음 레벨까지 <span id="total">{nextBricks.toLocaleString()}</span>장
             </small>
           </div>
           <div className="pct" id="pct">
-            0%
+            {pctText}
           </div>
         </div>
-        <div className="track">
-          <div id="fill" style={{ width: "0%" }} />
+        <div
+          className="track"
+          role="progressbar"
+          aria-label={`레벨 ${level} 진행률`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(levelPct * 1000) / 10}
+          aria-valuetext={pctText}
+        >
+          <div id="fill" style={{ width: pctText }} />
         </div>
         <div className="btns">
           <button id="enter" type="button">
@@ -258,9 +289,16 @@ export function StadiumPlay({
       </div>
 
       {state !== "ready" && (
-        <div className="play-cover">
+        <div className="play-cover" role="status">
           {state === "loading" ? (
-            <p>구장을 세우는 중…</p>
+            <div>
+              <p>구장을 세우는 중…</p>
+              {/* 여기서 막혀도 되돌아갈 곳이 있어야 한다 (감리 G24) */}
+              <p style={{ marginTop: 10 }}>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 문서 이동이 목적이다 */}
+                <a href="/stadium">지도로 돌아가기</a>
+              </p>
+            </div>
           ) : (
             <div>
               <p>구장을 여는 데 실패했습니다.</p>
