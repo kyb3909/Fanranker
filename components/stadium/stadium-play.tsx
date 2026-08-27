@@ -269,9 +269,6 @@ export function StadiumPlay({
         </button>
       </div>
 
-      {/* 시안 앱이 찾는 야간 표시 슬롯 — 화면에는 안 쓴다 */}
-      <span id="night" hidden />
-
       {state !== "ready" && (
         <div className="play-cover">
           {state === "loading" ? (

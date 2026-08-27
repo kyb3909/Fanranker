@@ -579,10 +579,7 @@
 
   /* ── 상태 ── */
   var blocks = [], TOTAL = 0, builtMesh = null, ghostMesh = null;
-  var dayColors = null, nightColors = null;
-  var floods = [];
   var builtCount = 0;
-  var isNight = false;
   var plaza = null;
   var walkB = { x: 36.2, z: 25.2 };
   var terr = null;
@@ -592,13 +589,13 @@
 
   var az = 0.9, pol = 1.05, dist = 260;
   var camT = { x: 0, y: 8, z: 0 };
-  var autoRotate = !reduced;
+  // 운영자 판정: 상시 애니메이션 금지 — 회전은 사용자가 끌 때만 (감리 G16).
+  // reduced 분기 자체는 동상 제막·진행바에서 계속 쓰이므로 남긴다.
+  var autoRotate = false;
 
   function disposeMeshes() {
     if (builtMesh) { scene.remove(builtMesh); builtMesh.dispose(); }
     if (ghostMesh) { scene.remove(ghostMesh); ghostMesh.dispose(); }
-    floods.forEach(function (s) { scene.remove(s.target); scene.remove(s); });
-    floods = [];
   }
 
   function applyCount(n) {
@@ -649,25 +646,6 @@
     }
   }
 
-  function setNight(on) {
-    isNight = on;
-    var bg = on ? 0x0a0c13 : 0x14161d;
-    scene.background.setHex(bg);
-    scene.fog.color.setHex(bg);
-    // ⚠️ 낮 값은 위 초기 조명과 반드시 같아야 한다 — 여기만 옛 값(1.05/1.35)으로
-    //    남으면 야간을 껐을 때 다시 클리핑된 화면으로 돌아간다 (감리 G17)
-    amb.intensity = on ? 0.55 : 0.55;
-    amb.color.setHex(on ? 0x2c3348 : 0x6a7080);
-    sun.intensity = on ? 0.12 : 0.85;
-    sun.color.setHex(on ? 0x8899cc : 0xfff2dd);
-    rim.intensity = on ? 0.15 : 0.35;
-    floods.forEach(function (s) { s.intensity = on ? 2.4 : 0; });
-    builtMesh.instanceColor.array.set(on ? nightColors : dayColors);
-    builtMesh.instanceColor.needsUpdate = true;
-    var nb = document.getElementById("night");
-    if (nb) nb.textContent = "";
-  }
-
   function initStadium(id) {
     var cfg = STADIUMS[id];
     var g = generate(cfg);
@@ -700,32 +678,9 @@
     }
     builtMesh.instanceColor.needsUpdate = true;
 
-    dayColors = new Float32Array(builtMesh.instanceColor.array);
-    nightColors = new Float32Array(TOTAL * 3);
-    var c = new THREE.Color();
-    for (var k = 0; k < TOTAL; k++) {
-      var bk = blocks[k], t2 = bk.type;
-      if (t2 === "facadeGlass") c.setHex(((bk.x * 31 + bk.z * 17 + bk.y * 7) & 7) < 3 ? 0xffd27a : 0x141926);
-      else if (t2 === "banner") c.setHex(0xc22736);
-      else if (t2 === "muralFig") c.setHex(0xf3ecdf);
-      else if (t2 === "glassroof") c.setHex(0xfff3cf);
-      else if (t2 === "roofDeck" || t2 === "roofDark") c.setHex(0x363a42);
-      else if (t2 === "steel") c.setHex(0xb9c2cf);
-      else if (t2.indexOf("em_") === 0) c.fromArray(dayColors, k * 3);
-      else if (t2 === "grassA" || t2 === "grassB" || t2 === "line") c.fromArray(dayColors, k * 3);
-      else c.fromArray(dayColors, k * 3).multiplyScalar(0.55);
-      nightColors[k * 3] = c.r; nightColors[k * 3 + 1] = c.g; nightColors[k * 3 + 2] = c.b;
-    }
-
-    [[g.OHX - 3, g.OHZ - 3], [-(g.OHX - 3), g.OHZ - 3], [g.OHX - 3, -(g.OHZ - 3)], [-(g.OHX - 3), -(g.OHZ - 3)]].forEach(
-      function (p) {
-        var s = new THREE.SpotLight(0xfff4dc, 0, 340, 0.72, 0.55, 1.2);
-        s.position.set(p[0] * WS, (g.ROOF_Y + 6) * WS, p[1] * WS);
-        s.target.position.set(-p[0] * 0.35 * WS, 0, -p[1] * 0.35 * WS);
-        scene.add(s); scene.add(s.target);
-        floods.push(s);
-      }
-    );
+    // ⚠️ 야간 모드는 걷어냈다. intensity 0 인 SpotLight 4개를 매달아 두면 꺼져
+    //    있어도 모든 Lambert 프래그먼트가 픽셀마다 네 번 더 돈다. 야간용 색 배열
+    //    (TOTAL×3 Float32) 도 같이 지웠다 — 아무도 안 읽는 300KB 였다 (감리 G16).
 
     statueGroup.clear();
     if (plaza) {
@@ -755,7 +710,6 @@
     // ⚠️ 여기서 시안 데모값(34%)을 미리 세우면 안 된다. applyCount 는 증분 함수라
     //    호출자가 이후에 카운터를 위조하면 되돌리는 분기가 통째로 죽는다 (감리 C1).
     builtCount = 0;
-    setNight(isNight);
   }
 
   /* ── 카메라 ── */
@@ -900,18 +854,36 @@
     var margin = camera.aspect < 0.75 ? 0.86 : 1.04;
     return Math.max(fitX / ht, vertHalf / vt) * margin;
   }
+  /**
+   * 캔버스 크기 맞추기.
+   *
+   * ⚠️ 예전에는 CSS 폭을 `canvas.width` 와 비교했는데, setPixelRatio 를 걸어 둔
+   *    탓에 그 둘은 고해상도 화면에서 애초에 같아질 수 없다 — 조건이 항상 참이라
+   *    매 프레임 setSize + 투영행렬 재계산이 돌았다. 직전 CSS 크기를 따로 기억한다.
+   */
+  var lastW = 0, lastH = 0;
   function resize() {
     var w = canvas.clientWidth, h = canvas.clientHeight;
-    if (canvas.width !== w || canvas.height !== h) {
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      if (!userZoomed && !walkMode) {
-        dist = fitDistance();
-        applyCamera();
-      }
+    if (!w || !h || (w === lastW && h === lastH)) return;
+    lastW = w; lastH = h;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    // ⚠️ TOTAL 검사를 빼면 안 된다. fitDistance 는 initStadium 이 세우는 값을
+    //    읽으므로, 구장이 서기 전에 부르면 dist 가 NaN 이 되고 카메라가 통째로
+    //    죽어 화면이 영영 빈 채로 남는다.
+    if (!userZoomed && !walkMode && TOTAL > 0) {
+      dist = fitDistance();
+      applyCamera();
     }
   }
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(resize).observe(canvas);
+  }
+  // ⚠️ 관찰자에만 맡기면 안 된다 — 첫 콜백이 비동기라, 그 전에 누가 render 를
+  //    부르면 기본 300×150 캔버스에 그려져 화면이 빈 채로 남는다 (스틸 하니스가
+  //    실제로 그렇게 빈 프레임을 뱉었다). 시작할 때 한 번은 동기로 맞춘다.
+  resize();
   var rafId = 0;
   /** 루프 정지 — 지면 언마운트 시 호출한다 (유령 컨텍스트가 GPU 를 태우는 걸 막는다) */
   window.__stadiumStop = function () {
@@ -920,7 +892,8 @@
   };
   function tick() {
     rafId = requestAnimationFrame(tick);
-    resize();
+    // ResizeObserver 가 없는 브라우저를 위한 보험 — 있으면 첫 프레임에만 일한다
+    if (typeof ResizeObserver !== "function") resize();
     var dt = clock.getDelta();
     if (autoRotate) az += dt * 0.12;
     if (playing) {
@@ -947,6 +920,14 @@
     updateWalk(dt);
     updateBall(dt);
     applyCamera();
+    /**
+     * ⚠️ 매 프레임 그린다. "변한 게 있을 때만 그리기"를 실측해 봤지만, 그리지
+     *    않은 프레임에서 컴포지터가 드로잉 버퍼를 비워 캔버스가 통째로 빈 채로
+     *    남았다 (스틸 하니스가 180ms 시점에 4색짜리 백지를 뱉었다).
+     *    preserveDrawingBuffer 로도 타이밍에 따라 재현됐다. 배터리 이득보다
+     *    "구장이 안 보인다"가 훨씬 큰 손해라 되돌렸다 — 다시 시도하려면 이 증상을
+     *    먼저 재현해 볼 것 (감리 G16 의 dirty 플래그 항목).
+     */
     renderer.render(scene, camera);
   }
 
@@ -1327,8 +1308,14 @@
   scrCanvas.width = 512; scrCanvas.height = 288;
   var scrTex = new THREE.CanvasTexture(scrCanvas);
   var curAbbr = "ARS";
-  /** 전광판에 띄우는 벽돌 수 — __setup 이 채운다 */
-  var scrBricks = 0;
+  /**
+   * 전광판에 띄우는 벽돌 수 — __setup 이 채운다.
+   *
+   * ⚠️ null 이면 숫자를 아예 안 적는다. 모달 스틸은 (팀 × 레벨) 로만 굽기 때문에
+   *    실제 벽돌 수를 알 수 없는데, 예전에는 초기값 0 이 그대로 구워져 완공된
+   *    구장이 "0 벽돌"이라고 써 붙이고 있었다.
+   */
+  var scrBricks = null;
   /**
    * 전광판.
    *
@@ -1351,42 +1338,71 @@
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#e8e6e0";
     ctx.font = "700 64px 'Barlow Condensed', sans-serif";
-    ctx.fillText(curAbbr, 256, 84);
+    ctx.fillText(curAbbr, 256, scrBricks == null ? 148 : 84);
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 92px 'Barlow Condensed', sans-serif";
-    ctx.fillText(scrBricks.toLocaleString(), 256, 176);
+    if (scrBricks != null) {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 92px 'Barlow Condensed', sans-serif";
+      ctx.fillText(scrBricks.toLocaleString(), 256, 176);
 
-    ctx.fillStyle = "#8a8d98";
-    ctx.font = "700 30px 'IBM Plex Sans KR', sans-serif";
-    ctx.fillText("팬들이 쌓은 벽돌", 256, 240);
+      ctx.fillStyle = "#8a8d98";
+      ctx.font = "700 30px 'IBM Plex Sans KR', sans-serif";
+      ctx.fillText("팬들이 쌓은 벽돌", 256, 240);
+    }
     scrTex.needsUpdate = true;
   }
 
   var screenGroup = new THREE.Group();
+  var SCR_W = 26, SCR_H = 14.6;
+  /** 기둥은 시공 높이에 따라 길이가 달라진다 — 따로 담아 두고 다시 세운다 */
+  var screenLegs = new THREE.Group();
+  var legMat = new THREE.MeshLambertMaterial({ color: 0x2a2e38 });
   (function () {
-    var SW = 26, SH = 14.6;
     var frame = new THREE.Mesh(
-      new THREE.BoxGeometry(1.2, SH + 2, SW + 2),
+      new THREE.BoxGeometry(1.2, SCR_H + 2, SCR_W + 2),
       new THREE.MeshLambertMaterial({ color: 0x1c1f27 })
     );
     screenGroup.add(frame);
-    var face = new THREE.Mesh(
-      new THREE.PlaneGeometry(SW, SH),
-      new THREE.MeshBasicMaterial({ map: scrTex })
-    );
-    face.rotation.y = Math.PI / 2;
-    face.position.x = 0.75;
-    screenGroup.add(face);
-    /* 지지 기둥 2개 */
-    var legMat = new THREE.MeshLambertMaterial({ color: 0x2a2e38 });
-    [-SW / 3, SW / 3].forEach(function (lz) {
-      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 30, 0.8), legMat);
-      leg.position.set(-0.4, -SH / 2 - 15, lz);
-      screenGroup.add(leg);
+    // ⚠️ 화면은 앞뒤 두 장이다. 예전에는 피치 쪽 한 장뿐이라, 반대에서 보면
+    //    거의 검정인 프레임의 뒷등만 보였다 — 히어로 컷의 시선 중심이 검은
+    //    구멍이 되던 원인이다 (감리 M4)
+    [1, -1].forEach(function (dir) {
+      var face = new THREE.Mesh(
+        new THREE.PlaneGeometry(SCR_W, SCR_H),
+        new THREE.MeshBasicMaterial({ map: scrTex })
+      );
+      face.rotation.y = (dir * Math.PI) / 2;
+      face.position.x = dir * 0.75;
+      screenGroup.add(face);
     });
+    screenGroup.add(screenLegs);
   })();
   scene.add(screenGroup);
+  /**
+   * 지지 기둥을 지금 시공된 높이 위에 다시 세운다.
+   *
+   * ⚠️ 예전에는 길이 30 짜리를 통째로 매달아 둬서 아래끝이 월드 y = −3.3, 즉
+   *    지면을 뚫고 내려갔다. 굵기도 0.8 이라 한 변 1.92 인 복셀 구장에서 이쑤시개
+   *    두 개가 대형 패널을 든 형상이었다 (감리 M4).
+   */
+  function layoutScreenLegs() {
+    for (var i = screenLegs.children.length - 1; i >= 0; i--) {
+      var old = screenLegs.children[i];
+      old.geometry.dispose();
+      screenLegs.remove(old);
+    }
+    var topY = screenGroup.position.y - SCR_H / 2;
+    [-SCR_W / 3, SCR_W / 3].forEach(function (lz) {
+      var floor = groundHeightAt(screenGroup.position.x, screenGroup.position.z + lz);
+      if (!isFinite(floor)) floor = SURFACE;
+      var h = topY - floor;
+      if (h <= 0) return;
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(WS * 0.96, h, WS * 0.96), legMat);
+      // screenGroup 기준 로컬 좌표 — 아래끝이 딛는 면에 정확히 닿는다
+      leg.position.set(-0.4, -SCR_H / 2 - h / 2, lz);
+      screenLegs.add(leg);
+    });
+  }
   /**
    * 전광판 갱신 — 값이 바뀔 때만. 매 프레임 도는 루프를 두지 않는다.
    * (상시 애니메이션 금지 판정 · 감리 G16)
@@ -1527,6 +1543,7 @@
    */
   function setScreenLevel(level) {
     if (level != null) screenGroup.visible = level >= 6;
+    if (screenGroup.visible) layoutScreenLegs();
   }
   window.__shot = function (o) {
     o = o || {};
