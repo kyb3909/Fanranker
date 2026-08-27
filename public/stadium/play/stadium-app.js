@@ -966,7 +966,9 @@
       scene.add(player);
       drawNumber();
     }
-    player.position.set(0, SURFACE, 4);
+    var foot = findFooting(0, 2);
+    player.position.set(foot.x, foot.y, foot.z);
+    lastFooting = { x: foot.x, y: foot.y, z: foot.z };
     player.visible = true;
     walkMode = true;
     // 조작을 알려주는 자리가 화면 어디에도 없었다 — 걷기 모드는 이 지면의 유일한
@@ -1098,6 +1100,30 @@
     return y === HM_EMPTY ? Infinity : y * WS + SURFACE;
   }
 
+  /**
+   * 딛고 설 자리를 찾는다 — 격자 (gx0, gz0) 에서 바깥으로 링을 넓혀 가며
+   * 실제로 지어진 첫 칸을 돌려준다.
+   *
+   * ⚠️ 스폰을 좌표에 고정해 두면 안 된다. 시공률이 낮으면 그 자리에 아직 블록이
+   *    없어서 발밑도 사방도 전부 미시공으로 잡히고, 이동 판정이 모두 막혀 **한 발도
+   *    못 움직인다**. 레벨 1(시공 6%) 아스날에서 실제로 그랬다 — 잔디가 절반만
+   *    깔린 그 경계에 세워졌다.
+   */
+  function findFooting(gx0, gz0) {
+    for (var r = 0; r <= 60; r++) {
+      for (var dx = -r; dx <= r; dx++) {
+        for (var dz = -r; dz <= r; dz++) {
+          if (r > 0 && Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue; // 테두리만
+          var h = groundHeightAt((gx0 + dx) * WS, (gz0 + dz) * WS);
+          if (h !== Infinity) return { x: (gx0 + dx) * WS, y: h, z: (gz0 + dz) * WS };
+        }
+      }
+    }
+    return { x: gx0 * WS, y: SURFACE, z: gz0 * WS };
+  }
+  /** 마지막으로 실제로 밟았던 자리 — 빈 곳에 갇히면 여기로 되돌린다 */
+  var lastFooting = null;
+
   function updateWalk(dt) {
     if (!walkMode || !player) return;
     var fwd = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
@@ -1132,8 +1158,21 @@
     }
     /* 중력 + 지형 착지 */
     var floorH = groundHeightAt(player.position.x, player.position.z);
-    // ⚠️ 0 이 아니라 SURFACE. 0 은 잔디 윗면보다 반 칸 아래라 처박힌다 (감리 G5)
-    if (floorH === Infinity) floorH = SURFACE;
+    if (floorH === Infinity) {
+      // 발밑이 비었다. 예전에는 SURFACE 로 때워 허공에 세워 뒀는데, 사방도 미시공
+      // 이면 이동 판정이 전부 막혀 **영영 갇힌다**. 마지막으로 밟았던 자리로 되돌린다.
+      if (lastFooting) {
+        player.position.set(lastFooting.x, lastFooting.y, lastFooting.z);
+        pvy = 0;
+        onGround = true;
+        floorH = lastFooting.y;
+      } else {
+        // ⚠️ 0 이 아니라 SURFACE. 0 은 잔디 윗면보다 반 칸 아래라 처박힌다 (감리 G5)
+        floorH = SURFACE;
+      }
+    } else if (onGround) {
+      lastFooting = { x: player.position.x, y: floorH, z: player.position.z };
+    }
     player.position.y += pvy * dt;
     pvy -= 26 * dt;
     if (player.position.y <= floorH) {
@@ -1203,7 +1242,12 @@
   scene.add(ball);
   var bvel = new THREE.Vector3();
   function resetBall() {
-    ball.position.set(0, SURFACE + 0.62, 4);
+    // 캐릭터와 같은 자리에 놓으면 겹쳐서 밀려 굴러 나간다 — 한 칸 비켜 놓되
+    // 발로 찰 수 있는 거리(3.4) 안에 둔다. 여기도 지어진 땅이어야 한다.
+    var gx = player ? Math.round(player.position.x / WS) : 0;
+    var gz = player ? Math.round(player.position.z / WS) : 2;
+    var f = findFooting(gx + 1, gz + 1);
+    ball.position.set(f.x, f.y + 0.62, f.z);
     bvel.set(0, 0, 0);
     ball.visible = true;
   }
