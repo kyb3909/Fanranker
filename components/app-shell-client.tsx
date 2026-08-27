@@ -24,7 +24,10 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   const pathname = usePathname()
   // admin 은 완전히 자체 레이아웃 (헤더·탭바 전부 제거). 메타버스는 홈페이지
   // 서비스의 일부라 헤더·탭바 유지 — 단 배너는 메인 피드에서만.
-  const hideChrome = pathname.startsWith("/admin")
+  // 경기장 입장(/stadium/{team}/enter)은 걸어다니는 풀스크린 3D 화면이라 헤더가
+  // HUD 를 덮는다 — admin 과 같은 취급으로 크롬을 걷는다. 지면이 자체 "지도로"를 준다.
+  const isStadiumPlay = /^\/stadium\/[^/]+\/enter$/.test(pathname)
+  const hideChrome = pathname.startsWith("/admin") || isStadiumPlay
   const isHome = pathname === "/"
   // 푸터 — chrome 노출 페이지에만. 풀스크린 다크 캔버스(스타디움·메타버스)는 제외.
   const hideFooter =

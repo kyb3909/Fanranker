@@ -149,11 +149,11 @@ export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
           )}
 
           <div className="mt-5 flex gap-2">
-            {done ? (
-              <Button variant="outline" className="flex-1" disabled>
-                입장하기 — 준비 중
-              </Button>
-            ) : null}
+            {/* 완공 전에도 들어갈 수 있다 — 지금 쌓인 만큼만 서 있는 구장을 보는 게
+                이 루프의 보상이다 (평가 R1-P1-7: 건설 중일수록 보여줄 게 많다) */}
+            <Button asChild variant="outline" className="flex-1">
+              <Link href={`/stadium/${row.teamId}/enter`}>경기장 입장</Link>
+            </Button>
             <Button
               asChild
               className="flex-1"

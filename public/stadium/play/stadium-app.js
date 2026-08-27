@@ -435,6 +435,13 @@
   scene.add(ground);
 
   var WS = 2; // 월드 스케일 — 벽돌 수는 그대로, 렌더만 2배
+  /**
+   * 밟는 면의 높이.
+   * 블록은 한 변이 WS 이고 **중심**이 (x*WS, y*WS, z*WS) 에 놓인다. 그래서 y=0 인
+   * 잔디 블록의 윗면은 0 이 아니라 WS/2 다. 이걸 빼먹으면 캐릭터·공·골대가 전부
+   * 반 칸씩 잔디에 잠긴다.
+   */
+  var SURFACE = WS / 2;
   var unit = new THREE.BoxGeometry(0.96, 0.96, 0.96);
   var builtMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   var ghostMat = new THREE.MeshLambertMaterial({
@@ -631,11 +638,11 @@
     statueGroup.clear();
     if (plaza) {
       var adams = buildAdams();
-      adams.position.set(plaza * WS, 0, 12 * WS);
+      adams.position.set(plaza * WS, SURFACE, 12 * WS);
       adams.rotation.y = Math.PI / 2;
       statueGroup.add(adams);
       var henry = buildHenry();
-      henry.position.set(plaza * WS, 0, -12 * WS);
+      henry.position.set(plaza * WS, SURFACE, -12 * WS);
       henry.rotation.y = Math.PI / 2;
       statueGroup.add(henry);
     }
@@ -893,7 +900,7 @@
       scene.add(player);
       drawNumber();
     }
-    player.position.set(0, 0, 4);
+    player.position.set(0, SURFACE, 4);
     player.visible = true;
     walkMode = true;
     autoRotate = false;
@@ -939,9 +946,9 @@
   });
   /* 지형 높이 — 피치 0, 스탠드는 계단 (점프로 한 칸씩 오른다) */
   function groundHeightAt(px, pz) {
-    if (!terr) return 0;
+    if (!terr) return SURFACE;
     var bx = px / WS, bz = pz / WS;
-    if (inSuper(bx, bz, terr.arx, terr.arz)) return 0;
+    if (inSuper(bx, bz, terr.arx, terr.arz)) return SURFACE;
     var maxT = terr.tiers + terr.bigExtra;
     for (var t = 0; t < maxT; t++) {
       var rx1 = terr.arx + (t + 1) * terr.step, rz1 = terr.arz + (t + 1) * terr.step;
@@ -952,7 +959,7 @@
           var len = Math.hypot(bx, bz) || 1;
           if ((bx * terr.bigDir[0] + bz * terr.bigDir[1]) / len <= 0.62) return Infinity;
         }
-        return (1 + t) * WS;
+        return (1 + t) * WS + SURFACE;
       }
     }
     return Infinity; // 파사드 밖 — 벽
@@ -1062,7 +1069,7 @@
   scene.add(ball);
   var bvel = new THREE.Vector3();
   function resetBall() {
-    ball.position.set(0, 0.62, 4);
+    ball.position.set(0, SURFACE + 0.62, 4);
     bvel.set(0, 0, 0);
     ball.visible = true;
   }
@@ -1117,7 +1124,7 @@
       Math.abs(ball.position.x) > GOAL_X + 0.2 &&
       Math.abs(ball.position.x) < GOAL_X + 2.4 &&
       Math.abs(ball.position.z) < GOAL_Z &&
-      ball.position.y < GOAL_H
+      ball.position.y < GOAL_H + SURFACE
     ) {
       goalCooldown = 2;
       showToast("골인!!! ⚽");
@@ -1251,6 +1258,7 @@
     back.position.set(sideX > 0 ? 1.6 : -1.6, GOAL_H / 2, 0);
     g.add(back);
     g.position.x = sideX;
+    g.position.y = SURFACE;
     scene.add(g);
   }
   buildGoal(GOAL_X);
@@ -1328,6 +1336,30 @@
     renderer.render(scene, camera);
     return { total: TOTAL, built: builtCount };
   };
+  /**
+   * 지면 진입 훅 — app/stadium/[teamId]/enter 가 부른다.
+   * 우리 팀 구장을, 지금 쌓인 만큼만 세워서 연다.
+   */
+  window.__setup = function (o) {
+    o = o || {};
+    if (o.team && STADIUMS[o.team]) {
+      var sel = document.getElementById("stadium");
+      if (sel) sel.value = o.team;
+      initStadium(o.team);
+    }
+    if (o.pct != null) { builtCount = 0; applyCount(Math.round(TOTAL * o.pct)); }
+    if (ghostMesh) ghostMesh.visible = o.ghost !== false;
+    applyCamera();
+    return { total: TOTAL, built: builtCount };
+  };
+
+  /** 청사진(미시공 블록) 켜고 끄기 — 경기장 화면 전용 토글 (운영자 요청) */
+  window.__toggleGhost = function () {
+    if (!ghostMesh) return false;
+    ghostMesh.visible = !ghostMesh.visible;
+    return ghostMesh.visible;
+  };
+
   initStadium("emirates");
   applyCamera();
   tick();

@@ -138,6 +138,7 @@ type AnalyticsEvent =
   | { name: "marker_open"; params: { team_id: string } }
   | { name: "brick_cta_click"; params: { team_id: string; first_brick: boolean } }
   | { name: "brick_purchase"; params: { team_id: string; bricks: number } }
+  | { name: "stadium_enter"; params: { team_id: string; level: number } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

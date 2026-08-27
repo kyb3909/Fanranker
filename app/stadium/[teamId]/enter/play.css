@@ -1,0 +1,415 @@
+/*
+ * 경기장 입장 화면 스타일.
+ *
+ * 3D 시안(public/stadium/play/)의 원본 스타일을 그대로 가져와 중첩으로 감쌌다.
+ * 시안 앱(stadium-app.js)이 .hud · .kit · .dpad 같은 이름을 직접 찾으므로
+ * 이름을 바꾸면 안 되고, 이름이 흔해서 전역으로 풀어놓아도 안 된다 — 그래서 스코프.
+ */
+.stadium-play-scope {
+  & {
+    --ground: #14161d;
+    --panel: rgba(24, 27, 36, 0.82);
+    --line: rgba(232, 230, 224, 0.12);
+    --text: #e8e6e0;
+    --muted: #8a8d98;
+    --accent: #d0323f;
+    --ghost: #6db4ff;
+    --num: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  #scene {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+  }
+  #scene:active {
+    cursor: grabbing;
+  }
+
+  .hud {
+    position: fixed;
+    z-index: 2;
+  }
+  .brief {
+    top: 20px;
+    left: 20px;
+    max-width: 300px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    backdrop-filter: blur(6px);
+  }
+  .kicker {
+    font-family: var(--num);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .brief h1 {
+    margin: 2px 0 6px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .brief p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+  .brief .ghost-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--ghost);
+    opacity: 0.5;
+    margin-right: 4px;
+    vertical-align: -1px;
+  }
+  .brief .built-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    margin-right: 4px;
+    vertical-align: -1px;
+  }
+
+  .bar {
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    width: min(560px, calc(100% - 32px));
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px 14px;
+    backdrop-filter: blur(6px);
+  }
+  .bar .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .bar .nums {
+    font-family: var(--num);
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .bar .nums small {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .bar .pct {
+    font-family: var(--num);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .track {
+    margin-top: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: rgba(232, 230, 224, 0.1);
+    overflow: hidden;
+  }
+  #fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--accent);
+    transition: width 0.25s;
+  }
+  .btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btns button {
+    font-family: var(--body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(232, 230, 224, 0.08);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  .btns button:hover {
+    background: rgba(232, 230, 224, 0.15);
+  }
+  .btns button:focus-visible {
+    outline: 2px solid var(--ghost);
+    outline-offset: 1px;
+  }
+  .btns select {
+    font-family: var(--body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(232, 230, 224, 0.08);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+  .btns select:focus-visible {
+    outline: 2px solid var(--ghost);
+    outline-offset: 1px;
+  }
+  .btns #play {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .btns #play:hover {
+    background: #da4450;
+  }
+
+  #toast {
+    position: fixed;
+    right: 20px;
+    bottom: 110px;
+    z-index: 2;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: none;
+    border-right: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+      opacity 0.25s,
+      transform 0.25s;
+    pointer-events: none;
+  }
+  #toast.on {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .hint {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 2;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  @media (max-width: 640px) {
+    .brief {
+      max-width: 220px;
+      padding: 10px 12px;
+    }
+    .brief p.long {
+      display: none;
+    }
+    .hint {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #fill {
+      transition: none;
+    }
+  }
+
+  .kit {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 3;
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    backdrop-filter: blur(6px);
+    width: 210px;
+  }
+  .kit.on {
+    display: block;
+  }
+  .kit h2 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .kit .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .kit input[type="color"] {
+    width: 42px;
+    height: 26px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: none;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+  .kit input[type="text"] {
+    width: 44px;
+    font-family: var(--num);
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text);
+    background: rgba(232, 230, 224, 0.08);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3px 4px;
+  }
+  .kit select {
+    font-family: var(--body);
+    font-size: 12px;
+    font-weight: 700;
+    width: 100%;
+    color: var(--text);
+    background: rgba(232, 230, 224, 0.08);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-top: 8px;
+    cursor: pointer;
+  }
+  .dpad {
+    position: fixed;
+    right: 22px;
+    bottom: 120px;
+    z-index: 3;
+    display: none;
+  }
+  .dpad.on {
+    display: grid;
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(2, 46px);
+    gap: 6px;
+  }
+  .dpad button {
+    font-size: 18px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+  }
+  .dpad .up {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .dpad .lf {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .dpad .dn {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .dpad .rt {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .dpad .kick {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 20px;
+  }
+  .chat {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 108px;
+    z-index: 3;
+    display: none;
+    width: min(340px, calc(100% - 40px));
+  }
+  .chat.on {
+    display: block;
+  }
+  .chat input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    backdrop-filter: blur(6px);
+  }
+  .chat input:focus-visible {
+    outline: 2px solid var(--ghost);
+    outline-offset: 1px;
+  }
+
+  /* ── 지면 전용 (시안에는 없던 것) ── */
+
+  /* 시안보다 하단 바가 두꺼워서 채팅창이 겹친다 — 위로 올린다 */
+  .chat {
+    bottom: 176px;
+  }
+  .play-back {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: transparent;
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  .play-cover {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: var(--ground);
+    color: var(--muted);
+    font-family: var(--body);
+    font-size: 14px;
+  }
+
+  .play-cover__link {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 9px 18px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+}
