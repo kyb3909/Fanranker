@@ -971,11 +971,8 @@
     walkMode = true;
     // 조작을 알려주는 자리가 화면 어디에도 없었다 — 걷기 모드는 이 지면의 유일한
     // 체류 장치인데 진입 직후에 막혔다 (감리 C13)
-    showToast(
-      matchMedia("(pointer: coarse)").matches
-        ? "D패드로 이동 · ⚽ 로 슛"
-        : "WASD·방향키 이동 · Space 점프 · F 슛"
-    );
+    showToast(HINT_WALK);
+    setHint(HINT_WALK);
     autoRotate = false;
     dist = 12; pol = 1.18;
     resetBall();
@@ -987,6 +984,7 @@
   function exitWalk() {
     walkMode = false;
     keys = {}; // 나가면서 누르고 있던 키가 남으면 다음 입장 때 혼자 걸어간다 (감리 G7)
+    setHint(HINT_ORBIT);
     if (player) player.visible = false;
     ball.visible = false;
     camT.x = 0; camT.y = 16; camT.z = 0;
@@ -1015,6 +1013,22 @@
     KeyA: "left", ArrowLeft: "left",
     KeyD: "right", ArrowRight: "right",
   };
+  /**
+   * 화면 구석 안내.
+   *
+   * ⚠️ 예전에는 "드래그 회전 · 휠 확대" 한 줄로 고정이었다. 걷기로 들어가도 그대로라,
+   *    진입 토스트(1.8초)를 놓치면 조작을 알려주는 자리가 화면에 하나도 없었다.
+   *    특히 채팅창에 커서가 들어가면 이동키가 통째로 죽는데 그 사실도, 빠져나오는
+   *    방법도 어디에도 안 적혀 있었다 — "입장했는데 안 움직인다"의 실제 원인이다.
+   */
+  var hintEl = document.getElementById("hint");
+  var coarse = matchMedia("(pointer: coarse)").matches;
+  var HINT_ORBIT = "드래그 회전 · 휠 확대";
+  var HINT_WALK = coarse ? "D패드로 이동 · ⚽ 로 슛" : "WASD·방향키 이동 · Space 점프 · F 슛";
+  var HINT_CHAT = "Enter 로 전송 · Esc 로 조작 복귀";
+  function setHint(text) {
+    if (hintEl) hintEl.textContent = text;
+  }
   function isTyping() {
     var el = document.activeElement;
     return !!el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
@@ -1498,7 +1512,18 @@
       say(this.value.trim());
       this.value = "";
       this.blur(); // 전송 후 바로 움직일 수 있게 — 포커스가 남으면 WASD 가 채팅에 먹힌다
+    } else if (e.key === "Escape") {
+      this.blur(); // 쓰다 말고 조작으로 돌아가는 길
     }
+  });
+  // ⚠️ 채팅창에 커서가 있는 동안 이동키는 통째로 죽는다(그래야 채팅에 "was" 를 칠 수
+  //    있다). 문제는 그 사실이 화면 어디에도 안 보였다는 것이다 — 안내를 바꿔 준다.
+  chatInput.addEventListener("focus", function () { setHint(HINT_CHAT); });
+  chatInput.addEventListener("blur", function () { setHint(walkMode ? HINT_WALK : HINT_ORBIT); });
+  // 경기장을 클릭하면 조작으로 돌아온다 — 채팅창을 눌렀다가 갇히는 걸 푸는 가장
+  // 자연스러운 동작이다 (Esc 를 아는 사람만 나올 수 있으면 안 된다).
+  canvas.addEventListener("pointerdown", function () {
+    if (isTyping() && document.activeElement.blur) document.activeElement.blur();
   });
 
   /**

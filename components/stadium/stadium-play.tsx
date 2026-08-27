@@ -181,7 +181,10 @@ export function StadiumPlay({
         </p>
       </div>
 
-      <div className="hint">드래그 회전 · 휠 확대</div>
+      {/* 모드에 따라 앱이 문구를 갈아끼운다 (걷기 / 채팅 중) — id 로 잡는다 */}
+      <div className="hint" id="hint">
+        드래그 회전 · 휠 확대
+      </div>
       <div id="toast" role="status" />
 
       <div className="hud bar">
