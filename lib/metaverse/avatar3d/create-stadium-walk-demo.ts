@@ -12,12 +12,13 @@ import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator"
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent"
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader"
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color"
-import { Vector3 } from "@babylonjs/core/Maths/math.vector"
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector"
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial"
 import { Texture } from "@babylonjs/core/Materials/Textures/texture"
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture"
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder"
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder"
+import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder"
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode"
 import { Scene } from "@babylonjs/core/scene"
 import { getKit, DEFAULT_KIT_KEY } from "./kits"
@@ -28,10 +29,53 @@ const WALK_SPEED = 2.1
 const RUN_SPEED = 4.6
 const TURN_LERP = 0.18
 
+const BALL_RADIUS = 0.34
+const GOAL_HALF_Z = PITCH_LENGTH / 2 - 1.2
+const GOAL_HALF_X = 3.6
+const GOAL_HEIGHT = 2.6
+// how close the player must be, and how wide the strike cone is
+const KICK_RANGE = 1.9
+const KICK_POWER = 13
+const KICK_LIFT = 3.4
+const GRAVITY = 14
+const ROLL_FRICTION = 0.7 // velocity retained per second on the ground
+const BOUNCE = 0.42
+
 type ActionMotion = "jump" | "kick" | "cheer"
 
 export type StadiumWalkDemo = {
   dispose(): void
+}
+
+function paintBallTexture(scene: Scene) {
+  const texture = new DynamicTexture("match_ball_texture", { width: 512, height: 256 }, scene, true)
+  const ctx = texture.getContext() as CanvasRenderingContext2D
+  ctx.fillStyle = "#f3f3ee"
+  ctx.fillRect(0, 0, 512, 256)
+  ctx.fillStyle = "#15171c"
+  // staggered pentagon-ish patches read as a classic ball once wrapped
+  const rows = [
+    { y: 48, offset: 0 },
+    { y: 128, offset: 64 },
+    { y: 208, offset: 0 },
+  ]
+  for (const row of rows) {
+    for (let x = row.offset; x < 512 + 128; x += 128) {
+      ctx.beginPath()
+      const r = 26
+      for (let i = 0; i < 5; i++) {
+        const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2
+        const px = x + Math.cos(angle) * r
+        const py = row.y + Math.sin(angle) * r
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
+  texture.update()
+  return texture
 }
 
 function paintPitchTexture(scene: Scene) {
@@ -216,17 +260,39 @@ export async function createStadiumWalkDemo(canvas: HTMLCanvasElement): Promise<
   })
   await applyKitTexture(scene)
 
-  const ballNodes = [...scene.meshes, ...scene.transformNodes].filter(
+  // The GLB carries a ball rigged to the kick clip for the lab preview. On the
+  // pitch the ball is a real object you walk up to, so that one stays hidden.
+  const riggedBallNodes = [...scene.meshes, ...scene.transformNodes].filter(
     (node) => node.name === "ball" || node.name.startsWith("ball_primitive")
   )
+  riggedBallNodes.forEach((node) => node.setEnabled(false))
   imported.animationGroups.forEach((group) => group.stop())
+
+  const matchBall = CreateSphere("match_ball", { diameter: BALL_RADIUS * 2, segments: 20 }, scene)
+  const ballMaterial = new PBRMaterial("match_ball_material", scene)
+  ballMaterial.albedoTexture = paintBallTexture(scene)
+  ballMaterial.metallic = 0
+  ballMaterial.roughness = 0.55
+  matchBall.material = ballMaterial
+  matchBall.rotationQuaternion = Quaternion.Identity()
+  shadows.addShadowCaster(matchBall)
+
+  const ballVelocity = Vector3.Zero()
+  let goals = 0
+  let goalFlashUntil = 0
+
+  function resetBall() {
+    matchBall.position.set(0, BALL_RADIUS, 0)
+    ballVelocity.setAll(0)
+    matchBall.rotationQuaternion = Quaternion.Identity()
+  }
+  resetBall()
 
   let currentMotion = ""
   let activeAction: ActionMotion | null = null
   function playMotion(motion: string, loop: boolean) {
     if (currentMotion === motion) return
     imported.animationGroups.forEach((group) => group.stop())
-    ballNodes.forEach((node) => node.setEnabled(motion === "kick"))
     const target = imported.animationGroups.find((group) => group.name === motion)
     if (target) {
       target.play(loop)
@@ -262,7 +328,25 @@ export async function createStadiumWalkDemo(canvas: HTMLCanvasElement): Promise<
     if (action && !activeAction) {
       activeAction = action
       playMotion(action, false)
+      if (action === "kick") strikeBall()
     }
+  }
+
+  // The strike lands ~1/3 into the kick clip, when the boot reaches the ball.
+  function strikeBall() {
+    const toBall = matchBall.position.subtract(avatarRoot.position)
+    toBall.y = 0
+    const distance = toBall.length()
+    if (distance > KICK_RANGE) return
+    const facing = new Vector3(Math.sin(yaw), 0, Math.cos(yaw))
+    // aim along the player's facing, nudged toward wherever the ball actually
+    // sits so a slightly off-centre approach still connects
+    const aim = facing.scale(2).add(distance > 0.05 ? toBall.normalize() : facing)
+    aim.normalize()
+    setTimeout(() => {
+      ballVelocity.copyFrom(aim.scale(KICK_POWER))
+      ballVelocity.y = KICK_LIFT
+    }, 300)
   }
   function onKeyUp(event: KeyboardEvent) {
     pressed.delete(event.code)
@@ -270,11 +354,81 @@ export async function createStadiumWalkDemo(canvas: HTMLCanvasElement): Promise<
   window.addEventListener("keydown", onKeyDown)
   window.addEventListener("keyup", onKeyUp)
 
-  let yaw = Math.PI // face the near goal (toward the default camera)
+  // Kick off from behind the centre spot, facing the ball and the far goal.
+  let yaw = 0
+  avatarRoot.position.set(0, 0, -7)
   avatarRoot.rotation = new Vector3(0, yaw, 0)
+
+  function stepBall(dt: number, playerVelocity: Vector3) {
+    const ball = matchBall.position
+    // Dribble: running into a slow ball carries it along just ahead of the
+    // boot instead of punting it away.
+    const playerSpeed = playerVelocity.length()
+    if (playerSpeed > 0.1 && ballVelocity.lengthSquared() < playerSpeed * playerSpeed * 4) {
+      const gapVector = ball.subtract(avatarRoot.position)
+      gapVector.y = 0
+      if (gapVector.length() < 0.85) {
+        ballVelocity.x = playerVelocity.x * 1.35
+        ballVelocity.z = playerVelocity.z * 1.35
+      }
+    }
+
+    ballVelocity.y -= GRAVITY * dt
+    ball.addInPlace(ballVelocity.scale(dt))
+
+    if (ball.y <= BALL_RADIUS) {
+      ball.y = BALL_RADIUS
+      if (ballVelocity.y < 0) ballVelocity.y = -ballVelocity.y * BOUNCE
+      if (ballVelocity.y < 1.2) ballVelocity.y = 0
+      const decay = Math.pow(ROLL_FRICTION, dt)
+      ballVelocity.x *= decay
+      ballVelocity.z *= decay
+      if (Math.abs(ballVelocity.x) < 0.05) ballVelocity.x = 0
+      if (Math.abs(ballVelocity.z) < 0.05) ballVelocity.z = 0
+    }
+
+    const insideGoalMouth = Math.abs(ball.x) < GOAL_HALF_X && ball.y < GOAL_HEIGHT
+    if (Math.abs(ball.z) > GOAL_HALF_Z && insideGoalMouth) {
+      if (Date.now() > goalFlashUntil) {
+        goals += 1
+        goalFlashUntil = Date.now() + 1800
+        canvas.dataset.goals = String(goals)
+        if (!activeAction) {
+          activeAction = "cheer"
+          playMotion("cheer", false)
+        }
+        window.setTimeout(resetBall, 1200)
+      }
+    } else {
+      // stay in play: bounce off the touchlines and the back walls
+      const limitX = PITCH_WIDTH / 2
+      const limitZ = PITCH_LENGTH / 2
+      if (Math.abs(ball.x) > limitX) {
+        ball.x = Math.sign(ball.x) * limitX
+        ballVelocity.x *= -0.6
+      }
+      if (Math.abs(ball.z) > limitZ) {
+        ball.z = Math.sign(ball.z) * limitZ
+        ballVelocity.z *= -0.6
+      }
+    }
+
+    // roll: spin about the axis perpendicular to travel
+    const horizontal = new Vector3(ballVelocity.x, 0, ballVelocity.z)
+    const speed = horizontal.length()
+    if (speed > 0.01 && matchBall.rotationQuaternion) {
+      const axis = Vector3.Cross(Vector3.Up(), horizontal).normalize()
+      const spin = Quaternion.RotationAxis(axis, (speed * dt) / BALL_RADIUS)
+      matchBall.rotationQuaternion = spin.multiply(matchBall.rotationQuaternion)
+    }
+    canvas.dataset.ballPos = `${ball.x.toFixed(1)},${ball.z.toFixed(1)}`
+  }
+
+  const playerVelocity = Vector3.Zero()
 
   scene.onBeforeRenderObservable.add(() => {
     const dt = engine.getDeltaTime() / 1000
+    playerVelocity.setAll(0)
     const forward =
       (pressed.has("KeyW") || pressed.has("ArrowUp") ? 1 : 0) -
       (pressed.has("KeyS") || pressed.has("ArrowDown") ? 1 : 0)
@@ -293,6 +447,7 @@ export async function createStadiumWalkDemo(canvas: HTMLCanvasElement): Promise<
       direction.normalize()
       const running = pressed.has("ShiftLeft") || pressed.has("ShiftRight")
       const speed = running ? RUN_SPEED : WALK_SPEED
+      playerVelocity.copyFrom(direction.scale(speed))
       avatarRoot.position.addInPlace(direction.scale(speed * dt))
       avatarRoot.position.x = Math.max(
         -PITCH_WIDTH / 2,
@@ -313,6 +468,8 @@ export async function createStadiumWalkDemo(canvas: HTMLCanvasElement): Promise<
     } else if (!activeAction) {
       playMotion("idle", true)
     }
+
+    stepBall(dt, playerVelocity)
 
     // camera follows the avatar
     const desired = avatarRoot.position.add(new Vector3(0, 2, 0))

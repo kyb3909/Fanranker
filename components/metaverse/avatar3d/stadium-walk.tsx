@@ -8,8 +8,8 @@ const demoModulePromise = import("@/lib/metaverse/avatar3d/create-stadium-walk-d
 const keyGuide = [
   { keys: "W A S D / 방향키", label: "이동" },
   { keys: "Shift", label: "달리기" },
+  { keys: "공에 다가가 K", label: "슛" },
   { keys: "Space", label: "점프" },
-  { keys: "K", label: "슛" },
   { keys: "C", label: "환호" },
   { keys: "드래그", label: "카메라 회전" },
 ]
@@ -18,6 +18,16 @@ export function StadiumWalk() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const demoRef = useRef<StadiumWalkDemo | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [goals, setGoals] = useState(0)
+
+  // The demo owns the scene loop; mirror its goal counter for the HUD.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const next = Number(canvasRef.current?.dataset.goals ?? 0)
+      setGoals((current) => (current === next ? current : next))
+    }, 250)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     let disposed = false
@@ -51,6 +61,9 @@ export function StadiumWalk() {
         className="h-[70vh] min-h-[420px] w-full touch-none outline-none"
         aria-label="경기장 워크 데모"
       />
+      <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/85 px-4 py-1.5 text-sm font-semibold text-slate-100">
+        <span className="text-indigo-300">GOAL</span> {goals}
+      </div>
       <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap justify-center gap-2">
         {keyGuide.map((item) => (
           <span
