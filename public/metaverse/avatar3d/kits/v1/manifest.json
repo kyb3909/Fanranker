@@ -136,11 +136,11 @@
     {
       "kitKey": "west-london-blue-26-home",
       "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/west-london-blue-26-home.r1.48d47957.png",
-      "sha256": "48d479576fb42698eca6a56ed05c3f7326a5640c8553394c733541b499943d73",
+      "url": "/metaverse/avatar3d/kits/v1/west-london-blue-26-home.r1.954d8aef.png",
+      "sha256": "954d8aef32f59b171fc02d59bf431d27bf2dd82700b961e6e1f86c69d0d0fc2b",
       "width": 1024,
       "height": 1024,
-      "byteSize": 6909,
+      "byteSize": 7783,
       "generatedWith": "sharp-0.34.5"
     }
   ]

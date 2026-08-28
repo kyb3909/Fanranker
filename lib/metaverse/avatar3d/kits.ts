@@ -385,7 +385,7 @@ const ORIGINAL_KIT_CATALOG: readonly KitItem[] = [
 
 export const CLUB_SPONSORS: Record<ClubKey, KitSponsor> = {
   arsenal: { text: "Fly Emirates", style: "serif-italic", logo: "fly-emirates.svg" },
-  chelsea: { text: "SAMSUNG", style: "wide" },
+  chelsea: { text: "SAMSUNG", style: "wide", logo: "samsung.svg" },
   "manchester-united": { text: "Snapdragon", style: "sans" },
   liverpool: { text: "Standard Chartered", style: "sans", logo: "standard-chartered.svg" },
   "manchester-city": { text: "ETIHAD AIRWAYS", style: "wide", logo: "etihad.svg" },
