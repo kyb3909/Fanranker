@@ -46,11 +46,11 @@
     {
       "kitKey": "manchester-red-26-home",
       "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/manchester-red-26-home.r1.eb7238fb.png",
-      "sha256": "eb7238fb61a90e7f2121155d05d625818129043e1a5b20923ea5c3f96faba8ab",
+      "url": "/metaverse/avatar3d/kits/v1/manchester-red-26-home.r1.b702d210.png",
+      "sha256": "b702d210adfbefaec4b8547b9f212b803e81ba37fe034b76c4688d3d3ab6e4ff",
       "width": 1024,
       "height": 1024,
-      "byteSize": 8407,
+      "byteSize": 8031,
       "generatedWith": "sharp-0.34.5"
     },
     {

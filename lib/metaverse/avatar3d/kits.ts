@@ -386,7 +386,8 @@ const ORIGINAL_KIT_CATALOG: readonly KitItem[] = [
 export const CLUB_SPONSORS: Record<ClubKey, KitSponsor> = {
   arsenal: { text: "Fly Emirates", style: "serif-italic", logo: "fly-emirates.svg" },
   chelsea: { text: "SAMSUNG", style: "wide", logo: "samsung.svg" },
-  "manchester-united": { text: "Snapdragon", style: "sans", logo: "snapdragon.svg" },
+  // 가로 락업은 치비 가슴에서 엠블럼이 점이 됨 — 세로 재배치본(엠블럼 위, 워드마크 아래) 사용
+  "manchester-united": { text: "Snapdragon", style: "sans", logo: "snapdragon-stacked.png" },
   liverpool: { text: "Standard Chartered", style: "sans", logo: "standard-chartered.svg" },
   "manchester-city": { text: "ETIHAD AIRWAYS", style: "wide", logo: "etihad.svg" },
   tottenham: { text: "AIA", style: "wide", logo: "aia.svg" },
