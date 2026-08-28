@@ -26,7 +26,9 @@
     "test:e2e:cleanup": "tsx tests/e2e/setup/bot-factory-cli.ts cleanup",
     "lint:slop": "node scripts/lint-slop.mjs",
     "design:check": "node scripts/check-design-tokens.mjs",
-    "design:report": "node scripts/check-design-tokens.mjs --report"
+    "design:report": "node scripts/check-design-tokens.mjs --report",
+    "avatar:kits": "tsx scripts/avatar3d/generate-kit-textures.ts",
+    "avatar:verify": "tsx scripts/avatar3d/verify-avatar-lab.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -38,6 +40,8 @@
     ]
   },
   "dependencies": {
+    "@babylonjs/core": "6.49.0",
+    "@babylonjs/loaders": "6.49.0",
     "@clerk/nextjs": "^6.39.3",
     "@google-analytics/data": "^5.2.1",
     "@next/third-parties": "^16.1.6",

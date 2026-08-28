@@ -1,0 +1,767 @@
+{
+  "version": 1,
+  "atlasSize": 1024,
+  "generatedWith": "sharp-0.34.5",
+  "entries": [
+    {
+      "kitKey": "bavarian-red-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/bavarian-red-26-home.r1.61eea438.png",
+      "sha256": "61eea438cbe31ac495ca87e33c3938af352bd3e127a71e2edb4f6af6f8655d15",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6381,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "bavarian-red-blue-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/bavarian-red-blue-retro.r1.f5fadca6.png",
+      "sha256": "f5fadca6f24a1c9569a613460370aef70631a76ba4398a1d7866169581993806",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6268,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "bavarian-white-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/bavarian-white-26-away.r1.991b577a.png",
+      "sha256": "991b577a74f1586d06a972df850e514a04388c8a914808fad391352043fff012",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5667,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "bavarian-yellow-blue-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/bavarian-yellow-blue-retro.r1.5c14923a.png",
+      "sha256": "5c14923a264fbeb30ea1610c618d39a50331ea622d445bd3061085461a16fd7d",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9111,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "catalan-gold-stripe-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/catalan-gold-stripe-retro.r1.48e2b050.png",
+      "sha256": "48e2b050624d9b9321a84ee92848a0209adacf3120524b9179fa5ff8603448bf",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9496,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "catalan-nightfade-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/catalan-nightfade-26-away.r1.c25e0a61.png",
+      "sha256": "c25e0a61420ff1351cfb8935b94a6742a608b3b3c04b932138e9c00221f6c8fb",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 16574,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "catalan-orange-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/catalan-orange-retro.r1.5c669388.png",
+      "sha256": "5c6693883894fffc43e35aeeca5d54630c0355cb87d10d4649ea7e6ed9db73fb",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9569,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "catalan-stripe-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/catalan-stripe-26-home.r1.9c649850.png",
+      "sha256": "9c649850c00ae0603156f9ed48679718367d1831bebbcf848182998b3ae73310",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9978,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "classic-yellow-navy",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/classic-yellow-navy.r1.35e60d96.png",
+      "sha256": "35e60d96fe7ab519256aaf04d37dd2a01ef6c0f643ec17e84301ffeac2ad47a6",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10851,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "cobalt-current",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/cobalt-current.r1.bb4180c6.png",
+      "sha256": "bb4180c6f3ab34791d567e02ecf423fc5cf5b780697bd48d392070700b898267",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10444,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "ivory-orbit-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/ivory-orbit-away.r1.b964ffd7.png",
+      "sha256": "b964ffd7cc91bcd1bba984d1475bc1569c0b06f015119c59815cbcec37474ec8",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 14441,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-blue-red-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-blue-red-retro.r1.2b45ddc8.png",
+      "sha256": "2b45ddc8bd4a1a196074ce9471f50609518a07a020d0f08bbebf6455763b9cf4",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5403,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-double-stripe-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-double-stripe-retro.r1.b1feac39.png",
+      "sha256": "b1feac39a0a08bf19fd37294d04b70fe0ff0e590889142f1918a619d29f2e31c",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7242,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-forest-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-forest-26-away.r1.88c62181.png",
+      "sha256": "88c621815d5462ae0d806ca2799bbaf6d49510aa2d24d950f2fe7dd5c95db552",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8503,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-navy-gold-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-navy-gold-retro.r1.ba99b52a.png",
+      "sha256": "ba99b52af73ec5481a742c356d322ea49de0dc8d1465cb0ae37753d2e97f06e2",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9893,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-stripe-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-stripe-26-home.r1.3fb3d215.png",
+      "sha256": "3fb3d2156f315666930d079cfb8d56f355a14eea3824f0ba8a3fa5fed5329714",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7141,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-stripe-night-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-stripe-night-26-away.r1.c6a138d7.png",
+      "sha256": "c6a138d79669498aa6b5e9ac4de86fe00dbfc79791948a4b7962010df6b8881f",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4998,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-violet-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-violet-retro.r1.5d35a9e9.png",
+      "sha256": "5d35a9e9b85ffbc348f6e869740b1ab3dc5e21d78a1dde83658f79c91dd82d7f",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8423,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "madrid-white-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/madrid-white-26-home.r1.6023c57e.png",
+      "sha256": "6023c57e63fda294920e684460904fda84392db9f282e0546aa9df9d39dce937",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8589,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-midnight-gold-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-midnight-gold-retro.r1.bef35062.png",
+      "sha256": "bef35062da7a86b8f9f3ce266275c0403367fcdf2854d3f8e40a72cdd6706b3b",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5489,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-neon-navy-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-neon-navy-retro.r1.98769597.png",
+      "sha256": "98769597f4579edf6f250e2b821da9265c2be49d3327305ef38c641b5dee470c",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7362,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-red-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-red-26-home.r1.1edf3b44.png",
+      "sha256": "1edf3b44ff3765623e0be7f1f95300750d3b7d5a891f6c0efb367834afc3685a",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6589,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-red-black-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-red-black-retro.r1.cfba11ed.png",
+      "sha256": "cfba11ed3618601a4bfe99ded4a8e951ff02ca451c9c531d16197496f12e72bd",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9331,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-royal-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-royal-26-away.r1.7119d6c8.png",
+      "sha256": "7119d6c8da89915f00b99bb7ff9e035dd8d35c36ffe3f04d57a942a4c527e797",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6501,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-sky-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-sky-26-home.r1.3b3d07dd.png",
+      "sha256": "3b3d07dd05a7369c2ed1e4ae2a54a1ea4de2ae7e01ddb874171baf4236841b11",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 16121,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-white-rail-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-white-rail-retro.r1.09dd2dc1.png",
+      "sha256": "09dd2dc1044cff02fc439c0ed983275b293471cc09d9bba844789fa4f757e7ec",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7414,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "manchester-worker-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/manchester-worker-26-away.r1.bc3f26db.png",
+      "sha256": "bc3f26dba89160eddac60b5dfcad1a7fe9ec804b5fcc606560c57c8f2ae968f0",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9959,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "mersey-deep-red-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/mersey-deep-red-26-home.r1.611d50e7.png",
+      "sha256": "611d50e72c711aa89713ba80304c7517c4bb11a2f4d3bbc275cbd0f60ebfa8f7",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 17539,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "mersey-teal-quarter-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/mersey-teal-quarter-retro.r1.967297d0.png",
+      "sha256": "967297d0ce76acdaf2fab35fe5eb2f2be656a8b7aa85523df6cc98152769182d",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 13624,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "mersey-title-red-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/mersey-title-red-retro.r1.cdb03a5d.png",
+      "sha256": "cdb03a5d0373f0ced5a4484e7dc4438fd024d8ae336489bc44403cb1aefc1a14",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10909,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "mersey-white-signal-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/mersey-white-signal-26-away.r1.fd6e65e9.png",
+      "sha256": "fd6e65e9a7db2644c67622800661495d75afbe344c65511eb558cc26a1047771",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 11610,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-blue-black-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-blue-black-26-home.r1.7703d4d2.png",
+      "sha256": "7703d4d2ba5b6ca0dac194f3fd580bdc40c540e454e0a343272e89c44d8bdd06",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6025,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-blue-gold-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-blue-gold-retro.r1.3e0b5cee.png",
+      "sha256": "3e0b5ceef800b5f82d882cb6a78757dceab2e125580ed7a04365fe31f93518bf",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5734,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-europe-white-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-europe-white-retro.r1.8d1018b1.png",
+      "sha256": "8d1018b1de095f3edb0934af0e7b28f316824c3d5e73d3650296b303507b16ba",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10022,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-pinstripe-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-pinstripe-26-away.r1.674b1078.png",
+      "sha256": "674b1078eb5369f5d4954e68fa14dafb387d856984080cb3158d0846802a1feb",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5674,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-red-black-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-red-black-26-home.r1.8a033a41.png",
+      "sha256": "8a033a41f341dc1415e515060bf0ea31a3a9d63afde6df1273e22b792af7a63e",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 11311,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-shadow-stripe-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-shadow-stripe-retro.r1.afbfcba1.png",
+      "sha256": "afbfcba1a718bffba5f9cf208ac8885fcd08f969ec409bdca90d06bb1ef9d10e",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10862,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-white-gold-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-white-gold-26-away.r1.1905c65c.png",
+      "sha256": "1905c65c66747d40c4261b5036c8cfcfa3d582de4b9366c05ac6c5305288c5f6",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8118,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "milan-white-sash-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/milan-white-sash-retro.r1.99ae5c40.png",
+      "sha256": "99ae5c40493a40f8c6c418b2e8adf6942bed78a54163cced98e1d254af039fd0",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4811,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "naples-denim-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/naples-denim-retro.r1.f539834e.png",
+      "sha256": "f539834e80fa6620f32d8171b336d4220b7ecbfe97f3c0514d6ded803f1ce74b",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4513,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "naples-red-sky-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/naples-red-sky-retro.r1.3629258e.png",
+      "sha256": "3629258e63deebb5041f4153fc65f8b43f1ceea8796bd4d4d3b500e184486247",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4740,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "naples-sky-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/naples-sky-26-home.r1.9f1c1934.png",
+      "sha256": "9f1c19349a4df0a635bf7b26ace468308f1a2b982bf854c852631e96b5caa158",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5272,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "naples-world-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/naples-world-26-away.r1.96fc0da6.png",
+      "sha256": "96fc0da6d4e32192035d3c0a8971c09f801b2c342025ac8f8c53efdc512af9f4",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5748,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "north-london-lily-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/north-london-lily-26-home.r1.9922c3b0.png",
+      "sha256": "9922c3b02798c53272fa9c6fa36a705cf7bb2ebfff53a66de051c9d74c50fb9a",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8450,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "north-london-nightflow-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/north-london-nightflow-26-away.r1.5d1ea667.png",
+      "sha256": "5d1ea6678a1fb23c9f419eb8f621a8078dea4f63c2e96593fa80befae9b46b46",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 11154,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "north-london-sky-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/north-london-sky-retro.r1.3d8d1407.png",
+      "sha256": "3d8d14075af1968a1497e36fb4fe279be51b5440dae907ea8a1bb301ec003b9b",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8042,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "north-london-yellow-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/north-london-yellow-retro.r1.30b70469.png",
+      "sha256": "30b7046926c3163a847db5f9b1ec71eea4a4301fe9510ca79a194b9679d0e81f",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7241,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "paris-hechter-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/paris-hechter-retro.r1.c8d1fe3a.png",
+      "sha256": "c8d1fe3aa8b73f6a7652da350c925d70d6fea9a4078003ebf7a894b2b52c37db",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 12660,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "paris-royal-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/paris-royal-26-home.r1.373df1a0.png",
+      "sha256": "373df1a0db6b381e56460ff6e73101f6421b6b0cf0aff4d1ff86ac8d1dd79a06",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 12602,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "paris-silver-night-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/paris-silver-night-retro.r1.fbf81670.png",
+      "sha256": "fbf81670abc19f4c4b3781782d5b775abc4074640f8ec3856d7dbbb56004149e",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 11052,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "paris-white-sound-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/paris-white-sound-26-away.r1.2e6c5c74.png",
+      "sha256": "2e6c5c7484b69922f0c8cc4cb8e37783f6e43722d7452771f9a79e03a7dbcfb4",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 13619,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "red-horizon-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/red-horizon-home.r1.484848ef.png",
+      "sha256": "484848ef937e0e9fed32cb434e72fc224fafd1a6557cb7a627ffab461d188235",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 13454,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rhine-black-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rhine-black-26-away.r1.3f676dc9.png",
+      "sha256": "3f676dc9280ef8fece789402e39be2976d883b2fd747dce3901a4d4805fe7bf6",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4257,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rhine-red-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rhine-red-26-home.r1.8af93b27.png",
+      "sha256": "8af93b276513cc7ebc82c50cf861b67503aadabc1f61e0bb8ce3f972e3a73601",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 9710,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rhine-stripe-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rhine-stripe-retro.r1.63fd6b0a.png",
+      "sha256": "63fd6b0ae4fb8036deaa98fb30ba723f6e7f1eaf7ccb54483e178d45c55c55df",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6588,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rhine-white-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rhine-white-retro.r1.42803029.png",
+      "sha256": "428030297c17979cf64ed193a272402fd359b87233dbc9bdb7b43e57ec416313",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6470,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rome-black-gold-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rome-black-gold-retro.r1.861b8492.png",
+      "sha256": "861b8492e3a3525ec24e86902256e57c7549f2555806b3a49daf7c06694cc241",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4196,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rome-ivory-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rome-ivory-26-away.r1.5a06b810.png",
+      "sha256": "5a06b8108fb834b662e1c94db53f1d44bf805fd936f65d8b11a2bf842ffda6f8",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5727,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rome-scudetto-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rome-scudetto-retro.r1.efb3c7be.png",
+      "sha256": "efb3c7be5445af480586ff1945e273f87f7deed47fd632bb75d0330f05dec895",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6665,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "rome-wine-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/rome-wine-26-home.r1.2f2e3df9.png",
+      "sha256": "2f2e3df916089e43c6d4d455706be5def9140451a4b1e7c40bbe74636a8d1624",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4741,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "royal-violet-third",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/royal-violet-third.r1.fad7a862.png",
+      "sha256": "fad7a8626921a7dac7cceea20f4cc52610a0b32c20073d630fdc16f9ed32737f",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10642,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "ruhr-black-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/ruhr-black-26-away.r1.c018a2fa.png",
+      "sha256": "c018a2fa9dddeaa140bb3b8858eb5f253a41672f8f5ddde13241a212664d84c7",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 12641,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "ruhr-neon-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/ruhr-neon-retro.r1.ba4785d5.png",
+      "sha256": "ba4785d52934e16d804b7b7d8f882da9fb11479b4200ebddf9d593f8195fd616",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7205,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "ruhr-white-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/ruhr-white-retro.r1.29432c2e.png",
+      "sha256": "29432c2e9a59f8ff0907cc5ab3e8a1d7dd7fb727858e06d5bc43f9b896ab31ff",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10888,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "ruhr-yellow-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/ruhr-yellow-26-home.r1.8cdf33b5.png",
+      "sha256": "8cdf33b5187bb6996705b35b9fd14c40ceb63555300ac03d6515a3d5e794ea71",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7225,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "sand-relay",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/sand-relay.r1.87f8cd43.png",
+      "sha256": "87f8cd43b7a5b80da79749578055c3259f3f6d5ec53ebc7dec2f5270e9d3dbb6",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10475,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "signal-night-third",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/signal-night-third.r1.b50ceab8.png",
+      "sha256": "b50ceab8f296efab70e8533ae309b52da3de8bd678704d4ebd96da313b62f053",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8503,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "turin-blue-gold-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/turin-blue-gold-retro.r1.2371293d.png",
+      "sha256": "2371293d26f6d69916db0ccc4b3b1781d972f90c8f1e50461b4b5c0780d6248b",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 11411,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "turin-classic-stripe-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/turin-classic-stripe-retro.r1.b6411491.png",
+      "sha256": "b6411491764308d7df61e49589cf06f48e41c66458e57fa9765b4c511a584649",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 7688,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "turin-pink-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/turin-pink-26-away.r1.9e666178.png",
+      "sha256": "9e666178f1b12c1c7e3ced8c87b8c98c852b9778d95d5d3e6206c898f9edfe36",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8802,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "turin-stripe-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/turin-stripe-26-home.r1.6bd17b05.png",
+      "sha256": "6bd17b051ac16e654d5efe748289db2f0367b981e553a9b20f0f33ca8a8e10d7",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 8417,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "violet-pulse",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/violet-pulse.r1.87ff664d.png",
+      "sha256": "87ff664d05acb90883d26252f04d6591190688c5b5ce89d3c077d2ba247964d0",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 10401,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "west-london-black-26-away",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/west-london-black-26-away.r1.2377955a.png",
+      "sha256": "2377955afa6754592784717eec3e57878817c4cc590b3fc11047223853e9913f",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 4965,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "west-london-blue-26-home",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/west-london-blue-26-home.r1.48d47957.png",
+      "sha256": "48d479576fb42698eca6a56ed05c3f7326a5640c8553394c733541b499943d73",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6909,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "west-london-gallery-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/west-london-gallery-retro.r1.013b0bdf.png",
+      "sha256": "013b0bdf204353d7ef7424200e24e318b8daf9535c8ddc3352265b88adec43b3",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 5576,
+      "generatedWith": "sharp-0.34.5"
+    },
+    {
+      "kitKey": "west-london-yellow-retro",
+      "revision": 1,
+      "url": "/metaverse/avatar3d/kits/v1/west-london-yellow-retro.r1.7dd67201.png",
+      "sha256": "7dd67201d224b3b7ea7a68573c8fe67e6c2ff2070c90f40d26ef2287d21d88f3",
+      "width": 1024,
+      "height": 1024,
+      "byteSize": 6354,
+      "generatedWith": "sharp-0.34.5"
+    }
+  ]
+}

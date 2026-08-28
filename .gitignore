@@ -13,6 +13,7 @@
 
 # next.js
 /.next/
+/.next-avatar-lab/
 /out/
 
 # production
@@ -114,6 +115,12 @@ supabase/.temp/
 # PixelLab ZIP 추출 잔재 (이전 세션에서 root 에 풀린 임시물 — 실제 에셋은 public/metaverse/avatars/)
 /avatar-pro/
 /avatar-pro-xl/
+
+# 구매한 Colin/Chloe 치비 원본 세트 (CGTrader, 158MB — GLB 빌드 소스, repo 에 안 들어감)
+/avatar/
+
+# 아바타/QA 렌더 산출물
+/output/
 
 # Playwright audit 결과 (스크린샷, trace.zip 등)
 tests/audit/reports/

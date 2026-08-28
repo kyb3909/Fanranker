@@ -52,6 +52,9 @@ const STRICT_CSP_REPORT_ONLY = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The isolated avatar preview can run beside the main app dev server without
+  // both processes writing to the same route/build manifests.
+  distDir: process.env.AVATAR_LAB_DEV === "1" ? ".next-avatar-lab" : ".next",
   // OG 카드(app/opengraph-image.tsx)가 fs 로 읽는 임베드 폰트 — 파일 트레이싱이 놓치면
   // 프로덕션에서만 ENOENT 로 죽는다 (satori 는 woff2 를 못 읽어 ttf 를 따로 둠, 2026-08-20)
   outputFileTracingIncludes: {
@@ -100,6 +103,18 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy-Report-Only',
             value: STRICT_CSP_REPORT_ONLY,
+          },
+        ],
+      },
+      {
+        // Babylon/Webpack의 개발 빌드는 생성된 셰이더 코드를 eval로 평가한다.
+        // 이를 모두 CSP 위반으로 전송하면 로컬 보고 API가 폭주해 초기화가 수분간 멈춘다.
+        // 실제 적용 정책은 유지하고, 격리된 랩에서만 관측용 정책을 동일하게 맞춘다.
+        source: '/avatar-lab',
+        headers: [
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: ENFORCED_CSP,
           },
         ],
       },
