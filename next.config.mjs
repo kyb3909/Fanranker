@@ -119,6 +119,16 @@ const nextConfig = {
         ],
       },
       {
+        // 랩 하위 경로(경기장 워크 데모 등)도 같은 Babylon eval 특성을 가진다.
+        source: '/avatar-lab/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: ENFORCED_CSP,
+          },
+        ],
+      },
+      {
         // 미니게임(public/games/*.html) 을 /games/* 래퍼 페이지 iframe 으로 띄우기 위한 예외.
         // 전역 DENY 를 SAMEORIGIN 으로 완화 (같은 도메인 framing 만 허용 — 클릭재킹 방어 유지).
         // 글로벌 '/(.*)' 항목보다 뒤에 있어야 같은 키를 override 함.
