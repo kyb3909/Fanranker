@@ -119,6 +119,7 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.1.9",
+    "three": "0.150.1",
     "tsx": "^4.19.0",
     "tw-animate-css": "1.3.3",
     "typescript": "^5",

@@ -20,6 +20,8 @@ interface Props {
   levelPct: number
   /** 지금까지 지은 비율 0~1 (렌더 시공률 — 위 levelPct 와 다른 값이다) */
   built: number
+  /** 이 구장 팀의 홈 유니폼 킷 키 — 아바타가 입고 나온다 */
+  kitKey: string
 }
 
 declare global {
@@ -31,6 +33,8 @@ declare global {
       level?: number
       bricks?: number
       nextBricks?: number
+      /** 아바타가 입을 구단 유니폼 텍스처 */
+      avatarKitUrl?: string
       /** 레벨 진행률 — 위 pct(렌더 시공률)와 다른 값이다 */
       levelPct?: number
     }) => { total: number; built: number }
@@ -40,6 +44,18 @@ declare global {
     /** 렌더러가 실제로 붙든 캔버스 — 지금 DOM 의 것과 다르면 3D 는 죽어 있다 */
     __stadiumCanvas?: HTMLCanvasElement
     __stadiumStop?: () => void
+  }
+}
+
+/** 킷 키 → 해시가 박힌 실제 텍스처 URL (매니페스트가 정본) */
+async function resolveKitTextureUrl(kitKey: string): Promise<string | undefined> {
+  try {
+    const response = await fetch("/metaverse/avatar3d/kits/v1/manifest.json")
+    if (!response.ok) return undefined
+    const manifest = (await response.json()) as { entries: Array<{ kitKey: string; url: string }> }
+    return manifest.entries.find((entry) => entry.kitKey === kitKey)?.url
+  } catch {
+    return undefined
   }
 }
 
@@ -84,6 +100,7 @@ export function StadiumPlay({
   teamName,
   stadiumName,
   scene,
+  kitKey,
   level,
   bricks,
   nextBricks,
@@ -109,6 +126,9 @@ export function StadiumPlay({
         await Promise.race([
           Promise.all([
             loadScript("/stadium/play/three.min.js"),
+            // three r150 은 전역 GLTFLoader 를 안 준다 — 아바타를 읽으려면 필요하다.
+            // 실패해도 앱은 박스 캐릭터로 계속 도니 여기서 막지 않는다.
+            loadScript("/stadium/play/gltf-loader.js").catch(() => {}),
             loadScript("/stadium/play/stadium-app.js"),
           ]),
           new Promise((_, reject) => {
@@ -121,6 +141,7 @@ export function StadiumPlay({
         //    돌아와 커버가 걷히고, 계측까지 성공으로 잡혀 실패율이 지표에서 사라진다.
         const ready = window.__setup?.({
           team: scene,
+          avatarKitUrl: await resolveKitTextureUrl(kitKey),
           pct: built,
           ghost: false,
           level,
@@ -149,7 +170,7 @@ export function StadiumPlay({
       // 루프를 세워 둔다 — 안 그러면 떠난 뒤에도 rAF 가 돌며 GPU·배터리를 태운다
       window.__stadiumStop?.()
     }
-  }, [scene, built, teamId, level, bricks, nextBricks, levelPct])
+  }, [scene, built, teamId, level, bricks, nextBricks, levelPct, kitKey])
 
   return (
     <div className="stadium-play-scope">

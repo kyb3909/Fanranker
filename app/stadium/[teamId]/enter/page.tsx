@@ -2,9 +2,11 @@ import { notFound } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { findMapTeam, MAP_TEAM_IDS } from "@/lib/stadium/map-teams"
 import { PLAY_SCENE, buildFraction } from "@/lib/stadium/build-progress-scale"
+import { STADIUM_TEAM_KIT } from "@/lib/stadium/team-kit"
 import { BRICK_PRICE } from "@/lib/constants/stadium-bricks"
 import { STADIUM_LEVELS } from "@/lib/constants/stadium-levels"
 import { StadiumPlay } from "@/components/stadium/stadium-play"
+import { DEFAULT_KIT_KEY } from "@/lib/metaverse/avatar3d/kits"
 import "./play.css"
 
 export const dynamic = "force-dynamic"
@@ -57,6 +59,7 @@ export default async function StadiumEnterPage({
   return (
     <StadiumPlay
       teamId={teamId}
+      kitKey={STADIUM_TEAM_KIT[teamId] ?? DEFAULT_KIT_KEY}
       teamName={team.name}
       stadiumName={team.stadiumName}
       scene={scene}

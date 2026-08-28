@@ -882,6 +882,7 @@
       statueGroup.visible = false;
     }
     updateWalk(dt);
+    if (avatarMixer) avatarMixer.update(dt);
     updateBall(dt);
     applyCamera();
     /**
@@ -930,6 +931,89 @@
     m.position.set(px2, py2, pz2);
     return m;
   }
+  /* ── 진짜 아바타 (아바타 랩 GLB) ────────────────────────────────────
+   * 박스 캐릭터는 폴백으로 남긴다. GLB·로더가 실패해도 걷기는 계속 된다.
+   */
+  var AVATAR_HEIGHT = 2.5; // 박스 캐릭터와 같은 키로 맞춘다 (카메라·말풍선 유지)
+  var GLB_HEIGHT = 3.3; // build_colin_avatar.py TARGET_HEIGHT
+  var avatarUrl = "/metaverse/avatar3d/colin-avatar-v1.glb";
+  var avatarKitUrl = null;
+  var avatarRoot = null, avatarMixer = null, avatarActions = {}, avatarClip = "";
+  var avatarOneShot = null, avatarRequested = false, avatarReady = false;
+  var boxRig = null;
+
+  function applyAvatarKit() {
+    if (!avatarRoot || !avatarKitUrl) return;
+    var tex = new THREE.TextureLoader().load(avatarKitUrl);
+    // glTF 는 UV 원점이 반대다. flipY 를 안 끄면 유니폼이 뒤집혀 붙는다.
+    tex.flipY = false;
+    if ("colorSpace" in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+    else if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    avatarRoot.traverse(function (o) {
+      if (!o.isMesh || !o.material) return;
+      var mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach(function (m) {
+        if (m.name && m.name.indexOf("KIT_ATLAS") === 0) {
+          m.map = tex;
+          if (m.color) m.color.setHex(0xffffff);
+          m.needsUpdate = true;
+        }
+      });
+    });
+  }
+
+  function playAvatar(name, loop) {
+    if (!avatarMixer || avatarClip === name) return;
+    var next = avatarActions[name];
+    if (!next) return;
+    var prev = avatarActions[avatarClip];
+    next.reset();
+    next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+    next.clampWhenFinished = !loop;
+    next.enabled = true;
+    next.play();
+    if (prev && prev !== next) next.crossFadeFrom(prev, 0.18, false);
+    avatarClip = name;
+  }
+
+  function loadAvatar() {
+    if (avatarRequested || !THREE.GLTFLoader) return;
+    avatarRequested = true;
+    new THREE.GLTFLoader().load(
+      avatarUrl,
+      function (gltf) {
+        avatarRoot = gltf.scene;
+        avatarRoot.scale.setScalar(AVATAR_HEIGHT / GLB_HEIGHT);
+        avatarRoot.traverse(function (o) {
+          // 랩 미리보기용으로 리깅된 공은 구장에서 쓰지 않는다
+          if (o.name === "ball" || o.name.indexOf("ball_primitive") === 0) o.visible = false;
+          if (o.isMesh) o.frustumCulled = false;
+        });
+        applyAvatarKit();
+        avatarMixer = new THREE.AnimationMixer(avatarRoot);
+        (gltf.animations || []).forEach(function (clip) {
+          avatarActions[clip.name] = avatarMixer.clipAction(clip);
+        });
+        avatarMixer.addEventListener("finished", function () {
+          avatarOneShot = null;
+          avatarClip = "";
+        });
+        if (player) player.add(avatarRoot);
+        if (boxRig) boxRig.visible = false;
+        avatarReady = true;
+        // 아바타는 구단 유니폼을 입고 나온다 — 박스용 색 고르기는 의미가 없어진다
+        var panel = document.getElementById("kitPanel");
+        if (panel) panel.classList.remove("on");
+        playAvatar("idle", true);
+      },
+      undefined,
+      function () {
+        /* 로드 실패 — 박스 캐릭터로 계속 간다 */
+      }
+    );
+  }
+
   function buildPlayer() {
     var g = new THREE.Group();
     var legL = new THREE.Group(), legR = new THREE.Group();
@@ -961,11 +1045,13 @@
   }
   function enterWalk() {
     if (!player) {
-      player = buildPlayer();
-      player.scale.setScalar(1.0);
+      player = new THREE.Group();
+      boxRig = buildPlayer();
+      player.add(boxRig);
       scene.add(player);
       drawNumber();
     }
+    loadAvatar();
     var foot = findFooting(0, 2);
     player.position.set(foot.x, foot.y, foot.z);
     lastFooting = { x: foot.x, y: foot.y, z: foot.z };
@@ -979,7 +1065,7 @@
     dist = 12; pol = 1.18;
     resetBall();
     document.getElementById("enter").textContent = "나가기";
-    document.getElementById("kitPanel").classList.add("on");
+    if (!avatarReady) document.getElementById("kitPanel").classList.add("on");
     document.getElementById("chatWrap").classList.add("on");
     document.getElementById("dpad").classList.add("on");
   }
@@ -1172,6 +1258,8 @@
       limbs.armL.rotation.x *= 0.8;
       limbs.armR.rotation.x *= 0.8;
     }
+    // 아바타는 이동 여부에 따라 클립을 갈아탄다 (액션 중이면 그게 끝날 때까지 둔다)
+    if (avatarMixer && !avatarOneShot) playAvatar(moving ? "run" : "idle", true);
     /* 중력 + 지형 착지 */
     var floorH = groundHeightAt(player.position.x, player.position.z);
     if (floorH === Infinity) {
@@ -1267,7 +1355,13 @@
     bvel.set(0, 0, 0);
     ball.visible = true;
   }
+  function avatarAction(name) {
+    if (!avatarMixer || !avatarActions[name]) return;
+    avatarOneShot = name;
+    playAvatar(name, false);
+  }
   function kickBall() {
+    avatarAction("kick");
     if (!walkMode || !player) return;
     var dx = ball.position.x - player.position.x;
     var dz = ball.position.z - player.position.z;
@@ -1333,7 +1427,10 @@
     if (isTyping()) return;
     if (e.code === "Space") {
       e.preventDefault();
-      if (player && onGround) pvy = 12;
+      if (player && onGround) {
+        pvy = 12;
+        avatarAction("jump");
+      }
     } else if (e.code === "KeyF") {
       e.preventDefault();
       kickBall();
@@ -1626,6 +1723,10 @@
    */
   window.__setup = function (o) {
     o = o || {};
+    if (o.avatarKitUrl) {
+      avatarKitUrl = o.avatarKitUrl;
+      applyAvatarKit();
+    }
     if (o.team && STADIUMS[o.team]) initStadium(o.team);
     if (o.pct != null) applyCount(Math.round(TOTAL * o.pct));
     if (ghostMesh) ghostMesh.visible = o.ghost !== false;
