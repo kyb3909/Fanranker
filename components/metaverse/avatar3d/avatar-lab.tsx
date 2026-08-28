@@ -12,7 +12,7 @@ import {
   ShoppingBag,
 } from "lucide-react"
 import type { ChibiCameraView } from "@/lib/metaverse/avatar3d/chibi-spec"
-import type { ChibiAvatarLab } from "@/lib/metaverse/avatar3d/create-chibi-avatar-lab"
+import type { AvatarMotion, ChibiAvatarLab } from "@/lib/metaverse/avatar3d/create-chibi-avatar-lab"
 import {
   DEFAULT_AVATAR_APPEARANCE,
   EYE_COLORS,
@@ -41,6 +41,12 @@ const views: Array<{ value: ChibiCameraView; label: string }> = [
   { value: "front", label: "정면" },
   { value: "three-quarter", label: "3/4" },
   { value: "side", label: "측면" },
+]
+
+const motions: Array<{ value: AvatarMotion; label: string }> = [
+  { value: "idle", label: "대기" },
+  { value: "walk", label: "걷기" },
+  { value: "cheer", label: "환호" },
 ]
 
 const rarityLabel = {
@@ -208,6 +214,7 @@ export function AvatarLab() {
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<ChibiCameraView>("front")
   const [autoRotate, setAutoRotate] = useState(false)
+  const [motion, setMotion] = useState<AvatarMotion>("idle")
   const [appearance, setAppearance] = useState<AvatarAppearance>(DEFAULT_AVATAR_APPEARANCE)
   const [selectedClubKey, setSelectedClubKey] = useState<ClubKey>("arsenal")
   const [kitState, dispatchKit] = useReducer(kitStoreReducer, undefined, createInitialKitStore)
@@ -388,6 +395,26 @@ export function AvatarLab() {
                   onClick={() => selectView(item.value)}
                   className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
                     view === item.value && !autoRotate
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                      : "border-slate-200 hover:border-slate-400 dark:border-slate-700"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <h2 className="mt-4 mb-3 text-sm font-semibold">모션</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {motions.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => {
+                    setMotion(item.value)
+                    labRef.current?.setMotion(item.value)
+                  }}
+                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    motion === item.value
                       ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
                       : "border-slate-200 hover:border-slate-400 dark:border-slate-700"
                   }`}

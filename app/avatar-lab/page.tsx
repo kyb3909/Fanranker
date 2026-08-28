@@ -12,7 +12,7 @@ export default function AvatarLabPage() {
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 sm:px-6 lg:px-8 dark:bg-slate-900 dark:text-slate-50">
       <link
         rel="preload"
-        href="/metaverse/avatar3d/chibi-stylized-v5.glb"
+        href="/metaverse/avatar3d/colin-avatar-v1.glb"
         as="fetch"
         type="model/gltf-binary"
         crossOrigin="anonymous"

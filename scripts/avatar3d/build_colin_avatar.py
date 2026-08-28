@@ -199,6 +199,222 @@ def build_sole(name, center_x, foot_y, mat_sole):
     return sole
 
 
+def build_rig(keep, lx, rx, fy, factor):
+    """15-bone humanoid armature sized from measured chibi landmarks."""
+    arm_data = bpy.data.armatures.new("colin_rig")
+    arm_obj = bpy.data.objects.new("colin_rig", arm_data)
+    bpy.context.scene.collection.objects.link(arm_obj)
+    bpy.context.view_layer.objects.active = arm_obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    eb = arm_data.edit_bones
+
+    def bone(name, head, tail, parent=None, connect=False):
+        b = eb.new(name)
+        b.head = head
+        b.tail = tail
+        if parent:
+            b.parent = eb[parent]
+            b.use_connect = connect
+        return b
+
+    F = factor
+    hips_z = 0.385 * F
+    bone("hips", (0, 0, hips_z), (0, 0, 0.50 * F))
+    bone("spine", (0, 0, 0.50 * F), (0, 0, 0.545 * F), "hips", True)
+    bone("neck", (0, 0, 0.545 * F), (0, 0, 0.575 * F), "spine", True)
+    bone("head", (0, 0, 0.575 * F), (0, 0, 0.80 * F), "neck", True)
+    for side, sx in (("l", 1), ("r", -1)):
+        bone(
+            f"upper_arm_{side}",
+            (sx * 0.10 * F, 0, 0.535 * F),
+            (sx * 0.21 * F, 0, 0.425 * F),
+            "spine",
+        )
+        bone(
+            f"forearm_{side}",
+            (sx * 0.21 * F, 0, 0.425 * F),
+            (sx * 0.315 * F, 0, 0.32 * F),
+            f"upper_arm_{side}",
+            True,
+        )
+        leg_x = (lx if side == "l" else rx) * F
+        bone(f"thigh_{side}", (leg_x, 0, hips_z), (leg_x, 0, 0.20 * F), "hips")
+        bone(f"shin_{side}", (leg_x, 0, 0.20 * F), (leg_x, 0, 0.055 * F), f"thigh_{side}", True)
+        bone(
+            f"foot_{side}",
+            (leg_x, 0, 0.055 * F),
+            (leg_x, (fy - 0.09) * F, 0.02 * F),
+            f"shin_{side}",
+            True,
+        )
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return arm_obj
+
+
+def skin_meshes(keep, arm_obj, factor):
+    # heat weights on the body only
+    body = keep["body"]
+    bpy.ops.object.select_all(action="DESELECT")
+    body.select_set(True)
+    arm_obj.select_set(True)
+    bpy.context.view_layer.objects.active = arm_obj
+    bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+
+    # clothes copy the body's weights (nearest surface) so they can never
+    # tear away from the skin underneath, then deform with the same armature
+    for cloth in (keep["kit_shirt"], keep["kit_shorts"]):
+        transfer = cloth.modifiers.new("CopyBodyWeights", "DATA_TRANSFER")
+        transfer.object = body
+        transfer.use_vert_data = True
+        transfer.data_types_verts = {"VGROUP_WEIGHTS"}
+        transfer.vert_mapping = "POLYINTERP_NEAREST"
+        transfer.layers_vgroup_select_src = "ALL"
+        transfer.layers_vgroup_select_dst = "NAME"
+        bpy.context.view_layer.objects.active = cloth
+        bpy.ops.object.modifier_apply(modifier=transfer.name)
+        armature_mod = cloth.modifiers.new("Armature", "ARMATURE")
+        armature_mod.object = arm_obj
+        cloth.parent = arm_obj
+
+    # the shirt torso must not follow the arms — damp arm influence inside the
+    # shoulder seam (sleeves keep it), reassigning the removed weight to spine
+    shirt = keep["kit_shirt"]
+    x0 = 0.080 * factor
+    x1 = 0.125 * factor
+    arm_group_ids = {
+        g.index for g in shirt.vertex_groups if g.name.startswith(("upper_arm", "forearm"))
+    }
+    spine_group = shirt.vertex_groups.get("spine") or shirt.vertex_groups.new(name="spine")
+    for v in shirt.data.vertices:
+        t = (abs(v.co.x) - x0) / (x1 - x0)
+        t = max(0.0, min(1.0, t))
+        if t >= 1.0:
+            continue
+        removed = 0.0
+        for ge in v.groups:
+            if ge.group in arm_group_ids:
+                removed += ge.weight * (1.0 - t)
+                ge.weight *= t
+        if removed > 0:
+            spine_group.add([v.index], removed, "ADD")
+
+    # verts the transfer missed (collar rim etc.) have no weights at all and
+    # stay behind on translation keys — pin them to the torso bones
+    for mesh_name, bone_name in (("kit_shirt", "spine"), ("kit_shorts", "hips")):
+        obj = keep[mesh_name]
+        group = obj.vertex_groups.get(bone_name) or obj.vertex_groups.new(name=bone_name)
+        orphans = [
+            v.index for v in obj.data.vertices if sum(ge.weight for ge in v.groups) < 0.05
+        ]
+        if orphans:
+            group.add(orphans, 1.0, "REPLACE")
+            print(f"{mesh_name}: pinned {len(orphans)} orphan verts to {bone_name}")
+
+    # heat/transferred weights don't always sum to 1 per vertex, which makes
+    # translation keys (the cheer hop) tear cloth away from the skin
+    for obj in (body, keep["kit_shirt"], keep["kit_shorts"]):
+        for v in obj.data.vertices:
+            total = sum(ge.weight for ge in v.groups)
+            if total > 1e-6 and abs(total - 1.0) > 1e-4:
+                for ge in v.groups:
+                    ge.weight /= total
+
+    # rigid attachments: full weight to one bone
+    rigid = {"head": [], "foot_l": [], "foot_r": []}
+    for name, obj in keep.items():
+        if name.startswith(("hair", "eye_")):
+            rigid["head"].append(obj)
+    rigid["foot_l"] = [keep["boot_l"], keep["sole_l"]]
+    rigid["foot_r"] = [keep["boot_r"], keep["sole_r"]]
+    for bone_name, objs in rigid.items():
+        for obj in objs:
+            group = obj.vertex_groups.new(name=bone_name)
+            group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+            modifier = obj.modifiers.new("Armature", "ARMATURE")
+            modifier.object = arm_obj
+            obj.parent = arm_obj
+
+
+def author_clips(arm_obj):
+    """Keyframe idle / walk / cheer loops directly on the pose bones."""
+    scene = bpy.context.scene
+    scene.render.fps = 30
+    pose = arm_obj.pose.bones
+    for b in pose:
+        b.rotation_mode = "XYZ"
+    arm_obj.animation_data_create()
+
+    def key(name, frame, rot=None, loc=None):
+        b = pose[name]
+        if rot is not None:
+            b.rotation_euler = rot
+            b.keyframe_insert("rotation_euler", frame=frame)
+        if loc is not None:
+            b.location = loc
+            b.keyframe_insert("location", frame=frame)
+
+    def reset_pose():
+        for b in pose:
+            b.rotation_euler = (0, 0, 0)
+            b.location = (0, 0, 0)
+
+    actions = []
+
+    # ---- idle: soft breathing, 2s loop ----
+    act = bpy.data.actions.new("idle")
+    arm_obj.animation_data.action = act
+    reset_pose()
+    for frame, amp in ((1, 0.0), (30, 1.0), (60, 0.0)):
+        key("spine", frame, rot=(0.05 * amp, 0, 0))
+        key("head", frame, rot=(-0.06 * amp, 0, 0))
+        key("upper_arm_l", frame, rot=(0.06 * amp, 0, 0))
+        key("upper_arm_r", frame, rot=(0.06 * amp, 0, 0))
+        key("hips", frame, loc=(0, -0.012 * amp, 0))
+    actions.append(act)
+
+    # ---- walk: 1s toddle loop (forward = -X rotation on down bones) ----
+    act = bpy.data.actions.new("walk")
+    arm_obj.animation_data.action = act
+    reset_pose()
+    swing, shin_bend, arm_swing = 0.55, 0.7, 0.42
+    for frame, s in ((1, 1.0), (8, 0.0), (15, -1.0), (22, 0.0), (30, 1.0)):
+        key("thigh_l", frame, rot=(-swing * s, 0, 0))
+        key("thigh_r", frame, rot=(swing * s, 0, 0))
+        key("shin_l", frame, rot=(shin_bend * max(0.0, s), 0, 0))
+        key("shin_r", frame, rot=(shin_bend * max(0.0, -s), 0, 0))
+        key("upper_arm_l", frame, rot=(arm_swing * s, 0, 0))
+        key("upper_arm_r", frame, rot=(-arm_swing * s, 0, 0))
+        bob = 0.05 if s == 0.0 else 0.0
+        key("hips", frame, loc=(0, bob, 0))
+        key("spine", frame, rot=(0.06, 0, 0))
+    actions.append(act)
+
+    # ---- cheer: arms up + hops, 1.6s loop ----
+    # A-pose arms point diagonally down; local Z rotation swings them within
+    # the body plane (jumping-jack raise) instead of pushing them forward.
+    act = bpy.data.actions.new("cheer")
+    arm_obj.animation_data.action = act
+    reset_pose()
+    up = 1.45
+    for frame, hop, wave in ((1, 0.0, 0.1), (12, 1.0, -0.1), (24, 0.0, 0.1), (36, 1.0, -0.1), (48, 0.0, 0.1)):
+        key("upper_arm_l", frame, rot=(0, 0, -(up + wave)))
+        key("upper_arm_r", frame, rot=(0, 0, up + wave))
+        key("forearm_l", frame, rot=(0, 0, -0.15))
+        key("forearm_r", frame, rot=(0, 0, 0.15))
+        key("head", frame, rot=(0.12 * hop, 0, 0))
+        key("hips", frame, loc=(0, 0.14 * hop, 0))
+    actions.append(act)
+
+    # stash every clip on the NLA so the glTF exporter emits one animation each
+    arm_obj.animation_data.action = None
+    for act in actions:
+        act.use_fake_user = True
+        track = arm_obj.animation_data.nla_tracks.new()
+        track.name = act.name
+        track.strips.new(act.name, 1, act)
+    return actions
+
+
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
@@ -285,6 +501,14 @@ def main():
     total_polys = sum(len(o.data.polygons) for o in keep.values())
     print(f"export meshes={len(keep)} polys={total_polys}")
 
+    # ---- rig + animation clips ------------------------------------------
+    arm_obj = build_rig(keep, lx, rx, fy, factor)
+    skin_meshes(keep, arm_obj, factor)
+    author_clips(arm_obj)
+    # keep stashed tracks from posing the rest state
+    for track in arm_obj.animation_data.nla_tracks:
+        track.mute = True
+
     # ---- preview renders (Arsenal home) ---------------------------------
     preview = sorted(KITS_DIR.glob(f"{PREVIEW_KIT}.r*.png"))
     if preview:
@@ -336,22 +560,40 @@ def main():
             scene.render.filepath = str(OUT / f"colin-style-{style}.png")
             bpy.ops.render.render(write_still=True)
 
+        # animation pose stills (deform + sign check)
+        for name, obj in keep.items():
+            if name.startswith("hair_style_"):
+                obj.hide_render = not name.startswith(f"hair_style_{default_style}_")
+        cam.location = center + Vector((0, -1, 0.16)).normalized() * dist
+        fwd = (center - cam.location).normalized()
+        cam.rotation_euler = fwd.to_track_quat("-Z", "Y").to_euler()
+        for clip_name, frames in (("walk", (1, 8, 15)), ("cheer", (1, 12))):
+            arm_obj.animation_data.action = bpy.data.actions[clip_name]
+            for frame in frames:
+                scene.frame_set(frame)
+                scene.render.filepath = str(OUT / f"colin-anim-{clip_name}-f{frame}.png")
+                bpy.ops.render.render(write_still=True)
+        arm_obj.animation_data.action = None
+        scene.frame_set(1)
+
         # strip preview texture so the GLB ships with a clean white atlas slot
         mat_kit.node_tree.links.remove(tex.outputs["Color"].links[0])
         mat_kit.node_tree.nodes.remove(tex)
         principled.inputs["Base Color"].default_value = (1, 1, 1, 1)
 
     # ---- export ----------------------------------------------------------
+    bpy.ops.object.select_all(action="DESELECT")
     for obj in keep.values():
         obj.hide_render = False
         obj.hide_set(False)
         obj.select_set(True)
+    arm_obj.select_set(True)
     bpy.ops.export_scene.gltf(
         filepath=str(GLB_PATH),
         export_format="GLB",
         use_selection=True,
         export_apply=True,
-        export_animations=False,
+        export_animations=True,
     )
     size_kb = GLB_PATH.stat().st_size / 1024
     print(f"EXPORTED {GLB_PATH.name} {size_kb:.0f}KB")

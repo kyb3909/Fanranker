@@ -1,6 +1,8 @@
 // Importing Babylon's package barrels makes Next compile thousands of unused
 // modules. The lab only needs glTF 2.0 and these concrete runtime modules.
 import "@babylonjs/loaders/glTF/2.0/glTFLoader"
+// Scene.beginAnimation & friends — required for the GLB's animation groups.
+import "@babylonjs/core/Animations/animatable"
 
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera"
 import { Engine } from "@babylonjs/core/Engines/engine"
@@ -47,6 +49,9 @@ type KitTextureManifest = {
 // Average painted skin color in the Colin body texture (sampled from flat areas).
 const SKIN_TEXTURE_BASE = { r: 231 / 255, g: 192 / 255, b: 173 / 255 } as const
 
+// Clip names baked into the GLB by scripts/avatar3d/build_colin_avatar.py.
+export type AvatarMotion = "idle" | "walk" | "cheer"
+
 export type ChibiAvatarLab = {
   engine: Engine
   scene: Scene
@@ -56,6 +61,7 @@ export type ChibiAvatarLab = {
   setAppearance(appearance: AvatarAppearance): void
   setAutoRotate(enabled: boolean): void
   setView(view: ChibiCameraView): void
+  setMotion(motion: AvatarMotion): void
   dispose(): void
 }
 
@@ -218,6 +224,23 @@ export async function createChibiAvatarLab(canvas: HTMLCanvasElement): Promise<C
   ])
   collarMeshes.forEach((meshes) => meshes.forEach((mesh) => mesh.setEnabled(false)))
 
+  // The glTF loader auto-plays the first clip; take over playback ourselves.
+  imported.animationGroups.forEach((group) => group.stop())
+  function playMotion(motion: AvatarMotion) {
+    imported.animationGroups.forEach((group) => group.stop())
+    const target = imported.animationGroups.find((group) => group.name === motion)
+    if (target) {
+      target.play(true)
+    } else if (imported.animationGroups.length > 0) {
+      console.warn(
+        `GLB has no "${motion}" clip; available:`,
+        imported.animationGroups.map((g) => g.name)
+      )
+    }
+    canvas.dataset.motion = motion
+  }
+  playMotion("idle")
+
   const kitTexturePromises = new Map<string, Promise<Texture>>()
   let kitRequestVersion = 0
 
@@ -377,6 +400,9 @@ export async function createChibiAvatarLab(canvas: HTMLCanvasElement): Promise<C
     },
     setAutoRotate(enabled) {
       autoRotate = enabled
+    },
+    setMotion(motion) {
+      playMotion(motion)
     },
     setView(view) {
       const alphaByView: Record<ChibiCameraView, number> = {
