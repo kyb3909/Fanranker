@@ -52,6 +52,15 @@ const SKIN_TEXTURE_BASE = { r: 231 / 255, g: 192 / 255, b: 173 / 255 } as const
 // Clip names baked into the GLB by scripts/avatar3d/build_colin_avatar.py.
 export type AvatarMotion = "idle" | "walk" | "run" | "cheer" | "kick" | "jump"
 
+// Both bodies ship the same material slots, motion clips, and kit UVs, so the
+// lab only swaps the file name.
+export type AvatarCharacter = "colin" | "chloe"
+
+export const AVATAR_GLB: Record<AvatarCharacter, string> = {
+  colin: "colin-avatar-v1.glb",
+  chloe: "chloe-avatar-v1.glb",
+}
+
 export type ChibiAvatarLab = {
   engine: Engine
   scene: Scene
@@ -80,7 +89,10 @@ async function loadKitTextureManifest() {
   return (await response.json()) as KitTextureManifest
 }
 
-export async function createChibiAvatarLab(canvas: HTMLCanvasElement): Promise<ChibiAvatarLab> {
+export async function createChibiAvatarLab(
+  canvas: HTMLCanvasElement,
+  character: AvatarCharacter = "colin"
+): Promise<ChibiAvatarLab> {
   const engine = new Engine(canvas, true, {
     antialias: true,
     preserveDrawingBuffer: false,
@@ -122,7 +134,7 @@ export async function createChibiAvatarLab(canvas: HTMLCanvasElement): Promise<C
   ground.material = makeGroundMaterial(scene)
 
   const [imported, kitTextureManifest] = await Promise.all([
-    SceneLoader.ImportMeshAsync("", "/metaverse/avatar3d/", "colin-avatar-v1.glb", scene),
+    SceneLoader.ImportMeshAsync("", "/metaverse/avatar3d/", AVATAR_GLB[character], scene),
     loadKitTextureManifest(),
   ])
   const kitTextureAssets = new Map(kitTextureManifest.entries.map((entry) => [entry.kitKey, entry]))

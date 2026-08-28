@@ -1,18 +1,22 @@
-"""Build the Colin avatar GLB for the avatar lab.
+"""Build an avatar GLB (Colin or Chloe) for the avatar lab.
 
-Imports the purchased Colin chibi set (body / modular hair / clothes FBX),
-re-UVs the football shirt+shorts onto the existing 512px kit atlas layout
-(so every generated kit texture in public/metaverse/avatar3d/kits/v1 works
-unchanged), builds simple boots, assigns the material slots the lab expects
-(KIT_ATLAS / KIT_BOOTS / KIT_SOLE / CHAR_*), and exports a single GLB.
+Imports the purchased chibi set (body / modular hair FBX), re-UVs the football
+shirt+shorts onto the existing 512px kit atlas layout (so every generated kit
+texture in public/metaverse/avatar3d/kits/v1 works unchanged), builds simple
+boots and a ball, rigs a 15-bone armature with keyframed motion clips, and
+exports a single GLB.
 
-Run:  py -3.11 scripts/avatar3d/build_colin_avatar.py
+The purchased set only ships clothes fitted to Colin, so Chloe borrows the same
+shirt/shorts and shrink-wraps them onto her body before skinning.
+
+Run:  py -3.11 scripts/avatar3d/build_colin_avatar.py [colin|chloe|all]
 Outputs:
-  public/metaverse/avatar3d/colin-avatar-v1.glb
+  public/metaverse/avatar3d/{colin,chloe}-avatar-v1.glb
   output/colin-build/*.png  (preview renders with the Arsenal home kit)
 """
 
 import math
+import sys
 from pathlib import Path
 
 import bpy
@@ -25,11 +29,50 @@ KITS_DIR = PUBLIC / "kits" / "v1"
 OUT = ROOT / "output" / "colin-build"
 OUT.mkdir(parents=True, exist_ok=True)
 
-GLB_PATH = PUBLIC / "colin-avatar-v1.glb"
-BODY_TEXTURE = AVATAR / "Texture" / "Collin_baseModel_BaseColor_1001.png"
 PREVIEW_KIT = "red-horizon-home"  # Arsenal home (kits.ts DEFAULT_KIT_KEY)
 
 TARGET_HEIGHT = 3.3  # matches CHIBI_SPEC.totalHeight / v5 scene scale
+
+# Clothes exist only for Colin; both characters wear them.
+CLOTHES_FBX = AVATAR / "Colin_clothes_v01_forBlender.fbx"
+
+CHARACTERS = {
+    "colin": {
+        "glb": "colin-avatar-v1.glb",
+        "body_fbx": AVATAR / "Modeling_v02_head_body_Combine" / "Colin_baseModel_v02.fbx",
+        "hair_fbx": AVATAR / "Modeling" / "Colin_Hair_v01_forBlender.fbx",
+        "body_prefix": "Colin_baseModel",
+        "hair_prefix": "Colin_hair",
+        "texture": AVATAR / "Texture" / "Collin_baseModel_BaseColor_1001.png",
+        "has_hair_base": True,
+        # style key -> (bangs index, back index)
+        "hair_combos": {
+            "short": (1, 1),
+            "bob": (5, 3),
+            "ponytail": (3, 5),
+            "twintail": (7, 6),
+        },
+        "tuck_body": False,
+    },
+    "chloe": {
+        "glb": "chloe-avatar-v1.glb",
+        "body_fbx": AVATAR / "Modeling_v02_head_body_Combine" / "Chloe_baseModel_v02.fbx",
+        "hair_fbx": AVATAR / "Modeling" / "Chloe_Hair2_v01.fbx",
+        "body_prefix": "Chloe_baseModel",
+        "hair_prefix": "Chloe_hair2",
+        "texture": AVATAR / "Texture" / "Chloe_baseModel_BaseColor_1001.png",
+        # Chloe's hair set has no shared skull cap — bangs+back cover it.
+        "has_hair_base": False,
+        # bangs 01..10, back 01..05
+        "hair_combos": {
+            "short": (2, 2),
+            "bob": (6, 1),
+            "ponytail": (3, 3),
+            "twintail": (9, 5),
+        },
+        "tuck_body": True,
+    },
+}
 
 # 512-logical kit atlas regions (canvas coords, y down) — must mirror
 # scripts/avatar3d/generate-kit-textures.ts `rect`.
@@ -43,15 +86,6 @@ REGIONS = {
     "shorts_r": (128, 256, 128, 192),
     "collar": (384, 256, 64, 64),
 }
-
-# hair style key -> (bangs index, back index); shared base/side/brows always on
-HAIR_COMBOS = {
-    "short": (1, 1),
-    "bob": (5, 3),
-    "ponytail": (3, 5),
-    "twintail": (7, 6),
-}
-
 
 def import_fbx(path):
     before = set(bpy.data.objects)
@@ -130,7 +164,19 @@ def remap_shirt(obj):
     for poly in mesh.polygons:
         center = poly.center
         is_collar = center.z > zmax - 0.022 and abs(center.x) < 0.085
-        is_sleeve = abs(center.x) > sleeve_x
+        # Width alone misfires: the shirt flares at the hip, so the lower side
+        # panel is wider than the sleeve cutoff and used to sample the ivory
+        # sleeve strip — a white slab across the hip. Sleeves only exist in the
+        # upper torso.
+        is_sleeve = abs(center.x) > sleeve_x and center.z > zmin + 0.42 * (zmax - zmin)
+        # Hem/armhole undersides face up or down. Projecting them front-on
+        # smears a huge stretched crop of the sponsor across the hip, so park
+        # them on a solid primary-color spot low in the front panel instead.
+        if not is_collar and abs(poly.normal.z) > 0.7:
+            flat_uv = region_uv(REGIONS["front"], 0.5, 0.06)
+            for li in poly.loop_indices:
+                uv[li].uv = flat_uv
+            continue
         for li in poly.loop_indices:
             co = mesh.vertices[mesh.loops[li].vertex_index].co
             if is_collar:
@@ -588,12 +634,54 @@ def author_clips(arm_obj):
     return actions
 
 
-def main():
+def tuck_body_under_clothes(body, garments, inset, max_pierce):
+    """Push body vertices that poke through a garment back inside it.
+
+    The kit is cut for Colin, so on another build (Chloe's bust and hips) the
+    skin pierces the shirt and shows up as pale blotches over the sponsor. We
+    keep the loose jersey silhouette and move only the offending skin vertices
+    just inside the cloth surface.
+    """
+    from mathutils.bvhtree import BVHTree
+
+    moved = 0
+    for garment in garments:
+        mesh = garment.data
+        verts = [v.co.copy() for v in mesh.vertices]
+        polys = [tuple(p.vertices) for p in mesh.polygons]
+        bvh = BVHTree.FromPolygons(verts, polys, all_triangles=False)
+        (_, _), (_, _), (gzmin, gzmax) = mesh_bounds(garment)
+        for v in body.data.vertices:
+            if not (gzmin - 0.01 <= v.co.z <= gzmax + 0.01):
+                continue
+            location, normal, _, distance = bvh.find_nearest(v.co)
+            if location is None or distance is None:
+                continue
+            # Limbs stick far out of their openings on purpose — only skin that
+            # barely pierces the shell is a fit artifact worth pushing back.
+            if distance > max_pierce:
+                continue
+            # positive dot => the skin sits outside the cloth shell
+            if (v.co - location).dot(normal) <= 0:
+                continue
+            v.co = location - normal * inset
+            moved += 1
+    if moved:
+        print(f"tucked {moved} body verts under the kit")
+
+
+def main(character_key):
+    character = CHARACTERS[character_key]
+    glb_path = PUBLIC / character["glb"]
+    body_prefix = character["body_prefix"]
+    hair_prefix = character["hair_prefix"]
+    hair_combos = character["hair_combos"]
+
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    body_objs = import_fbx(AVATAR / "Modeling_v02_head_body_Combine" / "Colin_baseModel_v02.fbx")
-    hair_objs = import_fbx(AVATAR / "Modeling" / "Colin_Hair_v01_forBlender.fbx")
-    clothes_objs = import_fbx(AVATAR / "Colin_clothes_v01_forBlender.fbx")
+    import_fbx(character["body_fbx"])
+    import_fbx(character["hair_fbx"])
+    import_fbx(CLOTHES_FBX)
 
     meshes = {o.name: o for o in bpy.data.objects if o.type == "MESH"}
     for obj in meshes.values():
@@ -606,18 +694,19 @@ def main():
 
     keep = {}
 
-    keep["body"] = meshes["Colin_baseModel_body"]
-    keep["eye_ball_l"] = meshes["Colin_baseModel_eyes_L_ball"]
-    keep["eye_ball_r"] = meshes["Colin_baseModel_eyes_R_ball"]
-    keep["eye_cover_l"] = meshes["Colin_baseModel_eyes_L_cover"]
-    keep["eye_cover_r"] = meshes["Colin_baseModel_eyes_R_cover"]
+    keep["body"] = meshes[f"{body_prefix}_body"]
+    keep["eye_ball_l"] = meshes[f"{body_prefix}_eyes_L_ball"]
+    keep["eye_ball_r"] = meshes[f"{body_prefix}_eyes_R_ball"]
+    keep["eye_cover_l"] = meshes[f"{body_prefix}_eyes_L_cover"]
+    keep["eye_cover_r"] = meshes[f"{body_prefix}_eyes_R_cover"]
 
-    keep["hair_base"] = meshes["Colin_hair_base_01"]
-    keep["hair_side"] = meshes["Colin_hair_side_01"]
-    keep["hair_eyebrows"] = meshes["Colin_hair_eyebrows"]
-    for style, (bangs_i, back_i) in HAIR_COMBOS.items():
-        keep[f"hair_style_{style}_bangs"] = meshes[f"Colin_hair_bangs_{bangs_i:02d}"]
-        keep[f"hair_style_{style}_back"] = meshes[f"Colin_hair_back_{back_i:02d}"]
+    if character["has_hair_base"]:
+        keep["hair_base"] = meshes[f"{hair_prefix}_base_01"]
+    keep["hair_side"] = meshes[f"{hair_prefix}_side_01"]
+    keep["hair_eyebrows"] = meshes[f"{hair_prefix}_eyebrows"]
+    for style, (bangs_i, back_i) in hair_combos.items():
+        keep[f"hair_style_{style}_bangs"] = meshes[f"{hair_prefix}_bangs_{bangs_i:02d}"]
+        keep[f"hair_style_{style}_back"] = meshes[f"{hair_prefix}_back_{back_i:02d}"]
 
     keep["kit_shirt"] = meshes["Colin_Tshirt_slim"]
     keep["kit_shorts"] = meshes["Colin_shorts_slim_clothes"]
@@ -626,9 +715,10 @@ def main():
         obj.name = new_name
     delete_objects([o for o in meshes.values() if o not in keep.values()])
 
+
     # ---- materials -------------------------------------------------------
-    mat_skin = make_material("CHAR_SKIN", (1, 1, 1), roughness=0.72, texture=BODY_TEXTURE)
-    mat_iris = make_material("CHAR_IRIS", (1, 1, 1), roughness=0.35, texture=BODY_TEXTURE)
+    mat_skin = make_material("CHAR_SKIN", (1, 1, 1), roughness=0.72, texture=character["texture"])
+    mat_iris = make_material("CHAR_IRIS", (1, 1, 1), roughness=0.35, texture=character["texture"])
     mat_cover = make_material("CHAR_EYE_HIGHLIGHT", (1, 1, 1), roughness=0.06, alpha=0.14)
     mat_hair = make_material("CHAR_HAIR", (0.16, 0.10, 0.09), roughness=0.62)
     mat_kit = make_material("KIT_ATLAS", (1, 1, 1), roughness=0.78)
@@ -649,8 +739,25 @@ def main():
     assign_material(keep["kit_shorts"], mat_kit)
 
     # ---- kit atlas UVs ---------------------------------------------------
+    # Bake UVs on the original Colin cut: the region classifier reads mesh
+    # proportions, and a shrink-wrapped shirt has different ones (thinner
+    # sleeves pushed torso faces into the sleeve strip). UVs ride along with
+    # the vertices, so refitting afterwards keeps the exact same layout.
     remap_shirt(keep["kit_shirt"])
     remap_shorts(keep["kit_shorts"])
+
+    if character["tuck_body"]:
+        tuck_body_under_clothes(
+            keep["body"],
+            [keep["kit_shirt"], keep["kit_shorts"]],
+            inset=0.004,
+            max_pierce=0.018,
+        )
+    # The shorts waistband is cut wider than the shirt hem, so a slab of shorts
+    # pokes through the jersey at the hip on every build. Same treatment.
+    tuck_body_under_clothes(
+        keep["kit_shorts"], [keep["kit_shirt"]], inset=0.003, max_pierce=0.02
+    )
 
     # ---- boots -----------------------------------------------------------
     body = keep["body"]
@@ -723,18 +830,18 @@ def main():
             cam.location = center + direction.normalized() * dist
             fwd = (center - cam.location).normalized()
             cam.rotation_euler = fwd.to_track_quat("-Z", "Y").to_euler()
-            scene.render.filepath = str(OUT / f"colin-arsenal-{label}.png")
+            scene.render.filepath = str(OUT / f"{character_key}-arsenal-{label}.png")
             bpy.ops.render.render(write_still=True)
 
         # per-style sheet for the record
-        for style in HAIR_COMBOS:
+        for style in hair_combos:
             for name, obj in keep.items():
                 if name.startswith("hair_style_"):
                     obj.hide_render = not name.startswith(f"hair_style_{style}_")
             cam.location = center + views["front"].normalized() * dist
             fwd = (center - cam.location).normalized()
             cam.rotation_euler = fwd.to_track_quat("-Z", "Y").to_euler()
-            scene.render.filepath = str(OUT / f"colin-style-{style}.png")
+            scene.render.filepath = str(OUT / f"{character_key}-style-{style}.png")
             bpy.ops.render.render(write_still=True)
 
         # animation pose stills (deform + sign check)
@@ -756,7 +863,7 @@ def main():
             arm_obj.animation_data.action = bpy.data.actions[clip_name]
             for frame in frames:
                 scene.frame_set(frame)
-                scene.render.filepath = str(OUT / f"colin-anim-{clip_name}-f{frame}.png")
+                scene.render.filepath = str(OUT / f"{character_key}-anim-{clip_name}-f{frame}.png")
                 bpy.ops.render.render(write_still=True)
         arm_obj.animation_data.action = None
         scene.frame_set(1)
@@ -774,15 +881,18 @@ def main():
         obj.select_set(True)
     arm_obj.select_set(True)
     bpy.ops.export_scene.gltf(
-        filepath=str(GLB_PATH),
+        filepath=str(glb_path),
         export_format="GLB",
         use_selection=True,
         export_apply=True,
         export_animations=True,
     )
-    size_kb = GLB_PATH.stat().st_size / 1024
-    print(f"EXPORTED {GLB_PATH.name} {size_kb:.0f}KB")
+    size_kb = glb_path.stat().st_size / 1024
+    print(f"EXPORTED {glb_path.name} {size_kb:.0f}KB")
 
 
 if __name__ == "__main__":
-    main()
+    requested = sys.argv[-1] if sys.argv[-1] in {*CHARACTERS, "all"} else "colin"
+    for key in (CHARACTERS if requested == "all" else [requested]):
+        print(f"--- building {key} ---")
+        main(key)

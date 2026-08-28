@@ -12,7 +12,11 @@ import {
   ShoppingBag,
 } from "lucide-react"
 import type { ChibiCameraView } from "@/lib/metaverse/avatar3d/chibi-spec"
-import type { AvatarMotion, ChibiAvatarLab } from "@/lib/metaverse/avatar3d/create-chibi-avatar-lab"
+import type {
+  AvatarCharacter,
+  AvatarMotion,
+  ChibiAvatarLab,
+} from "@/lib/metaverse/avatar3d/create-chibi-avatar-lab"
 import {
   DEFAULT_AVATAR_APPEARANCE,
   EYE_COLORS,
@@ -41,6 +45,11 @@ const views: Array<{ value: ChibiCameraView; label: string }> = [
   { value: "front", label: "정면" },
   { value: "three-quarter", label: "3/4" },
   { value: "side", label: "측면" },
+]
+
+const characters: Array<{ value: AvatarCharacter; label: string }> = [
+  { value: "colin", label: "콜린" },
+  { value: "chloe", label: "클로이" },
 ]
 
 const motions: Array<{ value: AvatarMotion; label: string }> = [
@@ -218,9 +227,14 @@ export function AvatarLab() {
   const [view, setView] = useState<ChibiCameraView>("front")
   const [autoRotate, setAutoRotate] = useState(false)
   const [motion, setMotion] = useState<AvatarMotion>("idle")
+  const [character, setCharacter] = useState<AvatarCharacter>("colin")
   const [appearance, setAppearance] = useState<AvatarAppearance>(DEFAULT_AVATAR_APPEARANCE)
   const [selectedClubKey, setSelectedClubKey] = useState<ClubKey>("arsenal")
   const [kitState, dispatchKit] = useReducer(kitStoreReducer, undefined, createInitialKitStore)
+  const appearanceRef = useRef(appearance)
+  const kitStateRef = useRef(kitState)
+  appearanceRef.current = appearance
+  kitStateRef.current = kitState
 
   useEffect(() => {
     let cancelled = false
@@ -232,14 +246,14 @@ export function AvatarLab() {
         const { createChibiAvatarLab } = await avatarLabModulePromise
         if (cancelled || !canvasRef.current) return
 
-        const lab = await createChibiAvatarLab(canvasRef.current)
+        const lab = await createChibiAvatarLab(canvasRef.current, character)
         if (cancelled) {
           lab.dispose()
           return
         }
         lab.setView("front")
-        await lab.setKit(getKit(DEFAULT_KIT_KEY))
-        lab.setAppearance(DEFAULT_AVATAR_APPEARANCE)
+        await lab.setKit(getKit(kitStateRef.current.previewKitKey))
+        lab.setAppearance(appearanceRef.current)
         labRef.current = lab
         setIsReady(true)
       } catch (cause) {
@@ -255,8 +269,9 @@ export function AvatarLab() {
       if (purchaseTimerRef.current) clearTimeout(purchaseTimerRef.current)
       labRef.current?.dispose()
       labRef.current = null
+      setIsReady(false)
     }
-  }, [])
+  }, [character])
 
   useEffect(() => {
     if (!isReady) return
@@ -389,6 +404,23 @@ export function AvatarLab() {
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <h2 className="mb-3 text-sm font-semibold">캐릭터</h2>
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {characters.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setCharacter(item.value)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    character === item.value
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                      : "border-slate-200 hover:border-slate-400 dark:border-slate-700"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
             <h2 className="mb-3 text-sm font-semibold">카메라</h2>
             <div className="grid grid-cols-3 gap-2">
               {views.map((item) => (

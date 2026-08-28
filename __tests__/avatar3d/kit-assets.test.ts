@@ -69,36 +69,44 @@ describe("avatar kit texture assets", () => {
     }
   })
 
-  it("exports the Colin avatar GLB with kit material slots, UVs, and hair styles", () => {
-    const glb = readFileSync(
-      path.join(root, "public", "metaverse", "avatar3d", "colin-avatar-v1.glb")
-    )
-    const jsonLength = glb.readUInt32LE(12)
-    const document = JSON.parse(
-      glb
-        .subarray(20, 20 + jsonLength)
-        .toString("utf8")
-        .replace(/\0+$/, "")
-    ) as {
-      materials?: Array<{ name?: string }>
-      meshes?: Array<{ primitives: Array<{ attributes: { TEXCOORD_0?: number } }> }>
-      nodes?: Array<{ name?: string }>
-    }
-    const materialNames = new Set(document.materials?.map((material) => material.name))
-    for (const materialName of ["KIT_ATLAS", "KIT_BOOTS", "KIT_SOLE", "CHAR_SKIN", "CHAR_HAIR"]) {
-      expect(materialNames.has(materialName), materialName).toBe(true)
-    }
-    expect(
-      document.meshes?.some((mesh) =>
-        mesh.primitives.some((primitive) => primitive.attributes.TEXCOORD_0 !== undefined)
+  it.each(["colin", "chloe"])(
+    "exports the %s avatar GLB with kit material slots, UVs, hair styles, and motion clips",
+    (character) => {
+      const glb = readFileSync(
+        path.join(root, "public", "metaverse", "avatar3d", `${character}-avatar-v1.glb`)
       )
-    ).toBe(true)
-    const nodeNames = document.nodes?.map((node) => node.name ?? "") ?? []
-    for (const style of ["short", "bob", "ponytail", "twintail"]) {
+      const jsonLength = glb.readUInt32LE(12)
+      const document = JSON.parse(
+        glb
+          .subarray(20, 20 + jsonLength)
+          .toString("utf8")
+          .replace(/\0+$/, "")
+      ) as {
+        materials?: Array<{ name?: string }>
+        meshes?: Array<{ primitives: Array<{ attributes: { TEXCOORD_0?: number } }> }>
+        nodes?: Array<{ name?: string }>
+        animations?: Array<{ name?: string }>
+      }
+      const materialNames = new Set(document.materials?.map((material) => material.name))
+      for (const materialName of ["KIT_ATLAS", "KIT_BOOTS", "KIT_SOLE", "CHAR_SKIN", "CHAR_HAIR"]) {
+        expect(materialNames.has(materialName), materialName).toBe(true)
+      }
       expect(
-        nodeNames.some((name) => name.startsWith(`hair_style_${style}_`)),
-        style
+        document.meshes?.some((mesh) =>
+          mesh.primitives.some((primitive) => primitive.attributes.TEXCOORD_0 !== undefined)
+        )
       ).toBe(true)
+      const nodeNames = document.nodes?.map((node) => node.name ?? "") ?? []
+      for (const style of ["short", "bob", "ponytail", "twintail"]) {
+        expect(
+          nodeNames.some((name) => name.startsWith(`hair_style_${style}_`)),
+          style
+        ).toBe(true)
+      }
+      const clipNames = document.animations?.map((clip) => clip.name) ?? []
+      for (const clip of ["idle", "walk", "run", "cheer", "kick", "jump"]) {
+        expect(clipNames, clip).toContain(clip)
+      }
     }
-  })
+  )
 })
