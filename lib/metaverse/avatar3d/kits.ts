@@ -386,13 +386,19 @@ const ORIGINAL_KIT_CATALOG: readonly KitItem[] = [
 export const CLUB_SPONSORS: Record<ClubKey, KitSponsor> = {
   arsenal: { text: "Fly Emirates", style: "serif-italic", logo: "fly-emirates.svg" },
   chelsea: { text: "SAMSUNG", style: "wide", logo: "samsung.svg" },
-  "manchester-united": { text: "Snapdragon", style: "sans" },
+  "manchester-united": { text: "Snapdragon", style: "sans", logo: "snapdragon.svg" },
   liverpool: { text: "Standard Chartered", style: "sans", logo: "standard-chartered.svg" },
   "manchester-city": { text: "ETIHAD AIRWAYS", style: "wide", logo: "etihad.svg" },
   tottenham: { text: "AIA", style: "wide", logo: "aia.svg" },
   "real-madrid": { text: "Fly Emirates", style: "serif-italic", logo: "fly-emirates.svg" },
   barcelona: { text: "Spotify", style: "sans", logo: "spotify.svg" },
-  "atletico-madrid": { text: "Riyadh Air", style: "sans" },
+  // 줄무늬(빨강+크림) 위라 자동 색이 묻힘 — 실물처럼 네이비로 고정
+  "atletico-madrid": {
+    text: "Riyadh Air",
+    style: "sans",
+    logo: "riyadh-air.svg",
+    color: "#172B52",
+  },
   "bayern-munich": { text: "Telekom", style: "sans", logo: "telekom.svg" },
   psg: { text: "QATAR AIRWAYS", style: "wide", logo: "qatar-airways.svg" },
   "ac-milan": { text: "Fly Emirates", style: "serif-italic", logo: "fly-emirates.svg" },

@@ -26,11 +26,11 @@
     {
       "kitKey": "madrid-stripe-26-home",
       "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/madrid-stripe-26-home.r1.3fb3d215.png",
-      "sha256": "3fb3d2156f315666930d079cfb8d56f355a14eea3824f0ba8a3fa5fed5329714",
+      "url": "/metaverse/avatar3d/kits/v1/madrid-stripe-26-home.r1.32c6aa83.png",
+      "sha256": "32c6aa83f20ab509b138fecfebf228cef59b233c77d90fcfc6b65ea43a00fcde",
       "width": 1024,
       "height": 1024,
-      "byteSize": 7141,
+      "byteSize": 11336,
       "generatedWith": "sharp-0.34.5"
     },
     {
@@ -46,11 +46,11 @@
     {
       "kitKey": "manchester-red-26-home",
       "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/manchester-red-26-home.r1.1edf3b44.png",
-      "sha256": "1edf3b44ff3765623e0be7f1f95300750d3b7d5a891f6c0efb367834afc3685a",
+      "url": "/metaverse/avatar3d/kits/v1/manchester-red-26-home.r1.eb7238fb.png",
+      "sha256": "eb7238fb61a90e7f2121155d05d625818129043e1a5b20923ea5c3f96faba8ab",
       "width": 1024,
       "height": 1024,
-      "byteSize": 6589,
+      "byteSize": 8407,
       "generatedWith": "sharp-0.34.5"
     },
     {
