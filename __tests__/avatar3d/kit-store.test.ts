@@ -72,17 +72,20 @@ describe("avatar kit store", () => {
     const chelseaKits = getKitsForClub("chelsea")
 
     expect(CLUB_ROADMAP).toHaveLength(18)
+    // 로마·나폴리·도르트문트·레버쿠젠은 정의만 두고 노출 중단 (2026-08-29 운영자 지시)
     expect(AVAILABLE_CLUBS.map((club) => club.clubKey)).toEqual(
-      CLUB_ROADMAP.map((club) => club.clubKey)
+      CLUB_ROADMAP.map((club) => club.clubKey).filter(
+        (key) => !["roma", "napoli", "dortmund", "leverkusen"].includes(key)
+      )
     )
-    expect(KIT_CATALOG).toHaveLength(76)
+    expect(KIT_CATALOG).toHaveLength(60)
     expect(AVAILABLE_CLUBS.every((club) => getKitsForClub(club.clubKey).length >= 4)).toBe(true)
     expect(chelseaKits).toHaveLength(4)
     expect(chelseaKits.map((kit) => kit.slot)).toEqual(["home", "away", "retro", "retro"])
     expect(new Set(KIT_CATALOG.map((kit) => kit.kitKey)).size).toBe(KIT_CATALOG.length)
   })
 
-  it("ships every expansion club with current home/away and two retro slots", () => {
+  it("ships every active expansion club with current home/away and two retro slots", () => {
     const expansionClubKeys = [
       "manchester-united",
       "liverpool",
@@ -96,14 +99,15 @@ describe("avatar kit store", () => {
       "ac-milan",
       "juventus",
       "inter-milan",
-      "roma",
-      "napoli",
-      "dortmund",
-      "leverkusen",
     ] as const
+    // 정의·레퍼런스는 유지하되 카탈로그에서만 빠진 구단들
+    const pausedClubKeys = ["roma", "napoli", "dortmund", "leverkusen"] as const
 
     expect(AVAILABLE_CLUBS.slice(2).map((club) => club.clubKey)).toEqual(expansionClubKeys)
-    expect(Object.keys(KIT_REFERENCE_SOURCES)).toEqual(expansionClubKeys)
+    expect(Object.keys(KIT_REFERENCE_SOURCES)).toEqual([...expansionClubKeys, ...pausedClubKeys])
+    for (const clubKey of pausedClubKeys) {
+      expect(getKitsForClub(clubKey)).toHaveLength(0)
+    }
     for (const clubKey of expansionClubKeys) {
       const kits = getKitsForClub(clubKey)
       const sources = KIT_REFERENCE_SOURCES[clubKey]

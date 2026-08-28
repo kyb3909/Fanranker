@@ -394,46 +394,6 @@
       "generatedWith": "sharp-0.34.5"
     },
     {
-      "kitKey": "naples-denim-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/naples-denim-retro.r1.f539834e.png",
-      "sha256": "f539834e80fa6620f32d8171b336d4220b7ecbfe97f3c0514d6ded803f1ce74b",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 4513,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "naples-red-sky-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/naples-red-sky-retro.r1.3629258e.png",
-      "sha256": "3629258e63deebb5041f4153fc65f8b43f1ceea8796bd4d4d3b500e184486247",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 4740,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "naples-sky-26-home",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/naples-sky-26-home.r1.9f1c1934.png",
-      "sha256": "9f1c19349a4df0a635bf7b26ace468308f1a2b982bf854c852631e96b5caa158",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 5272,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "naples-world-26-away",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/naples-world-26-away.r1.96fc0da6.png",
-      "sha256": "96fc0da6d4e32192035d3c0a8971c09f801b2c342025ac8f8c53efdc512af9f4",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 5748,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
       "kitKey": "north-london-lily-26-home",
       "revision": 1,
       "url": "/metaverse/avatar3d/kits/v1/north-london-lily-26-home.r1.9922c3b0.png",
@@ -524,86 +484,6 @@
       "generatedWith": "sharp-0.34.5"
     },
     {
-      "kitKey": "rhine-black-26-away",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rhine-black-26-away.r1.3f676dc9.png",
-      "sha256": "3f676dc9280ef8fece789402e39be2976d883b2fd747dce3901a4d4805fe7bf6",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 4257,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rhine-red-26-home",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rhine-red-26-home.r1.8af93b27.png",
-      "sha256": "8af93b276513cc7ebc82c50cf861b67503aadabc1f61e0bb8ce3f972e3a73601",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 9710,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rhine-stripe-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rhine-stripe-retro.r1.63fd6b0a.png",
-      "sha256": "63fd6b0ae4fb8036deaa98fb30ba723f6e7f1eaf7ccb54483e178d45c55c55df",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 6588,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rhine-white-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rhine-white-retro.r1.42803029.png",
-      "sha256": "428030297c17979cf64ed193a272402fd359b87233dbc9bdb7b43e57ec416313",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 6470,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rome-black-gold-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rome-black-gold-retro.r1.861b8492.png",
-      "sha256": "861b8492e3a3525ec24e86902256e57c7549f2555806b3a49daf7c06694cc241",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 4196,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rome-ivory-26-away",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rome-ivory-26-away.r1.5a06b810.png",
-      "sha256": "5a06b8108fb834b662e1c94db53f1d44bf805fd936f65d8b11a2bf842ffda6f8",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 5727,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rome-scudetto-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rome-scudetto-retro.r1.efb3c7be.png",
-      "sha256": "efb3c7be5445af480586ff1945e273f87f7deed47fd632bb75d0330f05dec895",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 6665,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "rome-wine-26-home",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/rome-wine-26-home.r1.2f2e3df9.png",
-      "sha256": "2f2e3df916089e43c6d4d455706be5def9140451a4b1e7c40bbe74636a8d1624",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 4741,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
       "kitKey": "royal-violet-third",
       "revision": 1,
       "url": "/metaverse/avatar3d/kits/v1/royal-violet-third.r1.fad7a862.png",
@@ -611,46 +491,6 @@
       "width": 1024,
       "height": 1024,
       "byteSize": 10642,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "ruhr-black-26-away",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/ruhr-black-26-away.r1.c018a2fa.png",
-      "sha256": "c018a2fa9dddeaa140bb3b8858eb5f253a41672f8f5ddde13241a212664d84c7",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 12641,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "ruhr-neon-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/ruhr-neon-retro.r1.ba4785d5.png",
-      "sha256": "ba4785d52934e16d804b7b7d8f882da9fb11479b4200ebddf9d593f8195fd616",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 7205,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "ruhr-white-retro",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/ruhr-white-retro.r1.29432c2e.png",
-      "sha256": "29432c2e9a59f8ff0907cc5ab3e8a1d7dd7fb727858e06d5bc43f9b896ab31ff",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 10888,
-      "generatedWith": "sharp-0.34.5"
-    },
-    {
-      "kitKey": "ruhr-yellow-26-home",
-      "revision": 1,
-      "url": "/metaverse/avatar3d/kits/v1/ruhr-yellow-26-home.r1.8cdf33b5.png",
-      "sha256": "8cdf33b5187bb6996705b35b9fd14c40ceb63555300ac03d6515a3d5e794ea71",
-      "width": 1024,
-      "height": 1024,
-      "byteSize": 7225,
       "generatedWith": "sharp-0.34.5"
     },
     {

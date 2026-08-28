@@ -404,10 +404,29 @@ export const CLUB_SPONSORS: Record<ClubKey, KitSponsor> = {
   leverkusen: { text: "Barmenia", style: "sans" },
 }
 
-export const KIT_CATALOG: readonly KitItem[] = [
-  ...ORIGINAL_KIT_CATALOG,
-  ...ADDITIONAL_KIT_CATALOG,
-].map((kit) => (kit.sponsor ? kit : { ...kit, sponsor: CLUB_SPONSORS[kit.clubKey] }))
+// 운영 노출 대상 (2026-08-29 운영자 지시: 일단 빅6 + 레알·바르사·아틀레티코·
+// 뮌헨·PSG·밀란·인테르·유벤투스만). 정의는 club-kit-collections 에 그대로 있으니
+// 여기 목록에 clubKey 를 다시 넣으면 복구된다 — 넣은 뒤 pnpm avatar:kits 재실행.
+const ACTIVE_CLUBS: ReadonlySet<ClubKey> = new Set([
+  "arsenal",
+  "chelsea",
+  "manchester-united",
+  "liverpool",
+  "manchester-city",
+  "tottenham",
+  "real-madrid",
+  "barcelona",
+  "atletico-madrid",
+  "bayern-munich",
+  "psg",
+  "ac-milan",
+  "inter-milan",
+  "juventus",
+])
+
+export const KIT_CATALOG: readonly KitItem[] = [...ORIGINAL_KIT_CATALOG, ...ADDITIONAL_KIT_CATALOG]
+  .filter((kit) => ACTIVE_CLUBS.has(kit.clubKey))
+  .map((kit) => (kit.sponsor ? kit : { ...kit, sponsor: CLUB_SPONSORS[kit.clubKey] }))
 
 export const KIT_BY_KEY = new Map(KIT_CATALOG.map((kit) => [kit.kitKey, kit]))
 
