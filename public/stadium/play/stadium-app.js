@@ -1723,6 +1723,7 @@
    */
   window.__setup = function (o) {
     o = o || {};
+    if (o.avatarUrl && !avatarRequested) avatarUrl = o.avatarUrl;
     if (o.avatarKitUrl) {
       avatarKitUrl = o.avatarKitUrl;
       applyAvatarKit();

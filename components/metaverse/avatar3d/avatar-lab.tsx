@@ -410,7 +410,14 @@ export function AvatarLab() {
                 <button
                   key={item.value}
                   type="button"
-                  onClick={() => setCharacter(item.value)}
+                  onClick={() => {
+                    setCharacter(item.value)
+                    try {
+                      window.localStorage.setItem("gn.avatar.character", item.value)
+                    } catch {
+                      // 저장 못 해도 랩 안에서는 그대로 바뀐다
+                    }
+                  }}
                   className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
                     character === item.value
                       ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"

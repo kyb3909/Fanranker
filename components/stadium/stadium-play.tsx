@@ -35,6 +35,8 @@ declare global {
       nextBricks?: number
       /** 아바타가 입을 구단 유니폼 텍스처 */
       avatarKitUrl?: string
+      /** 아바타 GLB — 랩에서 고른 캐릭터 */
+      avatarUrl?: string
       /** 레벨 진행률 — 위 pct(렌더 시공률)와 다른 값이다 */
       levelPct?: number
     }) => { total: number; built: number }
@@ -45,6 +47,24 @@ declare global {
     __stadiumCanvas?: HTMLCanvasElement
     __stadiumStop?: () => void
   }
+}
+
+/**
+ * 아바타 랩에서 고른 캐릭터를 그대로 데려온다.
+ *
+ * 계정에 붙는 값이 아니라 이 브라우저의 선택일 뿐이다 — 구매·장착이 Supabase 로
+ * 넘어갈 때 그쪽 값으로 교체한다.
+ */
+function savedAvatarUrl(): string | undefined {
+  try {
+    const character = window.localStorage.getItem("gn.avatar.character")
+    if (character === "chloe" || character === "colin") {
+      return `/metaverse/avatar3d/${character}-avatar-v1.glb`
+    }
+  } catch {
+    // 프라이빗 모드 등 — 기본 캐릭터로 간다
+  }
+  return undefined
 }
 
 /** 킷 키 → 해시가 박힌 실제 텍스처 URL (매니페스트가 정본) */
@@ -142,6 +162,7 @@ export function StadiumPlay({
         const ready = window.__setup?.({
           team: scene,
           avatarKitUrl: await resolveKitTextureUrl(kitKey),
+          avatarUrl: savedAvatarUrl(),
           pct: built,
           ghost: false,
           level,
