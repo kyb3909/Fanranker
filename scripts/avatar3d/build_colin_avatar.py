@@ -312,8 +312,8 @@ def skin_meshes(keep, arm_obj, factor):
     # the shirt torso must not follow the arms — damp arm influence inside the
     # shoulder seam (sleeves keep it), reassigning the removed weight to spine
     shirt = keep["kit_shirt"]
-    x0 = 0.080 * factor
-    x1 = 0.125 * factor
+    x0 = 0.070 * factor
+    x1 = 0.150 * factor
     arm_group_ids = {
         g.index for g in shirt.vertex_groups if g.name.startswith(("upper_arm", "forearm"))
     }
@@ -346,14 +346,15 @@ def skin_meshes(keep, arm_obj, factor):
         if removed > 0:
             hips_on_shirt.add([v.index], removed, "ADD")
 
-    # the hem must stay glued to the pelvis, or a spine lean pushes red shirt
-    # patches through the rigid shorts waistband
+    # the hem leans toward the pelvis (60%) so it stays near the shorts
+    # waistband on a spine lean without going fully rigid — a hard pin made
+    # the leaning belly punch through the taut shirt front instead
     hem_top = 0.395 * factor
     hem_bottom = 0.355 * factor
     for v in shirt.data.vertices:
         if v.co.z >= hem_top:
             continue
-        t = min(1.0, (hem_top - v.co.z) / (hem_top - hem_bottom))
+        t = 0.6 * min(1.0, (hem_top - v.co.z) / (hem_top - hem_bottom))
         for ge in v.groups:
             ge.weight *= 1.0 - t
         hips_on_shirt.add([v.index], t, "ADD")
@@ -364,15 +365,21 @@ def skin_meshes(keep, arm_obj, factor):
     for group in list(shorts.vertex_groups):
         shorts.vertex_groups.remove(group)
     hips_on_shorts = shorts.vertex_groups.new(name="hips")
+    spine_on_shorts = shorts.vertex_groups.new(name="spine")
     thigh_l_group = shorts.vertex_groups.new(name="thigh_l")
     thigh_r_group = shorts.vertex_groups.new(name="thigh_r")
     crotch_z = 0.335 * factor
     blend_band = 0.05 * factor
+    waist_z = 0.375 * factor
     for v in shorts.data.vertices:
         t = (crotch_z - v.co.z) / blend_band
         t = max(0.0, min(1.0, t))
         if t <= 0.0:
-            hips_on_shorts.add([v.index], 1.0, "REPLACE")
+            # waistband picks up some spine so it leans with the shirt hem
+            spine_share = 0.3 if v.co.z >= waist_z else 0.0
+            hips_on_shorts.add([v.index], 1.0 - spine_share, "REPLACE")
+            if spine_share > 0.0:
+                spine_on_shorts.add([v.index], spine_share, "REPLACE")
             continue
         side = thigh_l_group if v.co.x >= 0 else thigh_r_group
         hips_on_shorts.add([v.index], 1.0 - t, "REPLACE")
@@ -480,6 +487,32 @@ def author_clips(arm_obj):
         key("forearm_r", frame, rot=(0, 0, 0.15))
         key("head", frame, rot=(0.12 * hop, 0, 0))
         key("hips", frame, loc=(0, 0.14 * hop, 0))
+    actions.append(act)
+
+    # ---- run: fast stride with airborne phases and pumping bent arms ----
+    act = bpy.data.actions.new("run")
+    arm_obj.animation_data.action = act
+    reset_pose()
+    run_poses = (
+        # frame, stride(-1..1), hips_up
+        (1, 1.0, -0.03),
+        (5, 0.0, 0.14),
+        (10, -1.0, -0.03),
+        (15, 0.0, 0.14),
+        (20, 1.0, -0.03),
+    )
+    for frame, s, hips_up in run_poses:
+        key("thigh_l", frame, rot=(-0.95 * s if s >= 0 else 0.7 * -s, 0, 0))
+        key("thigh_r", frame, rot=(0.7 * s if s >= 0 else -0.95 * -s, 0, 0))
+        key("shin_l", frame, rot=((0.15 if s > 0 else 1.25 if s < 0 else 0.65), 0, 0))
+        key("shin_r", frame, rot=((1.25 if s > 0 else 0.15 if s < 0 else 0.65), 0, 0))
+        key("upper_arm_l", frame, rot=(0.6 * s, 0, 0))
+        key("upper_arm_r", frame, rot=(-0.6 * s, 0, 0))
+        key("forearm_l", frame, rot=(-0.75, 0, 0))
+        key("forearm_r", frame, rot=(-0.75, 0, 0))
+        key("spine", frame, rot=(0.1, 0, 0))
+        key("head", frame, rot=(-0.06, 0, 0))
+        key("hips", frame, loc=(0, hips_up, 0))
     actions.append(act)
 
     # ---- kick: wind-up, strike, ball flies off; loop resets the ball ----
@@ -713,6 +746,7 @@ def main():
         cam.rotation_euler = fwd.to_track_quat("-Z", "Y").to_euler()
         anim_checks = (
             ("walk", (1, 8, 15)),
+            ("run", (1, 5, 10)),
             ("cheer", (1, 12)),
             ("kick", (6, 10, 18)),
             ("jump", (6, 16, 26)),

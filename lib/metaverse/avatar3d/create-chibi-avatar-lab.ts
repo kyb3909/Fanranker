@@ -50,7 +50,7 @@ type KitTextureManifest = {
 const SKIN_TEXTURE_BASE = { r: 231 / 255, g: 192 / 255, b: 173 / 255 } as const
 
 // Clip names baked into the GLB by scripts/avatar3d/build_colin_avatar.py.
-export type AvatarMotion = "idle" | "walk" | "cheer" | "kick" | "jump"
+export type AvatarMotion = "idle" | "walk" | "run" | "cheer" | "kick" | "jump"
 
 export type ChibiAvatarLab = {
   engine: Engine
