@@ -94,22 +94,26 @@ async function main() {
   await waitForRenderedKit(home.kitKey)
   await page.locator("canvas").screenshot({ path: path.join(outputDir, "avatar-kit-home-uv.png") })
 
-  const away = getKitsForClub("arsenal").find((kit) => kit.kitKey === "ivory-orbit-away")
-  if (!away) throw new Error("Arsenal away kit is missing")
-  await page.locator(`[aria-label^="${away.name}"]`).click()
-  await waitForRenderedKit(away.kitKey)
-  await page.locator("canvas").screenshot({ path: path.join(outputDir, "avatar-kit-away-uv.png") })
+  // 홈킷만 노출되므로 구매 흐름은 유료 홈킷(리버풀, 550G)으로 검증한다.
+  const purchaseKit = getKitsForClub("liverpool").find((kit) => kit.slot === "home")
+  if (!purchaseKit) throw new Error("Liverpool home kit is missing")
+  await page.locator(`[data-club-key="liverpool"]`).click()
+  await page.locator(`[data-kit-key="${purchaseKit.kitKey}"] [data-kit-preview]`).click()
+  await waitForRenderedKit(purchaseKit.kitKey)
+  await page
+    .locator("canvas")
+    .screenshot({ path: path.join(outputDir, "avatar-kit-purchase-uv.png") })
 
-  const awayCard = page.locator(`[data-kit-key="${away.kitKey}"]`)
+  const purchaseCard = page.locator(`[data-kit-key="${purchaseKit.kitKey}"]`)
   const balanceBefore = Number(
     await page.locator("[data-shop-balance]").getAttribute("data-shop-balance")
   )
-  await awayCard.locator("[data-kit-action]").click()
+  await purchaseCard.locator("[data-kit-action]").click()
   await page.waitForFunction(
     (kitKey) =>
       document.querySelector(`[data-kit-key="${kitKey}"]`)?.getAttribute("data-kit-equipped") ===
       "true",
-    away.kitKey,
+    purchaseKit.kitKey,
     { timeout: 5_000 }
   )
   const balanceAfter = Number(
@@ -166,10 +170,10 @@ async function main() {
     loadedAtlasRequests: loadedAtlases.size,
     uniqueRenderedFrames: new Set(kitCaptures.map((capture) => capture.frameHash)).size,
     purchase: {
-      kitKey: away.kitKey,
+      kitKey: purchaseKit.kitKey,
       balanceBefore,
       balanceAfter,
-      expectedBalanceAfter: INITIAL_KIT_BALANCE - away.priceGold,
+      expectedBalanceAfter: INITIAL_KIT_BALANCE - purchaseKit.priceGold,
       equippedAfterPurchase,
       ownedCountAfterPurchase,
     },
@@ -242,10 +246,11 @@ async function main() {
   }
   if (balanceBefore !== INITIAL_KIT_BALANCE)
     throw new Error(`Unexpected initial balance: ${balanceBefore}`)
-  if (balanceAfter !== INITIAL_KIT_BALANCE - away.priceGold) {
+  if (balanceAfter !== INITIAL_KIT_BALANCE - purchaseKit.priceGold) {
     throw new Error(`Purchase balance mismatch: ${balanceAfter}`)
   }
-  if (equippedAfterPurchase !== away.kitKey) throw new Error("Purchased kit was not equipped")
+  if (equippedAfterPurchase !== purchaseKit.kitKey)
+    throw new Error("Purchased kit was not equipped")
   if (ownedCountAfterPurchase !== 2)
     throw new Error(`Expected 2 owned kits, got ${ownedCountAfterPurchase}`)
   if (report.placeholderSponsorVisible) throw new Error("Placeholder sponsor is visible")

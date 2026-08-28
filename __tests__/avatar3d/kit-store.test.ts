@@ -14,39 +14,39 @@ describe("avatar kit store", () => {
   it("previews an unowned kit without purchasing it", () => {
     const state = kitStoreReducer(createInitialKitStore(), {
       type: "preview",
-      kitKey: "ivory-orbit-away",
+      kitKey: "mersey-deep-red-26-home",
     })
 
-    expect(state.previewKitKey).toBe("ivory-orbit-away")
-    expect(ownsKit(state, "ivory-orbit-away")).toBe(false)
+    expect(state.previewKitKey).toBe("mersey-deep-red-26-home")
+    expect(ownsKit(state, "mersey-deep-red-26-home")).toBe(false)
     expect(state.balanceGold).toBe(2_400)
   })
 
   it("charges once, grants ownership, and equips after purchase", () => {
     const pending = kitStoreReducer(createInitialKitStore(), {
       type: "purchase-start",
-      kitKey: "signal-night-third",
+      kitKey: "mersey-deep-red-26-home",
     })
     const purchased = kitStoreReducer(pending, {
       type: "purchase-success",
-      kitKey: "signal-night-third",
+      kitKey: "mersey-deep-red-26-home",
     })
     const duplicate = kitStoreReducer(purchased, {
       type: "purchase-start",
-      kitKey: "signal-night-third",
+      kitKey: "mersey-deep-red-26-home",
     })
 
-    expect(purchased.balanceGold).toBe(1_500)
-    expect(purchased.equippedKitKey).toBe("signal-night-third")
-    expect(ownsKit(purchased, "signal-night-third")).toBe(true)
-    expect(duplicate.balanceGold).toBe(1_500)
+    expect(purchased.balanceGold).toBe(1_850)
+    expect(purchased.equippedKitKey).toBe("mersey-deep-red-26-home")
+    expect(ownsKit(purchased, "mersey-deep-red-26-home")).toBe(true)
+    expect(duplicate.balanceGold).toBe(1_850)
     expect(duplicate.ownedKitKeys).toHaveLength(2)
   })
 
   it("does not equip an unowned kit", () => {
     const state = kitStoreReducer(createInitialKitStore(), {
       type: "equip",
-      kitKey: "violet-pulse",
+      kitKey: "manchester-sky-26-home",
     })
 
     expect(state.equippedKitKey).toBe("red-horizon-home")
@@ -56,16 +56,16 @@ describe("avatar kit store", () => {
   it("clears pending state without charging when a purchase fails", () => {
     const pending = kitStoreReducer(createInitialKitStore(), {
       type: "purchase-start",
-      kitKey: "ivory-orbit-away",
+      kitKey: "mersey-deep-red-26-home",
     })
     const failed = kitStoreReducer(pending, {
       type: "purchase-failure",
-      kitKey: "ivory-orbit-away",
+      kitKey: "mersey-deep-red-26-home",
     })
 
     expect(failed.pendingKitKey).toBeNull()
     expect(failed.balanceGold).toBe(2_400)
-    expect(ownsKit(failed, "ivory-orbit-away")).toBe(false)
+    expect(ownsKit(failed, "mersey-deep-red-26-home")).toBe(false)
   })
 
   it("keeps club collections grouped with unique kit keys", () => {
@@ -78,10 +78,11 @@ describe("avatar kit store", () => {
         (key) => !["roma", "napoli", "dortmund", "leverkusen"].includes(key)
       )
     )
-    expect(KIT_CATALOG).toHaveLength(60)
-    expect(AVAILABLE_CLUBS.every((club) => getKitsForClub(club.clubKey).length >= 4)).toBe(true)
-    expect(chelseaKits).toHaveLength(4)
-    expect(chelseaKits.map((kit) => kit.slot)).toEqual(["home", "away", "retro", "retro"])
+    // 올해 홈 유니폼 1벌씩만 노출 (2026-08-29 운영자 지시)
+    expect(KIT_CATALOG).toHaveLength(14)
+    expect(AVAILABLE_CLUBS.every((club) => getKitsForClub(club.clubKey).length === 1)).toBe(true)
+    expect(chelseaKits).toHaveLength(1)
+    expect(chelseaKits.map((kit) => kit.slot)).toEqual(["home"])
     expect(new Set(KIT_CATALOG.map((kit) => kit.kitKey)).size).toBe(KIT_CATALOG.length)
   })
 
@@ -111,9 +112,8 @@ describe("avatar kit store", () => {
     for (const clubKey of expansionClubKeys) {
       const kits = getKitsForClub(clubKey)
       const sources = KIT_REFERENCE_SOURCES[clubKey]
-      expect(kits.map((kit) => kit.slot)).toEqual(["home", "away", "retro", "retro"])
+      expect(kits.map((kit) => kit.slot)).toEqual(["home"])
       expect(kits[0]?.collection).toBe("26/27 HOME INSPIRED")
-      expect(kits[1]?.collection).toBe("26/27 AWAY INSPIRED")
       expect(sources.season).toBe("2026/27")
       expect(sources.verifiedAt).toBe("2026-08-28")
       expect(sources.homeUrl).toMatch(/^https:\/\//)
@@ -121,18 +121,12 @@ describe("avatar kit store", () => {
     }
   })
 
-  it("ships the flagship home and away kits with construction-level design data", () => {
+  it("ships the flagship home kit with construction-level design data", () => {
     expect(KIT_BY_KEY.get(DEFAULT_KIT_KEY)).toMatchObject({
       clubKey: "arsenal",
       collar: "crew",
       design: "contrast-raglan",
       pattern: "plain",
-    })
-    expect(KIT_BY_KEY.get("ivory-orbit-away")).toMatchObject({
-      clubKey: "arsenal",
-      collar: "crew",
-      design: "contrast-raglan",
-      pattern: "chevron",
     })
   })
 })
