@@ -50,7 +50,7 @@ type KitTextureManifest = {
 const SKIN_TEXTURE_BASE = { r: 231 / 255, g: 192 / 255, b: 173 / 255 } as const
 
 // Clip names baked into the GLB by scripts/avatar3d/build_colin_avatar.py.
-export type AvatarMotion = "idle" | "walk" | "cheer"
+export type AvatarMotion = "idle" | "walk" | "cheer" | "kick" | "jump"
 
 export type ChibiAvatarLab = {
   engine: Engine
@@ -226,8 +226,17 @@ export async function createChibiAvatarLab(canvas: HTMLCanvasElement): Promise<C
 
   // The glTF loader auto-plays the first clip; take over playback ourselves.
   imported.animationGroups.forEach((group) => group.stop())
+  // The soccer ball lives in the GLB but only makes sense during the kick
+  // clip. The loader may split the two-material mesh into primitives, so match
+  // by name prefix ("ball", "ball_primitive0", ...) while excluding the
+  // ball_anchor bone node and the eye_ball meshes.
+  const ballNodes = [...scene.meshes, ...scene.transformNodes].filter(
+    (node) => node.name === "ball" || node.name.startsWith("ball_primitive")
+  )
+  canvas.dataset.ballNodes = String(ballNodes.length)
   function playMotion(motion: AvatarMotion) {
     imported.animationGroups.forEach((group) => group.stop())
+    ballNodes.forEach((node) => node.setEnabled(motion === "kick"))
     const target = imported.animationGroups.find((group) => group.name === motion)
     if (target) {
       target.play(true)

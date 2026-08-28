@@ -199,6 +199,37 @@ def build_sole(name, center_x, foot_y, mat_sole):
     return sole
 
 
+BALL_RADIUS = 0.30  # final scene units
+
+
+def ball_rest_position(rx, fy, factor):
+    return (rx * factor, fy * factor - 0.5, BALL_RADIUS)
+
+
+def build_ball(mat_white, mat_dark, rx, fy, factor):
+    """Stylized soccer ball: icosphere with the 12 pole clusters painted dark."""
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1.0, location=(0, 0, 0))
+    ball = bpy.context.active_object
+    ball.name = "ball"
+    mesh = ball.data
+    valence = {i: 0 for i in range(len(mesh.vertices))}
+    for edge in mesh.edges:
+        valence[edge.vertices[0]] += 1
+        valence[edge.vertices[1]] += 1
+    poles = {i for i, count in valence.items() if count == 5}
+    mesh.materials.append(mat_white)
+    mesh.materials.append(mat_dark)
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+        if any(vi in poles for vi in poly.vertices):
+            poly.material_index = 1
+    ball.scale = (BALL_RADIUS, BALL_RADIUS, BALL_RADIUS)
+    bpy.ops.object.transform_apply(scale=True)
+    ball.location = ball_rest_position(rx, fy, factor)
+    bpy.ops.object.transform_apply(location=True)
+    return ball
+
+
 def build_rig(keep, lx, rx, fy, factor):
     """15-bone humanoid armature sized from measured chibi landmarks."""
     arm_data = bpy.data.armatures.new("colin_rig")
@@ -247,6 +278,8 @@ def build_rig(keep, lx, rx, fy, factor):
             f"shin_{side}",
             True,
         )
+    ball_x, ball_y, ball_z = ball_rest_position(rx, fy, F)
+    bone("ball_anchor", (ball_x, ball_y, ball_z), (ball_x, ball_y, ball_z + 0.25))
     bpy.ops.object.mode_set(mode="OBJECT")
     return arm_obj
 
@@ -298,17 +331,60 @@ def skin_meshes(keep, arm_obj, factor):
         if removed > 0:
             spine_group.add([v.index], removed, "ADD")
 
+    # the shirt must not follow the legs either — transferred thigh weights on
+    # the hem dragged red streaks over the shorts during kicks
+    leg_group_ids = {
+        g.index for g in shirt.vertex_groups if g.name.startswith(("thigh", "shin", "foot"))
+    }
+    hips_on_shirt = shirt.vertex_groups.get("hips") or shirt.vertex_groups.new(name="hips")
+    for v in shirt.data.vertices:
+        removed = 0.0
+        for ge in v.groups:
+            if ge.group in leg_group_ids:
+                removed += ge.weight
+                ge.weight = 0.0
+        if removed > 0:
+            hips_on_shirt.add([v.index], removed, "ADD")
+
+    # the hem must stay glued to the pelvis, or a spine lean pushes red shirt
+    # patches through the rigid shorts waistband
+    hem_top = 0.395 * factor
+    hem_bottom = 0.355 * factor
+    for v in shirt.data.vertices:
+        if v.co.z >= hem_top:
+            continue
+        t = min(1.0, (hem_top - v.co.z) / (hem_top - hem_bottom))
+        for ge in v.groups:
+            ge.weight *= 1.0 - t
+        hips_on_shirt.add([v.index], t, "ADD")
+
+    # shorts: positional weights — pelvis above the crotch, thighs below, so
+    # tucked legs (jump) and kicks carry the shorts legs along
+    shorts = keep["kit_shorts"]
+    for group in list(shorts.vertex_groups):
+        shorts.vertex_groups.remove(group)
+    hips_on_shorts = shorts.vertex_groups.new(name="hips")
+    thigh_l_group = shorts.vertex_groups.new(name="thigh_l")
+    thigh_r_group = shorts.vertex_groups.new(name="thigh_r")
+    crotch_z = 0.335 * factor
+    blend_band = 0.05 * factor
+    for v in shorts.data.vertices:
+        t = (crotch_z - v.co.z) / blend_band
+        t = max(0.0, min(1.0, t))
+        if t <= 0.0:
+            hips_on_shorts.add([v.index], 1.0, "REPLACE")
+            continue
+        side = thigh_l_group if v.co.x >= 0 else thigh_r_group
+        hips_on_shorts.add([v.index], 1.0 - t, "REPLACE")
+        side.add([v.index], t, "REPLACE")
+
     # verts the transfer missed (collar rim etc.) have no weights at all and
-    # stay behind on translation keys — pin them to the torso bones
-    for mesh_name, bone_name in (("kit_shirt", "spine"), ("kit_shorts", "hips")):
-        obj = keep[mesh_name]
-        group = obj.vertex_groups.get(bone_name) or obj.vertex_groups.new(name=bone_name)
-        orphans = [
-            v.index for v in obj.data.vertices if sum(ge.weight for ge in v.groups) < 0.05
-        ]
-        if orphans:
-            group.add(orphans, 1.0, "REPLACE")
-            print(f"{mesh_name}: pinned {len(orphans)} orphan verts to {bone_name}")
+    # stay behind on translation keys — pin them to the torso
+    orphan_group = shirt.vertex_groups.get("spine") or shirt.vertex_groups.new(name="spine")
+    orphans = [v.index for v in shirt.data.vertices if sum(ge.weight for ge in v.groups) < 0.05]
+    if orphans:
+        orphan_group.add(orphans, 1.0, "REPLACE")
+        print(f"kit_shirt: pinned {len(orphans)} orphan verts to spine")
 
     # heat/transferred weights don't always sum to 1 per vertex, which makes
     # translation keys (the cheer hop) tear cloth away from the skin
@@ -326,6 +402,7 @@ def skin_meshes(keep, arm_obj, factor):
             rigid["head"].append(obj)
     rigid["foot_l"] = [keep["boot_l"], keep["sole_l"]]
     rigid["foot_r"] = [keep["boot_r"], keep["sole_r"]]
+    rigid["ball_anchor"] = [keep["ball"]]
     for bone_name, objs in rigid.items():
         for obj in objs:
             group = obj.vertex_groups.new(name=bone_name)
@@ -405,6 +482,69 @@ def author_clips(arm_obj):
         key("hips", frame, loc=(0, 0.14 * hop, 0))
     actions.append(act)
 
+    # ---- kick: wind-up, strike, ball flies off; loop resets the ball ----
+    act = bpy.data.actions.new("kick")
+    arm_obj.animation_data.action = act
+    reset_pose()
+    kick_poses = (
+        # frame, thigh_r, shin_r, spine, arm_l, arm_r, head
+        (1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        (6, 0.85, 0.95, 0.14, -0.55, 0.5, 0.06),
+        (10, -1.15, 0.12, -0.1, 0.45, -0.5, -0.04),
+        (16, -1.3, 0.05, -0.12, 0.55, -0.6, -0.1),
+        (26, -0.35, 0.15, -0.04, 0.2, -0.2, -0.06),
+        (40, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    )
+    for frame, thigh_r, shin_r, spine, arm_l, arm_r, head in kick_poses:
+        key("thigh_r", frame, rot=(thigh_r, 0, 0))
+        key("shin_r", frame, rot=(shin_r, 0, 0))
+        key("spine", frame, rot=(spine, 0, 0))
+        key("upper_arm_l", frame, rot=(arm_l, 0, 0))
+        key("upper_arm_r", frame, rot=(arm_r, 0, 0))
+        key("head", frame, rot=(head, 0, 0))
+        key("thigh_l", frame, rot=(-0.05 if frame in (6, 10, 16) else 0.0, 0, 0))
+        key("shin_l", frame, rot=(0.1 if frame in (6, 10, 16) else 0.0, 0, 0))
+    # ball: sits at the foot until impact (f10), then a forward arc
+    # (bone local axes: y = up, z = forward)
+    ball_path = (
+        (1, (0.0, 0.0, 0.0), 0.0),
+        (9, (0.0, 0.0, 0.0), 0.0),
+        (13, (0.0, 0.4, 0.9), -2.0),
+        (18, (0.0, 1.0, 2.4), -5.5),
+        (24, (0.0, 0.75, 4.2), -9.0),
+        (30, (0.0, 0.1, 6.2), -12.5),
+        (40, (0.0, 0.1, 6.2), -12.5),
+    )
+    for frame, loc, spin in ball_path:
+        key("ball_anchor", frame, rot=(spin, 0, 0), loc=loc)
+    actions.append(act)
+
+    # ---- jump: crouch, leap with tucked legs, land, recover ----
+    act = bpy.data.actions.new("jump")
+    arm_obj.animation_data.action = act
+    reset_pose()
+    jump_poses = (
+        # frame, hips_up, thigh, shin, spine, arms
+        (1, 0.0, 0.0, 0.0, 0.0, 0.0),
+        (6, -0.25, -0.55, 0.85, 0.16, 0.65),
+        (12, 0.55, -0.35, 0.55, -0.04, -0.9),
+        (16, 0.72, -0.75, 1.0, -0.08, -1.1),
+        (22, 0.28, -0.15, 0.25, 0.0, -0.35),
+        (26, -0.2, -0.5, 0.8, 0.14, 0.3),
+        (33, -0.04, -0.1, 0.15, 0.04, 0.05),
+        (40, 0.0, 0.0, 0.0, 0.0, 0.0),
+    )
+    for frame, hips_up, thigh, shin, spine, arms in jump_poses:
+        key("hips", frame, loc=(0, hips_up, 0))
+        key("thigh_l", frame, rot=(thigh, 0, 0))
+        key("thigh_r", frame, rot=(thigh, 0, 0))
+        key("shin_l", frame, rot=(shin, 0, 0))
+        key("shin_r", frame, rot=(shin, 0, 0))
+        key("spine", frame, rot=(spine, 0, 0))
+        key("upper_arm_l", frame, rot=(arms, 0, 0))
+        key("upper_arm_r", frame, rot=(arms, 0, 0))
+    actions.append(act)
+
     # stash every clip on the NLA so the glTF exporter emits one animation each
     arm_obj.animation_data.action = None
     for act in actions:
@@ -461,6 +601,8 @@ def main():
     mat_kit = make_material("KIT_ATLAS", (1, 1, 1), roughness=0.78)
     mat_boot = make_material("KIT_BOOTS", (0.06, 0.075, 0.11), roughness=0.55)
     mat_sole = make_material("KIT_SOLE", (0.95, 0.94, 0.9), roughness=0.7)
+    mat_ball_white = make_material("BALL_WHITE", (0.93, 0.93, 0.9), roughness=0.5)
+    mat_ball_dark = make_material("BALL_DARK", (0.05, 0.05, 0.06), roughness=0.5)
 
     assign_material(keep["body"], mat_skin)
     assign_material(keep["eye_ball_l"], mat_iris)
@@ -501,7 +643,9 @@ def main():
     total_polys = sum(len(o.data.polygons) for o in keep.values())
     print(f"export meshes={len(keep)} polys={total_polys}")
 
-    # ---- rig + animation clips ------------------------------------------
+    # ---- ball + rig + animation clips -----------------------------------
+    keep["ball"] = build_ball(mat_ball_white, mat_ball_dark, rx, fy, factor)
+    keep["ball"].hide_render = True  # visible only in the kick pose stills
     arm_obj = build_rig(keep, lx, rx, fy, factor)
     skin_meshes(keep, arm_obj, factor)
     author_clips(arm_obj)
@@ -564,10 +708,17 @@ def main():
         for name, obj in keep.items():
             if name.startswith("hair_style_"):
                 obj.hide_render = not name.startswith(f"hair_style_{default_style}_")
-        cam.location = center + Vector((0, -1, 0.16)).normalized() * dist
+        cam.location = center + Vector((-0.4, -1, 0.16)).normalized() * dist
         fwd = (center - cam.location).normalized()
         cam.rotation_euler = fwd.to_track_quat("-Z", "Y").to_euler()
-        for clip_name, frames in (("walk", (1, 8, 15)), ("cheer", (1, 12))):
+        anim_checks = (
+            ("walk", (1, 8, 15)),
+            ("cheer", (1, 12)),
+            ("kick", (6, 10, 18)),
+            ("jump", (6, 16, 26)),
+        )
+        for clip_name, frames in anim_checks:
+            keep["ball"].hide_render = clip_name != "kick"
             arm_obj.animation_data.action = bpy.data.actions[clip_name]
             for frame in frames:
                 scene.frame_set(frame)

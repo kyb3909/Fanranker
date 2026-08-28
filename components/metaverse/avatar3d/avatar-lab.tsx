@@ -47,6 +47,8 @@ const motions: Array<{ value: AvatarMotion; label: string }> = [
   { value: "idle", label: "대기" },
   { value: "walk", label: "걷기" },
   { value: "cheer", label: "환호" },
+  { value: "kick", label: "슛" },
+  { value: "jump", label: "점프" },
 ]
 
 const rarityLabel = {
