@@ -324,6 +324,84 @@ export function ReportsWidget({ count }: { count: number }) {
   )
 }
 
+/** 범용 큐 위젯 — 0건이면 렌더링하지 않는다. 인라인 1액션 + 열기 */
+export function QueueWidget({
+  title,
+  count,
+  detail,
+  action,
+  danger,
+}: {
+  title: string
+  count: number
+  detail: string
+  action?: string
+  danger?: boolean
+}) {
+  if (count === 0) return null
+  return (
+    <Widget title={title} count={count} tone={danger ? "danger" : "default"}>
+      <p className="text-muted-foreground text-xs leading-relaxed">{detail}</p>
+      <div className="mt-2 flex gap-1.5">
+        {action && (
+          <button className="rounded bg-neutral-900 px-2.5 py-1 text-[11px] font-medium text-white">
+            {action}
+          </button>
+        )}
+        <button className="rounded border px-2.5 py-1 text-[11px]">열기</button>
+      </div>
+    </Widget>
+  )
+}
+
+/**
+ * 베트맨 위젯 — 큐가 아니라 **시스템**이다. 전부 정상이면 상단 초록 줄에 접히고,
+ * 하나라도 이상(동기화 지연·미정산·환불 대기)이면 위젯으로 나타나 액션을 준다.
+ */
+export function BetmanWidget({ betman }: { betman: DashboardData["betman"] }) {
+  const hasIssue = betman.status !== "ok" || betman.unsettled > 0 || betman.refundsPending > 0
+  if (!hasIssue) return null
+  return (
+    <Widget title="베트맨" tone="danger">
+      <ul className="space-y-1.5 text-xs">
+        {betman.status !== "ok" && (
+          <li className="flex items-center gap-2">
+            <span className="font-semibold text-red-600">
+              동기화 {betman.status === "stale" ? "지연" : "장애"}
+            </span>
+            <span className="text-muted-foreground">
+              마지막{" "}
+              {betman.lastCheckedAt
+                ? `${Math.round((Date.now() - new Date(betman.lastCheckedAt).getTime()) / 3600_000)}시간 전`
+                : "기록 없음"}
+            </span>
+            <button className="ml-auto rounded bg-neutral-900 px-2 py-0.5 text-[11px] text-white">
+              재동기화
+            </button>
+          </li>
+        )}
+        {betman.unsettled > 0 && (
+          <li className="flex items-center gap-2">
+            <span>
+              미정산 경기 <b className="tabular-nums">{betman.unsettled}</b>건
+            </span>
+            <span className="text-muted-foreground">(settle-pending 크론 15분 안전망 있음)</span>
+            <button className="ml-auto rounded border px-2 py-0.5 text-[11px]">정산 열기</button>
+          </li>
+        )}
+        {betman.refundsPending > 0 && (
+          <li className="flex items-center gap-2">
+            <span>
+              환불 대기 <b className="tabular-nums">{betman.refundsPending}</b>건
+            </span>
+            <button className="ml-auto rounded border px-2 py-0.5 text-[11px]">환불 열기</button>
+          </li>
+        )}
+      </ul>
+    </Widget>
+  )
+}
+
 /** 오늘의 흐름 — KPI 강등판: 대형 카드 대신 압축 한 줄 (2인 합의) */
 export function TodayStrip({ today }: { today: DashboardData["today"] }) {
   return (

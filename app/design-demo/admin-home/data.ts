@@ -27,7 +27,17 @@ export interface DashboardData {
   reportsPending: number
   sagaPending: number
   dictCandidates: number
-  betman: { lastCheckedAt: string | null; status: "ok" | "stale" | "error" }
+  betman: {
+    lastCheckedAt: string | null
+    status: "ok" | "stale" | "error"
+    /** 킥오프 지났는데 result 없는 경기 행 — operations/dashboard 와 같은 정의 */
+    unsettled: number
+    refundsPending: number
+  }
+  /** 문의 — ⚠️ inquiries 테이블은 존재하나 접수 경로가 미배선 (2026-08-30 실측: 코드 참조 0) */
+  inquiriesOpen: number
+  newsErrorReports: number
+  metaverseReports: number
   squadBacklog: number
   today: { signups: number; posts: number; predictions: number }
 }
@@ -75,51 +85,87 @@ export async function loadDashboardData(): Promise<DashboardData> {
     Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate()) - KST_OFFSET
   ).toISOString()
 
-  const [newsRes, reportsRes, sagaRes, dictRes, syncRes, squadRes, suRes, poRes, prRes] =
-    await Promise.all([
-      supabase
-        .from("news_reservoir")
-        .select("id, draft, raw, urls, scores, created_at")
-        .eq("status", "drafted")
-        .filter("source->>type", "eq", "hermes")
-        .order("created_at", { ascending: true })
-        .limit(100),
-      supabase
-        .from("content_reports")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending"),
-      supabase
-        .from("saga_reservoir")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending"),
-      supabase
-        .from("saga_reservoir")
-        .select("*", { count: "exact", head: true })
-        .eq("error", "auto_hold:unknown_player"),
-      supabase
-        .from("betman_sync_state")
-        .select("last_checked_at")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("team_squads")
-        .select("*", { count: "exact", head: true })
-        .not("name_kr_draft", "is", null)
-        .neq("status", "confirmed"),
-      supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", todayStart),
-      supabase
-        .from("posts")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", todayStart),
-      supabase
-        .from("betman_predictions")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", todayStart),
-    ])
+  const [
+    newsRes,
+    reportsRes,
+    sagaRes,
+    dictRes,
+    syncRes,
+    squadRes,
+    suRes,
+    poRes,
+    prRes,
+    unsettledRes,
+    refundsRes,
+    inqRes,
+    nerRes,
+    mvRes,
+  ] = await Promise.all([
+    supabase
+      .from("news_reservoir")
+      .select("id, draft, raw, urls, scores, created_at")
+      .eq("status", "drafted")
+      .filter("source->>type", "eq", "hermes")
+      .order("created_at", { ascending: true })
+      .limit(100),
+    supabase
+      .from("content_reports")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("saga_reservoir")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("saga_reservoir")
+      .select("*", { count: "exact", head: true })
+      .eq("error", "auto_hold:unknown_player"),
+    supabase
+      .from("betman_sync_state")
+      .select("last_checked_at")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("team_squads")
+      .select("*", { count: "exact", head: true })
+      .not("name_kr_draft", "is", null)
+      .neq("status", "confirmed"),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart),
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart),
+    supabase
+      .from("betman_predictions")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart),
+    /**
+     * 미정산 — ⚠️ operations/dashboard 의 정의(킥오프 지남 & result null)를 그대로 쓰면
+     * 주말 저녁마다 거짓 경보가 난다 (2026-08-30 실측: 122건 전부 최근 2일 in_progress —
+     * 그냥 지금 뛰고 있는 경기들). 경기 ~2h + VPS 동기화 주기 2h + 여유를 더해
+     * **킥오프 5시간 경과**부터만 "진짜 걸린 것"으로 센다. PM 경고 그대로: 늑대소리
+     * 내는 위젯은 3주 안에 무시를 학습시킨다.
+     */
+    supabase
+      .from("betman_games")
+      .select("*", { count: "exact", head: true })
+      .lt("match_time", new Date(Date.now() - 5 * 3600_000).toISOString())
+      .is("result", null),
+    supabase
+      .from("pending_refunds")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase.from("inquiries").select("*", { count: "exact", head: true }),
+    supabase.from("news_error_reports").select("*", { count: "exact", head: true }),
+    supabase
+      .from("metaverse_user_reports")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "open"),
+  ])
 
   interface Row {
     id: string
@@ -173,7 +219,15 @@ export async function loadDashboardData(): Promise<DashboardData> {
     reportsPending: reportsRes.count ?? 0,
     sagaPending: sagaRes.count ?? 0,
     dictCandidates: dictRes.count ?? 0,
-    betman: { lastCheckedAt: lastChecked, status: betmanStatus },
+    betman: {
+      lastCheckedAt: lastChecked,
+      status: betmanStatus,
+      unsettled: unsettledRes.count ?? 0,
+      refundsPending: refundsRes.count ?? 0,
+    },
+    inquiriesOpen: inqRes.count ?? 0,
+    newsErrorReports: nerRes.count ?? 0,
+    metaverseReports: mvRes.count ?? 0,
     squadBacklog: squadRes.count ?? 0,
     today: {
       signups: suRes.count ?? 0,

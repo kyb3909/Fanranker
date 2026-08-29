@@ -1,6 +1,14 @@
 import Link from "next/link"
 import { loadDashboardData } from "./data"
-import { MiniNewsDeck, DictWidget, ReportsWidget, TodayStrip, Widget } from "./widgets"
+import {
+  MiniNewsDeck,
+  DictWidget,
+  ReportsWidget,
+  TodayStrip,
+  Widget,
+  QueueWidget,
+  BetmanWidget,
+} from "./widgets"
 
 /**
  * 시안 B — 「벤토 그리드」 (디자이너 추천안)
@@ -37,14 +45,17 @@ export default async function AdminHomeBento() {
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <h1 className="text-lg font-bold">관리자 홈</h1>
           <TodayStrip today={d.today} />
-          {/* 시스템 — 정상이면 접힌 초록 한 줄 (디자이너: 부재 ≠ 정상 증명) */}
+          {/* 시스템 — 전부 정상이면 접힌 초록 한 줄 (디자이너: 부재 ≠ 정상 증명).
+              이상이 있으면 이 줄 대신 아래 베트맨 위젯이 나타난다 */}
           <p className="ml-auto text-xs">
-            {d.betman.status === "ok" ? (
-              <span className="text-emerald-700">✅ 전 시스템 정상 · betman 동기화 정상</span>
-            ) : (
-              <span className="font-bold text-red-600">
-                ⚠️ betman 동기화 {d.betman.status === "stale" ? "지연" : "장애"}
+            {d.betman.status === "ok" &&
+            d.betman.unsettled === 0 &&
+            d.betman.refundsPending === 0 ? (
+              <span className="text-emerald-700">
+                ✅ 전 시스템 정상 — 베트맨 동기화 · 미정산 0 · 환불 대기 0
               </span>
+            ) : (
+              <span className="font-bold text-red-600">⚠️ 베트맨 점검 필요 — 아래 위젯</span>
             )}
           </p>
         </div>
@@ -61,17 +72,32 @@ export default async function AdminHomeBento() {
           </Widget>
 
           <div className="flex flex-col gap-4 xl:col-span-3">
+            <BetmanWidget betman={d.betman} />
             <ReportsWidget count={d.reportsPending} />
+            <QueueWidget
+              title="문의"
+              count={d.inquiriesOpen}
+              detail="유저 문의 — 답변 대기"
+              danger
+            />
+            <QueueWidget
+              title="뉴스 오류 제보"
+              count={d.newsErrorReports}
+              detail="독자가 기사 오류를 제보한 건"
+              danger
+            />
+            <QueueWidget
+              title="메타버스 신고"
+              count={d.metaverseReports}
+              detail="채팅·닉네임 신고"
+            />
+            <QueueWidget title="사가 검수" count={d.sagaPending} detail="발행 대기 사가 슬립" />
             <DictWidget count={d.dictCandidates} />
-            {d.sagaPending > 0 && (
-              <Widget title="사가 검수" count={d.sagaPending}>
-                <button className="self-start rounded border px-2.5 py-1 text-[11px]">열기</button>
-              </Widget>
-            )}
             {/* 오늘 0건인 위젯들이 접혀 이 레일이 짧다 — 그게 규칙이다 */}
             <p className="text-muted-foreground text-[11px] leading-relaxed">
-              신고 {d.reportsPending}건 · 사가 검수 {d.sagaPending}건 —{" "}
-              <b>0건 위젯은 자동으로 사라집니다.</b> 빈 대시보드가 곧 퇴근 신호.
+              지금 접혀 있는 것: 신고 {d.reportsPending} · 문의 {d.inquiriesOpen} · 뉴스 오류 제보{" "}
+              {d.newsErrorReports} · 메타버스 신고 {d.metaverseReports} · 사가 {d.sagaPending} ·
+              베트맨 이상 0 — <b>0건 위젯은 자동으로 사라집니다.</b> 빈 대시보드가 곧 퇴근 신호.
             </p>
           </div>
 
