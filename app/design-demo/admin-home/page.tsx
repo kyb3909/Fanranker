@@ -1,6 +1,14 @@
 import Link from "next/link"
 import { loadDashboardData } from "./data"
-import { MiniNewsDeck, TodayStrip, Widget, StatusBoard, type StatusRow } from "./widgets"
+import {
+  MiniNewsDeck,
+  TodayStrip,
+  Widget,
+  StatusBoard,
+  PreviewList,
+  WINE,
+  type StatusRow,
+} from "./widgets"
 
 /**
  * 시안 B — 「벤토 그리드」 (디자이너 추천안)
@@ -76,67 +84,116 @@ export default async function AdminHomeBento() {
     },
   ]
   return (
-    <div className="min-h-[100dvh] bg-neutral-50 dark:bg-neutral-950">
-      <main className="mx-auto max-w-[1280px] p-6">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <p className="text-xs font-extrabold tracking-widest text-red-800">
-            DESIGN PILOT · 시안 B 「벤토 그리드」 — 시연 (실제 발행 안 됨)
+    <div className="min-h-[100dvh] bg-neutral-100 dark:bg-neutral-950">
+      {/* 풀폭 관제실 (운영자: "내 컴퓨터 화면 전체를 활용") — max-width 없음 */}
+      <main className="w-full px-6 py-5 2xl:px-8">
+        <div className="mb-1 flex flex-wrap items-center gap-3">
+          <p className="text-[11px] font-extrabold tracking-widest" style={{ color: WINE }}>
+            DESIGN PILOT — 시연 (실제 발행 안 됨)
           </p>
           <Link
             href="/design-demo/admin-home/focus"
-            className="ml-auto text-xs font-bold underline"
+            className="text-muted-foreground ml-auto text-[11px] underline"
           >
-            시안 A 「포커스 스테이션」 보기 →
+            구 시안 A 보기
           </Link>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-4">
-          <h1 className="text-lg font-bold">관리자 홈</h1>
+        <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 className="text-xl font-extrabold tracking-tight">관제실</h1>
           <TodayStrip today={d.today} />
-          {/* 시스템 — 전부 정상이면 접힌 초록 한 줄 (디자이너: 부재 ≠ 정상 증명).
-              이상이 있으면 이 줄 대신 아래 베트맨 위젯이 나타난다 */}
-          <p className="ml-auto text-xs">
-            {d.betman.status === "ok" &&
-            d.betman.unsettled === 0 &&
-            d.betman.refundsPending === 0 ? (
-              <span className="text-emerald-700">
-                ✅ 전 시스템 정상 — 베트맨 동기화 · 미정산 0 · 환불 대기 0
-              </span>
-            ) : (
-              <span className="font-bold text-red-600">⚠️ 베트맨 점검 필요 — 아래 위젯</span>
-            )}
+          <p className="text-muted-foreground ml-auto text-xs">
+            베트맨 동기화 {d.betman.status === "ok" ? `정상 · ${syncAgo}` : "⚠️ 점검 필요"}
           </p>
         </div>
 
-        {/* 12컬럼 벤토 — 부패 속도 × 파급 순 */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+        {/* 1행 — 뉴스(원문 대조 인라인) · 전황판 · 신고 미리보기 */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
           <Widget
+            kicker="NEWS DESK"
             title="뉴스 검수"
             count={d.newsTotal}
             className="xl:col-span-6"
             tone={d.news.some((n) => n.breaking) ? "danger" : "default"}
           >
-            <MiniNewsDeck items={d.news} variant="compact" />
+            {/* 화면이 넓으니 원문·초안 2열을 바로 편다 — 모달 왕복 제거 */}
+            <MiniNewsDeck items={d.news} variant="full" />
           </Widget>
 
-          <div className="flex flex-col gap-4 xl:col-span-3">
-            {/* 전 항목 항상 표시 — "오류 있는지 없는지" 자체가 정보다 (운영자 확정) */}
+          <div className="flex flex-col gap-5 xl:col-span-3">
+            {/* 전 항목 항상 표시 — "오류 있는지 없는지" 자체가 정보 (운영자 확정) */}
             <StatusBoard rows={statusRows} />
           </div>
 
-          <div className="flex flex-col gap-4 xl:col-span-3">
-            <Widget title="바로가기">
-              <ul className="space-y-1.5 text-xs">
-                <li>
-                  <span className="text-muted-foreground">스쿼드 검수 백로그</span>{" "}
-                  <b className="tabular-nums">{d.squadBacklog.toLocaleString()}</b>건 — 마감
-                  없음이라 위젯 금지, 링크만
-                </li>
-                <li className="text-muted-foreground">발행 후 교정 → 전용 페이지</li>
-                <li className="text-muted-foreground">누적 KPI → 애널리틱스로 추방</li>
-              </ul>
+          <div className="flex flex-col gap-5 xl:col-span-3">
+            <Widget kicker="REPORTS" title="신고" count={d.reportsPending}>
+              <PreviewList
+                rows={d.reportsPreview.map((r) => ({
+                  primary: `[${r.targetType}] ${r.reason}`,
+                  secondary: new Date(r.createdAt).toLocaleDateString("ko-KR"),
+                }))}
+                empty="미처리 신고 0건 — 들어오면 최신 5건이 여기 보입니다"
+                action="처리"
+              />
+            </Widget>
+            <Widget kicker="INQUIRIES" title="문의" count={d.inquiriesOpen}>
+              <PreviewList
+                rows={[]}
+                empty="문의 0건 — ⚠️ 접수 경로가 아직 미배선입니다 (inquiries 테이블만 존재)"
+              />
             </Widget>
           </div>
+        </div>
+
+        {/* 2행 — 스쿼드·표기 후보 미리보기 (운영자: "미리보기 같은 것들이 필요해") */}
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-12">
+          <Widget
+            kicker="SQUAD"
+            title="스쿼드 검수 백로그"
+            count={d.squadBacklog}
+            className="xl:col-span-6"
+            headerRight={
+              <span className="text-muted-foreground text-[11px]">마감 없음 — 틈날 때 한 줄씩</span>
+            }
+          >
+            <PreviewList
+              rows={d.squadPreview.map((s) => ({
+                primary: s.nameEn,
+                secondary: `→ ${s.nameKrDraft}`,
+                actionLabel: "승인",
+              }))}
+              empty="초안 없음"
+            />
+            <button
+              className="mt-2 self-start text-[11px] font-bold underline"
+              style={{ color: WINE }}
+            >
+              선수단 사전 전체 열기 →
+            </button>
+          </Widget>
+
+          <Widget
+            kicker="NOTATION"
+            title="표기 후보 — 미등재로 잠든 사가 슬립"
+            count={d.dictCandidates}
+            className="xl:col-span-6"
+            tone="danger"
+          >
+            <PreviewList
+              rows={d.dictPreview.map((c) => ({
+                primary: c.headline,
+                secondary: new Date(c.occurredAt).toLocaleDateString("ko-KR"),
+                actionLabel: "표기 입력",
+              }))}
+              empty="후보 없음"
+            />
+            <button
+              className="mt-2 self-start text-[11px] font-bold underline"
+              style={{ color: WINE }}
+            >
+              후보 전체 열기 →
+            </button>
+          </Widget>
         </div>
       </main>
     </div>

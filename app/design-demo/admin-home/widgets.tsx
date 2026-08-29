@@ -35,43 +35,94 @@ export function useTick(): number {
   return now
 }
 
-/** 위젯 껍데기 — 제목 + 카운트 + 본문. 시안이라 admin 톤(shadcn 계열)으로 */
+/** 사이트 와인색 — admin 레이아웃엔 wc 토큰이 없어 상수로 (시안 전용) */
+export const WINE = "#961e37"
+
+/**
+ * 위젯 껍데기 — 관제실 패널 (2026-08-30 "너무 안 예쁜데" 후속).
+ * 라틴 키커 + 카운트 알약 + 얇은 그림자. 헤더에 사이트 와인색을 물려
+ * admin 이 본편과 남남으로 보이던 것을 줄인다.
+ */
 export function Widget({
   title,
+  kicker,
   count,
   tone = "default",
   children,
   className,
+  headerRight,
 }: {
   title: string
+  /** 라틴 대문자 소제목 — 본편 밴드의 키커 문법 */
+  kicker?: string
   count?: number
   tone?: "default" | "danger"
   children: React.ReactNode
   className?: string
+  headerRight?: React.ReactNode
 }) {
   return (
     <section
       className={cn(
-        "bg-background flex flex-col rounded-xl border p-4",
-        tone === "danger" && "border-red-300",
+        "flex flex-col rounded-2xl border bg-white shadow-sm dark:bg-neutral-900",
+        tone === "danger" && "border-red-200",
         className
       )}
     >
-      <h2 className="mb-2 flex items-baseline gap-1.5 text-sm font-bold">
-        {title}
+      <header className="flex items-center gap-2 border-b px-4 py-2.5">
+        {kicker && (
+          <span className="text-[10px] font-extrabold tracking-[0.18em]" style={{ color: WINE }}>
+            {kicker}
+          </span>
+        )}
+        <h2 className="text-sm font-bold">{title}</h2>
         {count != null && (
           <span
             className={cn(
-              "tabular-nums",
-              tone === "danger" ? "text-red-600" : "text-muted-foreground"
+              "rounded-full px-2 py-0.5 text-[11px] font-bold text-white tabular-nums",
+              tone === "danger" ? "" : "opacity-90"
             )}
+            style={{ background: tone === "danger" ? "#dc2626" : WINE }}
           >
-            {count}
+            {count.toLocaleString()}
           </span>
         )}
-      </h2>
-      {children}
+        {headerRight && <span className="ml-auto">{headerRight}</span>}
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col p-4">{children}</div>
     </section>
+  )
+}
+
+/** 미리보기 행 목록 — 신고·스쿼드·표기 후보 공용. 비어 있으면 정직한 빈 상태 문구 */
+export function PreviewList({
+  rows,
+  empty,
+  action,
+}: {
+  rows: { primary: string; secondary?: string; actionLabel?: string }[]
+  empty: string
+  action?: string
+}) {
+  if (rows.length === 0) {
+    return <p className="text-muted-foreground py-4 text-center text-xs">{empty}</p>
+  }
+  return (
+    <ul className="divide-y">
+      {rows.map((r, i) => (
+        <li key={i} className="flex items-center gap-2 py-2 text-xs">
+          <span className="min-w-0 flex-1 truncate">{r.primary}</span>
+          {r.secondary && (
+            <span className="text-muted-foreground shrink-0 text-[11px]">{r.secondary}</span>
+          )}
+          {(r.actionLabel ?? action) && (
+            <button className="shrink-0 rounded border px-2 py-0.5 text-[11px] font-medium hover:bg-neutral-50">
+              {r.actionLabel ?? action}
+            </button>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 

@@ -39,6 +39,10 @@ export interface DashboardData {
   newsErrorReports: number
   metaverseReports: number
   squadBacklog: number
+  /** 미리보기 — 숫자만으론 판단이 안 선다 (운영자: "미리보기 같은 것들이 필요해") */
+  squadPreview: { nameEn: string; nameKrDraft: string }[]
+  reportsPreview: { reason: string; targetType: string; createdAt: string }[]
+  dictPreview: { headline: string; occurredAt: string }[]
   today: { signups: number; posts: number; predictions: number }
 }
 
@@ -100,6 +104,9 @@ export async function loadDashboardData(): Promise<DashboardData> {
     inqRes,
     nerRes,
     mvRes,
+    squadPrevRes,
+    reportsPrevRes,
+    dictPrevRes,
   ] = await Promise.all([
     supabase
       .from("news_reservoir")
@@ -165,6 +172,26 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .from("metaverse_user_reports")
       .select("*", { count: "exact", head: true })
       .eq("status", "open"),
+    // 미리보기 3종
+    supabase
+      .from("team_squads")
+      .select("name_en, name_kr_draft")
+      .not("name_kr_draft", "is", null)
+      .neq("status", "confirmed")
+      .order("updated_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("content_reports")
+      .select("reason, target_type, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("saga_reservoir")
+      .select("headline_kr, title, occurred_at")
+      .eq("error", "auto_hold:unknown_player")
+      .order("occurred_at", { ascending: false })
+      .limit(6),
   ])
 
   interface Row {
@@ -229,6 +256,16 @@ export async function loadDashboardData(): Promise<DashboardData> {
     newsErrorReports: nerRes.count ?? 0,
     metaverseReports: mvRes.count ?? 0,
     squadBacklog: squadRes.count ?? 0,
+    squadPreview: ((squadPrevRes.data as { name_en: string; name_kr_draft: string }[]) ?? []).map(
+      (r) => ({ nameEn: r.name_en, nameKrDraft: r.name_kr_draft })
+    ),
+    reportsPreview: (
+      (reportsPrevRes.data as { reason: string; target_type: string; created_at: string }[]) ?? []
+    ).map((r) => ({ reason: r.reason, targetType: r.target_type, createdAt: r.created_at })),
+    dictPreview: (
+      (dictPrevRes.data as { headline_kr: string | null; title: string; occurred_at: string }[]) ??
+      []
+    ).map((r) => ({ headline: r.headline_kr ?? r.title, occurredAt: r.occurred_at })),
     today: {
       signups: suRes.count ?? 0,
       posts: poRes.count ?? 0,
