@@ -63,7 +63,8 @@ function MatchRow({ m }: { m: MatchItem }) {
             </span>
             {m.home}
             {played ? (
-              <b className="gn-num mx-1.5">
+              // whitespace-nowrap: 안 걸면 좁은 폭에서 "5–" / "1" 로 점수가 쪼개진다
+              <b className="gn-num mx-1.5 whitespace-nowrap">
                 {m.homeScore}–{m.awayScore}
               </b>
             ) : (

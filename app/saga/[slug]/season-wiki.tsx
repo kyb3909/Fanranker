@@ -313,7 +313,8 @@ function MatchEvent({
       )}
       <span className="min-w-0 font-bold" style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}>
         {m.home}
-        <b className="gn-num mx-1.5">
+        {/* whitespace-nowrap: 안 걸면 좁은 폭에서 "5–" / "1" 로 점수가 쪼개진다 */}
+        <b className="gn-num mx-1.5 whitespace-nowrap">
           {m.homeScore}–{m.awayScore}
         </b>
         {m.away}
