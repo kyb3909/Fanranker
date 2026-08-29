@@ -5,6 +5,8 @@ import { PageBand } from "@/components/page-band"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/stages"
 import { isReportClub } from "@/lib/soccerway/report-clubs"
+import { Chip } from "@/components/saga/tier-chip"
+import { RAIL_BODY_BORDER, RAIL_GRID, RailDate, groupByDay } from "@/components/saga/rail"
 import { SagaBrowser, type MatchItem } from "./saga-browser"
 
 export const metadata: Metadata = {
@@ -170,8 +172,11 @@ export default async function SagaIndexPage() {
                 <Link
                   key={s.id}
                   href={`/saga/${s.slug}`}
+                  /* 목록이 전부 선으로 바뀌니 이 타일만 그림자로 떠 보였다. 쉬는 상태는
+                     1px 선, 그림자는 hover 에서만 — 목적지 타일이라 그리드 자체는 남긴다
+                     (목록 행이 아니라 다른 종류의 요소다). */
                   className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md"
-                  style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+                  style={{ background: "var(--wc-card, #fff)", border: "1px solid var(--wc-line)" }}
                 >
                   <p className="text-[12px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
                     SEASON SAGA
@@ -196,92 +201,97 @@ export default async function SagaIndexPage() {
                 아직 열린 사가가 없습니다 — 이적시장이 움직이면 여기부터 채워집니다.
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {sagas.map((s) => {
-                  const flow = STAGE_FLOW[s.saga_type]
-                  const idx = stageIndex(s.saga_type, s.stage)
-                  const closed = s.status === "closed"
-                  return (
-                    <Link
-                      key={s.id}
-                      href={`/saga/${s.slug}`}
-                      className="block rounded-xl px-5 py-4 transition-shadow hover:shadow-md"
-                      style={{
-                        background: "var(--wc-card, #fff)",
-                        boxShadow: "var(--wc-shadow-1)",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        {/* 단계 칩 — "지금 어디까지 왔나"가 재방문 이유 (PRD §7) */}
-                        <span
-                          className="rounded px-1.5 py-0.5 text-[12px] font-extrabold"
-                          style={{
-                            background: closed ? "var(--wc-line)" : "rgba(150,30,55,.08)",
-                            color: closed ? "var(--wc-mute)" : "var(--wc-burgundy)",
-                          }}
-                        >
-                          {closed
-                            ? (STAGE_LABEL[s.outcome ?? ""] ?? "종결")
-                            : (STAGE_LABEL[s.stage] ?? s.stage)}
-                        </span>
-                        {!s.is_confirmed && !closed && (
-                          <span
-                            className="text-[12px] font-bold"
-                            style={{ color: "var(--wc-mute)" }}
+              /* 경기 탭과 같은 헤어라인 레일 (2026-08-29 "안 B").
+                 이 탭만 흰 카드로 남아 있어서, 같은 페이지 안에서 탭 하나는 선이고
+                 하나는 카드였다. */
+              <div className="flex flex-col">
+                {groupByDay(sagas, (s) => s.last_event_at).map((day, di) => (
+                  <div
+                    key={day.key}
+                    className={RAIL_GRID}
+                    style={di > 0 ? { marginTop: 20 } : undefined}
+                  >
+                    <RailDate iso={day.iso} />
+
+                    <div>
+                      {day.items.map((s) => {
+                        const flow = STAGE_FLOW[s.saga_type]
+                        const idx = stageIndex(s.saga_type, s.stage)
+                        const closed = s.status === "closed"
+                        return (
+                          <Link
+                            key={s.id}
+                            href={`/saga/${s.slug}`}
+                            className="block py-3 pl-4 no-underline sm:pl-6"
+                            style={RAIL_BODY_BORDER}
                           >
-                            미확인 루머
-                          </span>
-                        )}
-                        <span
-                          className="ml-auto text-[12px]"
-                          style={{ color: "var(--wc-mute)" }}
-                          suppressHydrationWarning
-                        >
-                          {formatRelativeTime(new Date(s.last_event_at))}
-                        </span>
-                      </div>
+                            {/* 첫 줄 = [단계칩] 제목. "지금 어디까지 왔나"가 재방문 이유 (PRD §7) */}
+                            <p
+                              className="text-[16px] leading-[1.4] font-bold"
+                              style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                            >
+                              <span className="mr-1.5">
+                                <Chip tone={closed ? "ink" : "wine"}>
+                                  {closed
+                                    ? (STAGE_LABEL[s.outcome ?? ""] ?? "종결")
+                                    : (STAGE_LABEL[s.stage] ?? s.stage)}
+                                </Chip>
+                              </span>
+                              {s.title}
+                            </p>
 
-                      <h2
-                        className="mt-1.5 text-[16px] font-extrabold"
-                        style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-                      >
-                        {s.title}
-                      </h2>
-                      {s.summary && (
-                        <p
-                          className="mt-1 line-clamp-2 text-[13px]"
-                          style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
-                        >
-                          {s.summary}
-                        </p>
-                      )}
+                            {s.summary && (
+                              <p
+                                className="mt-1 line-clamp-2 text-[13px]"
+                                style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
+                              >
+                                {s.summary}
+                              </p>
+                            )}
 
-                      {/* 진행도 바 — stage 스테퍼 요약 */}
-                      <div className="mt-3 flex items-center gap-1" aria-hidden>
-                        {flow.slice(0, -1).map((st, i) => (
-                          <span
-                            key={st}
-                            className="h-1 flex-1 rounded-full"
-                            style={{
-                              background:
-                                i <= idx && !closed
-                                  ? "var(--wc-burgundy)"
-                                  : closed && s.outcome === "done"
-                                    ? "var(--wc-burgundy)"
-                                    : "var(--wc-line)",
-                            }}
-                          />
-                        ))}
-                        <span
-                          className="ml-2 text-[12px] font-bold"
-                          style={{ color: "var(--wc-mute)" }}
-                        >
-                          기록 {s.entry_count}건
-                        </span>
-                      </div>
-                    </Link>
-                  )
-                })}
+                            {/* 둘째 줄 = 메타 한 줄 */}
+                            <p
+                              className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[12px]"
+                              style={{ color: "var(--wc-mute)" }}
+                            >
+                              {!s.is_confirmed && !closed && (
+                                <>
+                                  <span>미확인 루머</span>
+                                  <span style={{ color: "var(--wc-line-2)" }}>·</span>
+                                </>
+                              )}
+                              <span suppressHydrationWarning>
+                                {formatRelativeTime(new Date(s.last_event_at))}
+                              </span>
+                              <span style={{ color: "var(--wc-line-2)" }}>·</span>
+                              <span>
+                                기록 <span className="gn-num">{s.entry_count}</span>건
+                              </span>
+                            </p>
+
+                            {/* 진행도 바 — stage 스테퍼 요약. 이적 사가에만 있는 정보라 남긴다 */}
+                            <div className="mt-2 flex items-center gap-1" aria-hidden>
+                              {flow.slice(0, -1).map((st, i) => (
+                                <span
+                                  key={st}
+                                  className="h-1 flex-1 rounded-full"
+                                  style={{
+                                    background:
+                                      i <= idx && !closed
+                                        ? "var(--wc-burgundy)"
+                                        : closed && s.outcome === "done"
+                                          ? "var(--wc-burgundy)"
+                                          : "var(--wc-line)",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )
           }
