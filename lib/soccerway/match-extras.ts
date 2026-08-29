@@ -6,6 +6,13 @@ import { chatParams } from "@/lib/llm/openai-params"
 import { findUniqueRomanizedMatch } from "@/lib/news/notation"
 import { matchByNickname } from "@/lib/soccerway/nickname-match"
 import { wrongScore } from "@/lib/soccerway/score-gate"
+import {
+  collectGoalFacts,
+  goalFactsMatchScore,
+  wrongTeamAttribution,
+  type GoalFact,
+  type TeamSide,
+} from "@/lib/soccerway/goal-facts"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
@@ -350,8 +357,11 @@ async function composeReportKo(
   score: string | null,
   events: MatchEvent[],
   stats: MatchStatRow[] | null,
+  /** 라인업에서 뽑은 득점 정본 (합이 확정 스코어와 맞을 때만 들어온다) */
+  goalFacts: GoalFact[] | null,
   feedback?: string[]
 ): Promise<MatchReport | null> {
+  const teamOf = (t: TeamSide) => (t === "home" ? homeTeam : awayTeam)
   const content = await callLLM(
     `구조화된 경기 사건 목록과 실측 스탯으로 한국어 경기 리포트를 쓰는 에디터다. 규칙:
 - **사건 목록과 스탯에 있는 것만** 쓴다. 다음 경기 전망·순위 계산·필자 감상은 금지.
@@ -370,6 +380,15 @@ async function composeReportKo(
 - **마지막 문단 끝 1~2문장으로 경기 흐름** — 제공된 스탯 중 가장 말이 되는 수치 2~3개만
   골라(xG·슈팅 등) 어느 쪽이 주도했는지 짚는다. 스탯 나열 금지, 제공되지 않은 수치 금지.
 - **숫자(시간·개수·기록·수치)는 사건 목록·스탯·score 에 있는 것만** 쓴다. 새 숫자를 만들지 마라.
+${
+  goalFacts
+    ? `- ⚠️⚠️ **득점_정본이 있으면 그게 득점의 정본이다.** 누가·몇 분에·어느 팀 득점인지는
+  전적으로 득점_정본을 따른다. 사건 목록(events)이 다르게 말해도 득점_정본이 이긴다.
+  득점_정본에 없는 골을 만들지 말고, 있는 골을 빼지도 마라 (총 ${goalFacts.length}골).
+- ⚠️ **자책골은 넣은 선수의 소속팀이 아니라 상대 팀 득점이다.** 득점_정본의 각 항목에서
+  \`넣은선수_소속\` 과 \`득점팀\` 이 다르면 그게 자책골이다. 선수의 소속을 반대로 적지 마라.`
+    : ""
+}
 - 톤: 사실 기반. 감탄사·과장·클리셰("환상적인", "믿을 수 없는")는 금지지만, 장면이 눈에
   그려지게는 쓴다. 기사체 평서문.
 - 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
@@ -384,6 +403,17 @@ async function composeReportKo(
       home: homeTeam,
       away: awayTeam,
       score,
+      ...(goalFacts
+        ? {
+            득점_정본: goalFacts.map((g) => ({
+              선수: g.scorer,
+              분: g.minute,
+              득점팀: teamOf(g.creditedTo),
+              넣은선수_소속: teamOf(g.playerTeam),
+              자책골: g.own,
+            })),
+          }
+        : {}),
       events,
       stats: (stats ?? []).map((s) => ({ 지표: s.label, [homeTeam]: s.home, [awayTeam]: s.away })),
       ...(feedback && feedback.length > 0
@@ -451,11 +481,19 @@ function numbersGate(
 /** ⑤ 독립 검증자 — 문장별 근거 대조 (작성자와 별도 호출, temp 0) */
 async function verifyReport(
   report: MatchReport,
-  sources: { paragraphs: string[]; events: MatchEvent[]; stats: MatchStatRow[] | null }
+  sources: {
+    paragraphs: string[]
+    events: MatchEvent[]
+    stats: MatchStatRow[] | null
+    goalFacts: GoalFact[] | null
+  }
 ): Promise<{ pass: boolean; problems: string[] }> {
   const content = await callLLM(
     `경기 리포트 검증자다. 한국어 리포트의 문장들을 근거 재료와 대조해 **사실 오류만** 찾는다.
-- 근거 우선순위: **누가 득점/도움/카드를 받았고 어떤 순서였는지는 "사건 목록"(events)이 정본**이다 —
+- 근거 우선순위: **득점_정본(goalFacts)이 있으면 득점에 관해서는 그게 최우선 정본**이다.
+  득점자·시각·어느 팀 득점인지가 리포트와 다르면 그건 확실한 사실 오류다.
+  ⚠️ 자책골은 넣은 선수의 소속팀이 아니라 **상대 팀 득점**이다 — 소속을 반대로 적었으면 잡아라.
+  득점 외(도움·카드·순서)는 **"사건 목록"(events)이 정본**이다 —
   리포트가 events 와 일치하면 원문 문단을 다시 해석해 뒤집지 마라.
   장면 묘사(슛 종류·방향·전개)는 해당 사건의 detail 및 원문 문단과 대조한다.
 - 문제 삼는 것: 근거에 없는 행위 주체(득점자·도움자 바꿔치기), 없는 사건, 없는 수치·기록,
@@ -540,24 +578,78 @@ function cachedReport(
       //    실제는 풀럼 2-3 첼시 — **승패 자체가 틀린 리포트**가 검증을 통과했다.
       //    숫자 게이트가 "3" 과 "3" 이 근거에 있는지만 보고 스코어 조합은 안 봤기 때문이다.
       const score = finalScore
+
+      /**
+       * ⚠️⚠️ **득점 정본을 라인업에서 꺼낸다** (2026-08-29 실사고).
+       *
+       * 종전엔 라인업을 가져다 **이름 한글화에만** 쓰고 득점 사실(득점자·시각·자책골)은
+       * 버렸다. 누가 넣었는지는 영문 기사를 LLM 이 읽어 다시 만들었고, 그 왕복에서
+       * 방향이 뒤집혔다 — 팰리스 1-4 시티에서 **맨시티 GK 돈나룸마의 자책골**(= 팰리스의
+       * 유일한 득점)이 "크리스털 팰리스의 돈나룸마 자책골 → 3-0 시티"로 나갔다.
+       * 시티 골이 하나 늘어 다섯을 나열하고 마지막을 "네 번째"라 적는 모순까지 났다.
+       *
+       * 스코어 게이트가 못 잡은 이유: 그건 최종 스코어 **조합**만 본다. 제목 1-4 는 맞았다.
+       * 틀린 건 거기까지 가는 경로였다.
+       *
+       * 합이 확정 스코어와 맞을 때만 정본으로 쓴다 — 인시던트는 늦게 채워질 수 있고,
+       * 불완전한 정본은 없느니만 못하다.
+       */
+      const lineupPlayers =
+        lineup.status === "ready"
+          ? [
+              ...[...lineup.home.starters, ...lineup.home.bench].map((p) => ({
+                label: p.label,
+                team: "home" as TeamSide,
+              })),
+              ...[...lineup.away.starters, ...lineup.away.bench].map((p) => ({
+                label: p.label,
+                team: "away" as TeamSide,
+              })),
+            ]
+          : []
+      let goalFacts: GoalFact[] | null = null
+      if (lineup.status === "ready") {
+        const facts = collectGoalFacts(lineup)
+        if (goalFactsMatchScore(facts, score)) {
+          goalFacts = facts.goals
+        } else if (facts.goals.length > 0) {
+          console.warn(
+            `[match-report] 득점 정본 불일치 — 라인업 ${facts.home}-${facts.away} vs 확정 ${score} (event ${eventId}). 정본 미사용.`
+          )
+        }
+      }
+
       const sources = { paragraphs: body.paragraphs, events, stats, score }
 
       // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
       // 재검증까지 실패하면 미노출(fail-closed) — 틀린 리포트는 없는 리포트보다 나쁘다.
       let feedback: string[] = []
       for (let attempt = 0; attempt < 3; attempt++) {
-        const ko = await composeReportKo(homeTeam, awayTeam, score, events, stats, feedback)
+        const ko = await composeReportKo(
+          homeTeam,
+          awayTeam,
+          score,
+          events,
+          stats,
+          goalFacts,
+          feedback
+        )
         if (!ko) break
         const gate = numbersGate(ko, sources)
+        // ⚠️ 소속 표기 게이트 — "○○의 <선수>" 에서 팀이 반대면 그 자리에서 떨어뜨린다.
+        //    실사고 문장이 정확히 이 형태였다("크리스털 팰리스의 잔루이지 돈나룸마").
+        const teamProblem = wrongTeamAttribution(ko, lineupPlayers, homeTeam, awayTeam)
         // ⚠️ 스코어 게이트 — LLM 판단 이전의 **결정론** 검사. 확정 스코어가 있는데
         //    리포트가 다른 조합을 적으면 그 자리에서 떨어뜨린다. 숫자 게이트는 개별
         //    숫자만 보므로 "3-3" 같은 **조합 오류**를 못 잡는다 (실사고).
         const scoreProblem = finalScore ? wrongScore(ko, finalScore) : null
         const verdict = scoreProblem
           ? { pass: false, problems: [scoreProblem] }
-          : gate.ok
-            ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats })
-            : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
+          : teamProblem
+            ? { pass: false, problems: [teamProblem] }
+            : gate.ok
+              ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats, goalFacts })
+              : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
         if (verdict.pass) return ko
         // 서버 로그만 — 화면은 fail-open 계약대로 침묵. 반복되면 프롬프트 튜닝 신호다.
         console.warn(
@@ -568,8 +660,8 @@ function cachedReport(
       }
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
-    // v10: 이름 확정 3단 폴백 (라인업 → 표기 사전 → 스쿼드 사전)
-    ["match-report-v13", eventId],
+    // v14: 득점 정본을 라인업에서 꺼내고 소속 표기 게이트 추가 (2026-08-29)
+    ["match-report-v14", eventId],
     // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
     { revalidate: 1800 }
   )
