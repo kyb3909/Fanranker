@@ -597,6 +597,35 @@ export function BetmanWidget({ betman }: { betman: DashboardData["betman"] }) {
 }
 
 /**
+ * 티커 즉시 삭제 — 원본 홈의 숨은 실용 기능 회수 (2026-08-30 대조에서 발견).
+ * 담벼락 티커에 이상한 게 올라오면 여기서 바로 죽인다. 시연 — 실제 삭제 안 됨.
+ */
+export function TickerModPanel({ items: initial }: { items: { id: string; title: string }[] }) {
+  const [items, setItems] = useState(initial)
+  return (
+    <Widget kicker="TICKER" title="뉴스 티커 최근" count={items.length}>
+      {items.length === 0 ? (
+        <p className="text-muted-foreground py-3 text-center text-xs">최근 티커 없음</p>
+      ) : (
+        <ul className="divide-y">
+          {items.map((t) => (
+            <li key={t.id} className="flex items-center gap-2 py-1.5 text-xs">
+              <span className="min-w-0 flex-1 truncate">{t.title}</span>
+              <button
+                onClick={() => setItems((prev) => prev.filter((x) => x.id !== t.id))}
+                className="shrink-0 rounded border border-red-200 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-50"
+              >
+                즉시 삭제
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Widget>
+  )
+}
+
+/**
  * 참여도 패널 — 오늘 vs 어제 (운영자: "사람들 참여도, 메뉴 활용 데이터가 첫 화면에").
  * 큰 숫자 + 어제 대비 증감. 색은 숫자가 아니라 화살표에만 — 0이 많은 시기라
  * 빨간 판이 되지 않게.

@@ -2,12 +2,12 @@ import Link from "next/link"
 import { loadDashboardData } from "./data"
 import {
   MiniNewsDeck,
-  TodayStrip,
   Widget,
   StatusBoard,
   PreviewList,
   SquadReviewList,
   ParticipationPanel,
+  TickerModPanel,
   WINE,
   type StatusRow,
 } from "./widgets"
@@ -84,6 +84,26 @@ export default async function AdminHomeBento() {
       ok: false, // 381건 — 실제 대기라 액션 노출
       action: "승인",
     },
+    // 원본 대시보드 대조(2026-08-30)에서 회수 — 시스템 건강 2종
+    {
+      label: "크롤러 실패 (오늘)",
+      value: `${d.crawlerFailsToday}건`,
+      ok: d.crawlerFailsToday === 0,
+      action: "로그",
+    },
+    {
+      label: "티커 수집",
+      value:
+        d.ticker.count24h > 0
+          ? `24h ${d.ticker.count24h}건 · ${
+              d.ticker.lastAt
+                ? `${Math.max(1, Math.round((Date.now() - new Date(d.ticker.lastAt).getTime()) / 60000))}분 전`
+                : ""
+            }`
+          : "24시간째 수집 없음",
+      ok: d.ticker.count24h > 0, // VPS 크롤러가 유일 공급로 — 마르면 담벼락 티커가 죽는다
+      action: "점검",
+    },
   ]
   return (
     <div className="min-h-[100dvh] bg-neutral-100 dark:bg-neutral-950">
@@ -101,9 +121,29 @@ export default async function AdminHomeBento() {
           </Link>
         </div>
 
+        {/* 헤더 정보줄 — 참여도 패널과 겹치던 TodayStrip 을 빼고, 회수한 베팅 운영
+            정보(진행 경기·회차·마감)를 넣는다. 스크롤 비용 0 으로 ③④ 해결 */}
         <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-xl font-extrabold tracking-tight">관제실</h1>
-          <TodayStrip today={d.today} />
+          <p className="text-muted-foreground text-xs">
+            진행 중 경기 <b className="text-foreground tabular-nums">{d.activeGames}</b>
+            {d.dailyRound.roundNum != null && (
+              <>
+                {" · "}회차 <b className="text-foreground tabular-nums">{d.dailyRound.roundNum}</b>
+                {d.dailyRound.closeAt && (
+                  <>
+                    {" "}
+                    (마감{" "}
+                    {new Date(d.dailyRound.closeAt).toLocaleTimeString("ko-KR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    )
+                  </>
+                )}
+              </>
+            )}
+          </p>
           <p className="text-muted-foreground ml-auto text-xs">
             베트맨 동기화 {d.betman.status === "ok" ? `정상 · ${syncAgo}` : "⚠️ 점검 필요"}
           </p>
@@ -114,6 +154,8 @@ export default async function AdminHomeBento() {
           <div className="flex flex-col gap-5 xl:col-span-4">
             {/* 전 항목 항상 표시 — "오류 있는지 없는지" 자체가 정보 (운영자 확정) */}
             <StatusBoard rows={statusRows} />
+            {/* 전황판 아래 빈 공간 활용 — 스크롤 비용 0 으로 ⑤(티커 즉시 삭제) 회수 */}
+            <TickerModPanel items={d.ticker.recent} />
           </div>
 
           <div className="flex flex-col gap-5 xl:col-span-8">

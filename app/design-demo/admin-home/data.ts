@@ -53,6 +53,11 @@ export interface DashboardData {
   today: { signups: number; posts: number; predictions: number }
   /** 참여도 — 오늘 vs 어제 (운영자: "사람들 참여도, 메뉴들 어떻게 활용했는지") */
   participation: { label: string; today: number; yesterday: number }[]
+  /** 원본 대시보드 대조(2026-08-30)에서 회수한 4종 — 위임 판단으로 채움 */
+  crawlerFailsToday: number
+  ticker: { lastAt: string | null; count24h: number; recent: { id: string; title: string }[] }
+  activeGames: number
+  dailyRound: { roundNum: number | null; closeAt: string | null }
 }
 
 const EXPIRE_HOURS = 24
@@ -233,6 +238,45 @@ export async function loadDashboardData(): Promise<DashboardData> {
     yesterday: participationCounts[i * 2 + 1].count ?? 0,
   }))
 
+  // 원본 대시보드에서 회수한 4종 — 정의는 기존 코드와 동일하게 유지
+  const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString()
+  const [crawlerFailRes, tickerLastRes, ticker24Res, tickerRecentRes, activeGamesRes, roundRes] =
+    await Promise.all([
+      // 크롤러 실패 — operations/dashboard 와 같은 정의 (오늘, status=error)
+      supabase
+        .from("crawler_run_log")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "error")
+        .gte("started_at", todayStart),
+      supabase
+        .from("news_ticker_items")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("news_ticker_items")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", dayAgo),
+      // 티커 즉시 삭제 패널용 최근 6건 (원본 홈의 숨은 실용 기능 회수)
+      supabase
+        .from("news_ticker_items")
+        .select("id, headline_kr, original_title")
+        .order("created_at", { ascending: false })
+        .limit(6),
+      supabase
+        .from("betman_games")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["scheduled", "in_progress"]),
+      supabase
+        .from("betman_daily_rounds")
+        .select("daily_id, bet_close_at")
+        .eq("status", "open")
+        .order("bet_close_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
+
   // 클럽명 매핑 — team_dictionary (name_kr ↔ soccerway_team_id)
   const { data: teamDictRows } = await supabase
     .from("team_dictionary")
@@ -348,5 +392,24 @@ export async function loadDashboardData(): Promise<DashboardData> {
       predictions: prRes.count ?? 0,
     },
     participation,
+    crawlerFailsToday: crawlerFailRes.count ?? 0,
+    ticker: {
+      lastAt: tickerLastRes.data?.created_at ?? null,
+      count24h: ticker24Res.count ?? 0,
+      recent: (
+        (tickerRecentRes.data as {
+          id: string
+          headline_kr: string | null
+          original_title: string | null
+        }[]) ?? []
+      ).map((t) => ({ id: t.id, title: t.headline_kr ?? t.original_title ?? "(제목 없음)" })),
+    },
+    activeGames: activeGamesRes.count ?? 0,
+    dailyRound: {
+      roundNum: roundRes.data?.daily_id
+        ? parseInt(String(roundRes.data.daily_id).replace(/\D/g, ""), 10) || null
+        : null,
+      closeAt: roundRes.data?.bet_close_at ?? null,
+    },
   }
 }
