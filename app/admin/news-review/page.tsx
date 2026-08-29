@@ -9,8 +9,13 @@ import { FastReview, type DeskItem, type FlairChoice, type SagaOption } from "./
 export const dynamic = "force-dynamic"
 export const metadata = { title: "뉴스 검수 | 관리자" }
 
-/** 초안은 24시간 뒤 news-expire-drafts 크론이 자동 반려한다 */
+/**
+ * 자동 반려 규칙 — **크론(news-expire-drafts)과 반드시 같은 값**이어야 한다.
+ * ⚠️ 종전엔 여기 24h 단일 + 화면 문구 "48시간"이 서로 모순이라 시계가 거짓말했고,
+ *    브레이킹(48h 유예) 4건이 "0시간 남음"으로 죽은 것처럼 보였다 (2026-08-30 실측).
+ */
 const EXPIRE_HOURS = 24
+const BREAKING_EXPIRE_HOURS = 48
 
 interface Row {
   id: string
@@ -119,6 +124,18 @@ export default async function NewsReviewPage() {
   const rows = (data as Row[]) ?? []
   const draftedIds = rows.map((r) => r.id)
   const rowMap = new Map(rows.map((r) => [r.id, r]))
+  // 항목별 브레이킹 판정 — 만료 규칙(24h/48h)·정렬·뱃지가 전부 여기 걸린다.
+  // 종전엔 "지금 막힌 것" 배너 집계에만 쓰고 항목에는 안 붙여서 속보가 큐 맨 밑에 깔렸다.
+  const breakingOf = new Map(
+    rows.map((r) => [
+      r.id,
+      isBreakingNewsItem({
+        draftTitle: r.draft?.title ?? null,
+        originalTitle: r.draft?.original?.title ?? null,
+        sourceUrl: r.urls?.source ?? null,
+      }),
+    ])
+  )
   let stuck: {
     total: number
     needsHuman: number
@@ -141,17 +158,7 @@ export default async function NewsReviewPage() {
     }[]
     if (cands.length > 0) {
       const needsHuman = cands.filter((c) => c.state === "needs_human")
-      const breaking = needsHuman.filter((c) => {
-        const r = rowMap.get(c.candidate_id)
-        return (
-          r &&
-          isBreakingNewsItem({
-            draftTitle: r.draft?.title ?? null,
-            originalTitle: r.draft?.original?.title ?? null,
-            sourceUrl: r.urls?.source ?? null,
-          })
-        )
-      })
+      const breaking = needsHuman.filter((c) => breakingOf.get(c.candidate_id) === true)
       const oldestMs = Math.min(...cands.map((c) => new Date(c.updated_at).getTime()))
       const reasonCounts = new Map<string, number>()
       for (const c of cands) {
@@ -169,13 +176,15 @@ export default async function NewsReviewPage() {
     }
   }
 
-  const items: DeskItem[] = ((data as Row[]) ?? []).map((r) => {
+  const items: DeskItem[] = rows.map((r) => {
     const title = r.draft?.title ?? "(제목 없음)"
     const body = preview(r.draft?.content)
+    const breaking = breakingOf.get(r.id) === true
     const createdMs = new Date(r.created_at).getTime()
     return {
       id: r.id,
       title,
+      originalTitle: r.draft?.original?.title ?? null,
       body,
       bodyLength: body.length,
       image: firstImage(r.draft?.content),
@@ -183,13 +192,22 @@ export default async function NewsReviewPage() {
       sourceText: r.raw?.source_text ?? null,
       sourceUrl: r.urls?.source ?? null,
       createdAt: r.created_at,
-      hoursLeft: Math.max(0, EXPIRE_HOURS - (Date.now() - createdMs) / 3600_000),
+      // 크론(news-expire-drafts)과 같은 규칙 — 클라이언트가 이 시각으로 실시간 카운트다운
+      expiresAt: new Date(
+        createdMs + (breaking ? BREAKING_EXPIRE_HOURS : EXPIRE_HOURS) * 3600_000
+      ).toISOString(),
+      breaking,
       credibility: Number(r.scores?.credibility ?? 0) || null,
       importance: Number(r.scores?.importance ?? 0) || null,
       suggestedFlairIds: suggestFlairs(title, suggestOpts).flairIds,
       vs: r.draft?.vs ?? null,
     }
   })
+  // 속보 먼저, 그 안에서 만료 임박 순 — 편집 우선순위(속보 > 만료 > 일상).
+  // 종전엔 오래된 순 하나뿐이라 방금 온 오피셜급이 맨 아래 깔렸다.
+  items.sort((a, b) =>
+    a.breaking !== b.breaking ? (a.breaking ? -1 : 1) : a.expiresAt.localeCompare(b.expiresAt)
+  )
 
   return (
     <div className="mx-auto max-w-[900px] p-6">
