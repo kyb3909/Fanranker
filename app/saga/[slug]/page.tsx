@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { PageBand, PageBandStat } from "@/components/page-band"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/stages"
 import { aggregateMainVotes } from "@/lib/saga/votes"
@@ -172,6 +173,19 @@ export default async function SagaDetailPage({
     : undefined
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
+      {/* ── 페이지 선언: 공용 다크 밴드.
+          사가 지면 셋 중 **여기만** 밴드가 없어서, 담벼락·사가 인덱스·시즌 문서가 전부
+          다크 밴드로 시작하는데 이 페이지만 옅은 경고 띠 다음 흰 카드로 시작했다.
+          PageBand 주석이 "페이지마다 폭과 모서리가 달라져 일관성이 깨진다 → 반드시
+          그리드 바깥, 최상단에" 라고 못박아 둔 그 규약을 이 페이지가 안 지키고 있었다.
+          h1 은 페이지에 하나 — 밴드가 가져간다 (아래 카드는 진행 단계만 남는다). */}
+      <PageBand
+        kicker="Transfer Saga"
+        title={saga.title}
+        description={saga.summary ?? undefined}
+        aside={<PageBandStat value={entries.length} label="ENTRIES" />}
+      />
+
       <main className="mx-auto max-w-[760px] px-4 pt-6 pb-16 sm:px-6">
         {/* 미확인 루머 배너 (D7) — 오피셜 확정 전 고정 */}
         {!saga.is_confirmed && !closed && (
@@ -183,40 +197,19 @@ export default async function SagaDetailPage({
           </div>
         )}
 
-        {/* ── 헤더: 제목 + 도트 스테퍼 + 신뢰 칩·D-day (목업 2026-08-04) ── */}
-        <header
+        {/* ── 진행 단계 카드: 도트 스테퍼 + 신뢰 칩·D-day (목업 2026-08-04) ── */}
+        <section
           className="rounded-2xl px-5 py-6 sm:px-7"
           style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+          aria-label="진행 상황"
         >
-          <h1
-            className="text-[26px] font-extrabold sm:text-[26px]"
-            style={{ color: "var(--wc-ink)", letterSpacing: "-.02em", wordBreak: "keep-all" }}
-          >
-            {saga.title}
-          </h1>
-          {saga.summary && (
-            <p
-              className="mt-1.5 text-[14px]"
-              style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
-            >
-              {saga.summary}
-            </p>
-          )}
-
           {/* 도트 스테퍼 — 노선도식. 지나온 단계는 채운 도트 + 버건디 연결선 (PRD §7) */}
-          <ol className="mt-6 flex items-start" aria-label="진행 단계">
+          <ol className="flex items-start" aria-label="진행 단계">
             {flow.map((st, i) => {
               const reached = closed ? saga.outcome === "done" : i <= idx
               const current = !closed && i === idx
               return (
-                <li key={st} className="relative flex flex-1 flex-col items-center gap-2">
-                  {i > 0 && (
-                    <span
-                      className="absolute top-[26px] right-1/2 left-[-50%] h-0.5"
-                      style={{ background: reached ? "var(--wc-burgundy)" : "var(--wc-line)" }}
-                      aria-hidden
-                    />
-                  )}
+                <li key={st} className="flex flex-1 flex-col items-center gap-2">
                   <span
                     className="text-[12px]"
                     style={{
@@ -226,16 +219,34 @@ export default async function SagaDetailPage({
                   >
                     {STAGE_LABEL[st] ?? st}
                   </span>
-                  <span
-                    className="relative z-10 rounded-full"
-                    style={{
-                      width: current ? 14 : 11,
-                      height: current ? 14 : 11,
-                      background: reached ? "var(--wc-burgundy)" : "#D4D4D8",
-                      boxShadow: current ? "0 0 0 4px rgba(150,30,55,.15)" : undefined,
-                    }}
-                    aria-hidden
-                  />
+                  {/* 도트 슬롯 — 높이를 도트 최대치(14px)로 고정하고 그 안에서 가운데 정렬.
+                      연결선도 같은 슬롯의 중앙에 건다. 그래야 선이 반드시 도트를 지난다.
+
+                      ⚠️ 종전엔 도트를 li 에 바로 얹고 선을 top-[26px] 로 눈대중했다. 실측하니
+                         선 중심 y=27, 도트 중심 y=32.7 — 선이 5.7px 위로 떠서 도트의 위쪽
+                         살만 스치고 지나갔다("마감이 덜 된" 정체). 게다가 도트가 top 정렬이라
+                         현재 단계의 14px 도트만 중심이 1.5px 내려가 도트 줄 자체가 삐뚤었다.
+                         슬롯을 만들면 11px·14px 도트와 선이 전부 슬롯 중앙에서 만난다. */}
+                  <span className="relative grid h-3.5 w-full place-items-center">
+                    {i > 0 && (
+                      <span
+                        className="absolute top-1/2 right-1/2 left-[-50%] h-0.5 -translate-y-1/2"
+                        style={{ background: reached ? "var(--wc-burgundy)" : "var(--wc-line)" }}
+                        aria-hidden
+                      />
+                    )}
+                    <span
+                      className="relative z-10 rounded-full"
+                      style={{
+                        width: current ? 14 : 11,
+                        height: current ? 14 : 11,
+                        // #D4D4D8 은 쿨 그레이라 웜 계열인 사이트에서 혼자 떠 있었다
+                        background: reached ? "var(--wc-burgundy)" : "var(--wc-line-2)",
+                        boxShadow: current ? "0 0 0 4px rgba(150,30,55,.15)" : undefined,
+                      }}
+                      aria-hidden
+                    />
+                  </span>
                 </li>
               )
             })}
@@ -255,7 +266,7 @@ export default async function SagaDetailPage({
               </span>
             )}
           </div>
-        </header>
+        </section>
 
         {/* ── 메인 투표 — 독립 카드. 기사 경유 진입이면 기사 직후로 (읽기 → 참전 순서) ── */}
         {!fromArticle && (
