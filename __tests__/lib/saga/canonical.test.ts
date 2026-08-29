@@ -58,3 +58,21 @@ describe("canonicalizePlayer — 성씨 승격", () => {
     expect(c).toEqual({ key: "totally-unknown", ko: null, matched: false })
   })
 })
+
+describe("한글 이름 키 (2026-08-30 운영자: 한국 선수도 사가 대상)", () => {
+  it("한글 이름이 키로 살아남는다 — 종전엔 빈 문자열이 돼 영원히 매칭 불가였다", () => {
+    const index = buildAliasIndex([
+      { romanized: "Kim Ye-gun", preferred_ko: "김예건", surfaces: ["김예건"] },
+    ])
+    // 추출기가 영문 칸에 한글을 넣는 실측 패턴 — 한글 surface 로 사전에 닿아야 한다
+    const c = canonicalizePlayer("김예건", index)
+    expect(c).toEqual({ key: "kim-ye-gun", ko: "김예건", matched: true })
+  })
+
+  it("라틴 이름 키는 종전과 동일하다 (분음부호 제거 회귀 확인)", () => {
+    const index = buildAliasIndex([{ romanized: "Sáenz", preferred_ko: "사엔스", surfaces: [] }])
+    const c = canonicalizePlayer("Saenz", index)
+    expect(c.key).toBe("saenz")
+    expect(c.matched).toBe(true)
+  })
+})

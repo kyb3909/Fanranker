@@ -7,13 +7,21 @@
 
 import type { SagaType } from "./stages"
 
-/** 선수 키 정규화 — 소문자·공백/특수문자 접기. 사전(news_alias_dictionary) 매칭 후의 영문 키 기준 */
+/**
+ * 선수 키 정규화 — 소문자·공백/특수문자 접기. 사전(news_alias_dictionary) 매칭 후의 키 기준.
+ *
+ * 한글을 보존한다 (2026-08-30 운영자: 한국 선수도 사가 대상) — 종전엔 한글이 전부
+ * 지워져 "김예건" 키가 빈 문자열이 됐고, 사전에 등재해도 **영원히 매칭 불가**였다
+ * (한글 surface 도 인덱스에서 조용히 증발). NFD 는 한글 음절을 자모로 분해하므로
+ * 분음부호 제거 후 NFC 로 재조합한다 — 라틴 키는 종전과 동일하게 나온다.
+ */
 export function normalizePlayerKey(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // 분음부호 제거 (Sáenz → saenz)
-    .replace(/[^a-z0-9]+/g, "-")
+    .normalize("NFC")
+    .replace(/[^a-z0-9가-힣]+/g, "-")
     .replace(/^-|-$/g, "")
 }
 

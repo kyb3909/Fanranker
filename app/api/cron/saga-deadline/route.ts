@@ -50,10 +50,25 @@ async function cronGet(request: Request) {
     .select("slug")
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // ── 기계 보류 큐 시효 (2026-08-30 운영자: "시효 = 이적시장 마감까지") ──
+  // 미등재·저신뢰 등으로 잠긴 이적설은 시장이 닫히면 뉴스 가치가 없다 — 폐기로 접어
+  // 재평가 루프(문서상 status='queued'만 봄)에서 빠진다. 나중에 선수가 등재돼도
+  // 부활하지 않는다(운영자 확정). 사람 검수 큐(에러 없는 queued)는 건드리지 않는다.
+  // 기계 보류 에러는 전부 auto_hold:/auto_publish_failed: 접두사 — 'auto'로 함께 잡는다.
+  // error 필드는 남긴다: status=discarded + error=auto_hold:... 조합이 "시효 폐기"의 기록이다.
+  const { data: expired, error: expireError } = await supabase
+    .from("saga_reservoir")
+    .update({ status: "discarded", updated_at: now })
+    .eq("status", "queued")
+    .like("error", "auto%")
+    .select("id")
+  if (expireError) return NextResponse.json({ error: expireError.message }, { status: 500 })
+
   return NextResponse.json({
     ok: true,
     closedDone: (closedDone ?? []).map((s) => s.slug),
     closedStayed: (closedStayed ?? []).map((s) => s.slug),
+    expiredHolds: (expired ?? []).length,
   })
 }
 

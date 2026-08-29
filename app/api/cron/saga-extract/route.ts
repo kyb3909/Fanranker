@@ -15,6 +15,7 @@ import {
 import { SAGA_WINDOW_KEY } from "@/lib/saga/config"
 import { publishReservoirItem } from "@/lib/saga/publish"
 import { reconcileSagaNames } from "@/lib/saga/reconcile"
+import { syncSquadNamesToNews } from "@/lib/dictionary/sync-news"
 import { isWomensFootball } from "@/lib/news/quality-gate"
 import { judgeClubConsistency } from "@/lib/saga/consistency"
 import { notifyDiscordOps } from "@/lib/discord-notify"
@@ -58,6 +59,17 @@ async function cronGet(request: Request) {
       .eq("status", "ingested")
       .order("created_at", { ascending: true })
       .limit(MAX_ROWS)
+
+    // ── 스쿼드 사전(정본) → 뉴스 사전 자동 동기화 (2026-08-30 운영자: 무승인 확정) ──
+    // 스쿼드에서 이미 검수된 이름(name_kr)이 뉴스 사전에 없어서 사가가 못 보던 구멍
+    // (실측: 커티스 존스 6건·엔조 페르난데스 5건이 미등재 보류). 없는 것만 넣는
+    // 멱등 동기화라 매 회차 돌려도 안전하고, **사전 로드 전에** 돌아야 같은 회차의
+    // 재평가 루프가 방금 확정된 선수의 보류 기사를 바로 살린다.
+    // 실패는 본 작업을 막지 않는다 — 다음 회차가 다시 시도한다.
+    const dictSync = await syncSquadNamesToNews(supabase, { apply: true }).catch((e) => {
+      console.error("[saga-extract] 스쿼드→뉴스 사전 동기화 실패", e)
+      return null
+    })
 
     const { data: aliasRows } = await supabase
       .from("news_alias_dictionary")
@@ -386,6 +398,9 @@ async function cronGet(request: Request) {
       retried,
       revived,
       reconcile,
+      dictSync: dictSync
+        ? { inserted: dictSync.inserted, conflicts: dictSync.conflicts.length }
+        : null,
     })
   }
 }
