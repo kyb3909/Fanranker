@@ -14,6 +14,7 @@ import {
 } from "@/lib/saga/canonical"
 import { SAGA_WINDOW_KEY } from "@/lib/saga/config"
 import { publishReservoirItem } from "@/lib/saga/publish"
+import { reconcileSagaNames } from "@/lib/saga/reconcile"
 import { isWomensFootball } from "@/lib/news/quality-gate"
 import { judgeClubConsistency } from "@/lib/saga/consistency"
 import { notifyDiscordOps } from "@/lib/discord-notify"
@@ -325,6 +326,55 @@ async function cronGet(request: Request) {
       }
     }
 
+    // ── 동성이인 보호에 걸린 행 자가 재평가 (2026-08-30 각포 실사고) ──
+    // 성씨-only 보도("gakpo")가 클럽 맥락 부재로 막혔던 행도, canonicalizePlayer 의
+    // 성씨 승격(사전에 그 성의 풀네임이 유일하면 풀네임으로)이 키를 풀네임으로
+    // 바꿔주면 다음 회차에 스스로 살아난다. 승격이 안 되는 행(진짜 동성이인)은
+    // 키가 그대로라 재시도해도 같은 에러 — 무한 재시도 방지로 승격된 행만 재시도.
+    {
+      const { data: held } = await supabase
+        .from("saga_reservoir")
+        .select("id, source_url, source, title, headline_kr, occurred_at, extracted")
+        .eq("status", "queued")
+        .like("error", "auto_publish_failed:동성이인%")
+        .order("occurred_at", { ascending: true })
+        .limit(RETRY_LIMIT)
+
+      for (const row of held ?? []) {
+        const ex = (row.extracted ?? null) as ExtractedTransfer | null
+        if (!ex?.player) continue
+        const canon = canonicalizePlayer(ex.player, aliasIndex)
+        // 승격으로 키가 실제로 바뀐 행만 — 안 바뀌었으면 결과도 같다
+        if (!canon.matched || canon.key === normalizePlayerKey(ex.player)) continue
+        retried++
+        try {
+          await publishReservoirItem(
+            supabase,
+            {
+              id: row.id,
+              source_url: row.source_url,
+              source: (row.source ?? null) as Record<string, unknown> | null,
+              title: row.title,
+              headline_kr: row.headline_kr,
+              extracted: ex,
+              occurred_at: row.occurred_at,
+            },
+            { player: canon.key, ...(canon.ko ? { player_kr: canon.ko } : {}) }
+          )
+          revived++
+        } catch (e) {
+          console.error("[saga-extract] 동성이인 재평가 실패", row.id, e)
+        }
+      }
+    }
+
+    // ── 표기 동기화 — 사전(정본)을 사가 제목·헤드라인에 반영 (2026-08-30 운영자) ──
+    // 실패해도 추출·발행 결과는 그대로 반환한다 — 본 작업을 막지 않는다.
+    const reconcile = await reconcileSagaNames(supabase).catch((e) => {
+      console.error("[saga-extract] 표기 동기화 실패", e)
+      return null
+    })
+
     return NextResponse.json({
       ok: true,
       processed: pendingRows.length,
@@ -335,6 +385,7 @@ async function cronGet(request: Request) {
       failed,
       retried,
       revived,
+      reconcile,
     })
   }
 }

@@ -42,6 +42,11 @@ function surnameOf(key: string): string | null {
   return last && last.length >= 3 ? last : null
 }
 
+/** 유의 토큰 수 — 성씨-only 항목('Gakpo') 판별에 쓴다 */
+function tokenCountOf(key: string): number {
+  return key.split("-").filter((t) => t.length > 0 && !SURNAME_SKIP.has(t)).length
+}
+
 /** 사전 행 → surface 정규화 인덱스 + 성(姓) 인덱스. romanized 자신도 surface 취급 */
 export function buildAliasIndex(rows: AliasRow[]): AliasIndex {
   const exact = new Map<string, AliasEntry>()
@@ -55,8 +60,12 @@ export function buildAliasIndex(rows: AliasRow[]): AliasIndex {
       const surface = normalizePlayerKey(s)
       if (surface && !exact.has(surface)) exact.set(surface, entry)
     }
+    // 성(姓) 인덱스엔 **풀네임 항목만** 넣는다. 성씨-only 항목('Gakpo'→각포)은 성씨의
+    // 표기 별칭이지 신원 후보가 아니다 — 넣으면 자기 자신과 풀네임('Cody Gakpo')이
+    // 충돌로 표시돼, 정작 그 성의 풀네임이 유일한데도 병합이 막힌다 (2026-08-30
+    // 각포 실사고: "gakpo" 보도가 cody-gakpo 사가에 못 합류하고 동성이인 보호에 걸림).
     const surname = surnameOf(key)
-    if (surname) {
+    if (surname && tokenCountOf(key) >= 2) {
       const prev = bySurname.get(surname)
       // 같은 성이 서로 다른 선수를 가리키면 충돌 표시 — 성만으로는 병합하지 않는다
       if (prev === undefined) bySurname.set(surname, entry)
@@ -69,7 +78,17 @@ export function buildAliasIndex(rows: AliasRow[]): AliasIndex {
 export function canonicalizePlayer(name: string, index: AliasIndex): CanonicalPlayer {
   const key = normalizePlayerKey(name)
   const hit = index.exact.get(key)
-  if (hit) return { key: hit.key, ko: hit.ko, matched: true }
+  if (hit) {
+    // 성씨-only 히트('gakpo'→각포)는 사전에 그 성의 풀네임이 유일하면 풀네임으로
+    // 승격한다 — 키·한국어 표기가 전부 **사전 등록 이름 기준**이 된다 (2026-08-30
+    // 운영자: "선수 모든 이름은 선수 사전 등록 이름 기준으로"). 동성이인이면
+    // bySurname 이 충돌(null)이라 승격 없이 성씨 항목 그대로 — 게이트가 지킨다.
+    if (tokenCountOf(hit.key) === 1) {
+      const bySur = index.bySurname.get(hit.key)
+      if (bySur) return { key: bySur.key, ko: bySur.ko, matched: true }
+    }
+    return { key: hit.key, ko: hit.ko, matched: true }
+  }
 
   // 성(姓) 폴백 — "조던 헨더슨"과 "헨더슨"이 다른 사가가 되면 안 된다 (2026-08-04).
   // 사전에서 그 성이 유일할 때만 (동성이인은 충돌 표시돼 있어 병합 안 함)
