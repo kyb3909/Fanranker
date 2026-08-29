@@ -94,8 +94,13 @@ export function MiniNewsDeck({
   const [modal, setModal] = useState(false)
   const item = items[Math.min(cursor, Math.max(0, items.length - 1))]
 
+  /** 좌우가 곧 스킵이다 (운영자: "스킵하는 건 좌우로 움직이면서 관리") — 순환 */
   const next = useCallback(
     () => setCursor((c) => (items.length === 0 ? 0 : (c + 1) % items.length)),
+    [items.length]
+  )
+  const prev = useCallback(
+    () => setCursor((c) => (items.length === 0 ? 0 : (c - 1 + items.length) % items.length)),
     [items.length]
   )
   const decideLocal = useCallback(() => {
@@ -111,14 +116,15 @@ export function MiniNewsDeck({
       const t = e.target as HTMLElement
       if (["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.isContentEditable) return
       const k = e.key.toLowerCase()
-      if (e.key === "ArrowRight" || k === "s") next()
+      if (e.key === "ArrowRight" || k === "s" || k === "j") next()
+      if (e.key === "ArrowLeft" || k === "k") prev()
       if (k === "p" || k === "r") decideLocal()
       if (k === "e") setModal(true)
       if (e.key === "Escape") setModal(false)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [next, decideLocal])
+  }, [next, prev, decideLocal])
 
   const breaking = items.filter((i) => i.breaking).length
   const urgent = items.filter((i) => hoursLeftOf(i, now) < 6).length
@@ -135,18 +141,30 @@ export function MiniNewsDeck({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* 헤더 한 줄 — 남은 개수·속보·만료 */}
-      <p className="text-muted-foreground mb-2 text-[11px]">
+      {/* 헤더 한 줄 — 남은 개수·속보·만료 + 좌우 이동(=스킵) */}
+      <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[11px]">
         <b className="text-foreground tabular-nums">
           {cursor + 1}/{items.length}
         </b>
         건 남음
-        {breaking > 0 && (
-          <span className="ml-1.5 font-bold text-red-600">🚨 오피셜급 {breaking}</span>
-        )}
-        {urgent > 0 && <span className="ml-1.5 text-red-600">⏰ 6시간 내 {urgent}</span>}
-        <span className="float-right ml-auto">오늘 처리 {done}건</span>
-      </p>
+        {breaking > 0 && <span className="font-bold text-red-600">🚨 오피셜급 {breaking}</span>}
+        {urgent > 0 && <span className="text-red-600">⏰ 6시간 내 {urgent}</span>}
+        <span className="ml-auto">오늘 처리 {done}건</span>
+        <button
+          onClick={prev}
+          aria-label="이전 (←)"
+          className="hover:bg-muted rounded border px-2 py-0.5 font-bold"
+        >
+          ◀
+        </button>
+        <button
+          onClick={next}
+          aria-label="다음 (→)"
+          className="hover:bg-muted rounded border px-2 py-0.5 font-bold"
+        >
+          ▶
+        </button>
+      </div>
 
       {/* 카드 1장 */}
       <div className={cn("rounded-lg border p-3", item.breaking && "border-red-300 bg-red-50/40")}>
@@ -221,7 +239,7 @@ export function MiniNewsDeck({
             onClick={next}
             className="text-muted-foreground rounded border px-3 py-1.5 text-xs"
           >
-            스킵 (→)
+            스킵 (←/→)
           </button>
           <button
             onClick={() => setModal(true)}

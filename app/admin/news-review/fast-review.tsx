@@ -998,7 +998,7 @@ export function FastReview({
                 onClick={next}
                 className="text-muted-foreground rounded-lg border px-5 py-2 text-sm font-medium"
               >
-                스킵 (→)
+                스킵 (←/→)
               </button>
               <button
                 onClick={() => startEdit(item)}
