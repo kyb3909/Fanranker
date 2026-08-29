@@ -341,7 +341,16 @@ def skin_meshes(keep, arm_obj, factor):
 
     # clothes copy the body's weights (nearest surface) so they can never
     # tear away from the skin underneath, then deform with the same armature
+    bone_names = [bone.name for bone in arm_obj.data.bones]
     for cloth in (keep["kit_shirt"], keep["kit_shorts"]):
+        # ⚠️ layers_vgroup_select_dst="NAME" only writes into groups that ALREADY
+        #    exist on the destination. Without this the transfer silently wrote
+        #    nothing, every cloth vertex fell through to the orphan pass, and the
+        #    whole shirt ended up rigid on `spine` — a board that ignored the arms
+        #    and let skin show at the shoulder on every stride.
+        for bone_name in bone_names:
+            if not cloth.vertex_groups.get(bone_name):
+                cloth.vertex_groups.new(name=bone_name)
         transfer = cloth.modifiers.new("CopyBodyWeights", "DATA_TRANSFER")
         transfer.object = body
         transfer.use_vert_data = True
@@ -355,89 +364,19 @@ def skin_meshes(keep, arm_obj, factor):
         armature_mod.object = arm_obj
         cloth.parent = arm_obj
 
-    # the shirt torso must not follow the arms — damp arm influence inside the
-    # shoulder seam (sleeves keep it), reassigning the removed weight to spine
-    shirt = keep["kit_shirt"]
-    x0 = 0.070 * factor
-    x1 = 0.150 * factor
-    arm_group_ids = {
-        g.index for g in shirt.vertex_groups if g.name.startswith(("upper_arm", "forearm"))
-    }
-    spine_group = shirt.vertex_groups.get("spine") or shirt.vertex_groups.new(name="spine")
-    for v in shirt.data.vertices:
-        t = (abs(v.co.x) - x0) / (x1 - x0)
-        t = max(0.0, min(1.0, t))
-        if t >= 1.0:
-            continue
-        removed = 0.0
-        for ge in v.groups:
-            if ge.group in arm_group_ids:
-                removed += ge.weight * (1.0 - t)
-                ge.weight *= t
-        if removed > 0:
-            spine_group.add([v.index], removed, "ADD")
-
-    # the shirt must not follow the legs either — transferred thigh weights on
-    # the hem dragged red streaks over the shorts during kicks
-    leg_group_ids = {
-        g.index for g in shirt.vertex_groups if g.name.startswith(("thigh", "shin", "foot"))
-    }
-    hips_on_shirt = shirt.vertex_groups.get("hips") or shirt.vertex_groups.new(name="hips")
-    for v in shirt.data.vertices:
-        removed = 0.0
-        for ge in v.groups:
-            if ge.group in leg_group_ids:
-                removed += ge.weight
-                ge.weight = 0.0
-        if removed > 0:
-            hips_on_shirt.add([v.index], removed, "ADD")
-
-    # the hem leans toward the pelvis (60%) so it stays near the shorts
-    # waistband on a spine lean without going fully rigid — a hard pin made
-    # the leaning belly punch through the taut shirt front instead
-    hem_top = 0.395 * factor
-    hem_bottom = 0.355 * factor
-    for v in shirt.data.vertices:
-        if v.co.z >= hem_top:
-            continue
-        t = 0.6 * min(1.0, (hem_top - v.co.z) / (hem_top - hem_bottom))
-        for ge in v.groups:
-            ge.weight *= 1.0 - t
-        hips_on_shirt.add([v.index], t, "ADD")
-
-    # shorts: positional weights — pelvis above the crotch, thighs below, so
-    # tucked legs (jump) and kicks carry the shorts legs along
-    shorts = keep["kit_shorts"]
-    for group in list(shorts.vertex_groups):
-        shorts.vertex_groups.remove(group)
-    hips_on_shorts = shorts.vertex_groups.new(name="hips")
-    spine_on_shorts = shorts.vertex_groups.new(name="spine")
-    thigh_l_group = shorts.vertex_groups.new(name="thigh_l")
-    thigh_r_group = shorts.vertex_groups.new(name="thigh_r")
-    crotch_z = 0.335 * factor
-    blend_band = 0.05 * factor
-    waist_z = 0.375 * factor
-    for v in shorts.data.vertices:
-        t = (crotch_z - v.co.z) / blend_band
-        t = max(0.0, min(1.0, t))
-        if t <= 0.0:
-            # waistband picks up some spine so it leans with the shirt hem
-            spine_share = 0.3 if v.co.z >= waist_z else 0.0
-            hips_on_shorts.add([v.index], 1.0 - spine_share, "REPLACE")
-            if spine_share > 0.0:
-                spine_on_shorts.add([v.index], spine_share, "REPLACE")
-            continue
-        side = thigh_l_group if v.co.x >= 0 else thigh_r_group
-        hips_on_shorts.add([v.index], 1.0 - t, "REPLACE")
-        side.add([v.index], t, "REPLACE")
-
-    # verts the transfer missed (collar rim etc.) have no weights at all and
-    # stay behind on translation keys — pin them to the torso
-    orphan_group = shirt.vertex_groups.get("spine") or shirt.vertex_groups.new(name="spine")
-    orphans = [v.index for v in shirt.data.vertices if sum(ge.weight for ge in v.groups) < 0.05]
-    if orphans:
-        orphan_group.add(orphans, 1.0, "REPLACE")
-        print(f"kit_shirt: pinned {len(orphans)} orphan verts to spine")
+    # Anything the transfer still missed (a few collar rim verts) has no
+    # weights at all and would stay behind on translation keys.
+    for mesh_name, fallback_bone in (("kit_shirt", "spine"), ("kit_shorts", "hips")):
+        cloth = keep[mesh_name]
+        group = cloth.vertex_groups.get(fallback_bone) or cloth.vertex_groups.new(
+            name=fallback_bone
+        )
+        orphans = [
+            v.index for v in cloth.data.vertices if sum(ge.weight for ge in v.groups) < 0.05
+        ]
+        if orphans:
+            group.add(orphans, 1.0, "REPLACE")
+            print(f"{mesh_name}: pinned {len(orphans)} orphan verts to {fallback_bone}")
 
     # heat/transferred weights don't always sum to 1 per vertex, which makes
     # translation keys (the cheer hop) tear cloth away from the skin
@@ -488,6 +427,18 @@ def author_clips(arm_obj):
             b.rotation_euler = (0, 0, 0)
             b.location = (0, 0, 0)
 
+    # The purchased body is modelled in an A-pose: arms angled out ~45°. Left
+    # like that the character walks like a scarecrow, so every grounded clip
+    # first drops the arms alongside the torso. Sign is mirrored per side
+    # (local Z swings the arm within the body plane).
+    ARMS_DOWN = 0.62
+
+    def key_arm(side, frame, swing=0.0, down=ARMS_DOWN, elbow=0.0):
+        sign = 1.0 if side == "l" else -1.0
+        key(f"upper_arm_{side}", frame, rot=(swing, 0, sign * down))
+        if elbow:
+            key(f"forearm_{side}", frame, rot=(elbow, 0, 0))
+
     actions = []
 
     # ---- idle: soft breathing, 2s loop ----
@@ -497,8 +448,8 @@ def author_clips(arm_obj):
     for frame, amp in ((1, 0.0), (30, 1.0), (60, 0.0)):
         key("spine", frame, rot=(0.05 * amp, 0, 0))
         key("head", frame, rot=(-0.06 * amp, 0, 0))
-        key("upper_arm_l", frame, rot=(0.06 * amp, 0, 0))
-        key("upper_arm_r", frame, rot=(0.06 * amp, 0, 0))
+        key_arm("l", frame, swing=0.06 * amp)
+        key_arm("r", frame, swing=0.06 * amp)
         key("hips", frame, loc=(0, -0.012 * amp, 0))
     actions.append(act)
 
@@ -506,14 +457,15 @@ def author_clips(arm_obj):
     act = bpy.data.actions.new("walk")
     arm_obj.animation_data.action = act
     reset_pose()
-    swing, shin_bend, arm_swing = 0.55, 0.7, 0.42
+    swing, shin_bend, arm_swing = 0.55, 0.7, 0.38
     for frame, s in ((1, 1.0), (8, 0.0), (15, -1.0), (22, 0.0), (30, 1.0)):
         key("thigh_l", frame, rot=(-swing * s, 0, 0))
         key("thigh_r", frame, rot=(swing * s, 0, 0))
         key("shin_l", frame, rot=(shin_bend * max(0.0, s), 0, 0))
         key("shin_r", frame, rot=(shin_bend * max(0.0, -s), 0, 0))
-        key("upper_arm_l", frame, rot=(arm_swing * s, 0, 0))
-        key("upper_arm_r", frame, rot=(-arm_swing * s, 0, 0))
+        # arms hang and swing opposite the leg on the same side
+        key_arm("l", frame, swing=arm_swing * s, elbow=-0.22)
+        key_arm("r", frame, swing=-arm_swing * s, elbow=-0.22)
         bob = 0.05 if s == 0.0 else 0.0
         key("hips", frame, loc=(0, bob, 0))
         key("spine", frame, rot=(0.06, 0, 0))
@@ -552,10 +504,8 @@ def author_clips(arm_obj):
         key("thigh_r", frame, rot=(0.7 * s if s >= 0 else -0.95 * -s, 0, 0))
         key("shin_l", frame, rot=((0.15 if s > 0 else 1.25 if s < 0 else 0.65), 0, 0))
         key("shin_r", frame, rot=((1.25 if s > 0 else 0.15 if s < 0 else 0.65), 0, 0))
-        key("upper_arm_l", frame, rot=(0.6 * s, 0, 0))
-        key("upper_arm_r", frame, rot=(-0.6 * s, 0, 0))
-        key("forearm_l", frame, rot=(-0.75, 0, 0))
-        key("forearm_r", frame, rot=(-0.75, 0, 0))
+        key_arm("l", frame, swing=0.6 * s, down=ARMS_DOWN * 0.8, elbow=-0.8)
+        key_arm("r", frame, swing=-0.6 * s, down=ARMS_DOWN * 0.8, elbow=-0.8)
         key("spine", frame, rot=(0.1, 0, 0))
         key("head", frame, rot=(-0.06, 0, 0))
         key("hips", frame, loc=(0, hips_up, 0))
@@ -578,8 +528,8 @@ def author_clips(arm_obj):
         key("thigh_r", frame, rot=(thigh_r, 0, 0))
         key("shin_r", frame, rot=(shin_r, 0, 0))
         key("spine", frame, rot=(spine, 0, 0))
-        key("upper_arm_l", frame, rot=(arm_l, 0, 0))
-        key("upper_arm_r", frame, rot=(arm_r, 0, 0))
+        key_arm("l", frame, swing=arm_l, down=ARMS_DOWN * 0.7)
+        key_arm("r", frame, swing=arm_r, down=ARMS_DOWN * 0.7)
         key("head", frame, rot=(head, 0, 0))
         key("thigh_l", frame, rot=(-0.05 if frame in (6, 10, 16) else 0.0, 0, 0))
         key("shin_l", frame, rot=(0.1 if frame in (6, 10, 16) else 0.0, 0, 0))
@@ -620,8 +570,8 @@ def author_clips(arm_obj):
         key("shin_l", frame, rot=(shin, 0, 0))
         key("shin_r", frame, rot=(shin, 0, 0))
         key("spine", frame, rot=(spine, 0, 0))
-        key("upper_arm_l", frame, rot=(arms, 0, 0))
-        key("upper_arm_r", frame, rot=(arms, 0, 0))
+        key_arm("l", frame, swing=arms, down=ARMS_DOWN * 0.55)
+        key_arm("r", frame, swing=arms, down=ARMS_DOWN * 0.55)
     actions.append(act)
 
     # stash every clip on the NLA so the glTF exporter emits one animation each
@@ -746,13 +696,15 @@ def main(character_key):
     remap_shirt(keep["kit_shirt"])
     remap_shorts(keep["kit_shorts"])
 
-    if character["tuck_body"]:
-        tuck_body_under_clothes(
-            keep["body"],
-            [keep["kit_shirt"], keep["kit_shorts"]],
-            inset=0.004,
-            max_pierce=0.018,
-        )
+    # Both builds get this now: even a body cut for these clothes grazes the
+    # shell at the shoulder and belly, and any rest-pose contact turns into a
+    # visible skin patch once a limb swings.
+    tuck_body_under_clothes(
+        keep["body"],
+        [keep["kit_shirt"], keep["kit_shorts"]],
+        inset=0.004,
+        max_pierce=0.018,
+    )
     # The shorts waistband is cut wider than the shirt hem, so a slab of shorts
     # pokes through the jersey at the hip on every build. Same treatment.
     tuck_body_under_clothes(
