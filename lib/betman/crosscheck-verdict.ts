@@ -45,6 +45,36 @@ function pair(h: number | null, a: number | null): string | null {
   return h == null || a == null ? null : `${h}-${a}`
 }
 
+/**
+ * ② result 필드 ↔ 검증 스코어 정합성 (2026-08-30 운영자 지적).
+ *
+ * 정산은 `betman_games.result` 로 지급하는데, 그 값은 betman.co.kr 크롤이 채운다.
+ * 스코어(LFA×와이즈토토)만 검증하면 **정산이 실제로 읽는 값이 검증 밖**이다.
+ * 검증된 스코어에서 그 행의 마켓 규칙(승무패/핸디캡/언더오버…)으로 result 를
+ * 재계산해 저장값과 대조한다. 어긋나면 크롤 버그·경기 매핑 오류·수동 입력 실수다.
+ *
+ * 판단 불가는 통과시킨다:
+ *  · 저장 result 가 비어 있으면 — 정산 가드가 어차피 그 행을 안 정산한다
+ *  · 재계산이 "" 이면 (언더오버 line 0 등) — 규칙상 유도 불가
+ *  · cancelled 는 스코어와 무관한 상태 결정
+ */
+export function checkResultConsistency(input: {
+  homeScore: number
+  awayScore: number
+  storedResult: string | null
+  /** deriveResultFromScore 재계산값 — 호출부가 result-mapper 로 계산해 넘긴다 */
+  expectedResult: string
+}): { ok: boolean; note: string | null } {
+  const stored = (input.storedResult ?? "").trim()
+  if (stored === "" || stored === "cancelled") return { ok: true, note: null }
+  if (input.expectedResult === "") return { ok: true, note: null }
+  if (stored === input.expectedResult) return { ok: true, note: null }
+  return {
+    ok: false,
+    note: `result 불일치 — 저장 ${stored} / 스코어(${input.homeScore}-${input.awayScore}) 계산 ${input.expectedResult}`,
+  }
+}
+
 export function decideVerdict(input: VerdictInput): VerdictResult {
   const betmanScore = pair(input.betman.home, input.betman.away)
   const lfaScore = input.lfa ? pair(input.lfa.homeScore, input.lfa.awayScore) : null

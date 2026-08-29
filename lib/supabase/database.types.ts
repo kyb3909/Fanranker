@@ -1072,6 +1072,7 @@ export type Database = {
           checked_at: string
           game_id: string
           lfa_score: string | null
+          note: string | null
           verdict: string
         }
         Insert: {
@@ -1080,6 +1081,7 @@ export type Database = {
           checked_at?: string
           game_id: string
           lfa_score?: string | null
+          note?: string | null
           verdict: string
         }
         Update: {
@@ -1088,6 +1090,7 @@ export type Database = {
           checked_at?: string
           game_id?: string
           lfa_score?: string | null
+          note?: string | null
           verdict?: string
         }
         Relationships: [

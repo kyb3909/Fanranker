@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { decideVerdict, WAIVE_HOURS } from "@/lib/betman/crosscheck-verdict"
+import { decideVerdict, checkResultConsistency, WAIVE_HOURS } from "@/lib/betman/crosscheck-verdict"
+import { deriveResultFromScore } from "@/lib/betman/result-mapper"
 
 const FT = (h: number | null, a: number | null) => ({ finished: true, homeScore: h, awayScore: a })
 
@@ -61,5 +62,71 @@ describe("decideVerdict", () => {
       hoursSinceKickoff: WAIVE_HOURS,
     })
     expect(r.verdict).toBe("waived")
+  })
+})
+
+describe("checkResultConsistency — result 필드 ↔ 검증 스코어 (2026-08-30 운영자 지적)", () => {
+  const derive = (
+    h: number,
+    a: number,
+    type: string,
+    handicap: number | null = null,
+    line: number | null = null
+  ) =>
+    deriveResultFromScore(h, a, type as Parameters<typeof deriveResultFromScore>[2], handicap, line)
+
+  it("승무패 — 스코어 1-3 인데 result 가 home 이면 불일치 (지급 사고 직전)", () => {
+    const r = checkResultConsistency({
+      homeScore: 1,
+      awayScore: 3,
+      storedResult: "home",
+      expectedResult: derive(1, 3, "일반"),
+    })
+    expect(r.ok).toBe(false)
+    expect(r.note).toContain("home")
+    expect(r.note).toContain("away")
+  })
+
+  it("승무패 — 스코어와 result 가 맞으면 통과", () => {
+    const r = checkResultConsistency({
+      homeScore: 2,
+      awayScore: 0,
+      storedResult: "home",
+      expectedResult: derive(2, 0, "일반"),
+    })
+    expect(r.ok).toBe(true)
+  })
+
+  it("핸디캡 — 원점수는 홈 승이어도 핸디 적용 후 away 가 정답이다", () => {
+    // 2-1 에 핸디캡 -1.5 → 조정 0.5 vs 1 → away
+    const expected = derive(2, 1, "핸디캡", -1.5)
+    expect(expected).toBe("away")
+    const r = checkResultConsistency({
+      homeScore: 2,
+      awayScore: 1,
+      storedResult: "away",
+      expectedResult: expected,
+    })
+    expect(r.ok).toBe(true)
+  })
+
+  it("언더오버 line 0 → 재계산 불가('') — 판단하지 않고 통과", () => {
+    const r = checkResultConsistency({
+      homeScore: 1,
+      awayScore: 1,
+      storedResult: "over",
+      expectedResult: derive(1, 1, "언더오버", null, 0),
+    })
+    expect(r.ok).toBe(true)
+  })
+
+  it("저장 result 가 비어 있으면 통과 — 정산 가드가 어차피 그 행을 안 정산한다", () => {
+    const r = checkResultConsistency({
+      homeScore: 1,
+      awayScore: 0,
+      storedResult: "",
+      expectedResult: derive(1, 0, "일반"),
+    })
+    expect(r.ok).toBe(true)
   })
 })

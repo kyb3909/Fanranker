@@ -3,7 +3,8 @@ import "server-only"
 import { SupabaseClient } from "@supabase/supabase-js"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import { notifyDiscordOps } from "@/lib/discord-notify"
-import { decideVerdict, type CheckVerdict } from "./crosscheck-verdict"
+import { decideVerdict, checkResultConsistency, type CheckVerdict } from "./crosscheck-verdict"
+import { deriveResultFromScore } from "./result-mapper"
 
 /**
  * 축구 결과 교차검증 러너 + 정산 게이트 (2026-08-30 운영자 확정).
@@ -33,6 +34,12 @@ interface FootballGameRow {
   away_score: number | null
   league_code: string | null
   match_time: string
+  /* result 정합성 검사 재료 (2026-08-30 운영자: "베트맨에서 긁어오는 결과값들도 있잖아")
+     — 정산이 실제로 읽는 result 는 betman.co.kr 크롤이 채우므로 따로 검증해야 한다 */
+  game_type: string
+  handicap: number | null
+  over_under_line: number | null
+  result: string | null
 }
 
 export interface CrosscheckSummary {
@@ -69,7 +76,9 @@ export async function crosscheckFootballResults(
   const since = new Date(Date.now() - LOOKBACK_HOURS * 3600_000).toISOString()
   const { data: games, error } = await supabase
     .from("betman_games")
-    .select("id, home_team_name, away_team_name, home_score, away_score, league_code, match_time")
+    .select(
+      "id, home_team_name, away_team_name, home_score, away_score, league_code, match_time, game_type, handicap, over_under_line, result"
+    )
     .eq("sport", "축구")
     .eq("status", "completed")
     .not("result", "is", null)
@@ -103,9 +112,15 @@ export async function crosscheckFootballResults(
     verdict: CheckVerdict
     betman_score: string | null
     lfa_score: string | null
+    note: string | null
     checked_at: string
   }[] = []
-  const newMismatches: { game: FootballGameRow; betman: string | null; lfa: string | null }[] = []
+  const newMismatches: {
+    game: FootballGameRow
+    betman: string | null
+    lfa: string | null
+    note: string | null
+  }[] = []
 
   for (const g of targets) {
     const index = indexes.get(kstDate(g.match_time))
@@ -118,16 +133,44 @@ export async function crosscheckFootballResults(
       betman: { home: g.home_score, away: g.away_score },
       hoursSinceKickoff: (now - new Date(g.match_time).getTime()) / 3600_000,
     })
-    summary[r.verdict]++
+    let verdict = r.verdict
+    let note: string | null = null
+
+    // ② 스코어가 검증됐으면 result 필드(betman.co.kr 크롤분)도 그 스코어와 맞는지 본다.
+    //    정산은 result 로 지급하므로, 스코어만 검증하면 지급 값이 검증 밖이다.
+    if (verdict === "match" && g.home_score != null && g.away_score != null) {
+      const expected = deriveResultFromScore(
+        g.home_score,
+        g.away_score,
+        g.game_type as Parameters<typeof deriveResultFromScore>[2],
+        g.handicap,
+        g.over_under_line
+      )
+      const consistency = checkResultConsistency({
+        homeScore: g.home_score,
+        awayScore: g.away_score,
+        storedResult: g.result,
+        expectedResult: expected,
+      })
+      if (!consistency.ok) {
+        verdict = "mismatch"
+        note = consistency.note
+      }
+    } else if (verdict === "mismatch") {
+      note = "스코어 불일치"
+    }
+
+    summary[verdict]++
     upserts.push({
       game_id: g.id,
-      verdict: r.verdict,
+      verdict,
       betman_score: r.betmanScore,
       lfa_score: r.lfaScore,
+      note,
       checked_at: new Date().toISOString(),
     })
-    if (r.verdict === "mismatch") {
-      newMismatches.push({ game: g, betman: r.betmanScore, lfa: r.lfaScore })
+    if (verdict === "mismatch") {
+      newMismatches.push({ game: g, betman: r.betmanScore, lfa: r.lfaScore, note })
     }
   }
 
@@ -159,7 +202,7 @@ export async function crosscheckFootballResults(
         url: "/admin/matches",
         fields: fresh.slice(0, 6).map((m) => ({
           name: `${m.game.home_team_name} vs ${m.game.away_team_name}`,
-          value: `와이즈토토 ${m.betman ?? "?"} · LFA ${m.lfa ?? "?"}`,
+          value: m.note ?? `와이즈토토 ${m.betman ?? "?"} · LFA ${m.lfa ?? "?"}`,
         })),
       })
       await supabase
