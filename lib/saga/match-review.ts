@@ -3,6 +3,7 @@ import "server-only"
 import { chatParams } from "@/lib/llm/openai-params"
 import { leagueLabel } from "@/lib/match/leagues"
 import { getLfaMatchInfo, type LfaStatRow } from "@/lib/lfa/match"
+import { wrongTeamAttribution } from "@/lib/soccerway/goal-facts"
 import { logUsage } from "@/lib/llm/usage-log"
 
 /**
@@ -118,6 +119,12 @@ function buildSystemPrompt(teamKr: string, oppKr: string): string {
 - **제공된 데이터에 있는 사실만** 쓴다. 득점자·시간·스탯은 입력 그대로.
   입력에 없는 숫자(관중 수·순위·기록)를 지어내는 것은 절대 금지.
 - 선수 이름은 입력 표기를 **한 글자도 바꾸지 말고** 그대로 쓴다.
+- ⚠️ **자책골(\`자책골: true\`)은 두 팀이 다르다.** \`득점팀\` 은 점수가 올라간 팀이고,
+  \`넣은선수_소속\` 은 공을 자기 골대에 넣은 선수의 소속 팀이다. **이 둘은 항상 반대다.**
+  선수의 소속을 \`득점팀\` 으로 적지 마라 — 골키퍼가 자기 골대에 넣었으면 그 골키퍼는
+  실점한 팀 소속이고, 점수는 상대에게 간다.
+- ⚠️ **득점 목록의 골이 전부다.** \`득점\` 배열에 있는 만큼만 쓰고, 팀별 골 수는 스코어와
+  반드시 맞아야 한다. 자책골도 \`득점팀\` 쪽 골로 센다.
 - 구성: 2~3문단, 총 5~8문장. ①경기 흐름과 승부처(득점 장면 중심) ②마지막 문단 끝
   1~2문장으로 스탯이 말하는 바(제공된 지표 중 말이 되는 것 2~3개만, 나열 금지).
 - **퇴장이 있으면 몇 분에 누가 나갔는지 반드시 명시**한다. 수적 우위·열세가 경기 흐름을
@@ -127,6 +134,9 @@ function buildSystemPrompt(teamKr: string, oppKr: string): string {
 - 상대는 "${oppKr}"로 표기한다.
 - 출력: {"summary": "문단1\\n\\n문단2"} JSON. 문단 구분은 빈 줄 두 개.`
 }
+
+/* 소속 표기 게이트는 매치 리포트 쪽과 **같은 함수**를 쓴다 — 같은 사고를 두 경로가
+   따로 막으면 반드시 한쪽이 뒤처진다 (등급 칩이 두 지면에서 갈렸던 것과 같은 실수). */
 
 /** 스탯을 LLM 입력용으로 — 우리/상대 관점으로 뒤집어 넘긴다 */
 function statsForPerspective(
@@ -170,14 +180,33 @@ export async function buildMatchReview(
   const sideName = (side: "home" | "away") =>
     (side === "home") === weAreHome ? perspective.teamKr : oppKr
   // 타임라인 통합(2026-08-19) 후에도 리뷰 재료는 골·퇴장만 — 카드·교체까지 넣으면
-  // 요약이 사건 나열이 된다. 자책골은 (자책)을 붙여 실축 선수를 득점자로 오독하지 않게 한다.
+  // 요약이 사건 나열이 된다.
+  //
+  // ⚠️⚠️ **자책골은 두 팀을 따로 적는다** (2026-08-29 실사고).
+  //    종전엔 `팀: sideName(g.side)` + `선수: "X (자책)"` 하나로 뭉개 넘겼는데,
+  //    `side` 는 lib/lfa/match.ts:620 주석대로 **득점이 오른 팀**이고 실축 선수는 반대
+  //    팀 소속이다. 그 둘이 한 필드에 섞이니 LLM 이 `팀` 을 선수 소속으로 읽었다:
+  //
+  //      입력  {팀:"크리스털 팰리스", 선수:"잔루이지 돈나룸마 (자책)"}
+  //      출력  "크리스털 팰리스의 잔루이지 돈나룸마 자책골이 나오며 3-0"
+  //
+  //    돈나룸마는 맨시티 GK 다. 소속이 뒤집힌 데 이어 득점까지 시티 쪽으로 붙어
+  //    골이 하나 늘었고, 다섯 골을 나열해놓고 마지막을 "네 번째"라 적는 모순이 났다.
+  //    필드를 쪼개면 섞일 여지가 없다.
+  const ogScorerSide = (side: "home" | "away") => (side === "home" ? "away" : "home")
   const goals = lfa.timeline
     .filter((e) => e.kind === "goal" || e.kind === "pen" || e.kind === "og")
-    .map((g) => ({
-      분: g.minute,
-      팀: sideName(g.side),
-      선수: g.kind === "og" ? `${g.player} (자책)` : g.player,
-    }))
+    .map((g) =>
+      g.kind === "og"
+        ? {
+            분: g.minute,
+            득점팀: sideName(g.side),
+            자책골: true,
+            넣은선수: g.player,
+            넣은선수_소속: sideName(ogScorerSide(g.side)),
+          }
+        : { 분: g.minute, 득점팀: sideName(g.side), 선수: g.player }
+    )
   // 퇴장은 몇 분에 나왔는지가 경기 해석을 좌우한다 — 반드시 재료에 넣는다 (2026-08-17 운영자)
   const reds = lfa.timeline
     .filter((e) => e.kind === "red")
@@ -207,11 +236,11 @@ export async function buildMatchReview(
     return null
   }
 
-  // 결정론 게이트 — 입력에 없는 숫자가 하나라도 있으면 카드를 버린다
+  // 결정론 게이트 ① — 입력에 없는 숫자가 하나라도 있으면 카드를 버린다
   const allowed = collectAllowedNumbers([
     us,
     them,
-    ...goals.flatMap((g) => [g.분, g.선수]),
+    ...goals.flatMap((g) => [g.분, "선수" in g ? g.선수 : g.넣은선수]),
     ...reds.flatMap((r) => [r.분, r.선수]),
     ...stats.flatMap((s) => [s.지표, s.우리, s.상대]),
   ])
@@ -220,6 +249,32 @@ export async function buildMatchReview(
     console.warn(
       `[saga/match-review] 근거 없는 숫자로 폐기 (${perspective.teamKr}): ${rogue.join(", ")}`
     )
+    return null
+  }
+
+  /**
+   * 결정론 게이트 ② — 소속 표기 (2026-08-29 실사고).
+   *
+   * "크리스털 팰리스의 잔루이지 돈나룸마" 처럼 선수를 반대 팀 소속으로 적으면 버린다.
+   * 자책골이 이 사고의 단골이라 타임라인의 **모든** 선수로 맵을 만들어 검사한다
+   * (자책골 선수는 side 의 반대가 소속이다 — lib/lfa/match.ts:620).
+   */
+  const playerTeams = lfa.timeline
+    .filter((e) => e.player)
+    .map((e) => ({
+      label: e.player,
+      team: (e.kind === "og" ? ogScorerSide(e.side) : e.side) as "home" | "away",
+    }))
+  const homeName = weAreHome ? perspective.teamKr : oppKr
+  const awayName = weAreHome ? oppKr : perspective.teamKr
+  const teamProblem = wrongTeamAttribution(
+    { title: headline, paragraphs: [summary] },
+    playerTeams,
+    homeName,
+    awayName
+  )
+  if (teamProblem) {
+    console.warn(`[saga/match-review] ${teamProblem} — 폐기 (${perspective.teamKr})`)
     return null
   }
 
