@@ -722,7 +722,7 @@ export function AvatarLab() {
                       <p className="font-bold">{kit.name}</p>
                       <p className="text-xs text-slate-500">{kit.collection}</p>
                     </div>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[12px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {rarityLabel[kit.rarity]}
                     </span>
                   </div>
