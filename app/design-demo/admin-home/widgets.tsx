@@ -127,6 +127,78 @@ export function PreviewList({
 }
 
 /**
+ * 스쿼드 검수 행 — **입력칸이 곧 편집기다** (운영자: "내가 바꾸고 싶을 때는?").
+ *
+ * 실제 /admin/team-squads 와 같은 문법: 초안이 입력칸에 들어 있고, 틀렸으면
+ * 그 자리에서 고친 뒤 승인. Enter = 승인. 고치면 값이 초안과 달라진 것만으로
+ * "수정 승인"이 된다 — 별도 수정 모드가 없다.
+ * (시연 — 실제 저장 안 됨. 이식 때 confirm_team + edits API 를 그대로 문다)
+ */
+export function SquadReviewList({
+  rows: initial,
+}: {
+  rows: { nameEn: string; nameKrDraft: string; teamKr: string }[]
+}) {
+  const [rows, setRows] = useState(initial.map((r) => ({ ...r, value: r.nameKrDraft })))
+  const [done, setDone] = useState(0)
+
+  const approve = (i: number) => {
+    setRows((prev) => prev.filter((_, j) => j !== i))
+    setDone((n) => n + 1)
+  }
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-muted-foreground py-4 text-center text-xs">
+        미리보기 소진 — 오늘 {done}명 확정. 전체는 선수단 사전에서.
+      </p>
+    )
+  }
+  return (
+    <ul className="divide-y">
+      {rows.map((r, i) => {
+        const edited = r.value.trim() !== r.nameKrDraft
+        return (
+          <li key={`${r.nameEn}-${i}`} className="flex items-center gap-2 py-1.5 text-xs">
+            <span className="text-muted-foreground w-[130px] shrink-0 truncate">
+              {r.teamKr} · {r.nameEn}
+            </span>
+            <span className="text-muted-foreground shrink-0">→</span>
+            {/* 초안이 입력칸 — 틀렸으면 여기서 바로 고친다 */}
+            <input
+              value={r.value}
+              onChange={(e) =>
+                setRows((prev) =>
+                  prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x))
+                )
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && r.value.trim()) approve(i)
+              }}
+              className={cn(
+                "min-w-0 flex-1 rounded border px-2 py-1",
+                edited && "border-amber-400 bg-amber-50 font-semibold"
+              )}
+              aria-label={`${r.nameEn} 한글 표기`}
+            />
+            <button
+              onClick={() => approve(i)}
+              disabled={!r.value.trim()}
+              className={cn(
+                "shrink-0 rounded px-2.5 py-1 text-[11px] font-bold text-white disabled:opacity-40",
+                edited ? "bg-amber-600" : "bg-emerald-600"
+              )}
+            >
+              {edited ? "고쳐서 승인" : "승인"}
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
  * 뉴스 미니 덱 — 대시보드의 심장.
  * compact: 제목+신호+본문 요약, 원문 대조 없음 (B안 — 펼치면 모달)
  * full: 원문·초안 2열 인라인 (A안 — 모달 불필요)

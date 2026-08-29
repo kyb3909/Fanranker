@@ -6,6 +6,7 @@ import {
   Widget,
   StatusBoard,
   PreviewList,
+  SquadReviewList,
   WINE,
   type StatusRow,
 } from "./widgets"
@@ -156,14 +157,8 @@ export default async function AdminHomeBento() {
               <span className="text-muted-foreground text-[11px]">마감 없음 — 틈날 때 한 줄씩</span>
             }
           >
-            <PreviewList
-              rows={d.squadPreview.map((s) => ({
-                primary: `${s.teamKr} · ${s.nameEn}`,
-                secondary: `→ ${s.nameKrDraft}`,
-                actionLabel: "승인",
-              }))}
-              empty="초안 없음"
-            />
+            {/* 초안이 입력칸 — 고치고 싶으면 그 자리에서 고친 뒤 승인 (Enter = 승인) */}
+            <SquadReviewList rows={d.squadPreview} />
             <button
               className="mt-2 self-start text-[11px] font-bold underline"
               style={{ color: WINE }}
