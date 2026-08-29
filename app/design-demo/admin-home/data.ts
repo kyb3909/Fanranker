@@ -30,8 +30,12 @@ export interface DashboardData {
   betman: {
     lastCheckedAt: string | null
     status: "ok" | "stale" | "error"
-    /** 킥오프 지났는데 result 없는 경기 행 — operations/dashboard 와 같은 정의 */
+    /** 결과 대기 — **경기 수** (행 수 아님. 한 경기 = 마켓별 여러 행) */
     unsettled: number
+    /** 결과 대기 경기 목록 ("홈 vs 원정") — 숫자만으론 뭔지 모른다 (운영자) */
+    unsettledMatches: string[]
+    /** 그 경기들에 걸려 있는 유저 예측 수 — 이게 진짜 심각도다 */
+    waitingPredictions: number
     refundsPending: number
   }
   /** 문의 — ⚠️ inquiries 테이블은 존재하나 접수 경로가 미배선 (2026-08-30 실측: 코드 참조 0) */
@@ -171,11 +175,17 @@ export async function loadDashboardData(): Promise<DashboardData> {
      * **킥오프 5시간 경과**부터만 "진짜 걸린 것"으로 센다. PM 경고 그대로: 늑대소리
      * 내는 위젯은 3주 안에 무시를 학습시킨다.
      */
+    /**
+     * ⚠️ 행 수가 아니라 **경기 수**로 세야 한다 (2026-08-30 운영자: "미정산이 뭔지
+     * 모르겠어" → 까보니 행 25 = 실제 경기 5). betman 은 한 경기가 마켓별 여러 행이다.
+     * head-count 로는 distinct 가 안 되므로 키만 가져와 JS 에서 접는다.
+     */
     supabase
       .from("betman_games")
-      .select("*", { count: "exact", head: true })
+      .select("id, home_team_name, away_team_name, match_time")
       .lt("match_time", new Date(Date.now() - 5 * 3600_000).toISOString())
-      .is("result", null),
+      .is("result", null)
+      .limit(500),
     supabase
       .from("pending_refunds")
       .select("*", { count: "exact", head: true })
@@ -328,6 +338,30 @@ export async function loadDashboardData(): Promise<DashboardData> {
     a.breaking !== b.breaking ? (a.breaking ? -1 : 1) : a.expiresAt.localeCompare(b.expiresAt)
   )
 
+  // 결과 대기 — 행을 경기 단위로 접고, 걸린 유저 예측 수를 센다 (진짜 심각도)
+  const unsettledRows =
+    (unsettledRes.data as {
+      id: string
+      home_team_name: string
+      away_team_name: string
+      match_time: string
+    }[]) ?? []
+  const matchKeys = new Map<string, string>()
+  for (const g of unsettledRows) {
+    const key = `${g.home_team_name}|${g.away_team_name}|${g.match_time}`
+    if (!matchKeys.has(key)) matchKeys.set(key, `${g.home_team_name} vs ${g.away_team_name}`)
+  }
+  const { count: waitingPredictions } =
+    unsettledRows.length > 0
+      ? await supabase
+          .from("betman_predictions")
+          .select("*", { count: "exact", head: true })
+          .in(
+            "game_id",
+            unsettledRows.map((g) => g.id)
+          )
+      : { count: 0 }
+
   let betmanStatus: "ok" | "stale" | "error" = "error"
   const lastChecked = syncRes.data?.last_checked_at ?? null
   if (lastChecked) {
@@ -344,7 +378,9 @@ export async function loadDashboardData(): Promise<DashboardData> {
     betman: {
       lastCheckedAt: lastChecked,
       status: betmanStatus,
-      unsettled: unsettledRes.count ?? 0,
+      unsettled: matchKeys.size,
+      unsettledMatches: [...matchKeys.values()].slice(0, 6),
+      waitingPredictions: waitingPredictions ?? 0,
       refundsPending: refundsRes.count ?? 0,
     },
     inquiriesOpen: inqRes.count ?? 0,

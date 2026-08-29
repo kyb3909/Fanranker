@@ -485,6 +485,8 @@ export interface StatusRow {
   action?: string
   /** ok 여도 주의 표시 (앰버) — 예: 접수 경로 미배선 */
   note?: string
+  /** 이상일 때 줄 아래 펼치는 실물 목록 — "숫자만으론 뭔지 모른다" (운영자) */
+  detail?: string[]
 }
 
 export function StatusBoard({ rows }: { rows: StatusRow[] }) {
@@ -492,24 +494,36 @@ export function StatusBoard({ rows }: { rows: StatusRow[] }) {
     <Widget title="운영 전황" tone={rows.some((r) => !r.ok) ? "danger" : "default"}>
       <ul className="divide-y">
         {rows.map((r) => (
-          <li key={r.label} className="flex items-center gap-2 py-1.5 text-xs">
-            <span aria-hidden>{r.ok ? "✅" : "🔴"}</span>
-            <span className={cn(r.ok ? "text-muted-foreground" : "font-bold text-red-700")}>
-              {r.label}
-            </span>
-            {r.note && <span className="text-[10px] text-amber-600">{r.note}</span>}
-            <span
-              className={cn(
-                "ml-auto tabular-nums",
-                r.ok ? "text-muted-foreground" : "font-bold text-red-700"
+          <li key={r.label} className="py-1.5 text-xs">
+            <div className="flex items-center gap-2">
+              <span aria-hidden>{r.ok ? "✅" : "🔴"}</span>
+              <span className={cn(r.ok ? "text-muted-foreground" : "font-bold text-red-700")}>
+                {r.label}
+              </span>
+              {r.note && <span className="text-[10px] text-amber-600">{r.note}</span>}
+              <span
+                className={cn(
+                  "ml-auto tabular-nums",
+                  r.ok ? "text-muted-foreground" : "font-bold text-red-700"
+                )}
+              >
+                {r.value}
+              </span>
+              {!r.ok && r.action && (
+                <button className="rounded bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-white">
+                  {r.action}
+                </button>
               )}
-            >
-              {r.value}
-            </span>
-            {!r.ok && r.action && (
-              <button className="rounded bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-white">
-                {r.action}
-              </button>
+            </div>
+            {/* 이상 항목은 실물을 줄 밑에 펼친다 — 숫자만 던지지 않는다 */}
+            {!r.ok && r.detail && r.detail.length > 0 && (
+              <ul className="text-muted-foreground mt-1 space-y-0.5 pl-6 text-[11px]">
+                {r.detail.map((line) => (
+                  <li key={line} className="truncate">
+                    · {line}
+                  </li>
+                ))}
+              </ul>
             )}
           </li>
         ))}

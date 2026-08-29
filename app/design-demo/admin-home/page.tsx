@@ -55,10 +55,16 @@ export default async function AdminHomeBento() {
       action: "재동기화",
     },
     {
-      label: "미정산 경기",
-      value: `${d.betman.unsettled}건`,
+      /* "미정산"은 운영자도 못 알아들은 내부어 — 풀어쓴다. 경기 수 + 걸린 예측 수가
+         진짜 심각도다 (예측 0건이면 유저 피해 없음 = 동기화 지연 관찰 중) */
+      label: "경기 결과 대기",
+      value:
+        d.betman.unsettled === 0
+          ? "0경기"
+          : `${d.betman.unsettled}경기 · 걸린 예측 ${d.betman.waitingPredictions}건`,
       ok: d.betman.unsettled === 0,
-      action: "정산",
+      action: "결과 확인",
+      detail: d.betman.unsettledMatches,
     },
     {
       label: "환불 대기",

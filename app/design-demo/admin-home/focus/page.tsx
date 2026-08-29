@@ -42,10 +42,10 @@ export default async function AdminHomeFocus() {
       action: "재동기화",
     },
     {
-      label: "미정산 경기",
-      value: `${d.betman.unsettled}건`,
+      label: "경기 결과 대기",
+      value: `${d.betman.unsettled}경기`,
       ok: d.betman.unsettled === 0,
-      action: "정산",
+      action: "결과 확인",
     },
     {
       label: "환불 대기",
