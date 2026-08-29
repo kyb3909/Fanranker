@@ -7,6 +7,7 @@ import {
   StatusBoard,
   PreviewList,
   SquadReviewList,
+  BlockedPlayerRegisterList,
   ParticipationPanel,
   TickerModPanel,
   RefreshButton,
@@ -223,18 +224,11 @@ export default async function AdminDashboardPage() {
         >
           {/* 무엇을 하라는 패널인지 첫 줄에 못박는다 (운영자: "뭘 어쩌라는 건지 모르겠어") */}
           <p className="text-muted-foreground mb-2 text-xs leading-relaxed">
-            사전에 없는 선수 이름에 걸려 <b>사가로 못 들어간 소식</b>들입니다. 선수 표기를 등록하면
-            그 선수의 소식이 전부 자동으로 풀립니다.
+            사전에 없는 선수 이름에 걸려 <b>사가로 못 들어간 소식</b>들입니다. 한글 표기를 확인하고{" "}
+            <b>등재</b>를 누르면 그 선수의 소식이 15분 안에 자동으로 풀립니다. 행에 마우스를 올리면
+            근거 기사 제목이 보입니다.
           </p>
-          <PreviewList
-            rows={d.blockedPlayers.map((p) => ({
-              primary: p.name,
-              secondary: `소식 ${p.count}건 잠김`,
-              actionLabel: "표기 등록",
-              href: "/admin/news-review",
-            }))}
-            empty="대기 없음"
-          />
+          <BlockedPlayerRegisterList rows={d.blockedPlayers} />
           {d.blockedUnparsed > 0 && (
             <p className="mt-2 rounded bg-amber-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
               ⚠️ 그 외 <b className="tabular-nums">{d.blockedUnparsed}</b>건은 이름 추출 자체가

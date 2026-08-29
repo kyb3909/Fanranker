@@ -280,6 +280,113 @@ export function SquadReviewList({ rows: initial }: { rows: SquadPreviewRow[] }) 
 }
 
 /**
+ * 선수 원클릭 등재 (2026-08-30 운영자 "진행해줘").
+ *
+ * 미등재로 잠긴 사가 소식을 선수 단위로 풀어주는 문. LLM 의 한글 표기 후보가 입력칸에
+ * 미리 채워지고, 운영자가 고치거나 그대로 등재 — **확정은 사람 클릭** 원칙 그대로
+ * (무인 등재 사서를 폐지시킨 그 원칙. /api/admin/player-dictionary 가 유일한 등재 문).
+ * 등재되면 다음 saga-extract 회차(15분)의 재평가 루프가 그 선수 보류 기사를 발행한다.
+ */
+export function BlockedPlayerRegisterList({
+  rows: initial,
+}: {
+  rows: { playerEn: string; playerKrDraft: string | null; count: number; sample: string }[]
+}) {
+  const [rows, setRows] = useState(initial.map((r) => ({ ...r, value: r.playerKrDraft ?? "" })))
+  const [done, setDone] = useState(0)
+  const busyRef = useRef<Set<string>>(new Set())
+
+  const register = async (i: number) => {
+    const row = rows[i]
+    if (!row || busyRef.current.has(row.playerEn)) return
+    const ko = row.value.trim()
+    // 한글 표기만 사전 대표값이 될 수 있다 — 영문이 대표가 되는 사고 방지 (서버 GET 과 같은 원칙)
+    if (!/^[가-힣·\s-]{2,20}$/.test(ko)) {
+      toast({
+        variant: "destructive",
+        title: "한글 표기가 필요합니다",
+        description: "2~20자 한글 (중점·공백·하이픈 허용)",
+      })
+      return
+    }
+    busyRef.current.add(row.playerEn)
+    setRows((prev) => prev.filter((_, j) => j !== i))
+    setDone((n) => n + 1)
+    const restore = () => {
+      setRows((prev) => {
+        const next = [...prev]
+        next.splice(Math.min(i, next.length), 0, row)
+        return next
+      })
+      setDone((n) => Math.max(0, n - 1))
+    }
+    try {
+      const res = await fetch("/api/admin/player-dictionary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "new", preferred_ko: ko, romanized: row.playerEn }),
+      })
+      const d = (await res.json().catch(() => ({}))) as { error?: string; already?: boolean }
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "등재 실패", description: d.error ?? "다시 시도" })
+        restore()
+        return
+      }
+      toast({
+        title: d.already ? `${ko} — 이미 등재돼 있습니다` : `${ko} 등재 완료`,
+        description: `${row.playerEn} · 잠긴 소식 ${row.count}건이 15분 안에 자동 발행됩니다`,
+      })
+    } catch {
+      toast({ variant: "destructive", title: "네트워크 오류", description: "행을 되살렸습니다." })
+      restore()
+    } finally {
+      busyRef.current.delete(row.playerEn)
+    }
+  }
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-muted-foreground py-4 text-center text-xs">
+        {done > 0 ? `오늘 ${done}명 등재 — 잠긴 소식이 다음 크론에 풀립니다` : "대기 없음"}
+      </p>
+    )
+  }
+  return (
+    <ul className="divide-y">
+      {rows.map((r, i) => (
+        <li key={r.playerEn} className="flex items-center gap-2 py-1.5 text-xs" title={r.sample}>
+          <span className="w-[150px] shrink-0 truncate">
+            {r.playerEn}
+            <span className="text-muted-foreground"> · {r.count}건</span>
+          </span>
+          <span className="text-muted-foreground shrink-0">→</span>
+          {/* LLM 후보가 미리 채워진다 — 틀렸으면 여기서 고치고 등재 (Enter = 등재) */}
+          <input
+            value={r.value}
+            placeholder="한글 표기 입력"
+            onChange={(e) =>
+              setRows((prev) => prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && r.value.trim()) void register(i)
+            }}
+            className="min-w-0 flex-1 rounded border px-2 py-1"
+            aria-label={`${r.playerEn} 한글 표기`}
+          />
+          <button
+            onClick={() => void register(i)}
+            disabled={!r.value.trim()}
+            className="shrink-0 rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white disabled:opacity-40"
+          >
+            등재
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * 뉴스 미니 덱 — 대시보드의 심장. 원문·초안 2열 인라인.
  *
  * 발행/반려는 fast-review 와 같은 **5초 유예 커밋**: 화면에서 즉시 빼고 5초 뒤

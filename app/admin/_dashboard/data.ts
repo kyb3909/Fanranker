@@ -58,12 +58,20 @@ export interface DashboardData {
   squadPreview: SquadPreviewRow[]
   reportsPreview: { reason: string; targetType: string; createdAt: string }[]
   /**
-   * 표기 등재 대기 — 선수별 집계. "이 선수 표기를 등재하면 소식 N건이 풀린다".
-   * 슬립 헤드라인을 그대로 보여줬더니 운영자: "뭘 어쩌라는 건지 모르겠어" — 당연했다.
-   * 행동 단위는 슬립이 아니라 **선수**다.
+   * 표기 등재 대기 — 선수별 집계 + 원클릭 등재 재료 (2026-08-30 운영자 "진행해줘").
+   * 행동 단위는 슬립이 아니라 **선수**다. 영문 이름으로 묶고, LLM 의 한글 표기는
+   * **후보일 뿐** — 입력칸에 미리 채워 운영자가 고치거나 승인한다 (환각 대책 원칙:
+   * LLM 이 만든 표기는 사람 확정 없이 사전에 못 들어간다).
    */
-  blockedPlayers: { name: string; count: number }[]
-  /** 이름 추출 자체가 실패해 표기 등재로는 안 풀리는 잔여물 (2026-08-30 실측 248/381 = 65%) */
+  blockedPlayers: {
+    playerEn: string
+    /** LLM 추출 한글 표기 후보 — 없으면 null (운영자가 직접 입력) */
+    playerKrDraft: string | null
+    count: number
+    /** 근거 — 이 선수가 걸린 기사 제목 하나 */
+    sample: string
+  }[]
+  /** 이름 추출 자체가 실패해 등재로는 안 풀리는 잔여물 (영문 이름조차 없는 행) */
   blockedUnparsed: number
   today: { signups: number; posts: number; predictions: number }
   /** 참여도 — 오늘 vs 어제 (운영자: "사람들 참여도, 메뉴들 어떻게 활용했는지") */
@@ -156,6 +164,7 @@ export async function loadDashboardData(): Promise<DashboardData> {
     supabase
       .from("saga_reservoir")
       .select("*", { count: "exact", head: true })
+      .eq("status", "queued")
       .eq("error", "auto_hold:unknown_player"),
     supabase
       .from("betman_sync_state")
@@ -220,11 +229,13 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(5),
-    // 표기 등재 대기 — 선수 이름만 뽑아 JS 에서 집계 (extracted->player_kr)
+    // 표기 등재 대기 — 선수별 집계 + 근거 제목 (JS 에서 접는다)
     supabase
       .from("saga_reservoir")
-      .select("extracted")
+      .select("title, extracted")
+      .eq("status", "queued")
       .eq("error", "auto_hold:unknown_player")
+      .order("occurred_at", { ascending: false })
       .limit(500),
   ])
 
@@ -421,22 +432,39 @@ export async function loadDashboardData(): Promise<DashboardData> {
       (reportsPrevRes.data as { reason: string; target_type: string; created_at: string }[]) ?? []
     ).map((r) => ({ reason: r.reason, targetType: r.target_type, createdAt: r.created_at })),
     ...(() => {
-      // 선수별 집계 — 이름이 뽑힌 것만. 추출 실패분은 따로 센다(표기 등재로는 안 풀림)
-      const byName = new Map<string, number>()
+      // 선수별 집계 — **영문 이름**으로 묶는다 (한글 표기는 LLM 후보라 흔들린다).
+      // 영문조차 없는 행만 "추출 실패" — 등재로 못 푸는 진짜 잔여물이다.
+      const byPlayer = new Map<
+        string,
+        { playerEn: string; playerKrDraft: string | null; count: number; sample: string }
+      >()
       let unparsed = 0
-      for (const row of (dictPrevRes.data as { extracted: unknown }[]) ?? []) {
-        const kr = (row.extracted as { player_kr?: string | null } | null)?.player_kr?.trim()
-        if (kr && kr !== "null" && /[가-힣]/.test(kr)) {
-          byName.set(kr, (byName.get(kr) ?? 0) + 1)
-        } else {
+      for (const row of (dictPrevRes.data as { title: string | null; extracted: unknown }[]) ??
+        []) {
+        const ex = row.extracted as { player?: string | null; player_kr?: string | null } | null
+        const en = ex?.player?.trim()
+        if (!en || en === "null") {
           unparsed++
+          continue
+        }
+        const krRaw = ex?.player_kr?.trim()
+        const kr = krRaw && krRaw !== "null" && /[가-힣]/.test(krRaw) ? krRaw : null
+        const key = en.toLowerCase()
+        const cur = byPlayer.get(key)
+        if (cur) {
+          cur.count++
+          if (!cur.playerKrDraft && kr) cur.playerKrDraft = kr
+        } else {
+          byPlayer.set(key, {
+            playerEn: en,
+            playerKrDraft: kr,
+            count: 1,
+            sample: row.title ?? "",
+          })
         }
       }
       return {
-        blockedPlayers: [...byName.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 7)
-          .map(([name, count]) => ({ name, count })),
+        blockedPlayers: [...byPlayer.values()].sort((a, b) => b.count - a.count).slice(0, 7),
         blockedUnparsed: unparsed,
       }
     })(),
