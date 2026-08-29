@@ -68,7 +68,10 @@ export async function GET() {
       supabase
         .from("betman_games")
         .select("*", { count: "exact", head: true })
-        .lt("match_time", now.toISOString())
+        // ⚠️ "킥오프 지남 & result null" 그대로면 지금 뛰는 경기까지 미정산으로 센다
+        //    (2026-08-30 실측: 122건 전부 진행 중 경기 — 주말 저녁마다 거짓 경보).
+        //    경기 ~2h + VPS 동기화 주기 2h + 여유 = 킥오프 5시간 경과부터만.
+        .lt("match_time", new Date(now.getTime() - 5 * 3600_000).toISOString())
         .is("result", null),
       supabase
         .from("crawler_run_log")
