@@ -1065,6 +1065,41 @@ export type Database = {
         }
         Relationships: []
       }
+      betman_result_checks: {
+        Row: {
+          alerted_at: string | null
+          betman_score: string | null
+          checked_at: string
+          game_id: string
+          lfa_score: string | null
+          verdict: string
+        }
+        Insert: {
+          alerted_at?: string | null
+          betman_score?: string | null
+          checked_at?: string
+          game_id: string
+          lfa_score?: string | null
+          verdict: string
+        }
+        Update: {
+          alerted_at?: string | null
+          betman_score?: string | null
+          checked_at?: string
+          game_id?: string
+          lfa_score?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "betman_result_checks_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: true
+            referencedRelation: "betman_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       betman_sync_state: {
         Row: {
           active_rounds: string[]

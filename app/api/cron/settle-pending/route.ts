@@ -4,6 +4,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { settleAllPendingCompleted } from "@/lib/betman/settle-sweep"
+import { crosscheckFootballResults } from "@/lib/betman/result-crosscheck"
 
 /**
  * GET /api/cron/settle-pending
@@ -22,10 +23,21 @@ async function cronGet(request: NextRequest) {
     if (authError) return authError
 
     const supabase = createServiceRoleClient()
+
+    // ① 결과 교차검증 (2026-08-30 운영자 확정: 검증 완료 + 오류 없음 → 그 다음 정산).
+    //    축구 완료 경기를 LFA×와이즈토토 대조 → verdict 기록, 불일치는 디스코드 알림.
+    //    실패해도 스윕은 계속 간다 — 게이트가 fail-closed 라 미검증 축구는 어차피 보류된다.
+    const crosscheck = await crosscheckFootballResults(supabase).catch((e) => {
+      console.warn("[settle-pending] 교차검증 실패 — 스윕은 계속:", e)
+      return null
+    })
+
+    // ② 안전망 스윕 — settlePredictions 안의 게이트가 verdict 를 읽는다
     const result = await settleAllPendingCompleted(supabase)
 
     return NextResponse.json({
       mode: "settle-sweep",
+      crosscheck,
       ...result,
       duration: `${Date.now() - start}ms`,
     })

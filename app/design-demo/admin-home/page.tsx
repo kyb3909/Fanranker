@@ -90,6 +90,14 @@ export default async function AdminHomeBento() {
       ok: false, // 381건 — 실제 대기라 액션 노출
       action: "승인",
     },
+    {
+      /* 2026-08-30 신설 — LFA×와이즈토토 스코어가 다르면 그 경기 정산이 자동으로
+         멈추고 디스코드 알림이 온다. 여기 빨간불 = 지금 정산 보류 중인 경기가 있다 */
+      label: "결과 교차검증",
+      value: d.resultMismatches === 0 ? "불일치 0건" : `불일치 ${d.resultMismatches}건 · 정산 보류`,
+      ok: d.resultMismatches === 0,
+      action: "확인",
+    },
     // 원본 대시보드 대조(2026-08-30)에서 회수 — 시스템 건강 2종
     {
       label: "크롤러 실패 (오늘)",

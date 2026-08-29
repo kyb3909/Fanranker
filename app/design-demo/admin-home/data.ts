@@ -62,6 +62,8 @@ export interface DashboardData {
   ticker: { lastAt: string | null; count24h: number; recent: { id: string; title: string }[] }
   activeGames: number
   dailyRound: { roundNum: number | null; closeAt: string | null }
+  /** 결과 교차검증(LFA×와이즈토토) 불일치 — 정산 보류 중인 경기 (2026-08-30 신설) */
+  resultMismatches: number
 }
 
 const EXPIRE_HOURS = 24
@@ -287,6 +289,12 @@ export async function loadDashboardData(): Promise<DashboardData> {
         .maybeSingle(),
     ])
 
+  // 결과 교차검증 불일치 — 정산이 멈춰 있는 경기 (settle-gate 가 이 verdict 를 본다)
+  const { count: resultMismatches } = await supabase
+    .from("betman_result_checks")
+    .select("*", { count: "exact", head: true })
+    .eq("verdict", "mismatch")
+
   // 클럽명 매핑 — team_dictionary (name_kr ↔ soccerway_team_id)
   const { data: teamDictRows } = await supabase
     .from("team_dictionary")
@@ -441,6 +449,7 @@ export async function loadDashboardData(): Promise<DashboardData> {
       ).map((t) => ({ id: t.id, title: t.headline_kr ?? t.original_title ?? "(제목 없음)" })),
     },
     activeGames: activeGamesRes.count ?? 0,
+    resultMismatches: resultMismatches ?? 0,
     dailyRound: {
       roundNum: roundRes.data?.daily_id
         ? parseInt(String(roundRes.data.daily_id).replace(/\D/g, ""), 10) || null

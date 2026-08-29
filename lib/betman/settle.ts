@@ -2,6 +2,7 @@ import { SupabaseClient } from "@supabase/supabase-js"
 import * as Sentry from "@sentry/nextjs"
 import { batchUpdateUserStats } from "./stats"
 import { retryRefundTokens } from "./refund-tokens"
+import { filterVerifiedForSettle } from "./settle-gate"
 import { syncStadiumContributions } from "@/lib/stadium/contribution-sync"
 
 /**
@@ -133,6 +134,30 @@ export async function settlePredictions(
   options: { actor?: string } = {}
 ): Promise<SettleResult> {
   const actor = options.actor ?? "cron:settle"
+
+  /**
+   * ── 결과 교차검증 게이트 (2026-08-30 운영자 확정) ──
+   * 축구 completed 경기는 LFA×와이즈토토 verdict(match/waived)를 받아야만 정산한다.
+   * "크로스 체크 완료 + 오류 없음이 확인돼야 맞춘 것도 정산 진행."
+   *
+   * 정산 진입로가 네 곳(results·settle·predictions/settle·sweep)이지만 전부 이
+   * 함수로 모이므로 게이트는 여기 한 곳이다 — 경로별로 따로 막으면 반드시 한쪽이
+   * 뒤처진다 (2026-08-29 자책골 사고에서 배운 규율).
+   *
+   * 보류된 경기의 픽은 pending 으로 남고, 15분 스윕이 교차검증 후 다시 온다.
+   */
+  const { allowed, held } = await filterVerifiedForSettle(supabase, games)
+  if (held.length > 0) {
+    console.warn(
+      `[settle] 교차검증 미통과로 보류 ${held.length}경기 (${actor}):`,
+      held
+        .slice(0, 5)
+        .map((g) => g.id)
+        .join(", ")
+    )
+  }
+  games = allowed
+
   const auditRows: AuditRow[] = []
   // 슬립 확정(won/lost) 시 유저에게 인앱 알림 — 스키마/UI(settlement_result)는
   // migration 039 부터 존재했으나 발송이 미배선이었음 (2026-07-02 배선).
