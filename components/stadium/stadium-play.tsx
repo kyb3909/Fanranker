@@ -21,8 +21,10 @@ interface Props {
   levelPct: number
   /** 지금까지 지은 비율 0~1 (렌더 시공률 — 위 levelPct 와 다른 값이다) */
   built: number
-  /** 이 구장 팀의 홈 유니폼 킷 키 — 아바타가 입고 나온다 */
+  /** 아바타가 입고 나올 킷 키 — 장착한 게 있으면 그것, 없으면 이 구장 팀 홈킷 */
   kitKey: string
+  /** 계정에 저장된 캐릭터 — 없으면 이 브라우저에 남은 선택을 쓴다 */
+  character: "colin" | "chloe" | null
 }
 
 declare global {
@@ -128,6 +130,7 @@ export function StadiumPlay({
   stadiumName,
   scene,
   kitKey,
+  character: savedOnAccount,
   level,
   bricks,
   nextBricks,
@@ -137,7 +140,7 @@ export function StadiumPlay({
   const pctText = `${Math.round(levelPct * 1000) / 10}%`
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading")
-  const character = savedCharacter()
+  const character = savedOnAccount ?? savedCharacter()
   const { peers, publish, send, onlineCount } = useStadiumPresence3d(teamId, character)
   const [ghost, setGhost] = useState(false)
 

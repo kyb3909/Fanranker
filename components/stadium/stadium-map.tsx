@@ -265,7 +265,7 @@ export function StadiumMap({ rows, myTeamId, myBrickBudget }: Props) {
       </svg>
 
       <div className="stadium-legend">
-        <p className="stadium-legend__title">활동 10p = 벽돌 1장 — 벽돌로 우리 팀 구장을 올린다</p>
+        <p className="stadium-legend__title">활동 100p = 벽돌 1장 — 벽돌로 우리 팀 구장을 올린다</p>
         <p className="stadium-legend__keys">
           <span>
             <i className="stadium-legend__dot" style={{ background: "var(--st-today)" }} />

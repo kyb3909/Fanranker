@@ -141,7 +141,7 @@ export function StadiumTeamModal({ row, gap, myBrickBudget, onClose }: Props) {
               3라운드 연속 지적된 온보딩(P1-1). 가격표 없이 버튼만 있으면 아무도 안 누른다. */}
           {firstBrick && (
             <p className="text-muted-foreground mt-3 text-[12px]">
-              글 하나 = 벽돌 하나. 활동 점수 {BRICK_PRICE}p 로 이 구장에 벽돌 한 장을 얹습니다.
+              글 열 개 = 벽돌 하나. 활동 점수 {BRICK_PRICE}p 로 이 구장에 벽돌 한 장을 얹습니다.
               {myBrickBudget !== null && myBrickBudget > 0
                 ? ` 지금 ${myBrickBudget.toLocaleString()}장 쌓을 수 있어요.`
                 : ""}

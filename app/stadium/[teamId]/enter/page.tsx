@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
-import { createAnonClient } from "@/lib/supabase/server"
+import { auth } from "@clerk/nextjs/server"
+import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { findMapTeam, MAP_TEAM_IDS } from "@/lib/stadium/map-teams"
 import { PLAY_SCENE, buildFraction } from "@/lib/stadium/build-progress-scale"
 import { STADIUM_TEAM_KIT } from "@/lib/stadium/team-kit"
@@ -44,6 +45,20 @@ export default async function StadiumEnterPage({
     .eq("team_id", teamId)
     .maybeSingle()
 
+  // 유니폼을 사서 장착해 뒀으면 그걸 입고 들어간다. 없으면 이 구장 팀의 홈킷.
+  const { userId } = await auth()
+  let equippedKitKey: string | null = null
+  let savedCharacter: string | null = null
+  if (userId) {
+    const { data: profile } = await createServiceRoleClient()
+      .from("profiles")
+      .select("equipped_kit_key, avatar_character")
+      .eq("user_id", userId)
+      .maybeSingle()
+    equippedKitKey = profile?.equipped_kit_key ?? null
+    savedCharacter = profile?.avatar_character ?? null
+  }
+
   const level = data?.level ?? 1
   const points = data?.total_points ?? 0
   // ⚠️ 화면에 "벽돌" 이라 쓰는 값은 전부 **경제 단위**여야 한다 (활동 점수 ÷ 단가).
@@ -59,7 +74,8 @@ export default async function StadiumEnterPage({
   return (
     <StadiumPlay
       teamId={teamId}
-      kitKey={STADIUM_TEAM_KIT[teamId] ?? DEFAULT_KIT_KEY}
+      kitKey={equippedKitKey ?? STADIUM_TEAM_KIT[teamId] ?? DEFAULT_KIT_KEY}
+      character={savedCharacter === "chloe" || savedCharacter === "colin" ? savedCharacter : null}
       teamName={team.name}
       stadiumName={team.stadiumName}
       scene={scene}
