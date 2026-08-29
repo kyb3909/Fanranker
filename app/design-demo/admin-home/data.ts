@@ -40,9 +40,16 @@ export interface DashboardData {
   metaverseReports: number
   squadBacklog: number
   /** 미리보기 — 숫자만으론 판단이 안 선다 (운영자: "미리보기 같은 것들이 필요해") */
-  squadPreview: { nameEn: string; nameKrDraft: string }[]
+  squadPreview: { nameEn: string; nameKrDraft: string; teamKr: string }[]
   reportsPreview: { reason: string; targetType: string; createdAt: string }[]
-  dictPreview: { headline: string; occurredAt: string }[]
+  /**
+   * 표기 등재 대기 — 선수별 집계. "이 선수 표기를 등재하면 소식 N건이 풀린다".
+   * 슬립 헤드라인을 그대로 보여줬더니 운영자: "뭘 어쩌라는 건지 모르겠어" — 당연했다.
+   * 행동 단위는 슬립이 아니라 **선수**다.
+   */
+  blockedPlayers: { name: string; count: number }[]
+  /** 이름 추출 자체가 실패해 표기 등재로는 안 풀리는 잔여물 (2026-08-30 실측 248/381 = 65%) */
+  blockedUnparsed: number
   today: { signups: number; posts: number; predictions: number }
 }
 
@@ -175,7 +182,7 @@ export async function loadDashboardData(): Promise<DashboardData> {
     // 미리보기 3종
     supabase
       .from("team_squads")
-      .select("name_en, name_kr_draft")
+      .select("name_en, name_kr_draft, soccerway_team_id")
       .not("name_kr_draft", "is", null)
       .neq("status", "confirmed")
       .order("updated_at", { ascending: false })
@@ -186,13 +193,25 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(5),
+    // 표기 등재 대기 — 선수 이름만 뽑아 JS 에서 집계 (extracted->player_kr)
     supabase
       .from("saga_reservoir")
-      .select("headline_kr, title, occurred_at")
+      .select("extracted")
       .eq("error", "auto_hold:unknown_player")
-      .order("occurred_at", { ascending: false })
-      .limit(6),
+      .limit(500),
   ])
+
+  // 클럽명 매핑 — team_dictionary (name_kr ↔ soccerway_team_id)
+  const { data: teamDictRows } = await supabase
+    .from("team_dictionary")
+    .select("name_kr, soccerway_team_id")
+    .not("soccerway_team_id", "is", null)
+  const teamNameById = new Map(
+    ((teamDictRows as { name_kr: string; soccerway_team_id: string }[]) ?? []).map((t) => [
+      t.soccerway_team_id,
+      t.name_kr,
+    ])
+  )
 
   interface Row {
     id: string
@@ -256,16 +275,41 @@ export async function loadDashboardData(): Promise<DashboardData> {
     newsErrorReports: nerRes.count ?? 0,
     metaverseReports: mvRes.count ?? 0,
     squadBacklog: squadRes.count ?? 0,
-    squadPreview: ((squadPrevRes.data as { name_en: string; name_kr_draft: string }[]) ?? []).map(
-      (r) => ({ nameEn: r.name_en, nameKrDraft: r.name_kr_draft })
-    ),
+    squadPreview: (
+      (squadPrevRes.data as {
+        name_en: string
+        name_kr_draft: string
+        soccerway_team_id: string | null
+      }[]) ?? []
+    ).map((r) => ({
+      nameEn: r.name_en,
+      nameKrDraft: r.name_kr_draft,
+      // 운영자: "어느 클럽의 누구인지도 정보가 필요" — team_dictionary 로 클럽명 해석
+      teamKr: (r.soccerway_team_id && teamNameById.get(r.soccerway_team_id)) || "소속 미상",
+    })),
     reportsPreview: (
       (reportsPrevRes.data as { reason: string; target_type: string; created_at: string }[]) ?? []
     ).map((r) => ({ reason: r.reason, targetType: r.target_type, createdAt: r.created_at })),
-    dictPreview: (
-      (dictPrevRes.data as { headline_kr: string | null; title: string; occurred_at: string }[]) ??
-      []
-    ).map((r) => ({ headline: r.headline_kr ?? r.title, occurredAt: r.occurred_at })),
+    ...(() => {
+      // 선수별 집계 — 이름이 뽑힌 것만. 추출 실패분은 따로 센다(표기 등재로는 안 풀림)
+      const byName = new Map<string, number>()
+      let unparsed = 0
+      for (const row of (dictPrevRes.data as { extracted: unknown }[]) ?? []) {
+        const kr = (row.extracted as { player_kr?: string | null } | null)?.player_kr?.trim()
+        if (kr && kr !== "null" && /[가-힣]/.test(kr)) {
+          byName.set(kr, (byName.get(kr) ?? 0) + 1)
+        } else {
+          unparsed++
+        }
+      }
+      return {
+        blockedPlayers: [...byName.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 7)
+          .map(([name, count]) => ({ name, count })),
+        blockedUnparsed: unparsed,
+      }
+    })(),
     today: {
       signups: suRes.count ?? 0,
       posts: poRes.count ?? 0,

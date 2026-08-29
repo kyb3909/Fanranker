@@ -77,7 +77,7 @@ export default async function AdminHomeBento() {
       action: "처리",
     },
     {
-      label: "표기 후보",
+      label: "선수 이름 등록 대기",
       value: `${d.dictCandidates}건`,
       ok: false, // 381건 — 실제 대기라 액션 노출
       action: "승인",
@@ -158,7 +158,7 @@ export default async function AdminHomeBento() {
           >
             <PreviewList
               rows={d.squadPreview.map((s) => ({
-                primary: s.nameEn,
+                primary: `${s.teamKr} · ${s.nameEn}`,
                 secondary: `→ ${s.nameKrDraft}`,
                 actionLabel: "승인",
               }))}
@@ -174,24 +174,35 @@ export default async function AdminHomeBento() {
 
           <Widget
             kicker="NOTATION"
-            title="표기 후보 — 미등재로 잠든 사가 슬립"
+            title="선수 이름 등록 대기"
             count={d.dictCandidates}
             className="xl:col-span-6"
             tone="danger"
           >
+            {/* 무엇을 하라는 패널인지 첫 줄에 못박는다 (운영자: "뭘 어쩌라는 건지 모르겠어") */}
+            <p className="text-muted-foreground mb-2 text-xs leading-relaxed">
+              사전에 없는 선수 이름에 걸려 <b>사가로 못 들어간 소식</b>들입니다. 선수 표기를
+              등록하면 그 선수의 소식이 전부 자동으로 풀립니다.
+            </p>
             <PreviewList
-              rows={d.dictPreview.map((c) => ({
-                primary: c.headline,
-                secondary: new Date(c.occurredAt).toLocaleDateString("ko-KR"),
-                actionLabel: "표기 입력",
+              rows={d.blockedPlayers.map((p) => ({
+                primary: p.name,
+                secondary: `소식 ${p.count}건 잠김`,
+                actionLabel: "표기 등록",
               }))}
-              empty="후보 없음"
+              empty="대기 없음"
             />
+            {d.blockedUnparsed > 0 && (
+              <p className="mt-2 rounded bg-amber-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-800">
+                ⚠️ 그 외 <b className="tabular-nums">{d.blockedUnparsed}</b>건은 이름 추출 자체가
+                실패한 잔여물 — 표기 등록으로는 안 풀립니다. 일괄 정리가 따로 필요합니다.
+              </p>
+            )}
             <button
               className="mt-2 self-start text-[11px] font-bold underline"
               style={{ color: WINE }}
             >
-              후보 전체 열기 →
+              등록 화면 열기 →
             </button>
           </Widget>
         </div>
