@@ -342,6 +342,59 @@ export function ReportsWidget({ count }: { count: number }) {
   )
 }
 
+/**
+ * 운영 전황판 — **전 항목 항상 표시** (2026-08-30 운영자 번복).
+ *
+ * 처음엔 전문가 합의대로 "0건 위젯은 숨김"으로 갔는데 운영자가 뒤집었다:
+ * "신고 같은 것도 있어야 하고 베트맨 상태도 나와야 하잖아. 정보가. 오류 있는지
+ * 없는지. 왜 그런 메뉴들이 안 보여" — **문제가 없다는 것 자체가 정보**다.
+ *
+ * 절충: 사라지는 대신 **한 줄로 압축**한다. 정상 = 초록 체크 + 흐린 글씨 한 줄,
+ * 이상 = 빨간 굵은 줄 + 액션 버튼. 위젯 하나가 통째로 나타났다 사라지는 것보다
+ * 줄 색이 바뀌는 쪽이 "늘 지켜보고 있다"는 감각을 준다.
+ */
+export interface StatusRow {
+  label: string
+  /** 표시값 — "0건"·"정상 (32분 전)"·"381건" */
+  value: string
+  ok: boolean
+  /** 이상일 때만 노출되는 액션 라벨 */
+  action?: string
+  /** ok 여도 주의 표시 (앰버) — 예: 접수 경로 미배선 */
+  note?: string
+}
+
+export function StatusBoard({ rows }: { rows: StatusRow[] }) {
+  return (
+    <Widget title="운영 전황" tone={rows.some((r) => !r.ok) ? "danger" : "default"}>
+      <ul className="divide-y">
+        {rows.map((r) => (
+          <li key={r.label} className="flex items-center gap-2 py-1.5 text-xs">
+            <span aria-hidden>{r.ok ? "✅" : "🔴"}</span>
+            <span className={cn(r.ok ? "text-muted-foreground" : "font-bold text-red-700")}>
+              {r.label}
+            </span>
+            {r.note && <span className="text-[10px] text-amber-600">{r.note}</span>}
+            <span
+              className={cn(
+                "ml-auto tabular-nums",
+                r.ok ? "text-muted-foreground" : "font-bold text-red-700"
+              )}
+            >
+              {r.value}
+            </span>
+            {!r.ok && r.action && (
+              <button className="rounded bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-white">
+                {r.action}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Widget>
+  )
+}
+
 /** 범용 큐 위젯 — 0건이면 렌더링하지 않는다. 인라인 1액션 + 열기 */
 export function QueueWidget({
   title,

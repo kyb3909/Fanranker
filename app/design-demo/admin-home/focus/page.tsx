@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { loadDashboardData } from "../data"
-import { MiniNewsDeck, DictWidget, ReportsWidget, TodayStrip } from "../widgets"
+import { MiniNewsDeck, StatusBoard, TodayStrip, type StatusRow } from "../widgets"
 
 /**
  * 시안 A — 「포커스 스테이션」 (PM 성향안)
@@ -19,6 +19,43 @@ export const dynamic = "force-dynamic"
 
 export default async function AdminHomeFocus() {
   const d = await loadDashboardData()
+  // 전황판 — B안과 같은 규칙 (전 항목 항상 표시, 운영자 확정)
+  const statusRows: StatusRow[] = [
+    { label: "신고", value: `${d.reportsPending}건`, ok: d.reportsPending === 0, action: "처리" },
+    {
+      label: "문의",
+      value: `${d.inquiriesOpen}건`,
+      ok: d.inquiriesOpen === 0,
+      action: "답변",
+      note: "접수 경로 미배선",
+    },
+    {
+      label: "뉴스 오류 제보",
+      value: `${d.newsErrorReports}건`,
+      ok: d.newsErrorReports === 0,
+      action: "확인",
+    },
+    {
+      label: "베트맨 동기화",
+      value: d.betman.status === "ok" ? "정상" : "지연",
+      ok: d.betman.status === "ok",
+      action: "재동기화",
+    },
+    {
+      label: "미정산 경기",
+      value: `${d.betman.unsettled}건`,
+      ok: d.betman.unsettled === 0,
+      action: "정산",
+    },
+    {
+      label: "환불 대기",
+      value: `${d.betman.refundsPending}건`,
+      ok: d.betman.refundsPending === 0,
+      action: "환불",
+    },
+    { label: "사가 검수", value: `${d.sagaPending}건`, ok: d.sagaPending === 0, action: "검수" },
+    { label: "표기 후보", value: `${d.dictCandidates}건`, ok: false, action: "승인" },
+  ]
   return (
     <div className="min-h-[100dvh] bg-neutral-50 dark:bg-neutral-950">
       <main className="mx-auto max-w-[1280px] p-6">
@@ -51,10 +88,9 @@ export default async function AdminHomeFocus() {
             <MiniNewsDeck items={d.news} variant="full" />
           </section>
 
-          {/* 우측 — 나머지 큐 레일 (0건은 사라짐) */}
+          {/* 우측 — 전황판 (전 항목 항상 표시) */}
           <div className="flex flex-col gap-4 xl:col-span-4">
-            <ReportsWidget count={d.reportsPending} />
-            <DictWidget count={d.dictCandidates} />
+            <StatusBoard rows={statusRows} />
             <div className="bg-background rounded-xl border p-4">
               <h2 className="mb-2 text-sm font-bold">바로가기</h2>
               <ul className="text-muted-foreground space-y-1.5 text-xs">

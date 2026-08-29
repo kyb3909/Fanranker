@@ -1,14 +1,6 @@
 import Link from "next/link"
 import { loadDashboardData } from "./data"
-import {
-  MiniNewsDeck,
-  DictWidget,
-  ReportsWidget,
-  TodayStrip,
-  Widget,
-  QueueWidget,
-  BetmanWidget,
-} from "./widgets"
+import { MiniNewsDeck, TodayStrip, Widget, StatusBoard, type StatusRow } from "./widgets"
 
 /**
  * 시안 B — 「벤토 그리드」 (디자이너 추천안)
@@ -27,6 +19,62 @@ export const dynamic = "force-dynamic"
 
 export default async function AdminHomeBento() {
   const d = await loadDashboardData()
+  const syncAgo = d.betman.lastCheckedAt
+    ? `${Math.max(1, Math.round((Date.now() - new Date(d.betman.lastCheckedAt).getTime()) / 60000))}분 전`
+    : "기록 없음"
+  // 전황판 — 전 항목 항상 표시. 정상=초록 흐림, 이상=빨강 굵음+액션
+  const statusRows: StatusRow[] = [
+    { label: "신고", value: `${d.reportsPending}건`, ok: d.reportsPending === 0, action: "처리" },
+    {
+      label: "문의",
+      value: `${d.inquiriesOpen}건`,
+      ok: d.inquiriesOpen === 0,
+      action: "답변",
+      note: "접수 경로 미배선",
+    },
+    {
+      label: "뉴스 오류 제보",
+      value: `${d.newsErrorReports}건`,
+      ok: d.newsErrorReports === 0,
+      action: "확인",
+    },
+    {
+      label: "베트맨 동기화",
+      value: d.betman.status === "ok" ? `정상 (${syncAgo})` : `지연 (${syncAgo})`,
+      ok: d.betman.status === "ok",
+      action: "재동기화",
+    },
+    {
+      label: "미정산 경기",
+      value: `${d.betman.unsettled}건`,
+      ok: d.betman.unsettled === 0,
+      action: "정산",
+    },
+    {
+      label: "환불 대기",
+      value: `${d.betman.refundsPending}건`,
+      ok: d.betman.refundsPending === 0,
+      action: "환불",
+    },
+    {
+      label: "사가 검수",
+      value: `${d.sagaPending}건`,
+      ok: d.sagaPending === 0,
+      action: "검수",
+    },
+    {
+      label: "메타버스 신고",
+      value: `${d.metaverseReports}건`,
+      ok: d.metaverseReports === 0,
+      action: "처리",
+    },
+    {
+      label: "표기 후보",
+      value: `${d.dictCandidates}건`,
+      ok: false, // 381건 — 실제 대기라 액션 노출
+      action: "승인",
+    },
+  ]
   return (
     <div className="min-h-[100dvh] bg-neutral-50 dark:bg-neutral-950">
       <main className="mx-auto max-w-[1280px] p-6">
@@ -72,33 +120,8 @@ export default async function AdminHomeBento() {
           </Widget>
 
           <div className="flex flex-col gap-4 xl:col-span-3">
-            <BetmanWidget betman={d.betman} />
-            <ReportsWidget count={d.reportsPending} />
-            <QueueWidget
-              title="문의"
-              count={d.inquiriesOpen}
-              detail="유저 문의 — 답변 대기"
-              danger
-            />
-            <QueueWidget
-              title="뉴스 오류 제보"
-              count={d.newsErrorReports}
-              detail="독자가 기사 오류를 제보한 건"
-              danger
-            />
-            <QueueWidget
-              title="메타버스 신고"
-              count={d.metaverseReports}
-              detail="채팅·닉네임 신고"
-            />
-            <QueueWidget title="사가 검수" count={d.sagaPending} detail="발행 대기 사가 슬립" />
-            <DictWidget count={d.dictCandidates} />
-            {/* 오늘 0건인 위젯들이 접혀 이 레일이 짧다 — 그게 규칙이다 */}
-            <p className="text-muted-foreground text-[11px] leading-relaxed">
-              지금 접혀 있는 것: 신고 {d.reportsPending} · 문의 {d.inquiriesOpen} · 뉴스 오류 제보{" "}
-              {d.newsErrorReports} · 메타버스 신고 {d.metaverseReports} · 사가 {d.sagaPending} ·
-              베트맨 이상 0 — <b>0건 위젯은 자동으로 사라집니다.</b> 빈 대시보드가 곧 퇴근 신호.
-            </p>
+            {/* 전 항목 항상 표시 — "오류 있는지 없는지" 자체가 정보다 (운영자 확정) */}
+            <StatusBoard rows={statusRows} />
           </div>
 
           <div className="flex flex-col gap-4 xl:col-span-3">
