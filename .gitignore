@@ -122,6 +122,9 @@ supabase/.temp/
 # 아바타/QA 렌더 산출물
 /output/
 
+# bpy 빌드 스크립트가 남기는 파이썬 캐시
+scripts/**/__pycache__/
+
 # Playwright audit 결과 (스크린샷, trace.zip 등)
 tests/audit/reports/
 tests/audit/last-run.log
