@@ -596,6 +596,46 @@ export function BetmanWidget({ betman }: { betman: DashboardData["betman"] }) {
   )
 }
 
+/**
+ * 참여도 패널 — 오늘 vs 어제 (운영자: "사람들 참여도, 메뉴 활용 데이터가 첫 화면에").
+ * 큰 숫자 + 어제 대비 증감. 색은 숫자가 아니라 화살표에만 — 0이 많은 시기라
+ * 빨간 판이 되지 않게.
+ */
+export function ParticipationPanel({
+  rows,
+}: {
+  rows: { label: string; today: number; yesterday: number }[]
+}) {
+  return (
+    <Widget kicker="PARTICIPATION" title="오늘의 참여">
+      <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
+        {rows.map((r) => {
+          const diff = r.today - r.yesterday
+          return (
+            <div key={r.label} className="rounded-lg bg-neutral-50 px-3 py-2.5 dark:bg-neutral-800">
+              <p className="text-muted-foreground text-[11px]">{r.label}</p>
+              <p className="text-xl font-extrabold tabular-nums">{r.today.toLocaleString()}</p>
+              <p
+                className={cn(
+                  "text-[11px] tabular-nums",
+                  diff > 0
+                    ? "text-emerald-600"
+                    : diff < 0
+                      ? "text-red-500"
+                      : "text-muted-foreground"
+                )}
+              >
+                {diff > 0 ? `▲ ${diff}` : diff < 0 ? `▼ ${Math.abs(diff)}` : "—"} 어제{" "}
+                {r.yesterday.toLocaleString()}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+    </Widget>
+  )
+}
+
 /** 오늘의 흐름 — KPI 강등판: 대형 카드 대신 압축 한 줄 (2인 합의) */
 export function TodayStrip({ today }: { today: DashboardData["today"] }) {
   return (

@@ -51,6 +51,8 @@ export interface DashboardData {
   /** 이름 추출 자체가 실패해 표기 등재로는 안 풀리는 잔여물 (2026-08-30 실측 248/381 = 65%) */
   blockedUnparsed: number
   today: { signups: number; posts: number; predictions: number }
+  /** 참여도 — 오늘 vs 어제 (운영자: "사람들 참여도, 메뉴들 어떻게 활용했는지") */
+  participation: { label: string; today: number; yesterday: number }[]
 }
 
 const EXPIRE_HOURS = 24
@@ -201,6 +203,36 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .limit(500),
   ])
 
+  /**
+   * 참여도 오늘/어제 — 지표 6종 × 2 구간. head-count 라 싸다.
+   * "메뉴 활용"의 근사: 글=담벼락, 댓글·추천=상호작용, 예측=베트맨, 설문=사이드바 폴.
+   */
+  const yesterdayStart = new Date(new Date(todayStart).getTime() - 24 * 3600_000).toISOString()
+  const countIn = (table: string, col: string, from: string, to?: string) => {
+    let q = supabase.from(table).select("*", { count: "exact", head: true }).gte(col, from)
+    if (to) q = q.lt(col, to)
+    return q
+  }
+  const PARTICIPATION_SOURCES = [
+    { label: "가입", table: "profiles" },
+    { label: "글", table: "posts" },
+    { label: "댓글", table: "comments" },
+    { label: "추천", table: "post_votes" },
+    { label: "예측", table: "betman_predictions" },
+    { label: "설문 투표", table: "poll_votes" },
+  ] as const
+  const participationCounts = await Promise.all(
+    PARTICIPATION_SOURCES.flatMap((s) => [
+      countIn(s.table, "created_at", todayStart),
+      countIn(s.table, "created_at", yesterdayStart, todayStart),
+    ])
+  )
+  const participation = PARTICIPATION_SOURCES.map((s, i) => ({
+    label: s.label,
+    today: participationCounts[i * 2].count ?? 0,
+    yesterday: participationCounts[i * 2 + 1].count ?? 0,
+  }))
+
   // 클럽명 매핑 — team_dictionary (name_kr ↔ soccerway_team_id)
   const { data: teamDictRows } = await supabase
     .from("team_dictionary")
@@ -315,5 +347,6 @@ export async function loadDashboardData(): Promise<DashboardData> {
       posts: poRes.count ?? 0,
       predictions: prRes.count ?? 0,
     },
+    participation,
   }
 }

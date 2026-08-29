@@ -7,6 +7,7 @@ import {
   StatusBoard,
   PreviewList,
   SquadReviewList,
+  ParticipationPanel,
   WINE,
   type StatusRow,
 } from "./widgets"
@@ -108,65 +109,52 @@ export default async function AdminHomeBento() {
           </p>
         </div>
 
-        {/* 1행 — 뉴스(원문 대조 인라인) · 전황판 · 신고 미리보기 */}
+        {/* ── 1행 (첫 화면): 운영 전황 + 참여도 + 신고·문의 — 운영자: "이게 가장 중요" ── */}
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+          <div className="flex flex-col gap-5 xl:col-span-4">
+            {/* 전 항목 항상 표시 — "오류 있는지 없는지" 자체가 정보 (운영자 확정) */}
+            <StatusBoard rows={statusRows} />
+          </div>
+
+          <div className="flex flex-col gap-5 xl:col-span-8">
+            <ParticipationPanel rows={d.participation} />
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <Widget kicker="REPORTS" title="신고" count={d.reportsPending}>
+                <PreviewList
+                  rows={d.reportsPreview.map((r) => ({
+                    primary: `[${r.targetType}] ${r.reason}`,
+                    secondary: new Date(r.createdAt).toLocaleDateString("ko-KR"),
+                  }))}
+                  empty="미처리 신고 0건 — 들어오면 최신 5건이 여기 보입니다"
+                  action="처리"
+                />
+              </Widget>
+              <Widget kicker="INQUIRIES" title="문의" count={d.inquiriesOpen}>
+                <PreviewList
+                  rows={[]}
+                  empty="문의 0건 — ⚠️ 접수 경로가 아직 미배선입니다 (inquiries 테이블만 존재)"
+                />
+              </Widget>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2행: 뉴스 검수 ── */}
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-12">
           <Widget
             kicker="NEWS DESK"
             title="뉴스 검수"
             count={d.newsTotal}
-            className="xl:col-span-6"
+            className="xl:col-span-12"
             tone={d.news.some((n) => n.breaking) ? "danger" : "default"}
           >
             {/* 화면이 넓으니 원문·초안 2열을 바로 편다 — 모달 왕복 제거 */}
             <MiniNewsDeck items={d.news} variant="full" />
           </Widget>
-
-          <div className="flex flex-col gap-5 xl:col-span-3">
-            {/* 전 항목 항상 표시 — "오류 있는지 없는지" 자체가 정보 (운영자 확정) */}
-            <StatusBoard rows={statusRows} />
-          </div>
-
-          <div className="flex flex-col gap-5 xl:col-span-3">
-            <Widget kicker="REPORTS" title="신고" count={d.reportsPending}>
-              <PreviewList
-                rows={d.reportsPreview.map((r) => ({
-                  primary: `[${r.targetType}] ${r.reason}`,
-                  secondary: new Date(r.createdAt).toLocaleDateString("ko-KR"),
-                }))}
-                empty="미처리 신고 0건 — 들어오면 최신 5건이 여기 보입니다"
-                action="처리"
-              />
-            </Widget>
-            <Widget kicker="INQUIRIES" title="문의" count={d.inquiriesOpen}>
-              <PreviewList
-                rows={[]}
-                empty="문의 0건 — ⚠️ 접수 경로가 아직 미배선입니다 (inquiries 테이블만 존재)"
-              />
-            </Widget>
-          </div>
         </div>
 
-        {/* 2행 — 스쿼드·표기 후보 미리보기 (운영자: "미리보기 같은 것들이 필요해") */}
+        {/* ── 3행: 선수 이름 등록 대기 → 스쿼드 검수 백로그 (운영자 지정 순서) ── */}
         <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-12">
-          <Widget
-            kicker="SQUAD"
-            title="스쿼드 검수 백로그"
-            count={d.squadBacklog}
-            className="xl:col-span-6"
-            headerRight={
-              <span className="text-muted-foreground text-[11px]">마감 없음 — 틈날 때 한 줄씩</span>
-            }
-          >
-            {/* 초안이 입력칸 — 고치고 싶으면 그 자리에서 고친 뒤 승인 (Enter = 승인) */}
-            <SquadReviewList rows={d.squadPreview} />
-            <button
-              className="mt-2 self-start text-[11px] font-bold underline"
-              style={{ color: WINE }}
-            >
-              선수단 사전 전체 열기 →
-            </button>
-          </Widget>
-
           <Widget
             kicker="NOTATION"
             title="선수 이름 등록 대기"
@@ -198,6 +186,25 @@ export default async function AdminHomeBento() {
               style={{ color: WINE }}
             >
               등록 화면 열기 →
+            </button>
+          </Widget>
+
+          <Widget
+            kicker="SQUAD"
+            title="스쿼드 검수 백로그"
+            count={d.squadBacklog}
+            className="xl:col-span-6"
+            headerRight={
+              <span className="text-muted-foreground text-[11px]">마감 없음 — 틈날 때 한 줄씩</span>
+            }
+          >
+            {/* 초안이 입력칸 — 고치고 싶으면 그 자리에서 고친 뒤 승인 (Enter = 승인) */}
+            <SquadReviewList rows={d.squadPreview} />
+            <button
+              className="mt-2 self-start text-[11px] font-bold underline"
+              style={{ color: WINE }}
+            >
+              선수단 사전 전체 열기 →
             </button>
           </Widget>
         </div>
