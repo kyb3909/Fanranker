@@ -9,6 +9,7 @@ import {
   tierChipStyle,
   type SagaTier,
 } from "@/components/saga/tier-chip"
+import { RAIL_BODY_BORDER, RAIL_GRID, RailDate, groupByDay } from "@/components/saga/rail"
 import {
   loadSquad,
   loadSquadFromDb,
@@ -42,56 +43,6 @@ interface SeasonSagaRow {
 function fmtDate(iso: string): string {
   const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000)
   return `${d.getUTCMonth() + 1}.${d.getUTCDate()}`
-}
-
-function kstDateLabel(iso: string): string {
-  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000)
-  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`
-}
-
-/** 날짜 레일용 "8.3" — 숫자와 점만이라 .gn-num(라틴 전용) 을 안전하게 걸 수 있다 */
-function kstShortDate(iso: string): string {
-  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000)
-  return `${d.getUTCMonth() + 1}.${d.getUTCDate()}`
-}
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const
-
-/** 요일은 한글이므로 .gn-num 을 걸지 않는다 (걸면 폴백으로 떨어진다) */
-function kstWeekday(iso: string): string {
-  return WEEKDAYS[new Date(new Date(iso).getTime() + 9 * 3600 * 1000).getUTCDay()]
-}
-
-/**
- * 날짜가 물리는 높이. 사이트 헤더가 sticky 이고 실측 94~96px 이다
- * (2026-08-29 측정: 모바일 94, 데스크톱 96). 8px 여유를 둔다.
- * 헤더 높이 토큰이 아직 없어서 상수로 둔다 — 헤더를 고치면 여기도 같이 봐야 한다.
- */
-const DATE_STICKY_TOP = 104
-
-interface ChronicleDay {
-  key: string
-  occurredAt: string
-  events: ChronicleEvent[]
-}
-
-/**
- * 하루 = 한 덩어리.
- *
- * 종전엔 사료 하나가 그리드 한 줄이고 날짜는 그 날 첫 줄에만 찍혔다. 그러면 날짜가
- * 자기 줄 안에 갇혀서 **물릴 수가 없다**. 아스널 2026-27 문서가 10,776px 인데
- * 스크롤 중간에서는 지금이 며칠인지 알 방법이 없었다.
- * 하루치를 한 그리드 행으로 묶으면 날짜 셀이 그 날 분량만큼 따라 내려온다.
- */
-function groupByDay(chronicle: ChronicleEvent[]): ChronicleDay[] {
-  const days: ChronicleDay[] = []
-  for (const ev of chronicle) {
-    const key = kstDateLabel(ev.occurredAt)
-    const last = days[days.length - 1]
-    if (last && last.key === key) last.events.push(ev)
-    else days.push({ key, occurredAt: ev.occurredAt, events: [ev] })
-  }
-  return days
 }
 
 const card: React.CSSProperties = {
@@ -195,7 +146,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
              * 왼쪽 92px 레일에 날짜를 한 번만 찍고, 같은 날 사료는 오른쪽에 붙여 한 덩어리로
              * 읽게 한다. 유채 테두리·배경 틴트·도트는 전부 제거 — 등급은 칩 채움이 말한다. */
             <div className="flex flex-col">
-              {groupByDay(chronicle).map((day, di) => {
+              {groupByDay(chronicle, (ev) => ev.occurredAt).map((day, di) => {
                 /* 같은 날 같은 사가가 연달아 나오면 사가명을 한 번만 찍는다.
                    "브루노 기마랑이스 이적 사가" 가 줄마다 똑같이 반복되던 것이 이 지면
                    잡음의 최대 원인이었다. 하루 안에서만 접는다 — 날이 바뀌면 다시
@@ -204,26 +155,13 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                 return (
                   <div
                     key={day.key}
-                    className="grid grid-cols-[62px_1fr] sm:grid-cols-[92px_1fr]"
+                    className={RAIL_GRID}
                     style={di > 0 ? { marginTop: 20 } : undefined}
                   >
-                    {/* 날짜 레일 — 그 날 분량이 다 지나갈 때까지 붙어 있는다 */}
-                    <div className="pr-3">
-                      <div className="sticky pt-3" style={{ top: DATE_STICKY_TOP }}>
-                        <p
-                          className="gn-num text-[20px] leading-none font-bold"
-                          style={{ color: "var(--wc-ink)" }}
-                        >
-                          {kstShortDate(day.occurredAt)}
-                        </p>
-                        <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
-                          {kstWeekday(day.occurredAt)}
-                        </p>
-                      </div>
-                    </div>
+                    <RailDate iso={day.iso} />
 
                     <div>
-                      {day.events.map((ev, i) => {
+                      {day.items.map((ev, i) => {
                         // 경기 사료(경기 결과 + 우리가 쓴 경기 리포트)만 배경으로 띄운다
                         const isMatchLike = ev.kind === "match" || ev.kind === "entry"
                         const showSaga = ev.kind === "transfer" ? ev.sagaTitle !== prevSaga : true
@@ -234,8 +172,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                             key={i}
                             className="py-3 pl-4 sm:pl-6"
                             style={{
-                              borderLeft: "1px solid var(--wc-line-2)",
-                              borderBottom: "1px solid var(--wc-line)",
+                              ...RAIL_BODY_BORDER,
                               /* 경기 사료만 옅은 와인 틴트로 띄운다 (2026-08-25 운영자:
                                  "경기 관련한 것만 하이라이트 — 아주 옅게, 룩앤필 살리는 방향").
                                  ⚠️ 한쪽 면 액센트 보더는 영구 금지 패턴이라 **배경 틴트**로만

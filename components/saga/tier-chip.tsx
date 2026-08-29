@@ -17,6 +17,15 @@
 
 export type SagaTier = "official" | "tier1" | "rumor"
 
+/**
+ * 칩 톤 — 등급 사다리를 일반화한 것. 사가 지면의 모든 칩이 이 넷 중 하나다.
+ *   ink  = 확정·완료 (오피셜)
+ *   wine = 우리가 쓴 것·유력 (리포트, tier1)
+ *   line = 미확정 (루머·이적설, 리포트 없는 기록)
+ *   soft = 분류만 하는 중립 칩 (경기·기사·뉴스)
+ */
+export type ChipTone = "ink" | "wine" | "line" | "soft"
+
 /** 칩 라벨은 지면마다 다르다 — 시즌 문서는 "이적설", 이적 사가 상세는 "루머" */
 export const TIER_LABEL: Record<SagaTier, string> = {
   official: "오피셜",
@@ -28,17 +37,28 @@ export const TIER_LABEL: Record<SagaTier, string> = {
 export const TIER_CHIP_BASE =
   "inline-block shrink-0 rounded-[4px] px-[7px] py-[2px] align-middle text-[12px] leading-[1.5] font-extrabold"
 
-export function tierChipStyle(tier: SagaTier): React.CSSProperties {
-  if (tier === "official") return { background: "var(--wc-ink)", color: "var(--wc-card)" }
-  if (tier === "tier1")
+export function chipStyle(tone: ChipTone): React.CSSProperties {
+  if (tone === "ink") return { background: "var(--wc-ink)", color: "var(--wc-card)" }
+  if (tone === "wine")
     return { color: "var(--wc-burgundy)", boxShadow: "inset 0 0 0 1px var(--wc-burgundy)" }
-  return { color: "var(--wc-mute-2)", boxShadow: "inset 0 0 0 1px var(--wc-line-2)" }
+  if (tone === "line")
+    return { color: "var(--wc-mute-2)", boxShadow: "inset 0 0 0 1px var(--wc-line-2)" }
+  return { background: "var(--wc-soft)", color: "var(--wc-mute)" }
+}
+
+export function tierChipStyle(tier: SagaTier): React.CSSProperties {
+  return chipStyle(tier === "official" ? "ink" : tier === "tier1" ? "wine" : "line")
 }
 
 /** 경기·기사처럼 등급이 없는 사료 — 사다리 밖의 중립 칩 */
-export const NEUTRAL_CHIP_STYLE: React.CSSProperties = {
-  background: "var(--wc-soft)",
-  color: "var(--wc-mute)",
+export const NEUTRAL_CHIP_STYLE = chipStyle("soft")
+
+export function Chip({ tone, children }: { tone: ChipTone; children: React.ReactNode }) {
+  return (
+    <span className={TIER_CHIP_BASE} style={chipStyle(tone)}>
+      {children}
+    </span>
+  )
 }
 
 export function TierChip({ tier, label }: { tier: SagaTier; label?: string }) {

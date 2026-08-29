@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import Link from "@/components/ui/app-link"
+import { Chip } from "@/components/saga/tier-chip"
+import { RAIL_BODY_BORDER, RAIL_GRID, RailDate, groupByDay } from "@/components/saga/rail"
 
 /**
  * 사가 인덱스 본문 — **경기가 먼저** (2026-08-25 운영자).
@@ -26,87 +28,59 @@ export interface MatchItem {
   report: { title: string; paragraphs: string[] } | null
 }
 
-/** 행에 찍는 라벨과 **같은 기준**(로컬 월/일)으로 비교해야 한다 — 안 그러면 경계가 어긋난다 */
-function sameDay(aIso: string, bIso: string): boolean {
-  const a = new Date(aIso)
-  const b = new Date(bIso)
-  return a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
-
-function ScoreCell({ h, a }: { h: number | null; a: number | null }) {
-  if (h == null || a == null) {
-    return (
-      <span className="text-[13px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
-        –
-      </span>
-    )
-  }
-  return (
-    <span
-      className="gn-num text-[16px] font-extrabold tabular-nums"
-      style={{ color: "var(--wc-ink)" }}
-    >
-      {h}
-      <span style={{ color: "var(--wc-mute-2)" }}>:</span>
-      {a}
-    </span>
-  )
-}
+/* sameDay·ScoreCell 은 카드 한 줄 배치에만 쓰이던 것이라 같이 뺐다.
+   날짜 경계는 이제 공용 groupByDay(KST 기준)가 잡는다 — 종전 sameDay 는 로컬 시각으로
+   비교해서 서버·클라이언트가 갈릴 여지가 있었고 그래서 suppressHydrationWarning 이
+   붙어 있었다. KST 고정이라 그 회피책도 필요 없어졌다. */
 
 /**
- * `showDate` — 같은 날 경기가 연달아 오면 날짜를 한 번만 찍는다.
- * 27행이 8.21~8.28 뿐이라 왼쪽 칼럼에 "8.28 8.28 8.28 8.28" 이 쌓였다. 반복을 지우면
- * 날짜가 바뀌는 자리가 곧 그룹 경계로 읽힌다 — 구분선을 새로 그리지 않고 얻는 위계다.
- * 자리는 그대로 비워 둔다(폭 유지) — 안 그러면 행마다 제목 시작점이 달라진다.
+ * 경기 한 줄 — 사가 공용 헤어라인 문법 (2026-08-29 운영자 "안 B").
+ *
+ * 종전엔 흰 카드에 날짜·팀·점수·칩·꺾쇠를 전부 한 줄로 욱여넣었다. 이제 다른 사가
+ * 지면과 같이 [칩] 제목 / 메타 한 줄이고, 날짜는 왼쪽 레일이 하루 한 번 맡는다.
+ * 점수는 제목 안으로 들어간다 — "크리스털 팰리스 1–4 맨체스터 시티" 가 곧 그 경기다.
  */
-function MatchRow({ m, showDate }: { m: MatchItem; showDate: boolean }) {
+function MatchRow({ m }: { m: MatchItem }) {
   const [open, setOpen] = useState(false)
-  const day = new Date(m.matchTime)
-  const label = `${day.getMonth() + 1}.${day.getDate()}`
+  const played = m.homeScore != null && m.awayScore != null
 
   return (
-    <div
-      className="rounded-xl"
-      style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
-    >
+    <div style={RAIL_BODY_BORDER}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className="flex w-full items-start gap-3 py-3 pl-4 text-left sm:pl-6"
       >
-        <span
-          className="w-10 shrink-0 text-[12px] font-bold tabular-nums"
-          style={{ color: "var(--wc-mute)" }}
-          suppressHydrationWarning
-        >
-          {showDate ? label : ""}
-        </span>
-
-        <span
-          className="min-w-0 flex-1 truncate text-[14px] font-bold"
-          style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-        >
-          {m.home} <span style={{ color: "var(--wc-mute-2)" }}>vs</span> {m.away}
-        </span>
-
-        <ScoreCell h={m.homeScore} a={m.awayScore} />
-
-        {/* 리포트 유무를 접기 전에 알려준다 — 열어보고 비어 있으면 그게 데드엔드다 */}
-        <span
-          className="shrink-0 rounded px-1.5 py-0.5 text-[12px] font-extrabold"
-          style={
-            m.report
-              ? { background: "rgba(150,30,55,.08)", color: "var(--wc-burgundy)" }
-              : { background: "var(--wc-line)", color: "var(--wc-mute)" }
-          }
-        >
-          {m.report ? "리포트" : "기록"}
+        <span className="min-w-0 flex-1">
+          <span
+            className="block text-[16px] leading-[1.4] font-bold"
+            style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+          >
+            {/* 리포트 유무를 접기 전에 알려준다 — 열어보고 비어 있으면 그게 데드엔드다 */}
+            <span className="mr-1.5">
+              <Chip tone={m.report ? "wine" : "line"}>{m.report ? "리포트" : "기록"}</Chip>
+            </span>
+            {m.home}
+            {played ? (
+              <b className="gn-num mx-1.5">
+                {m.homeScore}–{m.awayScore}
+              </b>
+            ) : (
+              <span className="mx-1.5" style={{ color: "var(--wc-mute-2)" }}>
+                vs
+              </span>
+            )}
+            {m.away}
+          </span>
+          <span className="mt-1.5 block text-[12px]" style={{ color: "var(--wc-mute)" }}>
+            {m.league ?? "경기"} · {open ? "접기" : m.report ? "리포트 펼치기" : "기록 보기"}
+          </span>
         </span>
 
         <span
           aria-hidden
-          className="shrink-0 text-[12px] transition-transform"
+          className="mt-1 shrink-0 text-[12px] transition-transform"
           style={{
             color: "var(--wc-mute)",
             transform: open ? "rotate(90deg)" : "none",
@@ -117,11 +91,11 @@ function MatchRow({ m, showDate }: { m: MatchItem; showDate: boolean }) {
       </button>
 
       {open && (
-        <div className="px-4 pb-4" style={{ borderTop: "1px solid var(--wc-line)" }}>
+        <div className="pb-4 pl-4 sm:pl-6">
           {m.report ? (
             <>
               <h3
-                className="mt-3 text-[16px] font-extrabold"
+                className="text-[16px] font-extrabold"
                 style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
               >
                 {m.report.title}
@@ -139,7 +113,7 @@ function MatchRow({ m, showDate }: { m: MatchItem; showDate: boolean }) {
               </div>
             </>
           ) : (
-            <p className="mt-3 text-[13px]" style={{ color: "var(--wc-mute)" }}>
+            <p className="text-[13px]" style={{ color: "var(--wc-mute)" }}>
               이 경기는 아직 리포트가 없습니다 — 라인업·기록은 매치 센터에서 볼 수 있습니다.
             </p>
           )}
@@ -201,13 +175,20 @@ export function SagaBrowser({
             최근 끝난 경기가 없습니다.
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {matches.map((m, i) => (
-              <MatchRow
-                key={m.key}
-                m={m}
-                showDate={i === 0 || !sameDay(matches[i - 1].matchTime, m.matchTime)}
-              />
+          <div className="flex flex-col">
+            {groupByDay(matches, (m) => m.matchTime).map((day, di) => (
+              <div
+                key={day.key}
+                className={RAIL_GRID}
+                style={di > 0 ? { marginTop: 20 } : undefined}
+              >
+                <RailDate iso={day.iso} />
+                <div>
+                  {day.items.map((m) => (
+                    <MatchRow key={m.key} m={m} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )
