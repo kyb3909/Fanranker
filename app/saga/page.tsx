@@ -159,6 +159,13 @@ export default async function SagaIndexPage() {
               시즌 사가
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {/* ⚠️ 이 카드에 "기록 N건 · 최근 갱신" 을 붙였다가 되돌렸다 (2026-08-29).
+                  시즌 사가의 `entry_count`·`last_event_at` 은 **그 사가가 직접 가진 엔트리**만
+                  센다. 실제 문서는 경기·팀 기사·다른 이적 사가의 엔트리를 모아 조립한
+                  연대기다(`fetchTeamChronicle`). 아스널 2026-27 은 entry_count 2 / 8월 21일인데
+                  지면에는 89건이 8월 29일까지 찍힌다 — 87건 차이다.
+                  숫자를 안 보여주는 것보다 틀린 숫자를 보여주는 게 나쁘다. 카드에 살아있음을
+                  표시하려면 조립된 연대기 길이를 따로 비정규화해 둬야 한다. */}
               {seasons.map((s) => (
                 <Link
                   key={s.id}
@@ -171,7 +178,7 @@ export default async function SagaIndexPage() {
                   </p>
                   <p
                     className="mt-0.5 text-[16px] font-extrabold"
-                    style={{ color: "var(--wc-ink)" }}
+                    style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
                   >
                     {s.title}
                   </p>

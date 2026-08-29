@@ -4,6 +4,12 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { CommentSection } from "@/components/post-detail/comment-section"
 import { STAGE_LABEL } from "@/lib/saga/stages"
 import {
+  NEUTRAL_CHIP_STYLE,
+  TIER_CHIP_BASE,
+  tierChipStyle,
+  type SagaTier,
+} from "@/components/saga/tier-chip"
+import {
   loadSquad,
   loadSquadFromDb,
   fetchStanding,
@@ -56,16 +62,46 @@ function kstWeekday(iso: string): string {
   return WEEKDAYS[new Date(new Date(iso).getTime() + 9 * 3600 * 1000).getUTCDay()]
 }
 
+/**
+ * 날짜가 물리는 높이. 사이트 헤더가 sticky 이고 실측 94~96px 이다
+ * (2026-08-29 측정: 모바일 94, 데스크톱 96). 8px 여유를 둔다.
+ * 헤더 높이 토큰이 아직 없어서 상수로 둔다 — 헤더를 고치면 여기도 같이 봐야 한다.
+ */
+const DATE_STICKY_TOP = 104
+
+interface ChronicleDay {
+  key: string
+  occurredAt: string
+  events: ChronicleEvent[]
+}
+
+/**
+ * 하루 = 한 덩어리.
+ *
+ * 종전엔 사료 하나가 그리드 한 줄이고 날짜는 그 날 첫 줄에만 찍혔다. 그러면 날짜가
+ * 자기 줄 안에 갇혀서 **물릴 수가 없다**. 아스널 2026-27 문서가 10,776px 인데
+ * 스크롤 중간에서는 지금이 며칠인지 알 방법이 없었다.
+ * 하루치를 한 그리드 행으로 묶으면 날짜 셀이 그 날 분량만큼 따라 내려온다.
+ */
+function groupByDay(chronicle: ChronicleEvent[]): ChronicleDay[] {
+  const days: ChronicleDay[] = []
+  for (const ev of chronicle) {
+    const key = kstDateLabel(ev.occurredAt)
+    const last = days[days.length - 1]
+    if (last && last.key === key) last.events.push(ev)
+    else days.push({ key, occurredAt: ev.occurredAt, events: [ev] })
+  }
+  return days
+}
+
 const card: React.CSSProperties = {
   background: "var(--wc-card, #fff)",
   boxShadow: "var(--wc-shadow-1)",
 }
 
-const TIER_COLOR: Record<string, string> = {
-  official: "#0E7A3C",
-  tier1: "var(--wc-burgundy)",
-  rumor: "#946A12",
-}
+/* TIER_COLOR(초록·버건디·금색)는 2026-08-18 리디자인이 버린 팔레트인데 선언만 남아
+   있었다. 죽은 색표가 파일에 남아 있으면 다음 사람이 거기서 베낀다 — 실제로 이적 사가
+   상세가 같은 색을 쓰고 있었다. 삭제. 등급 색은 components/saga/tier-chip 하나뿐이다. */
 
 function EVENT_LABEL(ev: ChronicleEvent): string {
   if (ev.kind === "match" || ev.kind === "entry") return "경기"
@@ -73,30 +109,11 @@ function EVENT_LABEL(ev: ChronicleEvent): string {
   return ev.tier === "official" ? "오피셜" : ev.tier === "tier1" ? "유력" : "이적설"
 }
 
-/**
- * 사료 등급 칩 — **채움 3단 사다리로만** 말한다 (2026-08-18 리디자인).
- *
- * 직전 버전은 파랑·보라·초록·앰버 4색을 새로 만들어 테두리·배경틴트·칩배경·칩글자·도트
- * 다섯 곳에 동시에 발랐다. 사이트 전체 유채색이 버건디 하나인데 실록에서만 5개가 되어
- * "우리 사이트 같지 않다"의 큰 축이 됐다. 색을 늘리지 않고 형태로 등급을 가른다:
- *
- *   잉크 채움 = 오피셜(확정)  ·  버건디 외곽 = 유력  ·  실선 외곽 = 이적설  ·  soft = 경기·기사
- *
- * radius 4 = 상태 칩 (radius 8 소속 칩과 형태로 구분 — 홈 피드가 8을 쓴다).
- */
+/** 등급 사다리는 components/saga/tier-chip 이 정본 — 여기서 색을 새로 만들지 않는다 */
 function EventChip({ ev }: { ev: ChronicleEvent }) {
-  const base =
-    "inline-block shrink-0 rounded-[4px] px-[7px] py-[2px] text-[12px] leading-[1.5] font-extrabold"
-  const style: React.CSSProperties =
-    ev.kind === "transfer" && ev.tier === "official"
-      ? { background: "var(--wc-ink)", color: "var(--wc-card)" }
-      : ev.kind === "transfer" && ev.tier === "tier1"
-        ? { color: "var(--wc-burgundy)", boxShadow: "inset 0 0 0 1px var(--wc-burgundy)" }
-        : ev.kind === "transfer"
-          ? { color: "var(--wc-mute-2)", boxShadow: "inset 0 0 0 1px var(--wc-line-2)" }
-          : { background: "var(--wc-soft)", color: "var(--wc-mute)" }
+  const style = ev.kind === "transfer" ? tierChipStyle(ev.tier as SagaTier) : NEUTRAL_CHIP_STYLE
   return (
-    <span className={base} style={style}>
+    <span className={TIER_CHIP_BASE} style={style}>
       {EVENT_LABEL(ev)}
     </span>
   )
@@ -178,68 +195,75 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
              * 왼쪽 92px 레일에 날짜를 한 번만 찍고, 같은 날 사료는 오른쪽에 붙여 한 덩어리로
              * 읽게 한다. 유채 테두리·배경 틴트·도트는 전부 제거 — 등급은 칩 채움이 말한다. */
             <div className="flex flex-col">
-              {chronicle.map((ev, i) => {
-                // 경기 사료(경기 결과 + 우리가 쓴 경기 리포트)만 배경으로 띄운다
-                const isMatchLike = ev.kind === "match" || ev.kind === "entry"
-                const newDay =
-                  i === 0 ||
-                  kstDateLabel(chronicle[i - 1].occurredAt) !== kstDateLabel(ev.occurredAt)
+              {groupByDay(chronicle).map((day, di) => {
+                /* 같은 날 같은 사가가 연달아 나오면 사가명을 한 번만 찍는다.
+                   "브루노 기마랑이스 이적 사가" 가 줄마다 똑같이 반복되던 것이 이 지면
+                   잡음의 최대 원인이었다. 하루 안에서만 접는다 — 날이 바뀌면 다시
+                   보여줘야 중간부터 읽는 사람이 맥락을 잃지 않는다. */
+                let prevSaga: string | null = null
                 return (
                   <div
-                    key={i}
+                    key={day.key}
                     className="grid grid-cols-[62px_1fr] sm:grid-cols-[92px_1fr]"
-                    style={newDay && i > 0 ? { marginTop: 20 } : undefined}
+                    style={di > 0 ? { marginTop: 20 } : undefined}
                   >
-                    {/* 날짜 레일 — 그 날 첫 항목에만 찍는다 */}
-                    <div className="pt-3 pr-3">
-                      {newDay && (
-                        <>
-                          <p
-                            className="gn-num text-[20px] leading-none font-bold sm:text-[20px]"
-                            style={{ color: "var(--wc-ink)" }}
-                          >
-                            {kstShortDate(ev.occurredAt)}
-                          </p>
-                          <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
-                            {kstWeekday(ev.occurredAt)}
-                          </p>
-                        </>
-                      )}
+                    {/* 날짜 레일 — 그 날 분량이 다 지나갈 때까지 붙어 있는다 */}
+                    <div className="pr-3">
+                      <div className="sticky pt-3" style={{ top: DATE_STICKY_TOP }}>
+                        <p
+                          className="gn-num text-[20px] leading-none font-bold"
+                          style={{ color: "var(--wc-ink)" }}
+                        >
+                          {kstShortDate(day.occurredAt)}
+                        </p>
+                        <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
+                          {kstWeekday(day.occurredAt)}
+                        </p>
+                      </div>
                     </div>
 
-                    <div
-                      className="py-3 pl-4 sm:pl-6"
-                      style={{
-                        borderLeft: "1px solid var(--wc-line-2)",
-                        borderBottom: "1px solid var(--wc-line)",
-                        /* 경기 사료만 옅은 와인 틴트로 띄운다 (2026-08-25 운영자:
-                           "경기 관련한 것만 하이라이트 — 아주 옅게, 룩앤필 살리는 방향").
-                           ⚠️ 한쪽 면 액센트 보더는 영구 금지 패턴이라 **배경 틴트**로만
-                              위계를 만든다 (app/a-tokens.css 상단 규약).
-                           ⚠️ --wc-wine-tint(#fbf2f4)는 사이트가 이미 쓰는 와인 faint fill
-                              이다. 새 색을 만들지 않고 그걸 그대로 쓴다.
-                           우측으로 살짝 넘겨 칠해 레일 옆 띠처럼 읽히게 한다. */
-                        ...(isMatchLike
-                          ? {
-                              background: "var(--wc-wine-tint)",
-                              marginRight: -8,
-                              paddingRight: 8,
-                            }
-                          : null),
-                      }}
-                    >
-                      <div className="mb-1.5 flex min-w-0 items-center gap-2">
-                        <EventChip ev={ev} />
-                      </div>
-                      {ev.kind === "match" ? (
-                        <MatchEvent ev={ev} teamNames={teamNames} />
-                      ) : ev.kind === "transfer" ? (
-                        <TransferEvent ev={ev} />
-                      ) : ev.kind === "entry" ? (
-                        <EntryEvent ev={ev} />
-                      ) : (
-                        <ArticleEvent ev={ev} />
-                      )}
+                    <div>
+                      {day.events.map((ev, i) => {
+                        // 경기 사료(경기 결과 + 우리가 쓴 경기 리포트)만 배경으로 띄운다
+                        const isMatchLike = ev.kind === "match" || ev.kind === "entry"
+                        const showSaga = ev.kind === "transfer" ? ev.sagaTitle !== prevSaga : true
+                        prevSaga = ev.kind === "transfer" ? ev.sagaTitle : null
+                        const chip = <EventChip ev={ev} />
+                        return (
+                          <div
+                            key={i}
+                            className="py-3 pl-4 sm:pl-6"
+                            style={{
+                              borderLeft: "1px solid var(--wc-line-2)",
+                              borderBottom: "1px solid var(--wc-line)",
+                              /* 경기 사료만 옅은 와인 틴트로 띄운다 (2026-08-25 운영자:
+                                 "경기 관련한 것만 하이라이트 — 아주 옅게, 룩앤필 살리는 방향").
+                                 ⚠️ 한쪽 면 액센트 보더는 영구 금지 패턴이라 **배경 틴트**로만
+                                    위계를 만든다 (app/a-tokens.css 상단 규약).
+                                 ⚠️ --wc-wine-tint(#fbf2f4)는 사이트가 이미 쓰는 와인 faint fill
+                                    이다. 새 색을 만들지 않고 그걸 그대로 쓴다.
+                                 우측으로 살짝 넘겨 칠해 레일 옆 띠처럼 읽히게 한다. */
+                              ...(isMatchLike
+                                ? {
+                                    background: "var(--wc-wine-tint)",
+                                    marginRight: -8,
+                                    paddingRight: 8,
+                                  }
+                                : null),
+                            }}
+                          >
+                            {ev.kind === "match" ? (
+                              <MatchEvent ev={ev} teamNames={teamNames} chip={chip} />
+                            ) : ev.kind === "transfer" ? (
+                              <TransferEvent ev={ev} chip={chip} showSaga={showSaga} />
+                            ) : ev.kind === "entry" ? (
+                              <EntryEvent ev={ev} chip={chip} />
+                            ) : (
+                              <ArticleEvent ev={ev} chip={chip} />
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )
@@ -313,12 +337,21 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
   )
 }
 
+/**
+ * 사료 하나 = 두 줄이 최대다.
+ *
+ * 종전엔 칩이 자기 줄을 통째로 먹어서 이적 사료 하나가 **세 줄**이었다
+ * (칩 / 단계+사가명 / 헤드라인). 내용 한 줄에 껍데기 두 줄이다.
+ * 칩을 첫 줄 맨 앞으로 넣어 한 줄을 없앤다 — 사료 89건이면 약 1,800px 이 줄어든다.
+ */
 function MatchEvent({
   ev,
   teamNames,
+  chip,
 }: {
   ev: Extract<ChronicleEvent, { kind: "match" }>
   teamNames: Set<string>
+  chip: React.ReactNode
 }) {
   const m = ev.match
   const isHome = teamNames.has(m.home)
@@ -329,6 +362,7 @@ function MatchEvent({
   // 카드 껍데기 없음 — 레일이 이미 지면을 나눈다 (카드 안 카드 금지)
   return (
     <div className="flex items-center gap-2 text-[16px]">
+      {chip}
       {wdl && (
         <span
           className="grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[12px] font-extrabold"
@@ -360,7 +394,13 @@ function MatchEvent({
  * 않는다 (2026-08-07 오너: "원래 링크로 가는 것이 아니라 경기 리포트를 작성해줘야해").
  * 소커웨이는 하단 보조 출처 링크로만.
  */
-function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) {
+function EntryEvent({
+  ev,
+  chip,
+}: {
+  ev: Extract<ChronicleEvent, { kind: "entry" }>
+  chip: React.ReactNode
+}) {
   const paragraphs = (ev.summary ?? "").split(/\n{2,}/).filter((p) => p.trim())
   // 엔트리 종류에 맞는 접힘 라벨 — 인터뷰 카드에 "경기 리포트"라고 적혀 있었다 (QA ISSUE-002)
   const label = ev.headline.startsWith("[인터뷰]") ? "인터뷰" : "경기 리포트"
@@ -370,6 +410,8 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
         className="text-[16px] leading-[1.45] font-bold"
         style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
       >
+        {/* 붙일 메타가 없는 사료는 칩을 헤드라인 앞에 인라인으로 물린다 */}
+        <span className="mr-1.5">{chip}</span>
         {ev.headline}
       </p>
       {paragraphs.length > 0 && (
@@ -409,42 +451,71 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
   )
 }
 
-function ArticleEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "article" }> }) {
+function ArticleEvent({
+  ev,
+  chip,
+}: {
+  ev: Extract<ChronicleEvent, { kind: "article" }>
+  chip: React.ReactNode
+}) {
   return (
     <Link href={`/post/${ev.postId}?utm_source=season_wiki`} className="block no-underline">
       <p
         className="text-[16px] leading-[1.45] font-bold"
         style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
       >
+        <span className="mr-1.5">{chip}</span>
         {ev.title}
       </p>
     </Link>
   )
 }
 
-function TransferEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "transfer" }> }) {
+function TransferEvent({
+  ev,
+  chip,
+  showSaga,
+}: {
+  ev: Extract<ChronicleEvent, { kind: "transfer" }>
+  chip: React.ReactNode
+  showSaga: boolean
+}) {
+  const stageLabel = ev.stageAfter ? (STAGE_LABEL[ev.stageAfter] ?? ev.stageAfter) : null
+  /* 칩과 단계가 같은 말을 하는 경우가 있다 — 오피셜 사료는 칩도 "오피셜", 단계도
+     "오피셜" 이라 같은 단어가 나란히 두 번 찍혔다. 다를 때만 단계를 쓴다. */
+  const showStage = !!stageLabel && stageLabel !== EVENT_LABEL(ev)
+  const hasMeta = showStage || showSaga
   return (
     <Link href={`/saga/${ev.sagaSlug}`} className="block no-underline">
-      <div>
-        {/* 등급은 레일 칩이 이미 말한다 — 여기선 사가명과 현재 단계만.
-            "루머 → 제안" 처럼 전이를 병기하면 무엇이 지금인지 안 읽힌다 */}
+      {/* 등급은 칩이 이미 말한다 — 여기선 사가명과 현재 단계만.
+          "루머 → 제안" 처럼 전이를 병기하면 무엇이 지금인지 안 읽힌다 */}
+      {hasMeta && (
         <div className="flex min-w-0 items-center gap-2 text-[12px]">
-          {ev.stageAfter && (
+          {chip}
+          {showStage && (
             <span className="shrink-0 font-bold" style={{ color: "var(--wc-burgundy)" }}>
-              {STAGE_LABEL[ev.stageAfter] ?? ev.stageAfter}
+              {stageLabel}
             </span>
           )}
-          <span className="min-w-0 truncate" style={{ color: "var(--wc-mute-2)" }}>
-            {ev.sagaTitle}
-          </span>
+          {showSaga && (
+            <span className="min-w-0 truncate" style={{ color: "var(--wc-mute-2)" }}>
+              {ev.sagaTitle}
+            </span>
+          )}
         </div>
-        <p
-          className="mt-1 text-[16px] leading-[1.45] font-bold"
-          style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-        >
-          {ev.headline}
-        </p>
-      </div>
+      )}
+      <p
+        className="text-[16px] leading-[1.45] font-bold"
+        style={{
+          color: "var(--wc-ink)",
+          wordBreak: "keep-all",
+          ...(hasMeta ? { marginTop: 4 } : null),
+        }}
+      >
+        {/* 앞줄과 같은 사가라 메타를 접은 줄 — 칩만 헤드라인 앞에 물린다 */}
+        {!hasMeta && <span className="mr-1.5">{chip}</span>}
+        {ev.headline}
+      </p>
     </Link>
   )
 }

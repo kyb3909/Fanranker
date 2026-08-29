@@ -7,6 +7,7 @@ import { aggregateMainVotes } from "@/lib/saga/votes"
 import { SagaMainVote } from "@/components/saga/main-vote"
 import { CommentSection } from "@/components/post-detail/comment-section"
 import { SagaViewTracker } from "@/components/saga/saga-view-tracker"
+import { TierChip } from "@/components/saga/tier-chip"
 import { SeasonWiki } from "./season-wiki"
 import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
 import { SAGA_DEADLINE_KST } from "@/lib/saga/config"
@@ -134,12 +135,10 @@ export async function generateMetadata({
   }
 }
 
-const TIER_LABEL = { official: "오피셜", tier1: "유력", rumor: "루머" } as const
-const TIER_STYLE = {
-  official: { color: "#0E7A3C", bg: "rgba(14,122,60,.08)" },
-  tier1: { color: "var(--wc-burgundy, #961E37)", bg: "rgba(150,30,55,.07)" },
-  rumor: { color: "#946A12", bg: "rgba(148,106,18,.09)" },
-} as const
+/* 등급 칩은 components/saga/tier-chip 이 정본.
+   여기 있던 TIER_STYLE(초록 #0E7A3C · 금색 #946A12)은 2026-08-18 실록 리디자인이
+   "사이트 유채색은 버건디 하나"를 이유로 버린 팔레트인데, 그때 이 페이지가 같이
+   안 고쳐져서 **같은 등급이 옆 페이지와 다른 색**으로 그려지고 있었다 (2026-08-29 통합). */
 
 export default async function SagaDetailPage({
   params,
@@ -243,16 +242,7 @@ export default async function SagaDetailPage({
           </ol>
 
           <div className="mt-5 flex items-center gap-2.5">
-            <span
-              className="rounded-md border px-2 py-0.5 text-[12px] font-extrabold"
-              style={{
-                borderColor: TIER_STYLE[headTier].color,
-                color: TIER_STYLE[headTier].color,
-                background: TIER_STYLE[headTier].bg,
-              }}
-            >
-              {TIER_LABEL[headTier]}
-            </span>
+            <TierChip tier={headTier} />
             {dday && !closed && (
               <span className="text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
                 이적시장 마감{" "}
@@ -351,14 +341,8 @@ export default async function SagaDetailPage({
                     >
                       <div className="px-4 py-3.5">
                         <div className="flex items-start gap-2.5">
-                          <span
-                            className="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-extrabold"
-                            style={{
-                              color: TIER_STYLE[e.tier].color,
-                              background: TIER_STYLE[e.tier].bg,
-                            }}
-                          >
-                            {TIER_LABEL[e.tier]}
+                          <span className="mt-0.5">
+                            <TierChip tier={e.tier} />
                           </span>
                           <div className="min-w-0 flex-1">
                             <h3

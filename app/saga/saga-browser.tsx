@@ -26,6 +26,13 @@ export interface MatchItem {
   report: { title: string; paragraphs: string[] } | null
 }
 
+/** 행에 찍는 라벨과 **같은 기준**(로컬 월/일)으로 비교해야 한다 — 안 그러면 경계가 어긋난다 */
+function sameDay(aIso: string, bIso: string): boolean {
+  const a = new Date(aIso)
+  const b = new Date(bIso)
+  return a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
 function ScoreCell({ h, a }: { h: number | null; a: number | null }) {
   if (h == null || a == null) {
     return (
@@ -46,7 +53,13 @@ function ScoreCell({ h, a }: { h: number | null; a: number | null }) {
   )
 }
 
-function MatchRow({ m }: { m: MatchItem }) {
+/**
+ * `showDate` — 같은 날 경기가 연달아 오면 날짜를 한 번만 찍는다.
+ * 27행이 8.21~8.28 뿐이라 왼쪽 칼럼에 "8.28 8.28 8.28 8.28" 이 쌓였다. 반복을 지우면
+ * 날짜가 바뀌는 자리가 곧 그룹 경계로 읽힌다 — 구분선을 새로 그리지 않고 얻는 위계다.
+ * 자리는 그대로 비워 둔다(폭 유지) — 안 그러면 행마다 제목 시작점이 달라진다.
+ */
+function MatchRow({ m, showDate }: { m: MatchItem; showDate: boolean }) {
   const [open, setOpen] = useState(false)
   const day = new Date(m.matchTime)
   const label = `${day.getMonth() + 1}.${day.getDate()}`
@@ -67,7 +80,7 @@ function MatchRow({ m }: { m: MatchItem }) {
           style={{ color: "var(--wc-mute)" }}
           suppressHydrationWarning
         >
-          {label}
+          {showDate ? label : ""}
         </span>
 
         <span
@@ -189,8 +202,12 @@ export function SagaBrowser({
           </p>
         ) : (
           <div className="flex flex-col gap-2">
-            {matches.map((m) => (
-              <MatchRow key={m.key} m={m} />
+            {matches.map((m, i) => (
+              <MatchRow
+                key={m.key}
+                m={m}
+                showDate={i === 0 || !sameDay(matches[i - 1].matchTime, m.matchTime)}
+              />
             ))}
           </div>
         )
