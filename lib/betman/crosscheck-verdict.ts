@@ -27,10 +27,15 @@ export interface ScorePairInput {
 }
 
 export interface VerdictInput {
+  /** 베트맨 확정값 (completed 후의 betman_games.home_score/away_score — 지급 기준) */
+  betman: ScorePairInput
+  /**
+   * 와이즈토토 보존값 — **경기 종료 후 캡처분만** 넘길 것 (킥오프+105분 이전 캡처는
+   * 미완 스코어라 호출부가 null 로 걸러야 한다). 커버리지 밖/보존 이전 데이터면 null.
+   */
+  wisetoto?: ScorePairInput | null
   /** 산 피드 색인 항목 — 색인에 없으면 null */
   lfa: { finished: boolean; homeScore: number | null; awayScore: number | null } | null
-  /** 와이즈토토 값 (betman_games.home_score/away_score) */
-  betman: ScorePairInput
   /** 킥오프 이후 경과 시간 */
   hoursSinceKickoff: number
 }
@@ -38,7 +43,9 @@ export interface VerdictInput {
 export interface VerdictResult {
   verdict: CheckVerdict
   betmanScore: string | null
+  wisetotoScore: string | null
   lfaScore: string | null
+  note: string | null
 }
 
 function pair(h: number | null, a: number | null): string | null {
@@ -75,22 +82,65 @@ export function checkResultConsistency(input: {
   }
 }
 
+/**
+ * ① 스코어 3자 다수결 (2026-08-30 운영자: "와이즈토토와 베트맨이 같은지 검증이 중요").
+ *
+ *   베트맨 == 와이즈토토             → match (LFA 가 달라도 다수결 통과, 원장에 참고 기록)
+ *   베트맨 != 와이즈토토, LFA==베트맨 → match (와이즈토토가 소수 — 참고 기록)
+ *   베트맨 != 와이즈토토, LFA==와이즈 → mismatch — **1차 출처(베트맨)가 소수. 가장 위험**
+ *   베트맨 != 와이즈토토, LFA 부재    → mismatch — 국내 두 출처 불일치·심판 부재 → 보류
+ *   와이즈토토 부재                 → 기존 2자(베트맨↔LFA) 판정으로 폴백
+ */
 export function decideVerdict(input: VerdictInput): VerdictResult {
   const betmanScore = pair(input.betman.home, input.betman.away)
+  const wisetotoScore = input.wisetoto ? pair(input.wisetoto.home, input.wisetoto.away) : null
   const lfaScore = input.lfa ? pair(input.lfa.homeScore, input.lfa.awayScore) : null
+  const lfaUsable = !!input.lfa && input.lfa.finished && lfaScore != null
   const overdue = input.hoursSinceKickoff >= WAIVE_HOURS
+  const base = { betmanScore, wisetotoScore, lfaScore }
 
-  // LFA 쪽이 확인 불가 — 색인에 없거나, 아직 종료 전이거나, 스코어가 비었거나
-  if (!input.lfa || !input.lfa.finished || lfaScore == null) {
-    return { verdict: overdue ? "waived" : "pending", betmanScore, lfaScore }
-  }
-  // 와이즈토토 스코어가 아직 비었으면 비교 자체가 불가
+  // 베트맨(지급 기준) 스코어가 아직 비었으면 비교 자체가 불가
   if (betmanScore == null) {
-    return { verdict: overdue ? "waived" : "pending", betmanScore, lfaScore }
+    return { verdict: overdue ? "waived" : "pending", ...base, note: null }
+  }
+
+  // ── 와이즈토토 보존값이 있으면 그게 1순위 교차 상대다 ──
+  if (wisetotoScore != null) {
+    if (betmanScore === wisetotoScore) {
+      return {
+        verdict: "match",
+        ...base,
+        note: lfaUsable && lfaScore !== betmanScore ? `LFA 상이(참고): ${lfaScore}` : null,
+      }
+    }
+    if (lfaUsable && lfaScore === betmanScore) {
+      return {
+        verdict: "match",
+        ...base,
+        note: `와이즈토토 소수(${wisetotoScore}) — LFA 가 베트맨 지지`,
+      }
+    }
+    if (lfaUsable && lfaScore === wisetotoScore) {
+      return {
+        verdict: "mismatch",
+        ...base,
+        note: `⚠️ 베트맨(${betmanScore})이 소수 — 와이즈토토·LFA 는 ${wisetotoScore}`,
+      }
+    }
+    return {
+      verdict: "mismatch",
+      ...base,
+      note: `베트맨 ${betmanScore} vs 와이즈토토 ${wisetotoScore} — 심판(LFA) 부재`,
+    }
+  }
+
+  // ── 와이즈토토 부재 (커버리지 밖/보존 이전 데이터) — 2자 판정 폴백 ──
+  if (!lfaUsable) {
+    return { verdict: overdue ? "waived" : "pending", ...base, note: null }
   }
   return {
     verdict: betmanScore === lfaScore ? "match" : "mismatch",
-    betmanScore,
-    lfaScore,
+    ...base,
+    note: betmanScore === lfaScore ? null : "스코어 불일치 (베트맨 vs LFA)",
   }
 }

@@ -130,3 +130,71 @@ describe("checkResultConsistency — result 필드 ↔ 검증 스코어 (2026-08
     expect(r.ok).toBe(true)
   })
 })
+
+describe("3자 다수결 — 베트맨 ↔ 와이즈토토 ↔ LFA (2026-08-30 운영자 확정)", () => {
+  it("베트맨 == 와이즈토토 → match (핵심 검증 — LFA 없어도 통과)", () => {
+    const r = decideVerdict({
+      betman: { home: 2, away: 1 },
+      wisetoto: { home: 2, away: 1 },
+      lfa: null,
+      hoursSinceKickoff: 4,
+    })
+    expect(r.verdict).toBe("match")
+    expect(r.wisetotoScore).toBe("2-1")
+  })
+
+  it("베트맨 != 와이즈토토, LFA 부재 → mismatch (심판 없이 못 보낸다)", () => {
+    const r = decideVerdict({
+      betman: { home: 2, away: 1 },
+      wisetoto: { home: 1, away: 1 },
+      lfa: null,
+      hoursSinceKickoff: 4,
+    })
+    expect(r.verdict).toBe("mismatch")
+    expect(r.note).toContain("심판")
+  })
+
+  it("베트맨 != 와이즈토토, LFA 가 베트맨 지지 → match (와이즈토토가 소수)", () => {
+    const r = decideVerdict({
+      betman: { home: 2, away: 1 },
+      wisetoto: { home: 1, away: 1 },
+      lfa: FT(2, 1),
+      hoursSinceKickoff: 4,
+    })
+    expect(r.verdict).toBe("match")
+    expect(r.note).toContain("와이즈토토 소수")
+  })
+
+  it("베트맨이 소수 (와이즈토토·LFA 일치) → mismatch — 지급 기준이 틀린 최악 신호", () => {
+    const r = decideVerdict({
+      betman: { home: 2, away: 1 },
+      wisetoto: { home: 1, away: 1 },
+      lfa: FT(1, 1),
+      hoursSinceKickoff: 4,
+    })
+    expect(r.verdict).toBe("mismatch")
+    expect(r.note).toContain("베트맨(2-1)이 소수")
+  })
+
+  it("셋 다 일치 → match, 참고 메모 없음", () => {
+    const r = decideVerdict({
+      betman: { home: 0, away: 0 },
+      wisetoto: { home: 0, away: 0 },
+      lfa: FT(0, 0),
+      hoursSinceKickoff: 4,
+    })
+    expect(r.verdict).toBe("match")
+    expect(r.note).toBeNull()
+  })
+
+  it("베트맨 == 와이즈토토인데 LFA 만 다름 → match + 참고 메모 (매핑 오류 의심 기록)", () => {
+    const r = decideVerdict({
+      betman: { home: 2, away: 0 },
+      wisetoto: { home: 2, away: 0 },
+      lfa: FT(1, 0),
+      hoursSinceKickoff: 4,
+    })
+    expect(r.verdict).toBe("match")
+    expect(r.note).toContain("LFA 상이")
+  })
+})

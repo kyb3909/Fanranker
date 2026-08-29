@@ -116,6 +116,12 @@ async function syncHandler(request: NextRequest) {
               .update({
                 home_score: s.homeScore,
                 away_score: s.awayScore,
+                // 교차검증용 보존 (2026-08-30 운영자: "와이즈토토와 베트맨이 같은지
+                // 검증이 중요"). 베트맨 공식이 home/away_score 를 덮어써도 와이즈토토가
+                // 뭘 줬었는지 여기 남는다. wisetoto_at 은 미완 스코어 구분용.
+                wisetoto_home_score: s.homeScore,
+                wisetoto_away_score: s.awayScore,
+                wisetoto_at: new Date().toISOString(),
                 status: "in_progress",
                 updated_at: new Date().toISOString(),
               })

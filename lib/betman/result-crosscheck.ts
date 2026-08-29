@@ -40,7 +40,14 @@ interface FootballGameRow {
   handicap: number | null
   over_under_line: number | null
   result: string | null
+  /* 와이즈토토 보존값 (2026-08-30c) — 베트맨 공식이 덮어쓰기 전의 교차 상대 */
+  wisetoto_home_score: number | null
+  wisetoto_away_score: number | null
+  wisetoto_at: string | null
 }
+
+/** 이 시각 이전 캡처는 미완(전반 등) 스코어로 본다 — 정규 90분 + 추가시간 여유 */
+const WISETOTO_FINAL_CAPTURE_MIN = 105
 
 export interface CrosscheckSummary {
   scanned: number
@@ -77,7 +84,7 @@ export async function crosscheckFootballResults(
   const { data: games, error } = await supabase
     .from("betman_games")
     .select(
-      "id, home_team_name, away_team_name, home_score, away_score, league_code, match_time, game_type, handicap, over_under_line, result"
+      "id, home_team_name, away_team_name, home_score, away_score, league_code, match_time, game_type, handicap, over_under_line, result, wisetoto_home_score, wisetoto_away_score, wisetoto_at"
     )
     .eq("sport", "축구")
     .eq("status", "completed")
@@ -111,6 +118,7 @@ export async function crosscheckFootballResults(
     game_id: string
     verdict: CheckVerdict
     betman_score: string | null
+    wisetoto_score: string | null
     lfa_score: string | null
     note: string | null
     checked_at: string
@@ -128,13 +136,19 @@ export async function crosscheckFootballResults(
       index && g.league_code
         ? (lookupLfaDayEntry(index, { leagueCode: g.league_code, matchTime: g.match_time }) ?? null)
         : null
+    const kickoffMs = new Date(g.match_time).getTime()
+    // 와이즈토토 보존값 — 경기 끝난 뒤 캡처분만 인정 (전반 1-0 같은 미완 스코어 차단)
+    const wtFinal =
+      g.wisetoto_at &&
+      new Date(g.wisetoto_at).getTime() >= kickoffMs + WISETOTO_FINAL_CAPTURE_MIN * 60_000
     const r = decideVerdict({
-      lfa: lfaEntry,
       betman: { home: g.home_score, away: g.away_score },
-      hoursSinceKickoff: (now - new Date(g.match_time).getTime()) / 3600_000,
+      wisetoto: wtFinal ? { home: g.wisetoto_home_score, away: g.wisetoto_away_score } : null,
+      lfa: lfaEntry,
+      hoursSinceKickoff: (now - kickoffMs) / 3600_000,
     })
     let verdict = r.verdict
-    let note: string | null = null
+    let note: string | null = r.note
 
     // ② 스코어가 검증됐으면 result 필드(betman.co.kr 크롤분)도 그 스코어와 맞는지 본다.
     //    정산은 result 로 지급하므로, 스코어만 검증하면 지급 값이 검증 밖이다.
@@ -154,10 +168,9 @@ export async function crosscheckFootballResults(
       })
       if (!consistency.ok) {
         verdict = "mismatch"
-        note = consistency.note
+        // 스코어층 참고 메모가 있으면 뒤에 붙인다 (예: "LFA 상이(참고)")
+        note = note ? `${consistency.note} · ${note}` : consistency.note
       }
-    } else if (verdict === "mismatch") {
-      note = "스코어 불일치"
     }
 
     summary[verdict]++
@@ -165,6 +178,7 @@ export async function crosscheckFootballResults(
       game_id: g.id,
       verdict,
       betman_score: r.betmanScore,
+      wisetoto_score: r.wisetotoScore,
       lfa_score: r.lfaScore,
       note,
       checked_at: new Date().toISOString(),

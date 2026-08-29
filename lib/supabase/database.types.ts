@@ -835,6 +835,9 @@ export type Database = {
           status: string
           under_odds: number | null
           updated_at: string | null
+          wisetoto_at: string | null
+          wisetoto_away_score: number | null
+          wisetoto_home_score: number | null
           venue: string | null
         }
         Insert: {
@@ -867,6 +870,9 @@ export type Database = {
           status?: string
           under_odds?: number | null
           updated_at?: string | null
+          wisetoto_at?: string | null
+          wisetoto_away_score?: number | null
+          wisetoto_home_score?: number | null
           venue?: string | null
         }
         Update: {
@@ -899,6 +905,9 @@ export type Database = {
           status?: string
           under_odds?: number | null
           updated_at?: string | null
+          wisetoto_at?: string | null
+          wisetoto_away_score?: number | null
+          wisetoto_home_score?: number | null
           venue?: string | null
         }
         Relationships: [
@@ -1074,6 +1083,7 @@ export type Database = {
           lfa_score: string | null
           note: string | null
           verdict: string
+          wisetoto_score: string | null
         }
         Insert: {
           alerted_at?: string | null
@@ -1083,6 +1093,7 @@ export type Database = {
           lfa_score?: string | null
           note?: string | null
           verdict: string
+          wisetoto_score?: string | null
         }
         Update: {
           alerted_at?: string | null
@@ -1092,6 +1103,7 @@ export type Database = {
           lfa_score?: string | null
           note?: string | null
           verdict?: string
+          wisetoto_score?: string | null
         }
         Relationships: [
           {
