@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { trackEvent } from "@/lib/analytics/events"
+import { useStadiumPresence3d } from "@/hooks/use-stadium-presence-3d"
 import { DEFAULT_KIT } from "@/lib/stadium/play-kit"
 
 interface Props {
@@ -41,6 +42,14 @@ declare global {
       levelPct?: number
     }) => { total: number; built: number }
     __toggleGhost?: () => boolean
+    /** 같은 구장의 다른 팬 목록을 넘긴다 */
+    __setPeers?: (peers: unknown[]) => number | undefined
+    /** 내 위치·모션 — presence 로 올린다 */
+    __localTransform?: () => { x: number; z: number; yaw: number; motion: string } | null
+    /** 내 말풍선 */
+    __sayLocal?: (text: string) => void
+    /** 채팅 입력을 지면이 가로챈다 */
+    __onChatSubmit?: ((text: string) => void) | null
     /** 렌더러가 못 뜬 이유 — 정의돼 있으면 3D 는 죽은 것이다 */
     __stadiumError?: string
     /** 렌더러가 실제로 붙든 캔버스 — 지금 DOM 의 것과 다르면 3D 는 죽어 있다 */
@@ -55,16 +64,14 @@ declare global {
  * 계정에 붙는 값이 아니라 이 브라우저의 선택일 뿐이다 — 구매·장착이 Supabase 로
  * 넘어갈 때 그쪽 값으로 교체한다.
  */
-function savedAvatarUrl(): string | undefined {
+function savedCharacter(): "colin" | "chloe" {
   try {
-    const character = window.localStorage.getItem("gn.avatar.character")
-    if (character === "chloe" || character === "colin") {
-      return `/metaverse/avatar3d/${character}-avatar-v1.glb`
-    }
+    const stored = window.localStorage.getItem("gn.avatar.character")
+    if (stored === "chloe" || stored === "colin") return stored
   } catch {
     // 프라이빗 모드 등 — 기본 캐릭터로 간다
   }
-  return undefined
+  return "colin"
 }
 
 /** 킷 키 → 해시가 박힌 실제 텍스처 URL (매니페스트가 정본) */
@@ -130,6 +137,8 @@ export function StadiumPlay({
   const pctText = `${Math.round(levelPct * 1000) / 10}%`
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading")
+  const character = savedCharacter()
+  const { peers, publish, send, onlineCount } = useStadiumPresence3d(teamId, character)
   const [ghost, setGhost] = useState(false)
 
   useEffect(() => {
@@ -162,7 +171,7 @@ export function StadiumPlay({
         const ready = window.__setup?.({
           team: scene,
           avatarKitUrl: await resolveKitTextureUrl(kitKey),
-          avatarUrl: savedAvatarUrl(),
+          avatarUrl: `/metaverse/avatar3d/${character}-avatar-v1.glb`,
           pct: built,
           ghost: false,
           level,
@@ -191,7 +200,32 @@ export function StadiumPlay({
       // 루프를 세워 둔다 — 안 그러면 떠난 뒤에도 rAF 가 돌며 GPU·배터리를 태운다
       window.__stadiumStop?.()
     }
-  }, [scene, built, teamId, level, bricks, nextBricks, levelPct, kitKey])
+  }, [scene, built, teamId, level, bricks, nextBricks, levelPct, kitKey, character])
+
+  useEffect(() => {
+    if (state !== "ready") return
+    // 8Hz — 부드러움은 받는 쪽 보간이 만든다. 더 자주 올리면 Realtime 쿼터만 태운다.
+    const timer = window.setInterval(() => {
+      const transform = window.__localTransform?.()
+      if (transform) publish(transform)
+    }, 125)
+    return () => window.clearInterval(timer)
+  }, [state, publish])
+
+  useEffect(() => {
+    if (state !== "ready") return
+    window.__setPeers?.(peers)
+  }, [state, peers])
+
+  useEffect(() => {
+    if (state !== "ready") return
+    window.__onChatSubmit = (text: string) => {
+      if (send(text)) window.__sayLocal?.(text)
+    }
+    return () => {
+      window.__onChatSubmit = null
+    }
+  }, [state, send])
 
   return (
     <div className="stadium-play-scope">
@@ -236,6 +270,7 @@ export function StadiumPlay({
             <span id="count">{bricks.toLocaleString()}</span>{" "}
             <small>
               벽돌 · 다음 레벨까지 <span id="total">{nextBricks.toLocaleString()}</span>장
+              {onlineCount > 1 ? ` · 지금 ${onlineCount}명 접속` : null}
             </small>
           </div>
           <div className="pct" id="pct">

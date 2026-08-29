@@ -408,8 +408,13 @@
       seen[k] = 1;
       return true;
     });
+    // 잔디·라인은 시공 진행률에서 뺀다. 예전에는 y=0 이라 맨 앞에 오긴 했지만
+    // 레벨이 낮으면 필드부터 구멍이 나서, 걸어 들어가면 발밑이 없는 땅이 나왔다
+    // (피어·공도 그 위에서는 좌표가 깨진다). 구장은 "필드는 깔려 있고 그 위에
+    // 관중석이 올라간다"가 맞다 — 운영자 판정 2026-08-29.
     blocks.forEach(function (b) {
-      b.order = b.y * 10000 + ((Math.atan2(b.z, b.x) + Math.PI) * 1000);
+      b.pinned = b.y === 0 && (b.type === "line" || b.type === "grassA" || b.type === "grassB");
+      b.order = (b.pinned ? -1e9 : 0) + b.y * 10000 + ((Math.atan2(b.z, b.x) + Math.PI) * 1000);
     });
     blocks.sort(function (a, b2) { return a.order - b2.order; });
     return {
@@ -579,6 +584,8 @@
 
   /* ── 상태 ── */
   var blocks = [], TOTAL = 0, builtMesh = null, ghostMesh = null;
+  /** 항상 서 있는 블록 수 (필드) — 진행률과 무관하다 */
+  var pinnedCount = 0;
   var builtCount = 0;
   var plaza = null;
   var walkB = { x: 36.2, z: 25.2 };
@@ -599,7 +606,7 @@
   }
 
   function applyCount(n) {
-    n = Math.max(0, Math.min(TOTAL, n));
+    n = Math.max(pinnedCount, Math.min(TOTAL, n));
     if (n > builtCount) {
       for (var j = builtCount; j < n; j++) {
         var bb = blocks[j];
@@ -652,6 +659,8 @@
     disposeMeshes();
     blocks = g.blocks;
     TOTAL = blocks.length;
+    pinnedCount = 0;
+    while (pinnedCount < TOTAL && blocks[pinnedCount].pinned) pinnedCount++;
     plaza = g.plaza;
     walkB = { x: g.arx - 0.8, z: g.arz - 0.8 };
     terr = { arx: g.arx, arz: g.arz, tiers: g.tiers, step: g.step, bigDir: g.bigDir, bigExtra: g.bigExtra };
@@ -883,6 +892,7 @@
     }
     updateWalk(dt);
     if (avatarMixer) avatarMixer.update(dt);
+    updatePeers(dt);
     updateBall(dt);
     applyCamera();
     /**
@@ -940,17 +950,18 @@
   var avatarKitUrl = null;
   var avatarRoot = null, avatarMixer = null, avatarActions = {}, avatarClip = "";
   var avatarOneShot = null, avatarRequested = false, avatarReady = false;
+  var avatarClips = [];
   var boxRig = null;
 
-  function applyAvatarKit() {
-    if (!avatarRoot || !avatarKitUrl) return;
+  function applyKitToRoot(root) {
+    if (!root || !avatarKitUrl) return;
     var tex = new THREE.TextureLoader().load(avatarKitUrl);
     // glTF 는 UV 원점이 반대다. flipY 를 안 끄면 유니폼이 뒤집혀 붙는다.
     tex.flipY = false;
     if ("colorSpace" in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
     else if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-    avatarRoot.traverse(function (o) {
+    root.traverse(function (o) {
       if (!o.isMesh || !o.material) return;
       var mats = Array.isArray(o.material) ? o.material : [o.material];
       mats.forEach(function (m) {
@@ -960,6 +971,14 @@
           m.needsUpdate = true;
         }
       });
+    });
+  }
+
+  /** 로컬 아바타 + 이미 받아 둔 모든 캐릭터에 구단 유니폼을 입힌다 */
+  function applyAvatarKit() {
+    applyKitToRoot(avatarRoot);
+    Object.keys(rigCache).forEach(function (name) {
+      applyKitToRoot(rigCache[name].root);
     });
   }
 
@@ -983,16 +1002,14 @@
     new THREE.GLTFLoader().load(
       avatarUrl,
       function (gltf) {
-        avatarRoot = gltf.scene;
-        avatarRoot.scale.setScalar(AVATAR_HEIGHT / GLB_HEIGHT);
-        avatarRoot.traverse(function (o) {
-          // 랩 미리보기용으로 리깅된 공은 구장에서 쓰지 않는다
-          if (o.name === "ball" || o.name.indexOf("ball_primitive") === 0) o.visible = false;
-          if (o.isMesh) o.frustumCulled = false;
-        });
+        avatarRoot = prepareRig(gltf.scene);
+        avatarClips = gltf.animations || [];
+        // 남이 같은 캐릭터면 이걸 복제해 쓴다 (같은 GLB 를 두 번 받지 않는다)
+        var localName = avatarUrl.indexOf("chloe") >= 0 ? "chloe" : "colin";
+        rigCache[localName] = { root: avatarRoot, clips: avatarClips };
         applyAvatarKit();
         avatarMixer = new THREE.AnimationMixer(avatarRoot);
-        (gltf.animations || []).forEach(function (clip) {
+        avatarClips.forEach(function (clip) {
           avatarActions[clip.name] = avatarMixer.clipAction(clip);
         });
         avatarMixer.addEventListener("finished", function () {
@@ -1012,6 +1029,208 @@
         /* 로드 실패 — 박스 캐릭터로 계속 간다 */
       }
     );
+  }
+
+  /* ── 같은 구장에 들어온 다른 팬들 ──────────────────────────────────────
+   * 지면(React)이 Supabase Realtime presence 로 받은 목록을 __setPeers 로 넣는다.
+   * 여기서는 그리기만 한다 — 네트워크는 이 파일이 모른다.
+   */
+  var peerGroup = new THREE.Group();
+  scene.add(peerGroup);
+  var peers = Object.create(null);
+  var peerLerp = 0.18;
+
+  function makeNameTag(text) {
+    var c = document.createElement("canvas");
+    c.width = 256; c.height = 64;
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "rgba(12,14,20,0.72)";
+    ctx.beginPath();
+    var r = 16, w = 248, h = 44, x0 = 4, y0 = 10;
+    ctx.moveTo(x0 + r, y0);
+    ctx.arcTo(x0 + w, y0, x0 + w, y0 + h, r);
+    ctx.arcTo(x0 + w, y0 + h, x0, y0 + h, r);
+    ctx.arcTo(x0, y0 + h, x0, y0, r);
+    ctx.arcTo(x0, y0, x0 + w, y0, r);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 26px 'IBM Plex Sans KR', sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(text).slice(0, 12), 128, 33);
+    var tex = new THREE.CanvasTexture(c);
+    var sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false })
+    );
+    sprite.scale.set(4.4, 1.1, 1);
+    sprite.position.y = 3.1;
+    return sprite;
+  }
+
+  function makeSpeechSprite() {
+    var c = document.createElement("canvas");
+    c.width = 320; c.height = 96;
+    var tex = new THREE.CanvasTexture(c);
+    var sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false })
+    );
+    sprite.scale.set(6.4, 1.92, 1);
+    sprite.position.y = 4.2;
+    sprite.visible = false;
+    sprite.userData.canvas = c;
+    sprite.userData.tex = tex;
+    return sprite;
+  }
+
+  function drawSpeech(sprite, text) {
+    var c = sprite.userData.canvas;
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, 320, 96);
+    ctx.fillStyle = "rgba(255,255,255,0.94)";
+    var r = 18, w = 312, h = 66, x0 = 4, y0 = 4;
+    ctx.beginPath();
+    ctx.moveTo(x0 + r, y0);
+    ctx.arcTo(x0 + w, y0, x0 + w, y0 + h, r);
+    ctx.arcTo(x0 + w, y0 + h, x0, y0 + h, r);
+    ctx.arcTo(x0, y0 + h, x0, y0, r);
+    ctx.arcTo(x0, y0, x0 + w, y0, r);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(146, 70); ctx.lineTo(174, 70); ctx.lineTo(160, 90);
+    ctx.fill();
+    ctx.fillStyle = "#1c1f27";
+    ctx.font = "700 26px 'IBM Plex Sans KR', sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(text).slice(0, 18), 160, 38);
+    sprite.userData.tex.needsUpdate = true;
+    sprite.visible = true;
+  }
+
+  /** 미시공 구역 위에서는 groundHeightAt 이 Infinity 라 좌표가 통째로 깨진다 */
+  function peerFloor(x, z) {
+    var h = groundHeightAt(x, z);
+    return h === Infinity ? SURFACE : h;
+  }
+
+  /* 캐릭터별 원본 리그 — 남이 클로이면 클로이로 보여야 한다.
+   * 로컬 캐릭터는 loadAvatar 가 넣어 두고, 나머지는 필요할 때만 받는다. */
+  var rigCache = Object.create(null);
+  var rigPending = Object.create(null);
+
+  function prepareRig(root) {
+    root.scale.setScalar(AVATAR_HEIGHT / GLB_HEIGHT);
+    root.traverse(function (o) {
+      if (o.name === "ball" || o.name.indexOf("ball_primitive") === 0) o.visible = false;
+      if (o.isMesh) o.frustumCulled = false;
+    });
+    return root;
+  }
+
+  function getRig(character) {
+    var name = character === "chloe" ? "chloe" : "colin";
+    if (rigCache[name]) return rigCache[name];
+    if (rigPending[name] || !THREE.GLTFLoader) return null;
+    rigPending[name] = true;
+    new THREE.GLTFLoader().load(
+      "/metaverse/avatar3d/" + name + "-avatar-v1.glb",
+      function (gltf) {
+        rigCache[name] = { root: prepareRig(gltf.scene), clips: gltf.animations || [] };
+        applyKitToRoot(rigCache[name].root);
+      },
+      undefined,
+      function () {
+        rigPending[name] = false;
+      }
+    );
+    return null;
+  }
+
+  function spawnPeer(info) {
+    if (!THREE.cloneSkinned) return null;
+    var entry = getRig(info.character);
+    // 아직 안 받았으면 다음 presence 갱신 때 다시 시도한다
+    if (!entry) return null;
+    // ⚠️ 평범한 clone() 은 스켈레톤을 공유해 모든 피어가 같은 포즈로 겹친다
+    var rig = THREE.cloneSkinned(entry.root);
+    var holder = new THREE.Group();
+    holder.add(rig);
+    holder.add(makeNameTag(info.nickname));
+    var speech = makeSpeechSprite();
+    holder.add(speech);
+    peerGroup.add(holder);
+    var mixer = new THREE.AnimationMixer(rig);
+    var actions = {};
+    entry.clips.forEach(function (clip) {
+      actions[clip.name] = mixer.clipAction(clip);
+    });
+    var peer = {
+      holder: holder,
+      mixer: mixer,
+      actions: actions,
+      speech: speech,
+      clip: "",
+      target: { x: info.x || 0, z: info.z || 0, yaw: info.yaw || 0 },
+      saidAt: 0,
+    };
+    holder.position.set(peer.target.x, peerFloor(peer.target.x, peer.target.z), peer.target.z);
+    return peer;
+  }
+
+  function setPeerClip(peer, name) {
+    if (peer.clip === name) return;
+    var next = peer.actions[name] || peer.actions.idle;
+    if (!next) return;
+    var prev = peer.actions[peer.clip];
+    next.reset();
+    next.enabled = true;
+    next.play();
+    if (prev && prev !== next) next.crossFadeFrom(prev, 0.18, false);
+    peer.clip = name;
+  }
+
+  window.__setPeers = function (list) {
+    if (!avatarReady) return;
+    var seen = Object.create(null);
+    (list || []).forEach(function (info) {
+      if (!info || !info.userId) return;
+      seen[info.userId] = true;
+      var peer = peers[info.userId];
+      if (!peer) {
+        peer = spawnPeer(info);
+        if (!peer) return;
+        peers[info.userId] = peer;
+      }
+      peer.target.x = info.x;
+      peer.target.z = info.z;
+      peer.target.yaw = info.yaw;
+      setPeerClip(peer, info.motion || "idle");
+      if (info.say && info.sayAt && info.sayAt !== peer.saidAt) {
+        peer.saidAt = info.sayAt;
+        drawSpeech(peer.speech, info.say);
+      }
+      if (peer.speech.visible && Date.now() - peer.saidAt > 4500) peer.speech.visible = false;
+    });
+    Object.keys(peers).forEach(function (id) {
+      if (seen[id]) return;
+      peerGroup.remove(peers[id].holder);
+      delete peers[id];
+    });
+    return Object.keys(peers).length;
+  };
+
+  function updatePeers(dt) {
+    Object.keys(peers).forEach(function (id) {
+      var peer = peers[id];
+      var h = peer.holder;
+      // 네트워크는 8Hz 라 그대로 놓으면 뚝뚝 끊긴다 — 목표점으로 보간한다
+      h.position.x += (peer.target.x - h.position.x) * peerLerp;
+      h.position.z += (peer.target.z - h.position.z) * peerLerp;
+      h.position.y += (peerFloor(h.position.x, h.position.z) - h.position.y) * peerLerp;
+      var delta = peer.target.yaw - h.rotation.y;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      h.rotation.y += delta * peerLerp;
+      peer.mixer.update(dt);
+    });
   }
 
   function buildPlayer() {
@@ -1666,7 +1885,10 @@
   chatInput.addEventListener("keydown", function (e) {
     e.stopPropagation();
     if (e.key === "Enter" && this.value.trim()) {
-      say(this.value.trim());
+      var text = this.value.trim();
+      // 지면이 붙어 있으면 Realtime 으로 보낸다(내 말풍선은 그쪽이 되돌려 준다)
+      if (typeof window.__onChatSubmit === "function") window.__onChatSubmit(text);
+      else say(text);
       this.value = "";
       this.blur(); // 전송 후 바로 움직일 수 있게 — 포커스가 남으면 WASD 가 채팅에 먹힌다
     } else if (e.key === "Escape") {
@@ -1743,6 +1965,30 @@
   };
 
   /** 청사진(미시공 블록) 켜고 끄기 — 경기장 화면 전용 토글 (운영자 요청) */
+  /** 지면이 8Hz 로 읽어 Realtime 으로 올린다 — 걷기 모드가 아니면 null */
+  /** 검수용 — 지금 씬에 서 있는 피어들의 실제 좌표 */
+  window.__peerDebug = function () {
+    return Object.keys(peers).map(function (id) {
+      var p = peers[id].holder.position;
+      return { id: id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), visible: peers[id].holder.visible };
+    });
+  };
+  window.__localTransform = function () {
+    if (!walkMode || !player) return null;
+    return {
+      x: player.position.x,
+      z: player.position.z,
+      yaw: player.rotation.y,
+      motion: avatarClip || (boxRig && boxRig.visible ? "idle" : "idle"),
+    };
+  };
+  /** 남이 보낸 채팅을 내 화면의 말풍선으로 (지면이 호출) */
+  window.__sayLocal = function (text) {
+    say(text);
+  };
+  /** 채팅 전송을 지면이 가로챈다 — 없으면 예전처럼 로컬 말풍선만 뜬다 */
+  window.__onChatSubmit = null;
+
   window.__toggleGhost = function () {
     if (!ghostMesh) return false;
     ghostMesh.visible = !ghostMesh.visible;
