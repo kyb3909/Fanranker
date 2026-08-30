@@ -38,6 +38,9 @@ export const maxDuration = 60
  *   6. saga_stage_regressed — 사가 단계는 게이트 통과 신호의 최대치보다 낮지 않다
  *                            (페란 토레스 실사고 — 늦게 온 낮은 단계 보도가 15건을
  *                            끌어내림. nextStage 단조 규칙이 1층, 여기는 2층 그물)
+ *   7. lineup_bench_empty  — 끝난 경기의 저장 라인업에 벤치가 있다 (2026-08-31 실사고:
+ *                            LFA 벤치 필드명 오독으로 164행 전부 벤치 0 — 교체 표기와
+ *                            MoTM 교체 후보가 통째로 사라졌는데 신호가 없었다)
  *
  * 자동 수정은 하지 않는다 — 확정은 사람 (독자 제보 파이프라인과 같은 원칙, 오탐 무해).
  * 알림 피로 방지: invariant_findings 원장에 fingerprint 로 기록하고 **open 전이 시
@@ -305,6 +308,53 @@ async function handler(req: NextRequest) {
     }
   } catch (e) {
     checkErrors.push(`saga_identity_mismatch: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 7. lineup_bench_empty — 끝난 경기의 저장 라인업에 벤치가 있다 ──
+  //
+  // 2026-08-31 실사고: LFA 응답의 벤치 필드명을 잘못 읽어(`substitutes` ← 실제 `subs`)
+  // LFA 로 채워진 라인업 **164행 전부**가 벤치 0 명이었다. 교체 표기가 붙을 자리가
+  // 사라지고 MoTM 후보에서 교체 선수가 통째로 빠졌는데, **아무 신호도 없었다** —
+  // 운영자가 첼시 경기를 눈으로 보고 제보할 때까지 45% 가 조용히 망가져 있었다.
+  //
+  // 프로 경기에 벤치 0 은 존재하지 않는다. 그러니 "끝난 경기인데 양 팀 벤치가 모두
+  // 비었다" 는 데이터가 아니라 **코드가 깨졌다는 뜻**이다. 소스가 무엇으로 바뀌든
+  // 같은 병이 재발하면 여기서 한 시간 안에 걸린다.
+  try {
+    const { data: lus } = await supabase
+      .from("match_lineups")
+      .select("game_id, payload")
+      .gte("updated_at", new Date(now - 3 * 24 * H).toISOString())
+
+    const broken: string[] = []
+    let ready = 0
+    for (const r of lus ?? []) {
+      const p = r.payload as {
+        status?: string
+        kickoff?: string
+        home?: { teamLabel?: string; bench?: unknown[] }
+        away?: { teamLabel?: string; bench?: unknown[] }
+      } | null
+      if (p?.status !== "ready" || !p.kickoff) continue
+      // FT 로 확실히 넘어간 경기만 — 킥오프 직전 스냅샷은 벤치가 아직 없을 수 있다
+      if (new Date(p.kickoff).getTime() > now - 3 * H) continue
+      ready++
+      if ((p.home?.bench?.length ?? 0) === 0 && (p.away?.bench?.length ?? 0) === 0) {
+        broken.push(`${p.home?.teamLabel ?? "?"} vs ${p.away?.teamLabel ?? "?"}`)
+      }
+    }
+    // 한 경기의 우연이 아니라 **비율**로 본다 — 개별 경기는 원본이 정말 빈약할 수 있다
+    if (ready >= 10 && broken.length / ready >= 0.2) {
+      const pct = Math.round((broken.length / ready) * 100)
+      findings.push({
+        invariant: "lineup_bench_empty",
+        fingerprint: "lineup_bench_empty",
+        summary: `끝난 경기 라인업 ${broken.length}/${ready}건(${pct}%)에 벤치가 0명 — 교체 표기·MoTM 교체 후보가 통째로 빠진다. 라인업 소스의 응답 모양(필드명)을 의심할 것`,
+        detail: { broken: broken.slice(0, 20), broken_count: broken.length, ready_count: ready },
+      })
+    }
+  } catch (e) {
+    checkErrors.push(`lineup_bench_empty: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // ── 원장 반영: 신규/재발만 알림, 사라진 위반은 resolved ──

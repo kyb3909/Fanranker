@@ -92,6 +92,8 @@ export async function getMatchLineup(gameId: string): Promise<LineupResponse> {
   // ① 저장분 — 있으면 재한글화하고, 좋아졌으면 되써 둔다(다음 읽기는 공짜)
   const stored = await loadStored(gameId)
   if (stored) {
+    const replaced = await healHalfBakedLineup(gameId, stored.payload)
+    if (replaced) return replaced
     const healed = await relocalize(stored.payload)
     if (healed) {
       await storeLineupPayload(gameId, stored.event_id, stored.payload).catch(() => {})
@@ -108,11 +110,53 @@ export async function getMatchLineup(gameId: string): Promise<LineupResponse> {
 
   // ③ LFA 폴백 — 끝난 경기의 라인업도 준다 (soccerway 는 +24h 후 침묵)
   const fallback = await lfaLineupFallback(gameId).catch(() => null)
-  return fallback ?? res
+  return fallback?.payload ?? res
 }
 
-/** soccerway 가 침묵할 때 LFA 로 — 확보하면 저장해 다음부터는 바깥 요청이 없다 */
-async function lfaLineupFallback(gameId: string): Promise<LineupResponse | null> {
+/** 양 팀 벤치가 모두 비었나 — 반쪽 저장분의 표식 */
+function benchIsEmpty(p: LineupResponse): boolean {
+  return p.status === "ready" && p.home.bench.length === 0 && p.away.bench.length === 0
+}
+
+/**
+ * 반쪽 저장분 자가 수리 (2026-08-31 운영자 제보: "교체 선수 기록이 하나도 없다").
+ *
+ * 저장분은 한 번 적히면 다시 안 읽는다 — 그래서 **킥오프 전에 적힌 예상 라인업**과
+ * **벤치를 못 읽던 시절(`substitutes` 오독)의 명단**이 영구히 굳어 있었다 (실측:
+ * LFA 로 채워진 164행 전부 벤치 0, 첼시전은 선발 2명까지 틀렸다).
+ *
+ * 표식은 **양 팀 벤치가 모두 빈 것**이다 — 프로 경기에 벤치 0 은 없다. 킥오프가 지난
+ * 경기에 한해 LFA 를 한 번 물어, **확정 라인업이고 벤치가 있으면** 통째로 갈아끼운다.
+ * 부분 병합이 아니라 교체인 이유는 선발까지 틀려 있을 수 있기 때문이다.
+ *
+ * 고쳐지면 벤치가 차므로 다시 타지 않는다 — 스스로 멎는 수리다.
+ */
+async function healHalfBakedLineup(
+  gameId: string,
+  stored: LineupResponse
+): Promise<LineupResponse | null> {
+  if (!benchIsEmpty(stored)) return null
+  if (stored.status !== "ready" || new Date(stored.kickoff).getTime() > Date.now()) return null
+
+  const fresh = await lfaLineupFallback(gameId, { store: false }).catch(() => null)
+  if (!fresh || fresh.projected || benchIsEmpty(fresh.payload)) return null
+
+  await relocalize(fresh.payload)
+  await storeLineupPayload(gameId, fresh.eventId, fresh.payload).catch(() => {})
+  return fresh.payload
+}
+
+/**
+ * soccerway 가 침묵할 때 LFA 로 — 확보하면 저장해 다음부터는 바깥 요청이 없다.
+ *
+ * ⚠️ **예상 라인업은 저장하지 않는다.** 저장분은 다시 안 읽으므로, 킥오프 전 예상 XI 를
+ *    적어두면 확정 XI 로 영영 갱신되지 않는다. 화면에는 보여주되(빈 화면보다 낫다)
+ *    굳히지는 않는다 — 확정이 나온 뒤 첫 요청이 적는다.
+ */
+async function lfaLineupFallback(
+  gameId: string,
+  opts: { store?: boolean } = {}
+): Promise<{ payload: LineupResponse; eventId: string; projected: boolean } | null> {
   const { data: game } = await createServiceRoleClient()
     .from("betman_games")
     .select("id, sport, home_team_name, away_team_name, match_time, league_code")
@@ -143,6 +187,8 @@ async function lfaLineupFallback(gameId: string): Promise<LineupResponse | null>
     away: { teamLabel: String(game.away_team_name), ...lu.away },
     fetchedAt: new Date().toISOString(),
   }
-  await storeLineupPayload(gameId, info.matchId, payload).catch(() => {})
-  return payload
+  if (opts.store !== false && !lu.projected) {
+    await storeLineupPayload(gameId, info.matchId, payload).catch(() => {})
+  }
+  return { payload, eventId: info.matchId, projected: lu.projected }
 }

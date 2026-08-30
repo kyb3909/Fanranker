@@ -5,6 +5,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaFetch } from "@/lib/lfa/client"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
 import { localizePlayerName, tidyFeedName, type SquadName } from "./player-name"
+// 응답 모양 해석은 순수 모듈이 소유한다 — 필드명 오독이 이 기능을 통째로 죽였다 (2026-08-31)
+import { normalizeLfaLineups, type LfaRawPlayer } from "./lineup-shape"
 
 // 이 모듈로 쓰던 곳이 많다 — 순수 모듈로 옮기면서 import 경로는 유지한다
 export { localizePlayerName, tidyFeedName, type SquadName }
@@ -25,25 +27,6 @@ export { localizePlayerName, tidyFeedName, type SquadName }
  * (틀린 한글보다 낫다).
  */
 
-interface LfaLineupPlayer {
-  id?: string
-  name?: string
-  number?: number | string | null
-}
-
-interface LfaLineupSide {
-  formation?: string | null
-  starting?: LfaLineupPlayer[]
-  substitutes?: LfaLineupPlayer[]
-  bench?: LfaLineupPlayer[]
-}
-
-interface LfaLineupsResponse {
-  match_id?: string
-  home?: LfaLineupSide
-  away?: LfaLineupSide
-}
-
 export interface LfaLineupPerson {
   label: string
   number: number | null
@@ -59,8 +42,9 @@ export interface LfaLineupSideOut {
 /** 끝난 경기도 값이 변하지 않는다 — 길게 잡는다 */
 function cachedLineups(matchId: string) {
   return unstable_cache(
-    async () => lfaFetch<LfaLineupsResponse>("lineups", { match_id: matchId, lang: "en" }),
-    ["lfa-lineups", matchId],
+    async () => lfaFetch<unknown>("lineups", { match_id: matchId, lang: "en" }),
+    // v2: 벤치를 못 읽던 시절(`substitutes` 오독)의 캐시를 무효화 (2026-08-31)
+    ["lfa-lineups-v2", matchId],
     { revalidate: 12 * 3600 }
   )
 }
@@ -88,7 +72,7 @@ export const getTeamSquadNames = unstable_cache(
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
-function toPeople(list: LfaLineupPlayer[] | undefined, squad: SquadName[]): LfaLineupPerson[] {
+function toPeople(list: LfaRawPlayer[] | undefined, squad: SquadName[]): LfaLineupPerson[] {
   const out: LfaLineupPerson[] = []
   for (const p of list ?? []) {
     const name = String(p.name ?? "").trim()
@@ -111,24 +95,25 @@ export async function getLfaLineup(
   matchId: string,
   homeTeamKr: string,
   awayTeamKr: string
-): Promise<{ home: LfaLineupSideOut; away: LfaLineupSideOut } | null> {
-  const data = await cachedLineups(matchId)().catch(() => null)
-  if (!data?.home || !data?.away) return null
+): Promise<{ home: LfaLineupSideOut; away: LfaLineupSideOut; projected: boolean } | null> {
+  const raw = await cachedLineups(matchId)().catch(() => null)
+  const data = normalizeLfaLineups(raw)
+  if (!data) return null
 
   const [homeSquad, awaySquad] = await Promise.all([
     getTeamSquadNames(homeTeamKr).catch(() => [] as SquadName[]),
     getTeamSquadNames(awayTeamKr).catch(() => [] as SquadName[]),
   ])
 
-  const side = (s: LfaLineupSide, squad: SquadName[]): LfaLineupSideOut => ({
-    formation: s.formation ? String(s.formation) : null,
+  const side = (s: (typeof data)["home"], squad: SquadName[]): LfaLineupSideOut => ({
+    formation: s.formation,
     starters: toPeople(s.starting, squad),
-    bench: toPeople(s.substitutes ?? s.bench, squad),
+    bench: toPeople(s.subs, squad),
   })
 
   const home = side(data.home, homeSquad)
   const away = side(data.away, awaySquad)
   // 선발이 비면 라인업이라 부를 수 없다 — 빈 껍데기를 그리지 않는다
   if (home.starters.length === 0 || away.starters.length === 0) return null
-  return { home, away }
+  return { home, away, projected: data.projected }
 }

@@ -7,6 +7,17 @@ import { getMatchLineup } from "@/lib/match/get-lineup"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
+// 후보판 계산은 순수 모듈이 소유한다 — env 없이 시험이 그대로 부른다 (2026-08-31)
+import {
+  buildMotmOptions,
+  mergeMotmOptions,
+  pickRichestLineup,
+  type MotmOption,
+} from "@/lib/motm/options"
+
+// 기존 import 경로를 지킨다 (매치 페이지·투표 API·카드가 여기서 가져간다)
+export { buildMotmOptions, mergeMotmOptions, pickRichestLineup }
+export type { MotmOption } from "@/lib/motm/options"
 
 /**
  * MoTM(맨오브더매치) 폴 — polls 인프라 재사용 (2026-08-22 운영자 지시: "출전 선수 전원 풀").
@@ -23,15 +34,6 @@ import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
  * 선발 22명 + LFA 타임라인에서 교체 투입(subIn)이 확인된 벤치. 타임라인이 없으면
  * 선발만 — 출전 안 한 벤치를 후보에 올리는 것보다 좁은 게 정직하다.
  */
-
-export interface MotmOption {
-  key: string
-  label: string
-  number: number | null
-  team: "home" | "away"
-  team_label: string
-  group: "starter" | "sub"
-}
 
 export interface MotmPollRef {
   pollId: string
@@ -52,69 +54,12 @@ export function motmClosesAtUtc(matchTimeIso: string): string {
   ).toISOString()
 }
 
-interface LineupPlayerLike {
-  label: string
-  number: number | null
-  roman?: string | null
-  subIn?: string | null
-}
-
-function optionKeyFor(p: LineupPlayerLike, team: "home" | "away", used: Set<string>): string {
-  const base =
-    (p.roman ?? "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 28) || (p.number != null ? `n${p.number}` : "p")
-  let key = `${team[0]}-${base}`
-  let i = 2
-  while (used.has(key)) key = `${team[0]}-${base}-${i++}`
-  used.add(key)
-  return key
-}
-
-/**
- * 라인업(타임라인 보강 후) → 후보 옵션. 선발 전원 + subIn 확인된 벤치.
- * 옵션 shape 는 polls.options 의 {key,label} 계약을 지키면서 표시용 필드만 더한다
- * (투표 API 는 key 만 본다 — app/api/polls/[id]/vote 의 화이트리스트 검증 그대로 통과).
- */
-export function buildMotmOptions(lineup: LineupResponse): MotmOption[] | null {
-  if (lineup.status !== "ready") return null
-  const used = new Set<string>()
-  const out: MotmOption[] = []
-  for (const team of ["home", "away"] as const) {
-    const side = lineup[team]
-    for (const p of side.starters as LineupPlayerLike[]) {
-      out.push({
-        key: optionKeyFor(p, team, used),
-        label: p.label,
-        number: p.number ?? null,
-        team,
-        team_label: side.teamLabel,
-        group: "starter",
-      })
-    }
-    for (const p of side.bench as LineupPlayerLike[]) {
-      if (!p.subIn) continue // 교체 투입 확인된 선수만 — 미출전 벤치는 후보가 아니다
-      out.push({
-        key: optionKeyFor(p, team, used),
-        label: p.label,
-        number: p.number ?? null,
-        team,
-        team_label: side.teamLabel,
-        group: "sub",
-      })
-    }
-  }
-  // 양 팀 선발이 다 안 실린 반쪽 라인업이면 폴을 만들지 않는다 (빈 후보판 방지)
-  return out.length >= 18 ? out : null
-}
-
 export interface MotmSweepResult {
   finalized: number
   created: { matchKey: string; pollId: string; candidates: number }[]
   skipped: { matchKey: string; reason: string }[]
+  /** 후보가 빠져 있던 기존 폴을 되살린 건수 */
+  repaired: { pollId: string; added: number }[]
 }
 
 /**
@@ -197,39 +142,51 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
 
   const created: MotmSweepResult["created"] = []
   const skipped: MotmSweepResult["skipped"] = []
-  if (cands.length === 0) return { finalized, created, skipped }
+  const repaired: MotmSweepResult["repaired"] = []
+  if (cands.length === 0) return { finalized, created, skipped, repaired }
 
-  // 3) 이미 폴이 있는 경기는 제외
+  // 3) 이미 폴이 있는 경기 — 보통은 건너뛰지만, **교체 후보가 통째로 빠진** 폴은
+  //    라인업이 뒤늦게 고쳐졌을 수 있으므로 다시 짜 본다 (열려 있는 동안만).
   const { data: existing } = await supabase
     .from("polls")
-    .select("match_key")
+    .select("id, match_key, options, is_active")
     .eq("kind", "motm")
     .in(
       "match_key",
       cands.map((c) => c.matchKey)
     )
-  const has = new Set((existing ?? []).map((e) => String(e.match_key)))
+  interface Prior {
+    id: string
+    options: MotmOption[]
+    active: boolean
+  }
+  const priorByKey = new Map<string, Prior>()
+  for (const e of existing ?? []) {
+    priorByKey.set(String(e.match_key), {
+      id: String(e.id),
+      options: (e.options as MotmOption[] | null) ?? [],
+      active: e.is_active === true,
+    })
+  }
+  const needsRepair = (p: Prior) => p.active && !p.options.some((o) => o.group === "sub")
 
   for (const c of cands) {
-    if (has.has(c.matchKey)) continue
+    const prior = priorByKey.get(c.matchKey)
+    if (prior && !needsRepair(prior)) continue
     try {
       // 라인업 — 저장분 우선(형제 행 전체에서), 없으면 단일 진입점(getMatchLineup:
       // 저장 → soccerway → LFA 폴백, 확보 시 저장까지)으로 한 번 시도
-      let lineup: LineupResponse | null = null
       const { data: stored } = await supabase
         .from("match_lineups")
         .select("payload")
         .in("game_id", c.gameIds)
-      for (const s of stored ?? []) {
-        const p = s.payload as LineupResponse | null
-        if (p && p.status === "ready") {
-          lineup = p
-          break
-        }
-      }
-      if (!lineup) {
+      // ⚠️ 먼저 걸린 행이 아니라 **벤치가 있는 행**을 쓴다 — 형제 행마다 소스가 갈려서
+      //    한쪽은 벤치가 있고 한쪽은 없다 (2026-08-31 첼시전).
+      let lineup = pickRichestLineup((stored ?? []).map((s) => s.payload as LineupResponse | null))
+      if (!lineup || lineup.home.bench.length + lineup.away.bench.length === 0) {
+        // 저장분이 없거나 전부 반쪽이면 단일 진입점으로 — 거기서 자가 수리가 돈다
         const fetched = await getMatchLineup(c.gameIds[0]).catch(() => null)
-        if (fetched && fetched.status === "ready") lineup = fetched
+        if (fetched && fetched.status === "ready") lineup = pickRichestLineup([fetched, lineup])
       }
       if (!lineup) {
         skipped.push({ matchKey: c.matchKey, reason: "no_lineup" })
@@ -251,6 +208,29 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
       const options = buildMotmOptions(enriched)
       if (!options) {
         skipped.push({ matchKey: c.matchKey, reason: "thin_lineup" })
+        continue
+      }
+
+      // 3-b) 기존 폴 보강 — 표가 없으면 통째로, 있으면 빠진 후보만 덧붙인다
+      if (prior) {
+        const { count } = await supabase
+          .from("poll_votes")
+          .select("id", { count: "exact", head: true })
+          .eq("poll_id", prior.id)
+        const merged = mergeMotmOptions(prior.options, options, (count ?? 0) > 0)
+        if (!merged) {
+          skipped.push({ matchKey: c.matchKey, reason: "repair_noop" })
+          continue
+        }
+        const { error: upErr } = await supabase
+          .from("polls")
+          .update({ options: merged })
+          .eq("id", prior.id)
+        if (upErr) {
+          skipped.push({ matchKey: c.matchKey, reason: `repair:${upErr.code ?? "err"}` })
+          continue
+        }
+        repaired.push({ pollId: prior.id, added: merged.length - prior.options.length })
         continue
       }
 
@@ -282,7 +262,7 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     }
   }
 
-  return { finalized, created, skipped }
+  return { finalized, created, skipped, repaired }
 }
 
 function refFromRow(row: {

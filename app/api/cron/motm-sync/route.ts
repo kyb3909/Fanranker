@@ -10,6 +10,8 @@ import { sweepMotmPolls } from "@/lib/motm/poll"
  * 생성: FT(킥오프+110분) 지난 매치 페이지 리그 경기 → 라인업 스냅샷(선발+교체 투입)을
  *       후보로 polls(kind='motm') 1행. match_key unique 라 마켓 중복 행·재실행에 안전.
  * 마감: closes_at(익일 11:00 KST) 지난 폴 is_active=false → 투표 API 가 자동 차단.
+ * 보강: 교체 후보가 통째로 빠진 채 만들어진 폴은 라인업이 뒤늦게 고쳐지면 다시 짠다
+ *       (2026-08-31). 표가 있으면 빠진 후보만 덧붙여 이미 던진 표를 지킨다.
  */
 async function cronGet(request: NextRequest) {
   const start = Date.now()
