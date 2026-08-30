@@ -14,6 +14,16 @@
  * 따로 깨져 있다(150명 중 2명 대조). 어차피 최종 판정은 운영자가 하므로 후보 생성원을
  * 수확기에서 LLM 으로 바꾼다 — 품질 관문은 그대로다.
  *
+ * ## 근거 층 (2026-08-30 운영자: "RAG 를 활용해서 진행해")
+ * LLM 음차를 그대로 넣지 않는다. LLM 은 **후보 2~4개**만 내고, 각 후보를 네이버 뉴스
+ * 검색량으로 세어 `lib/naming/pick.ts` 의 pickWinner 가 판정한다. 검색량이 모자라거나
+ * 표기가 경합하면 **초안을 만들지 않는다** (fail-closed) — 틀린 초안은 검수자의 시간을
+ * 더 쓰게 만들 뿐이다.
+ *
+ * 실측(프라이부르크 30명): 채택 6 / 보류 24. 채택률이 낮은 게 정상이다 — 나머지 24명은
+ * 한국 매체에 표기가 **아예 없어서** 근거로 삼을 게 없다. 예: LLM 이 '리엔하르트'를 먼저
+ * 냈지만 네이버가 린하르트 56 대 리엔하르트 0 으로 뒤집었다 (카릭→캐릭 사고와 같은 구조).
+ *
  * ## 규율
  * - **국적 힌트를 준다.** 같은 철자도 언어마다 다르게 읽는다 (Yılmaz 터키어 / Silva 포르투갈어).
  * - **한국 선수는 원래 이름으로.** "Hyeon-Gyu Oh" → 오현규. 음차하면 "오 현규" 같은 게 나온다.
@@ -21,7 +31,7 @@
  * - 이미 `name_kr` 이 있으면 건드리지 않는다.
  *
  * 실행:
- *   pnpm exec tsx scripts/draft-squad-names.ts --team <soccerway_team_id>
+ *   pnpm exec tsx scripts/draft-squad-names.ts --team <soccerway_team_id> [--verbose]
  *   pnpm exec tsx scripts/draft-squad-names.ts --league 라리가
  *   pnpm exec tsx scripts/draft-squad-names.ts --all           # 화면에 뜨는 팀 전체
  *   ... --apply    # 붙이면 DB 에 쓴다 (기본은 미리보기)
@@ -29,6 +39,8 @@
 import "dotenv/config"
 import { createClient } from "@supabase/supabase-js"
 import { chatParams } from "../lib/llm/openai-params"
+import { naverNewsCount } from "../lib/naming/naver"
+import { pickWinner } from "../lib/naming/pick"
 
 const APPLY = process.argv.includes("--apply")
 const arg = (name: string): string | null => {
@@ -38,6 +50,7 @@ const arg = (name: string): string | null => {
 const TEAM = arg("team")
 const LEAGUE = arg("league")
 const ALL = process.argv.includes("--all")
+const VERBOSE = process.argv.includes("--verbose")
 const MODEL = process.env.SQUAD_DRAFT_MODEL || "gpt-5.6-luna"
 
 /** 한 번에 보낼 선수 수 — 너무 크면 모델이 뒤쪽을 대충 만든다 (실측 25가 안정적) */
@@ -118,10 +131,15 @@ const PROMPT = `너는 한국 축구 매체의 표기 담당자다. 축구 선�
 6. **확신이 없으면 빈 문자열("")을 반환한다.** 틀린 추정은 검수자의 시간을 더 쓰게 만든다.
 7. 한글·가운뎃점(·)·공백만 쓴다. 로마자를 섞지 않는다.
 
-입력은 JSON 배열이다. 각 항목의 id 를 그대로 유지해서 답하라.
-출력 형식: {"names":[{"id":"<입력 id>","kr":"<한글명 또는 빈 문자열>"}]}`
+8. **후보를 2~4개 낸다.** 하나만 내면 네이버 검증이 비교할 대상이 없어 무의미해진다
+   (실사고: '카릭'만 내고 정답 '캐릭'이 빠져 오표기가 확정됐다). 혼동 축을 의도적으로
+   벌려라: ㅏ↔ㅐ · ㅓ↔ㅔ · ㅗ↔ㅜ · 어두 자음(사/샤/자/하) · 스↔즈.
+   확신이 높아도 대안 표기를 함께 낸다 — 최종 판정은 네이버 검색량이 한다.
 
-async function draftBatch(team: string, rows: Row[]): Promise<Map<string, string>> {
+입력은 JSON 배열이다. 각 항목의 id 를 그대로 유지해서 답하라.
+출력 형식: {"names":[{"id":"<입력 id>","kr":["<후보1>","<후보2>","<후보3>"]}]}`
+
+async function draftBatch(team: string, rows: Row[]): Promise<Map<string, string[]>> {
   const payload = rows.map((r, i) => ({ id: String(i), en: r.name_en }))
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -151,16 +169,43 @@ async function draftBatch(team: string, rows: Row[]): Promise<Map<string, string
   } catch {
     return new Map()
   }
-  const out = new Map<string, string>()
+  const out = new Map<string, string[]>()
   for (const n of parsed.names ?? []) {
     const row = rows[Number(n.id)]
-    const kr = (n.kr ?? "").trim()
-    if (!row || !kr) continue
+    if (!row) continue
+    const raw = Array.isArray(n.kr) ? n.kr : n.kr ? [n.kr] : []
     // ⚠️ 모델이 규칙을 어길 수 있다 — 형식은 여기서 다시 막는다 (API 검사와 같은 정규식)
-    if (!/^[가-힣·\s-]{2,20}$/.test(kr)) continue
-    out.set(row.player_slug, kr)
+    const cands = [...new Set(raw.map((k) => String(k).trim()))].filter((k) =>
+      /^[가-힣·\s-]{2,20}$/.test(k)
+    )
+    if (cands.length === 0) continue
+    out.set(row.player_slug, cands)
   }
   return out
+}
+
+/**
+ * 네이버 검색량으로 후보 중 하나를 고른다 — **이 스크립트의 근거 층** (2026-08-30).
+ *
+ * 종전엔 LLM 음차를 그대로 초안에 넣었다. 운영자: "RAG 를 활용해서 진행해."
+ * 판정은 `lib/naming/pick.ts` 의 pickWinner 를 그대로 쓴다 — 검색량이 모자라거나
+ * 표기가 경합하면 **승자 없음**이고, 그러면 초안을 만들지 않는다 (fail-closed).
+ * 잘못된 초안은 검수자의 시간을 더 쓰게 만들 뿐이다.
+ */
+async function pickByNaver(
+  candidates: string[],
+  teamKr: string
+): Promise<{ winner: string | null; reason: string }> {
+  const counts: { candidate: string; total: number }[] = []
+  for (const c of candidates) {
+    const total = await naverNewsCount(c, teamKr)
+    if (total === null) return { winner: null, reason: "네이버 API 미가동 — 사람 검수" }
+    counts.push({ candidate: c, total })
+    await new Promise((r) => setTimeout(r, 150)) // API 예의
+  }
+  const v = pickWinner(counts)
+  const detail = counts.map((c) => `${c.candidate} ${c.total}`).join(" / ")
+  return { winner: v.winner, reason: `${v.reason} [${detail}]` }
 }
 
 async function main() {
@@ -188,13 +233,29 @@ async function main() {
   let written = 0
   for (const [teamId, list] of byTeam) {
     const teamKr = list[0].team_kr
-    const drafts = new Map<string, string>()
+    const proposed = new Map<string, string[]>()
     for (let i = 0; i < list.length; i += BATCH) {
       const got = await draftBatch(teamKr, list.slice(i, i + BATCH))
-      for (const [slug, kr] of got) drafts.set(slug, kr)
+      for (const [slug, cands] of got) proposed.set(slug, cands)
+    }
+
+    // ── 근거 층 — LLM 후보를 네이버 검색량으로 판정한다 (승자 없으면 초안을 안 만든다) ──
+    const drafts = new Map<string, string>()
+    let rejected = 0
+    for (const [slug, cands] of proposed) {
+      const { winner, reason } = await pickByNaver(cands, teamKr)
+      if (!winner) {
+        rejected++
+        if (VERBOSE) console.log(`      ✗ ${slug}: ${reason}`)
+        continue
+      }
+      drafts.set(slug, winner)
+      if (VERBOSE) console.log(`      ✓ ${slug} → ${winner}  ${reason}`)
     }
     made += drafts.size
-    console.log(`  ${teamKr.padEnd(18)} ${drafts.size}/${list.length} 후보`)
+    console.log(
+      `  ${teamKr.padEnd(18)} 제안 ${proposed.size}/${list.length} → 네이버 채택 ${drafts.size} (보류 ${rejected})`
+    )
 
     if (APPLY) {
       for (const [slug, kr] of drafts) {
