@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
     `[지금]`,
     `상담자가 이어서 묻는다. **카드를 새로 뽑지 마라** — 위 판을 그대로 놓고 답한다.`,
     `표정 태그는 붙이지 말고 본문만 쓴다. 2~4문단으로 짧게.`,
+    `### 머리말(한 줄·카드별·루나의 한마디)은 쓰지 마라 — 리딩이 아니라 대화다.`,
+    `말투 규칙은 그대로 지킨다: 헤지 남발 금지, 부정 대조 금지, 어려운 한자어 금지.`,
   ].join("\n")
 
   const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
