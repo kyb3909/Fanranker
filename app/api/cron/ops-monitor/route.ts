@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
+import { isMatchPageLeague } from "@/lib/match/leagues"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import { isBreakingNewsItem } from "@/lib/news/breaking"
@@ -398,6 +399,59 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     console.error("ops-monitor lfa rate check 실패:", e)
+  }
+
+  /* ── 매치 ID 미해결 (2026-08-30) ──
+   * 워크플로우 2단계 "일정 → 매치 ID 확보" 에는 **전용 크론이 없다.** LFA 매치 id 는
+   * lfa-warm·match-threads·페이지 렌더가 필요할 때 그때그때 푸는 부수효과라, 못 풀어도
+   * 아무도 모른다 — 그 경기의 라인업·스탯·타임라인·불판·리포트가 통째로 빈 채로 지나간다
+   * (2026-08-23 브라이턴 사고가 그 모양이었다).
+   * 끝난 지 3시간 넘은 화이트리스트 경기에 `match_details_cache` 행이 없으면 그게 신호다.
+   * ⚠️ betman_games 는 같은 경기가 game_type 별로 여러 행이다 — (시각·홈·원정)으로 접는다. */
+  try {
+    const from = new Date(Date.now() - 24 * H).toISOString()
+    const to = new Date(Date.now() - 3 * H).toISOString()
+    const { data: fin } = await supabase
+      .from("betman_games")
+      .select("id, match_time, league_code, home_team_name, away_team_name")
+      .eq("sport", "축구")
+      .gte("match_time", from)
+      .lt("match_time", to)
+    const rows = (fin ?? []).filter((g) => isMatchPageLeague(String(g.league_code)))
+    if (rows.length > 0) {
+      const { data: det } = await supabase
+        .from("match_details_cache")
+        .select("game_id")
+        .in(
+          "game_id",
+          rows.map((g) => String(g.id))
+        )
+      const resolvedIds = new Set((det ?? []).map((d) => String(d.game_id)))
+      const groups = new Map<string, { label: string; resolved: boolean }>()
+      for (const g of rows) {
+        const key = `${g.match_time}|${g.home_team_name}|${g.away_team_name}`
+        const prev = groups.get(key)
+        const resolved = resolvedIds.has(String(g.id)) || prev?.resolved === true
+        groups.set(key, { label: `${g.home_team_name} vs ${g.away_team_name}`, resolved })
+      }
+      const unresolved = [...groups.values()].filter((v) => !v.resolved)
+      // 한두 건은 원래 흔들린다 — 절반 넘게 못 풀렸을 때만 사람을 부른다
+      if (unresolved.length >= 3 && unresolved.length / groups.size > 0.5) {
+        issues.push({
+          name: "🔗 매치 ID 미해결",
+          value:
+            `끝난 경기 ${groups.size}건 중 **${unresolved.length}건**이 LFA 매치와 안 이어졌습니다 ` +
+            `(${unresolved
+              .slice(0, 3)
+              .map((v) => v.label)
+              .join(", ")}${unresolved.length > 3 ? " 외" : ""}). ` +
+            `그 경기는 라인업·스탯·불판·리포트가 전부 빕니다. ` +
+            `team_dictionary 미등재부터 보세요 — /api/cron/team-dictionary-backfill 이 매일 06:00 UTC 에 메웁니다.`,
+        })
+      }
+    }
+  } catch (e) {
+    console.error("ops-monitor match-id check 실패:", e)
   }
 
   if (issues.length > 0) {
