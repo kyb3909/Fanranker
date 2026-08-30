@@ -75,7 +75,7 @@ async function cronGet(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        ...chatParams("gpt-4o", { temperature: 0.3 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0.3 }),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -98,7 +98,7 @@ JSON만: {"picks": [{"id": "...", "reason": "..."}, ...]} — 정확히 3개, id
     })
     if (!res.ok) return NextResponse.json({ ok: false, error: `LLM HTTP ${res.status}` })
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("hero-editor", "gpt-4o", data)
+    logUsage("hero-editor", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       picks?: { id?: string; reason?: string }[]
     }

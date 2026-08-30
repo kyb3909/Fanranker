@@ -12,7 +12,8 @@ import { chatParams } from "@/lib/llm/openai-params"
  * 잠깐 폐지했다가 되돌렸다. 폐지하면 번역 누락·오타·무내용·제목불일치·수치모순을
  * **아무도 안 보게 된다** (운영자 지적: "지금 왜 안 봐").
  *
- * ⚠️ 검사관은 **gpt-4o-mini** 다. 작성(terra)보다 약하지만 상관없다 — 여기 항목들은
+ * ⚠️ 검사관은 **gpt-5.6-luna** 다 (2026-08-30, 4o-mini 에서 교체). 작성(terra)보다 약하지만
+ *    상관없다 — 여기 항목들은
  *    작성자를 이겨야 아는 것이 아니라 **눈에 보이는 표면 결함**이다. 영어 문장이
  *    남았는지, 본문에 내용이 없는지는 약한 모델도 안다. 중요한 건 **다른 눈**이라는 것.
  * ⚠️ 이름 추출을 같은 호출에 얹었다 — 표기 검증 루프의 재료다. 추가 비용 0.
@@ -121,7 +122,9 @@ ${extractTextFromTipTapJSON(content as TipTapNode)}`
  *
  * ⚠️ **fail-closed** 다. 호출 실패·파싱 실패는 불통과 → 사람 검수 큐로 강등된다.
  *    검사관이 죽었는데 조용히 통과시키면 검사관이 없는 것과 같다.
- * ⚠️ 모델은 **작성 모델(terra)과 다른** gpt-4o-mini 다. 사유는 파일 상단 참조.
+ * ⚠️ 모델은 **작성 모델(terra)과 다른** gpt-5.6-luna 다. 사유는 파일 상단 참조.
+ * ⚠️ 다만 terra 와 **같은 5.6 계열**이라 '다른 눈' 분리도는 4o-mini 때보다 약하다.
+ *    분리가 다시 문제되면 검사관만 계열이 다른 모델로 되돌릴 것.
  */
 export async function inspectDraft(
   title: string,
@@ -152,7 +155,7 @@ export async function inspectDraft(
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(20000),
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0, max_tokens: 700 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0, max_tokens: 700 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: INSPECT_PROMPT },

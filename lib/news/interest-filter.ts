@@ -190,7 +190,7 @@ export function renderInterestInput(items: InterestItem[]): string {
  * 심판 규칙 변경·훈련 불참에까지 같은 사유를 붙였다. 사유는 검수 화면에서 사람이
  * 기사를 되살릴 때 읽는 근거라 뭉개지면 안 된다.
  */
-const INTEREST_MODEL = process.env.INTEREST_FILTER_MODEL || "gpt-4o"
+const INTEREST_MODEL = process.env.INTEREST_FILTER_MODEL || "gpt-5.6-luna"
 
 /**
  * 판정. 실패는 `null` — 호출부는 **유지**로 처리해야 한다 (잘못 버리는 게 더 나쁘다).

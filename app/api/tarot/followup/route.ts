@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
-            ...chatParams("gpt-4o", { temperature: 0.85, max_tokens: 700 }),
+            ...chatParams("gpt-5.6-luna", { temperature: 0.85, max_tokens: 700 }),
             stream: true,
             messages,
           }),

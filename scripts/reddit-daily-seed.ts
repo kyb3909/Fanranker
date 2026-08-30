@@ -32,7 +32,7 @@ import { chatParams } from "../lib/llm/openai-params"
 config({ path: resolve(process.cwd(), ".env.local") })
 config({ path: resolve(process.cwd(), ".env") })
 
-const MODEL = process.env.SEED_MODEL || "gpt-4.1-mini"
+const MODEL = process.env.SEED_MODEL || "gpt-5.6-luna"
 const REDDIT_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 

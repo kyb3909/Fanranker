@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
             // chatParams 필수 — 모델 세대별 파라미터 차이를 여기서 흡수한다(lib/llm/openai-params)
-            ...chatParams("gpt-4o", { temperature: 0.85, max_tokens: 1400 }),
+            ...chatParams("gpt-5.6-luna", { temperature: 0.85, max_tokens: 1400 }),
             stream: true,
             messages: [
               { role: "system", content: SYSTEM_PROMPT },

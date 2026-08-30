@@ -30,7 +30,7 @@ export async function proposeCandidates(name: string, context?: string): Promise
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0.3 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0.3 }),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -58,7 +58,7 @@ JSON만: {"romanized": "...", "candidates": ["표기1", "표기2", "표기3"]}`,
     })
     if (!res.ok) return empty
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("naming-verify", "gpt-4o-mini", data)
+    logUsage("naming-verify", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       romanized?: unknown
       candidates?: unknown[]

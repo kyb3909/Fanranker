@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { assignmentContentHash } from "@/lib/news/assignment-desk"
+import { assignmentContentHash, ASSIGNMENT_MODEL } from "@/lib/news/assignment-desk"
 
 /**
  * 어사인먼트 데스크 cron — shadow 계약을 잠근다.
@@ -185,7 +185,8 @@ describe("GET /api/cron/news-assignment-desk", () => {
       outcome: "assign",
       status: "ok",
       desk: "match",
-      model: "gpt-4o-mini",
+      // 모델 문자열을 박아두면 교체할 때마다 이 시험이 깨진다 — 기록되는지만 본다.
+      model: ASSIGNMENT_MODEL,
     })
     expect(inserted[0].estimated_cost_usd).toBeGreaterThan(0)
   })

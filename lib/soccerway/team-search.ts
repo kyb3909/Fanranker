@@ -121,7 +121,7 @@ export async function proposeSearchQueries(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -139,7 +139,7 @@ export async function proposeSearchQueries(
     })
     if (!res.ok) return []
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("team-search", "gpt-4o-mini", data)
+    logUsage("team-search", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       queries?: unknown[]
     }

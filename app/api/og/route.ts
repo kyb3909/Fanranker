@@ -227,7 +227,7 @@ function extractArticleText(html: string): string {
     .slice(0, 4000)
 }
 
-/** 기사 본문을 한국어 5줄로 요약 (gpt-4o-mini). 실패 시 null. */
+/** 기사 본문을 한국어 5줄로 요약 (gpt-5.6-luna). 실패 시 null. */
 async function summarizeArticle(text: string, title: string): Promise<string[] | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
@@ -237,7 +237,7 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0.3, max_tokens: 600 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0.3, max_tokens: 600 }),
         messages: [
           {
             role: "system",
@@ -251,7 +251,7 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
     })
     if (!res.ok) return null
     const data = await res.json()
-    logUsage("og-image", "gpt-4o-mini", data)
+    logUsage("og-image", "gpt-5.6-luna", data)
     const content = data.choices?.[0]?.message?.content
     if (!content) return null
     const parsed = JSON.parse(content) as { lines?: unknown }

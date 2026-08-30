@@ -64,7 +64,7 @@ import { chatParams, supportsSamplingParams } from "@/lib/llm/openai-params"
 export const ASSIGNMENT_PROMPT_VERSION = "assignment-desk@2026-08-05.5"
 
 /** 판정 모델. GPT-5 계열이 아니므로 temperature 사용 가능 (supportsTemperature 참조) */
-export const ASSIGNMENT_MODEL = "gpt-4o-mini"
+export const ASSIGNMENT_MODEL = "gpt-5.6-luna"
 
 /** LLM 없이 결정론 규칙만으로 끝난 판정의 model 값. 규칙이 바뀌면 함께 올린다. */
 export const ASSIGNMENT_RULE_MODEL = "rule:v2"
@@ -538,6 +538,8 @@ const MODEL_RATES_USD_PER_MTOK: Record<string, { input: number; cached: number; 
     // "출력이 긴 작업"에서 요금이 급증한다 — 모델 선택 시 입력가만 보면 안 된다.
     "gpt-5.6-terra": { input: 2.0, cached: 0.2, output: 12 },
     "gpt-5.1": { input: 1.25, cached: 0.125, output: 10 },
+    // 2026-08-30 확인. 4o/4.1 항목은 지우지 않는다 — 과거 usage 행이 그 키로 남아 있다.
+    "gpt-5.6-luna": { input: 0.2, cached: 0.02, output: 1.2 },
   }
 
 /** 결정론 규칙 판정은 호출이 없으므로 비용 0 (null 이 아니라 진짜 0 이다) */

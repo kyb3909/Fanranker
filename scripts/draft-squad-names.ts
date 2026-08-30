@@ -38,7 +38,7 @@ const arg = (name: string): string | null => {
 const TEAM = arg("team")
 const LEAGUE = arg("league")
 const ALL = process.argv.includes("--all")
-const MODEL = process.env.SQUAD_DRAFT_MODEL || "gpt-4.1"
+const MODEL = process.env.SQUAD_DRAFT_MODEL || "gpt-5.6-luna"
 
 /** 한 번에 보낼 선수 수 — 너무 크면 모델이 뒤쪽을 대충 만든다 (실측 25가 안정적) */
 const BATCH = 25

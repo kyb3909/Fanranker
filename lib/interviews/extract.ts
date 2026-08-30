@@ -15,7 +15,7 @@ import { logUsage } from "@/lib/llm/usage-log"
  * 대조 층 어느 쪽으로도 통과 못 한다 (드라이 톤 규칙: 인터뷰 번역 OK, 분석 금지).
  */
 
-const MODEL = "gpt-4o-mini"
+const MODEL = "gpt-5.6-luna"
 
 interface ExtractedInterview {
   speaker: string | null

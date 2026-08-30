@@ -12,7 +12,7 @@
  * Vultr cron 에서 `node news-scanner.mjs`.
  *
  * env: OPENAI_API_KEY, CRON_SECRET, BASE_URL(기본 https://gongnori.fan),
- *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-4o-mini)
+ *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-5.6-luna)
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
@@ -22,7 +22,7 @@ const BASE_URL = (process.env.BASE_URL || "https://gongnori.fan").replace(/\/$/,
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const CRON_SECRET = process.env.CRON_SECRET
 const SEEN_FILE = process.env.SEEN_FILE || "./news-scanner-seen.json"
-const MODEL = process.env.SCANNER_MODEL || "gpt-4o-mini"
+const MODEL = process.env.SCANNER_MODEL || "gpt-5.6-luna"
 const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판별 로그만 (테스트용)
 
 const LOOKBACK_HOURS = 24 // 이보다 오래된 글은 무시 (신선도)
@@ -215,7 +215,9 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
     signal: AbortSignal.timeout(30000),
     body: JSON.stringify({
       model: MODEL,
-      temperature: 0.4,
+      // 5세대 모델은 temperature 를 400 으로 거부한다 (lib/llm/openai-params.ts 참조).
+      // 이 파일은 무의존 단일 파일이라 chatParams 를 import 할 수 없어 같은 판정을 인라인으로 둔다.
+      ...(/^gpt-5/.test(MODEL) ? {} : { temperature: 0.4 }),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: sys },

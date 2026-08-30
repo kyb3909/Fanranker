@@ -16,7 +16,7 @@ import { logUsage } from "@/lib/llm/usage-log"
  * 기사에 전파되므로, 원문·수정본에 문자열로 실재하는 것만 통과시킨다.
  */
 
-const MODEL = "gpt-4.1-mini"
+const MODEL = "gpt-5.6-luna"
 
 const EXTRACT_PROMPT = `너는 한국 스포츠 뉴스룸의 교열 기록원이다. 봇이 쓴 기사(원본)와 검수자가 고친 최종본(수정본)을 비교해서, **표기 교정**과 **사실 정정**을 분리해 추출한다.
 

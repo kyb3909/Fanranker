@@ -83,7 +83,7 @@ async function extractNames(team: string, text: string): Promise<string[]> {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      ...chatParams("gpt-4o-mini", { temperature: 0 }),
+      ...chatParams("gpt-5.6-luna", { temperature: 0 }),
       response_format: { type: "json_object" },
       messages: [
         {

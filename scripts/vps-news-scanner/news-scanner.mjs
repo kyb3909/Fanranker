@@ -16,7 +16,7 @@
  * Vultr cron 에서 `node news-scanner.mjs`.
  *
  * env: OPENAI_API_KEY, CRON_SECRET, BASE_URL(기본 https://gongnori.fan),
- *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-4o-mini),
+ *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-5.6-luna),
  *      SCANNER_MODEL_LONG(기본 gpt-5.6-terra) — 원문을 확보한 글의 **기사 작성** 모델.
  *        독자가 실제로 읽는 본문을 쓰는 자리라 품질 투자 지점이 여기다.
  *        gpt-5.6-terra 로 올리려면 이 값만 바꾸면 된다(아래 chatParams 가 파라미터를 정리).
@@ -29,7 +29,7 @@ const BASE_URL = (process.env.BASE_URL || "https://gongnori.fan").replace(/\/$/,
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const CRON_SECRET = process.env.CRON_SECRET
 const SEEN_FILE = process.env.SEEN_FILE || "./news-scanner-seen.json"
-const MODEL = process.env.SCANNER_MODEL || "gpt-4o-mini"
+const MODEL = process.env.SCANNER_MODEL || "gpt-5.6-luna"
 /**
  * 기사 **작성** 모델. 2026-08-25 운영자 지시로 gpt-4.1-mini → gpt-5.1 로 올렸다.
  *

@@ -14,7 +14,7 @@ import { logUsage } from "@/lib/llm/usage-log"
  * 그건 검수자 몫. claim 은 검수자가 빨리 확인하도록 주장을 요약한 것일 뿐이다.
  */
 
-const MODEL = "gpt-4.1-mini"
+const MODEL = "gpt-5.6-luna"
 
 /** 오류 제보 신호 — 넓게 잡고 LLM 이 좁힌다 (놓치면 영영 안 보이므로 recall 우선) */
 export const ERROR_REPORT_HINT_RE =

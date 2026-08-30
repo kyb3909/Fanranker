@@ -23,7 +23,7 @@ import { TEAM_BOARDS } from "../lib/constants/team-boards"
 config({ path: resolve(process.cwd(), ".env.local") })
 config({ path: resolve(process.cwd(), ".env") })
 
-const MODEL = process.env.SEED_MODEL || "gpt-4.1-mini"
+const MODEL = process.env.SEED_MODEL || "gpt-5.6-luna"
 const PERSONAS = ["user_persona_light", "user_persona_meme", "user_persona_dawn"]
 
 interface TargetPost {

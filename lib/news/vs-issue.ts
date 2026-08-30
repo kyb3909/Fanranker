@@ -55,7 +55,7 @@ async function generateVsIssue(title: string, content: unknown): Promise<VsIssue
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0.4 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0.4 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -68,7 +68,7 @@ async function generateVsIssue(title: string, content: unknown): Promise<VsIssue
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[]
     }
-    logUsage("news-vs-issue", "gpt-4o-mini", data)
+    logUsage("news-vs-issue", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       no_issue?: boolean
       question?: string

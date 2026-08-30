@@ -63,7 +63,7 @@ async function extractNames(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        ...chatParams("gpt-4o-mini", { temperature: 0 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -78,7 +78,7 @@ async function extractNames(
     })
     if (!res.ok) return empty
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("naming-audit", "gpt-4o-mini", data)
+    logUsage("naming-audit", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       players?: unknown[]
       coaches?: unknown[]

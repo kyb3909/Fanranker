@@ -36,7 +36,7 @@ async function judgeIdolPhotos(urls: string[]): Promise<boolean[]> {
       signal: AbortSignal.timeout(30000),
       body: JSON.stringify({
         // chatParams 필수 — 모델 세대별 파라미터 차이를 흡수 (lib/llm/openai-params)
-        ...chatParams("gpt-4o-mini", { temperature: 0, max_tokens: 300 }),
+        ...chatParams("gpt-5.6-luna", { temperature: 0, max_tokens: 300 }),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -59,7 +59,7 @@ async function judgeIdolPhotos(urls: string[]): Promise<boolean[]> {
     })
     if (!res.ok) return urls.map(() => true)
     const d = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("admin-gallery", "gpt-4o-mini", d)
+    logUsage("admin-gallery", "gpt-5.6-luna", d)
     const parsed = JSON.parse(d.choices?.[0]?.message?.content ?? "{}") as {
       verdicts?: unknown[]
     }

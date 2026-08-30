@@ -26,6 +26,8 @@ const RATES_USD_PER_MTOK: Record<string, { input: number; cached: number; output
   "gpt-4o": { input: 2.5, cached: 1.25, output: 10 },
   "gpt-5.6-terra": { input: 2.0, cached: 0.2, output: 12 },
   "gpt-5.1": { input: 1.25, cached: 0.125, output: 10 },
+  // 2026-08-30 확인. 4o/4.1 항목은 지우지 않는다 — 과거 usage 행이 그 키로 남아 있다.
+  "gpt-5.6-luna": { input: 0.2, cached: 0.02, output: 1.2 },
 }
 
 export interface LlmUsage {

@@ -19,7 +19,7 @@ const SOURCES = [
 const MAX_NEW_PER_SOURCE = 5
 const REDDIT_BASE = "https://www.reddit.com"
 const USER_AGENT = "GongnoriSeedBot/1.0"
-const OPENAI_MODEL = "gpt-4o"
+const OPENAI_MODEL = "gpt-5.6-luna"
 
 // ── Reddit RSS 파싱 ───────────────────────────────────────
 

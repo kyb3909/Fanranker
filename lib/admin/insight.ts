@@ -19,7 +19,7 @@ import { logUsage } from "@/lib/llm/usage-log"
  *    "봐야 할 것"만큼 가치 있다.
  */
 
-const DEFAULT_MODEL = process.env.ADMIN_INSIGHT_MODEL || "gpt-4.1"
+const DEFAULT_MODEL = process.env.ADMIN_INSIGHT_MODEL || "gpt-5.6-luna"
 
 interface InsightItem {
   title: string
