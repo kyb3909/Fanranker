@@ -6,6 +6,10 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
 import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lookup"
+import { tokens, teamMatches } from "@/lib/match/pair-fixtures"
+
+// 종전 공개 API 유지 — 판정 자체는 순수 모듈이 소유한다 (2026-08-30)
+export { teamMatches }
 import {
   readDayMatches,
   readMatchDetails,
@@ -78,19 +82,6 @@ export const cachedTeamEn = unstable_cache(
   { revalidate: 3600 }
 )
 
-function tokens(s: string): string[] {
-  return (
-    s
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      // 3글자 미만은 버린다 — "fc"·"sc" 같은 접미가 서로 다른 팀을 이어붙인다
-      .filter((t) => t.length >= 3 && !["afc", "the"].includes(t))
-  )
-}
-
 /**
  * LFA 축약명과 우리 영문명이 같은 팀인가 — **느슨한 양방향 접두 겹침**.
  *
@@ -99,12 +90,6 @@ function tokens(s: string): string[] {
  * 유의미한 토큰이 하나라도 서로의 접두사면 후보로 보고, 최종 확정은 호출부의
  * "정확히 1건" 규칙이 담당한다.
  */
-export function teamMatches(lfaName: string, ourEn: string): boolean {
-  const a = tokens(lfaName)
-  const b = tokens(ourEn)
-  if (a.length === 0 || b.length === 0) return false
-  return a.some((t) => b.some((u) => u.startsWith(t) || t.startsWith(u)))
-}
 
 /* ── 날짜별 경기 목록 (크레딧 절약의 핵심) ── */
 

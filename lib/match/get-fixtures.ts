@@ -4,7 +4,8 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
-import { cachedTeamEn, teamMatches } from "@/lib/lfa/match"
+import { cachedTeamEn } from "@/lib/lfa/match"
+import { normTeam, pickLfaCounterpart } from "@/lib/match/pair-fixtures"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
 
 /**
@@ -134,15 +135,6 @@ function slotKey(leagueCode: string, matchTime: string): string {
   return `${leagueCode}|${new Date(matchTime).toISOString().slice(0, 16)}`
 }
 
-/** 팀명 대조용 정규화 (한글은 그대로, 영문은 소문자·기호 제거) */
-function normTeam(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9가-힣]/g, "")
-}
-
 /**
  * betman 행이 어느 LFA 경기인가 — 같은 슬롯 후보 중에서 고른다.
  * 후보가 하나면 그대로, 여럿이면 팀명 대조로 좁힌다. 못 고르면 null
@@ -155,25 +147,6 @@ function normTeam(s: string): string {
  *       "sheva" 토큰이 잡는다). 한글화는 lfa_team_id 매핑이 있는 팀만 되므로
  *       예선 마이너 팀은 ①이 영영 못 잡는다 — 그게 두 줄의 원인이었다.
  */
-function pickLfaCounterpart(
-  betman: FixtureRow,
-  candidates: FixtureRow[],
-  teamEn: Map<string, string>
-): FixtureRow | null {
-  if (candidates.length === 1) return candidates[0]
-  const bh = normTeam(betman.homeTeam)
-  const ba = normTeam(betman.awayTeam)
-  const bhEn = teamEn.get(betman.homeTeam.trim())
-  const baEn = teamEn.get(betman.awayTeam.trim())
-  const overlaps = (x: string, y: string) =>
-    x.length >= 2 && y.length >= 2 && (x.startsWith(y) || y.startsWith(x))
-  const sideMatch = (candName: string, korNorm: string, en: string | undefined) =>
-    overlaps(normTeam(candName), korNorm) || (!!en && teamMatches(candName, en))
-  const hits = candidates.filter(
-    (c) => sideMatch(c.homeTeam, bh, bhEn) && sideMatch(c.awayTeam, ba, baEn)
-  )
-  return hits.length === 1 ? hits[0] : null
-}
 
 /**
  * 매치데이 전 경기 — **LFA 가 정본, betman 이 보강**.
@@ -218,12 +191,34 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
   // LFA 가 그날 실제로 커버하는 리그 — 아래 "짝 없는 betman 버리기"의 안전선
   const leaguesInLfa = new Set(lfa.map((f) => f.leagueCode))
+  const droppedForLog: {
+    betman: string
+    league: string
+    candidates: string[]
+    homeEn: string | null
+    awayEn: string | null
+  }[] = []
   for (const b of betman) {
     const candidates = (slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []).filter(
       (c) => !consumed.has(c)
     )
     const hit = pickLfaCounterpart(b, candidates, teamEn)
     if (!hit) {
+      /**
+       * ⚠️ 여기서 버려진 경기는 gameId 를 잃고 매치 링크·불판·예열이 통째로 끊긴다.
+       *    2026-08-30 실사고(EPL 3경기·세리에A 2경기)에서 **읽기만으로는 원인을 못
+       *    좁혔다** — 짝짓기 함수는 단위 시험에서 실제 사전값으로 전부 통과하는데
+       *    프로덕션에서는 같은 슬롯에 2경기 이상이면 전멸했다. 입력이 다르다는 뜻인데
+       *    그게 사전인지 후보 목록인지 알 방법이 없었다. 그래서 **버리는 순간에 증거를
+       *    남긴다** — 조용한 실패가 이 저장소에서 가장 비싼 실패다.
+       */
+      droppedForLog.push({
+        betman: `${b.homeTeam} vs ${b.awayTeam}`,
+        league: b.leagueCode,
+        candidates: candidates.map((c) => `${c.homeTeam} vs ${c.awayTeam}`),
+        homeEn: teamEn.get(b.homeTeam.trim()) ?? null,
+        awayEn: teamEn.get(b.awayTeam.trim()) ?? null,
+      })
       // ⚠️ 짝 못 찾은 betman 행은 **버린다** (2026-08-20 운영자: "돈 내고 가져오는
       //    피드를 우선시" — LFA 가 정본, betman 은 링크·한글명 주석). 종전엔 그대로
       //    실어서 이름 대조가 빗나갈 때마다 같은 경기가 두 줄이 됐다 — 대조를 아무리
@@ -254,6 +249,13 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       homeScore: pickScore(live, hit.homeScore, b.homeScore),
       awayScore: pickScore(live, hit.awayScore, b.awayScore),
     })
+  }
+  if (droppedForLog.length > 0) {
+    console.warn(
+      `[fixtures] betman 짝짓기 실패 ${droppedForLog.length}건 (사전 ${teamEn.size}개) — ` +
+        `이 경기들은 매치 링크·불판·예열을 잃는다: ` +
+        JSON.stringify(droppedForLog)
+    )
   }
   for (const row of byLfaId.values()) if (!consumed.has(row)) merged.push(row)
 
