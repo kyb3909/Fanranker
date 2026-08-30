@@ -2,7 +2,11 @@ import { NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { extractTransferBatch, type ExtractedTransfer } from "@/lib/saga/extract"
+import {
+  extractTransferBatch,
+  buildTeamEvidenceIndex,
+  type ExtractedTransfer,
+} from "@/lib/saga/extract"
 import { classifyTier } from "@/lib/saga/tier"
 import { identityKey, normalizePlayerKey, transferClusterKey } from "@/lib/saga/identity"
 import {
@@ -77,6 +81,37 @@ async function cronGet(request: Request) {
       .eq("category", "player")
     const aliasIndex = buildAliasIndex((aliasRows ?? []) as AliasRow[])
 
+    // ── 클럽 증거 대조용 팀 표기 색인 ──
+    // 두 사전을 합친다: team_dictionary 는 팀 수(310)를, 뉴스 표기 사전 team 항목은
+    // 약칭(psg·lfc·ol·om)을 준다 — 실측상 둘 다 있어야 한다(한쪽만 쓰면 42, 둘 다 29).
+    // ⚠️ category='team' 만 읽는다. 사가가 표기 모듈에서 빠져 있는 이유는 인물(선수/감독)
+    //    오염이고, 여기서 쓰는 건 치환이 아니라 **원제목 증거 대조**라 그 축에 안 걸린다.
+    // 실패해도 본 작업을 막지 않는다 — 색인이 없으면 종전 하드코딩 별칭으로 동작한다.
+    const [teamDictResult, teamAliasResult] = await Promise.all([
+      supabase.from("team_dictionary").select("name_en, name_kr, short_kr, aliases_kr"),
+      supabase
+        .from("news_alias_dictionary")
+        .select("romanized, preferred_ko, surfaces")
+        .eq("category", "team"),
+    ])
+    if (teamDictResult.error)
+      console.error("[saga-extract] 팀 사전 로드 실패", teamDictResult.error)
+    if (teamAliasResult.error)
+      console.error("[saga-extract] 팀 표기 로드 실패", teamAliasResult.error)
+    const teamIndex = buildTeamEvidenceIndex([
+      ...(teamDictResult.data ?? []).map((t) => [
+        t.name_en,
+        t.name_kr,
+        t.short_kr,
+        ...(t.aliases_kr ?? []),
+      ]),
+      ...(teamAliasResult.data ?? []).map((t) => [
+        t.romanized,
+        t.preferred_ko,
+        ...(t.surfaces ?? []),
+      ]),
+    ])
+
     let queued = 0
     let autoPublished = 0
     let discarded = 0
@@ -87,7 +122,8 @@ async function cronGet(request: Request) {
     for (let i = 0; i < pendingRows.length; i += BATCH) {
       const chunk = pendingRows.slice(i, i + BATCH)
       const results = await extractTransferBatch(
-        chunk.map((r) => ({ title: r.title, headlineKr: r.headline_kr }))
+        chunk.map((r) => ({ title: r.title, headlineKr: r.headline_kr })),
+        { teamIndex }
       )
 
       for (let j = 0; j < chunk.length; j++) {
