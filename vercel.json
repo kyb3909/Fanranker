@@ -143,6 +143,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/team-dictionary-backfill",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/squad-sync",
       "schedule": "20 19 * * *"
     }
