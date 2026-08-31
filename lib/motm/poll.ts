@@ -14,6 +14,7 @@ import {
   pickRichestLineup,
   type MotmOption,
 } from "@/lib/motm/options"
+import { lfaDetailRow, pickFtScore, type LfaDetailRow } from "@/lib/motm/ft-evidence"
 
 // 기존 import 경로를 지킨다 (매치 페이지·투표 API·카드가 여기서 가져간다)
 export { buildMotmOptions, mergeMotmOptions, pickRichestLineup }
@@ -54,9 +55,35 @@ export function motmClosesAtUtc(matchTimeIso: string): string {
   ).toISOString()
 }
 
+/** `.in()` 한 번에 넣을 id 수 — 큰 배열은 400 으로 돌아온다 (재발 패턴) */
+const IN_CHUNK = 100
+
+/** 형제 gameId 들의 LFA 상세(FT 증거)를 gameId 별로 모아온다 */
+async function loadLfaDetails(gameIds: string[]): Promise<Map<string, LfaDetailRow[]>> {
+  const out = new Map<string, LfaDetailRow[]>()
+  const ids = [...new Set(gameIds)]
+  if (ids.length === 0) return out
+  const supabase = createServiceRoleClient()
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from("match_details_cache")
+      .select("game_id, finished, payload")
+      .in("game_id", ids.slice(i, i + IN_CHUNK))
+    for (const row of data ?? []) {
+      const key = String(row.game_id)
+      const list = out.get(key) ?? []
+      list.push(
+        lfaDetailRow(row as { finished?: unknown; payload?: { homeScore?: unknown } | null })
+      )
+      out.set(key, list)
+    }
+  }
+  return out
+}
+
 export interface MotmSweepResult {
   finalized: number
-  created: { matchKey: string; pollId: string; candidates: number }[]
+  created: { matchKey: string; pollId: string; candidates: number; ftSource: "betman" | "lfa" }[]
   skipped: { matchKey: string; reason: string }[]
   /** 후보가 빠져 있던 기존 폴을 되살린 건수 */
   repaired: { pollId: string; added: number }[]
@@ -137,8 +164,26 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
       awayScore: g.away_score != null ? Number(g.away_score) : null,
     })
   }
-  // 연기/취소 잔재 가드 — 스코어가 한 번도 안 찍힌 경기는 FT 로 단정하지 않는다
-  const cands = [...byKey.values()].filter((c) => c.homeScore != null)
+  /**
+   * 연기/취소 잔재 가드 — 스코어가 한 번도 안 찍힌 경기는 FT 로 단정하지 않는다.
+   *
+   * ⚠️ 증거를 **둘 중 하나**로 받는다: betman 스코어 또는 LFA 상세의 `finished`.
+   *    종전엔 betman 하나뿐이라, 돈 주고 사는 피드가 이미 아는 결과를 배치로 올라오는
+   *    무료 피드가 따라올 때까지 기다렸다 (실측 최대 7시간 40분 — ft-evidence.ts 참조).
+   *    가드 자체는 그대로다 — 시간만으로 FT 를 단정하는 경로는 생기지 않는다.
+   */
+  const lfaByGameId = await loadLfaDetails([...byKey.values()].flatMap((c) => c.gameIds))
+  const cands: (Cand & { ftSource: "betman" | "lfa" })[] = []
+  for (const c of byKey.values()) {
+    const ft = pickFtScore(
+      c,
+      c.gameIds.flatMap((id) => lfaByGameId.get(id) ?? [])
+    )
+    if (!ft) continue
+    c.homeScore = ft.home
+    c.awayScore = ft.away
+    cands.push({ ...c, ftSource: ft.source })
+  }
 
   const created: MotmSweepResult["created"] = []
   const skipped: MotmSweepResult["skipped"] = []
@@ -256,7 +301,12 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
         skipped.push({ matchKey: c.matchKey, reason: `insert:${error.code ?? "err"}` })
         continue
       }
-      created.push({ matchKey: c.matchKey, pollId: String(poll.id), candidates: options.length })
+      created.push({
+        matchKey: c.matchKey,
+        pollId: String(poll.id),
+        candidates: options.length,
+        ftSource: c.ftSource,
+      })
     } catch (e) {
       skipped.push({ matchKey: c.matchKey, reason: e instanceof Error ? e.message : "unknown" })
     }
