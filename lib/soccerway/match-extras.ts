@@ -14,6 +14,11 @@ import {
   type TeamSide,
 } from "@/lib/soccerway/goal-facts"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
+import {
+  pickReportArticle,
+  teamSlugsFromMatchUrl,
+  type ArticleMeta,
+} from "@/lib/soccerway/report-article"
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import {
@@ -137,41 +142,92 @@ interface MatchReport {
   paragraphs: string[]
 }
 
-/** fsned → 이 경기의 기사 id (없으면 null — 리포트는 FT 후 뒤늦게 붙는다) */
-async function findArticleId(eventId: string): Promise<string | null> {
+/**
+ * fsned → 이 경기 화면에 붙는 기사 목록.
+ *
+ * ⚠️ 섹션 이름이 `articlesOnParticipants` 다 — **"이 경기의 리포트"가 아니라 "두 팀을
+ *    언급한 최신 기사"** 다. 종전엔 여기서 맨 앞을 그냥 집었고, 그 결과 나폴리-코모 ·
+ *    칼리아리-인테르 · 모나코-마르세유 세 경기가 같은 주말 라운드업 하나를 원문으로 받았다.
+ *    고르는 일은 `pickReportArticle` 이 한다 (판별 근거·실측은 report-article.ts).
+ */
+async function fetchEventArticleRefs(
+  eventId: string
+): Promise<{ id: string; sortKeyMs: number }[]> {
   const res = await fetch(
     `${GRAPHQL_BASE}?_hash=fsned&projectId=2020&entityId=${eventId}&layoutTypeId=2`,
     { headers: FETCH_HEADERS }
   )
-  if (!res.ok) return null
+  if (!res.ok) return []
   const json = (await res.json()) as {
     data?: {
       findNewsLayoutForEventDetail?: {
-        sections?: { articles?: { id?: string }[] }[]
+        sections?: { articles?: { id?: string; article?: { sortKey?: number } }[] }[]
       }
     }
   }
+  const refs: { id: string; sortKeyMs: number }[] = []
   for (const s of json.data?.findNewsLayoutForEventDetail?.sections ?? []) {
-    for (const a of s.articles ?? []) if (a.id) return a.id
+    for (const a of s.articles ?? []) {
+      if (!a.id) continue
+      const sk = typeof a.article?.sortKey === "number" ? a.article.sortKey * 1000 : 0
+      refs.push({ id: a.id, sortKeyMs: sk })
+    }
   }
-  return null
+  return refs
 }
 
-/** nah → 슬러그 → 뉴스 페이지 SSR HTML → 본문 문단 (영문) */
-async function fetchArticleBody(
-  articleId: string
-): Promise<{ title: string; paragraphs: string[] } | null> {
+/** nah → 기사 메타(슬러그·발행시각). 판별 근거라 본문보다 **먼저** 받는다 */
+async function fetchArticleMeta(articleId: string): Promise<ArticleMeta | null> {
   const meta = await fetch(`${GRAPHQL_BASE}?_hash=nah&articleId=${articleId}`, {
     headers: FETCH_HEADERS,
   })
   if (!meta.ok) return null
   const json = (await meta.json()) as {
-    data?: { findCatArticleById?: { title?: string; slug?: string } }
+    data?: { findCatArticleById?: { title?: string; slug?: string; publishedAt?: number } }
   }
   const art = json.data?.findCatArticleById
   if (!art?.title || !art.slug) return null
+  return {
+    id: articleId,
+    slug: art.slug,
+    title: art.title,
+    // ⚠️ sortKey(=수정 시각)가 아니라 **최초 발행**이어야 한다. 라운드업은 경기 전날
+    //    발행돼 경기 뒤에 수정되므로, sortKey 로 재면 킥오프 게이트를 그냥 통과한다.
+    publishedAtMs: typeof art.publishedAt === "number" ? art.publishedAt * 1000 : 0,
+  }
+}
 
-  const page = await fetch(`https://www.soccerway.com/news/${art.slug}/${articleId}/`, {
+/** 메타를 받아볼 기사 수 상한 — 목록은 14건씩 오는데 리포트는 FT 직후 앞쪽에 있다 */
+const META_LOOKUP_LIMIT = 8
+
+/** 이 경기 **전용** 리포트 기사. 없으면 null — 라운드업으로 때우지 않는다 */
+async function findReportArticle(
+  eventId: string,
+  candidateUrl: string,
+  kickoffMs: number
+): Promise<ArticleMeta | null> {
+  const teamSlugs = teamSlugsFromMatchUrl(candidateUrl)
+  if (!teamSlugs) {
+    console.warn(`[match-report] 팀 슬러그 추출 실패 (event ${eventId}): ${candidateUrl}`)
+    return null
+  }
+  const refs = (await fetchEventArticleRefs(eventId))
+    // sortKey >= 발행시각이라, 이걸로 자르면 필요한 후보를 잃지 않는다 (싼 선별)
+    .filter((r) => r.sortKeyMs >= kickoffMs)
+    .sort((a, b) => a.sortKeyMs - b.sortKeyMs)
+    .slice(0, META_LOOKUP_LIMIT)
+
+  const metas: ArticleMeta[] = []
+  for (const r of refs) {
+    const m = await fetchArticleMeta(r.id).catch(() => null)
+    if (m) metas.push(m)
+  }
+  return pickReportArticle(metas, teamSlugs, kickoffMs)
+}
+
+/** 뉴스 페이지 SSR HTML → 본문 문단 (영문) */
+async function fetchArticleParagraphs(articleId: string, slug: string): Promise<string[] | null> {
+  const page = await fetch(`https://www.soccerway.com/news/${slug}/${articleId}/`, {
     headers: { ...FETCH_HEADERS, Accept: "text/html" },
   })
   if (!page.ok) return null
@@ -188,7 +244,7 @@ async function fetchArticleBody(
     // 스크립트 잔재·내비 텍스트 컷 — 본문 문단은 길고 코드 문자가 없다
     .filter((t) => t.length > 80 && !/[{}<>]|function|window\./.test(t))
   if (paragraphs.length < 2) return null
-  return { title: art.title, paragraphs }
+  return paragraphs
 }
 
 /* ── 리포트 파이프라인: ① 사건 추출 → ② 이름 확정(라인업 대조) → ③ 한국어 작성 ──
@@ -533,15 +589,19 @@ function cachedReport(
   homeTeam: string,
   awayTeam: string,
   /** betman 확정 스코어. ⚠️ null 이면 리포트를 아예 만들지 않는다 (아래 fail-closed) */
-  finalScore: string | null
+  finalScore: string | null,
+  /** soccerway 매치 URL — 여기서 팀 슬러그를 뽑아 원문을 판별한다 */
+  candidateUrl: string,
+  kickoffMs: number
 ) {
   return unstable_cache(
     async (): Promise<MatchReport | null> => {
-      // 기사가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다 (호출 2회)
-      const articleId = await findArticleId(eventId)
-      if (!articleId) return null
-      const body = await fetchArticleBody(articleId)
-      if (!body) return null
+      // 전용 리포트가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다
+      const article = await findReportArticle(eventId, candidateUrl, kickoffMs)
+      if (!article) return null
+      const paragraphs = await fetchArticleParagraphs(article.id, article.slug)
+      if (!paragraphs) return null
+      const body = { title: article.title, paragraphs }
 
       // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
       const extracted = await extractEvents(body.title, body.paragraphs)
@@ -660,8 +720,10 @@ function cachedReport(
       }
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
-    // v14: 득점 정본을 라인업에서 꺼내고 소속 표기 게이트 추가 (2026-08-29)
-    ["match-report-v14", eventId],
+    // v15: 원문을 **그 경기 전용 리포트**로 판별 (2026-09-01 — 종전엔 목록 맨 앞을
+    //      집어 주말 라운드업이 원문이 됐다). ⚠️ 키를 올려야 v14 가 물고 있던 실패·
+    //      라운드업 결과가 즉시 무효가 된다.
+    ["match-report-v15", eventId],
     // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
     { revalidate: 1800 }
   )
@@ -771,7 +833,9 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
           gameId,
           resolved.homeTeam,
           resolved.awayTeam,
-          confirmedScore
+          confirmedScore,
+          resolved.candidateUrl,
+          new Date(resolved.matchTime).getTime()
         )().catch(() => null)
       : Promise.resolve(null),
   ])

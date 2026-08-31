@@ -244,7 +244,13 @@ interface ResolvedEvent {
     league_code: string | null
     match_time: string
   }
-  attempt: { page_home_en: string; page_away_en: string; home_away_flip: boolean | null }
+  attempt: {
+    page_home_en: string
+    page_away_en: string
+    home_away_flip: boolean | null
+    /** 리포트 원문 판별이 여기서 팀 슬러그를 뽑는다 (report-article.ts) */
+    candidate_url: string
+  }
 }
 
 async function resolveEventCore(
@@ -322,6 +328,7 @@ async function resolveEventCore(
       page_home_en: String(attempt.page_home_en),
       page_away_en: String(attempt.page_away_en),
       home_away_flip: attempt.home_away_flip as boolean | null,
+      candidate_url: String(attempt.candidate_url),
     },
   }
 }
@@ -338,6 +345,8 @@ export async function resolveMatchEvent(gameId: string): Promise<{
   /** 산 피드 교차검증용 (lookupLfaDayEntry 가 이 둘로 조인한다) */
   leagueCode: string | null
   matchTime: string
+  /** soccerway 매치 URL — 리포트 원문 판별이 여기서 팀 슬러그를 뽑는다 */
+  candidateUrl: string
 } | null> {
   try {
     const r = await resolveEventCore(gameId)
@@ -353,6 +362,7 @@ export async function resolveMatchEvent(gameId: string): Promise<{
       awayScore: num(r.game.away_score),
       leagueCode: r.game.league_code,
       matchTime: r.game.match_time,
+      candidateUrl: r.attempt.candidate_url,
     }
   } catch {
     return null
