@@ -6,7 +6,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
 import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lookup"
-import { tokens, teamMatches } from "@/lib/match/pair-fixtures"
+import { teamMatches } from "@/lib/match/pair-fixtures"
+import { hasHangul, localizeFromSquad, localizeTimelineName } from "@/lib/lfa/scorer-name"
 
 // 종전 공개 API 유지 — 판정 자체는 순수 모듈이 소유한다 (2026-08-30)
 export { teamMatches }
@@ -237,37 +238,6 @@ export interface LfaMatchInfo {
 
 /* ── 득점자 한글화 ── */
 
-/**
- * LFA 득점자명("R. Calafiori")을 그 경기 라인업의 한글 표기로 바꾼다.
- *
- * 콘텐츠는 한글이 원칙이라 영문 이름을 그대로 올릴 수 없다. 근거는 LLM 의 감이 아니라
- * **그 경기의 실제 라인업**이다 (match-extras.ts 의 groundPlayerNames 와 같은 규율).
- * 22명으로 후보가 좁혀지므로 성(姓) 하나로도 거의 유일하게 결정된다
- * (2026-08-16 실측: 40명 중 39명 자동 매칭). 애매하면 원문 유지 — 틀린 한글보다 낫다.
- */
-function localizeScorer(lfaName: string, lineup: LineupResponse): string {
-  if (lineup.status !== "ready") return lfaName
-  const roster = [
-    ...lineup.home.starters,
-    ...lineup.home.bench,
-    ...lineup.away.starters,
-    ...lineup.away.bench,
-  ]
-  // 앞 이니셜("R.")을 떼고 남은 성을 로마자 슬러그 토큰과 대조
-  const surname = tokens(lfaName.replace(/^[A-Za-z]\.\s*/, ""))
-  if (surname.length === 0) return lfaName
-  const hits = roster.filter((p) => {
-    const rt = tokens(p.roman ?? "")
-    return surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))
-  })
-  return hits.length === 1 ? hits[0].label : lfaName
-}
-
-/** 한글이 섞였나 — 한글화가 실제로 됐는지의 유일한 판정 기준 */
-function hasHangul(s: string): boolean {
-  return /[가-힣]/.test(s)
-}
-
 /** 사전에 등재된 한 팀의 선수 (스쿼드 폴백용) */
 interface SquadName {
   nameEn: string
@@ -295,38 +265,6 @@ const cachedSquad = unstable_cache(
   ["lfa-squad-names-v3"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
-
-/**
- * 라인업 없이 득점자를 한글화한다 — **스쿼드 사전 폴백**.
- *
- * ⚠️ 종전엔 한글화가 라인업에 전적으로 매달려 있었다. 라인업은 경기 20여 시간 뒤 원본에서
- *    사라지므로, 지난 경기를 열면 득점자만 영문으로 남았다 ("N. Pepe") — 라인업이 안 뜨는
- *    것과 득점자가 영문인 것은 **같은 원인**이었다 (2026-08-18 운영자 제보).
- *    스쿼드 사전은 영구 저장이라 시간이 지나도 한글이 유지된다.
- *
- * 팀을 반드시 좁혀서 본다: 같은 성이 양 팀에 있을 수 있다 (이 경기에 게예가 둘 —
- * 비야레알 파페 게예, 라싱 마게테 게예). 이니셜이 오면 이름 첫 글자로 한 번 더 거른다.
- */
-function localizeFromSquad(lfaName: string, squad: SquadName[]): string {
-  if (squad.length === 0) return lfaName
-  const initial = lfaName.match(/^([A-Za-z])\.\s*/)?.[1]?.toLowerCase() ?? null
-  const surname = tokens(lfaName.replace(/^[A-Za-z]\.\s*/, ""))
-  if (surname.length === 0) return lfaName
-
-  const hits = squad.filter((p) => {
-    const rt = tokens(p.nameEn)
-    if (!surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))) {
-      return false
-    }
-    if (!initial) return true
-    // 성 토큰이 아닌 나머지(=이름) 중 하나가 이니셜로 시작해야 한다
-    const rest = rt.filter(
-      (u) => !surname.some((t) => u === t || u.startsWith(t) || t.startsWith(u))
-    )
-    return rest.length === 0 || rest.some((u) => u.startsWith(initial))
-  })
-  return hits.length === 1 ? hits[0].nameKr : lfaName
-}
 
 /* ── 본체 ── */
 
@@ -570,21 +508,18 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
       ? await Promise.all([cachedSquad(game.homeTeam), cachedSquad(game.awayTeam)])
       : [[], []]
 
-    // 이름 한글화 한 사람분 — 라인업 라벨 → 스쿼드 사전 폴백.
-    // ⚠️ 판정 기준은 "값이 바뀌었나" 가 아니라 **한글이 됐나** 다 (2026-08-18 실사고:
-    //    라인업이 로마자 라벨을 돌려주면 바뀐 걸로 착각해 폴백을 건너뛰었다).
-    const localizeName = (raw: string | undefined, side: "home" | "away"): string | null => {
-      const name = raw?.trim()
-      if (!name) return null
-      const fromLineup = localizeScorer(name, lineup)
-      if (hasHangul(fromLineup)) return fromLineup
-      const squad = side === "away" ? awaySquad : homeSquad
-      for (const candidate of [name, fromLineup]) {
-        const ko = localizeFromSquad(candidate, squad)
-        if (hasHangul(ko)) return ko
-      }
-      return fromLineup
-    }
+    // 이름 한글화 한 사람분 — 판정은 순수 모듈이 소유한다 (백필 CLI 가 같은 규칙을 쓴다)
+    const roster =
+      lineup.status === "ready"
+        ? [
+            ...lineup.home.starters,
+            ...lineup.home.bench,
+            ...lineup.away.starters,
+            ...lineup.away.bench,
+          ]
+        : []
+    const localizeName = (raw: string | undefined, side: "home" | "away"): string | null =>
+      localizeTimelineName(raw, roster, side === "away" ? awaySquad : homeSquad)
 
     for (const { e, kind } of rawEvents) {
       const minute = String(e.time ?? "")

@@ -16,6 +16,7 @@
  * ("순수 모듈에 lib/env·supabase/server 최상위 import 금지").
  * 그래서 판정만 여기로 뗀다 — I/O 는 호출부가 하고, 여기는 문자열만 본다.
  */
+import { foldLatin } from "@/lib/text/fold-latin"
 
 /**
  * 팀명 대조용 정규화 (한글은 그대로, 영문은 소문자·기호 제거).
@@ -42,12 +43,17 @@ export function normTeam(s: string): string {
     .replace(/[^a-z0-9가-힣]/g, "")
 }
 
+/**
+ * ⚠️ **foldLatin 을 거친다** (2026-09-01). NFD 는 발음 부호만 분해한다 — `Ø`·`Ł`·`Đ` 는
+ *    독립 글자라 분해되지 않고 아래 `[^a-z0-9\s]` 가 **통째로 지운다.**
+ *      "Ødegaard" → "  degaard" → ["degaard"]   vs  "Odegaard Martin" → ["odegaard","martin"]
+ *    토큰이 안 겹쳐 대조가 조용히 실패했다. 이 함수는 `localizeScorer`(lib/lfa/match.ts)가
+ *    타임라인 이름을 **저장 시점에** 한글화할 때도 쓰므로, 실패가 저장분에 굳었다 —
+ *    끝난 경기 상세는 수명이 Infinity 라 스스로 낫지 않는다. (fold-latin.ts 참조)
+ */
 export function tokens(s: string): string[] {
   return (
-    s
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
+    foldLatin(s)
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/)
       // 3글자 미만은 버린다 — "fc"·"sc" 같은 접미가 서로 다른 팀을 이어붙인다
