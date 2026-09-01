@@ -218,3 +218,64 @@ export async function syncSquadNamesToNews(
 
   return out
 }
+
+/**
+ * 표기 **정정**을 뉴스 사전에 반영한다 — 옛 표기를 버리지 않는 것이 핵심이다 (2026-09-01).
+ *
+ * ## 왜 필요한가
+ * 스쿼드 표기를 고치면 `update({ name_kr })` 가 **옛 값을 그냥 덮는다.** 그래서 정정이
+ * 저장분(라인업 라벨·타임라인·리포트 본문·발행 글)으로 퍼질 길이 없었다 — 2026-09-01
+ * "마르틴 외데고르 → 마틴 외데고르" 하나를 고치는 데 9곳을 손으로 SQL 했다.
+ * 전파를 자동화하려 해도 **(무엇을 → 무엇으로) 쌍이 어디에도 안 남아** 입력이 없었다.
+ *
+ * 여기서 옛 표기를 `hangul_alts` 에 적어 두면 그 쌍이 생긴다. 그러면 공짜로 따라오는 것들:
+ *   · `buildNamingPairs` 가 (옛 → 새) 쌍을 만들어 신규 발행 글에 자동 적용
+ *   · 불변식 `notation_alt_in_title` 이 옛 표기가 남은 발행물을 찾아 준다
+ *   · 일괄 전파 CLI 가 저장분을 훑을 근거를 갖는다
+ *
+ * ## ⚠️ 일괄 동기화와 규칙이 다른 이유
+ * `syncSquadNamesToNews` 는 "없는 것만 넣고 있는 것은 안 건드린다" 다 — 양쪽 중 어느 쪽이
+ * 옳은지 기계가 모르기 때문이다(실측 25명 표기 상충, 어느 쪽도 일관되게 옳지 않았다).
+ * 그런데 **이 함수는 운영자가 방금 고른 결과**를 받는다. 표기 정본은 운영자 확정이므로
+ * 여기서는 `preferred_ko` 를 덮는 것이 맞다. 둘을 같은 규칙으로 묶으면 안 된다.
+ *
+ * ⚠️ 첫 입력(옛 값 없음)은 정정이 아니다 — 아무것도 하지 않는다.
+ * ⚠️ 뉴스 사전에 항목이 없으면 만들지 않는다. 생성은 `syncSquadNamesToNews` 의 몫이고,
+ *    여기서 만들면 같은 사람을 두 규칙으로 두 번 넣게 된다.
+ */
+export async function recordNameCorrection(
+  supabase: SupabaseClient,
+  opts: { nameEn: string; oldNameKr: string | null; newNameKr: string }
+): Promise<"updated" | "not_a_correction" | "no_entry"> {
+  const oldKr = (opts.oldNameKr ?? "").trim()
+  const newKr = opts.newNameKr.trim()
+  if (!oldKr || !newKr || oldKr === newKr) return "not_a_correction"
+
+  const key = romanKey(opts.nameEn)
+  const { data: rows } = await supabase
+    .from("news_alias_dictionary")
+    .select("id, preferred_ko, hangul_alts, surfaces")
+    .eq("category", "player")
+    .or(`id.eq.${newsId(opts.nameEn)},romanized.eq.${opts.nameEn}`)
+  // 항목이 여럿이면 손대지 않는다 — 어느 쪽이 이 선수인지 기계가 못 고른다 (fail-closed)
+  const entry = (rows ?? []).length === 1 ? rows![0] : null
+  if (!entry) return "no_entry"
+
+  const alts = new Set<string>(((entry.hangul_alts as string[] | null) ?? []).map(String))
+  alts.add(oldKr)
+  alts.delete(newKr) // 새 대표 표기가 자기 별칭에 남아 있으면 자기 자신을 치환한다
+  const surfaces = new Set<string>(((entry.surfaces as string[] | null) ?? []).map(String))
+  surfaces.add(key)
+  surfaces.add(newKr)
+
+  const { error } = await supabase
+    .from("news_alias_dictionary")
+    .update({
+      preferred_ko: newKr,
+      hangul_alts: [...alts],
+      surfaces: [...surfaces],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", entry.id)
+  return error ? "no_entry" : "updated"
+}

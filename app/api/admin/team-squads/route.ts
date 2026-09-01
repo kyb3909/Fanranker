@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { requireStaffApi } from "@/lib/admin/roles"
 import { apiBadRequest, apiError } from "@/lib/api-error"
-import { syncSquadNamesToNews, resolveNotationConflict } from "@/lib/dictionary/sync-news"
+import {
+  syncSquadNamesToNews,
+  resolveNotationConflict,
+  recordNameCorrection,
+} from "@/lib/dictionary/sync-news"
 
 export const dynamic = "force-dynamic"
 
@@ -173,6 +178,53 @@ export async function GET(req: NextRequest) {
   })
 }
 
+/**
+ * 스쿼드 한글명 반영 — **inline_save 와 csv_import 가 같이 쓴다.**
+ *
+ * ⚠️ 쓰기 전에 옛 값을 읽는다. `update` 는 새 값을 돌려주므로, 여기서 안 읽으면
+ *    "무엇을 → 무엇으로" 쌍이 영영 사라진다. 그 쌍이 없어서 2026-09-01 에 표기 하나를
+ *    고치는 데 저장분 9곳을 손으로 SQL 했다 (recordNameCorrection 주석 참조).
+ */
+async function applySquadNames(
+  supabase: SupabaseClient,
+  updates: { team: string; slug: string; nameKr: string }[]
+): Promise<{ updated: number; corrections: number; failed: string[] }> {
+  let updated = 0
+  let corrections = 0
+  const failed: string[] = []
+  for (const u of updates) {
+    // 옛 값 — 정정인지 첫 입력인지 가르는 유일한 근거
+    const { data: before } = await supabase
+      .from("team_squads")
+      .select("name_kr, name_en")
+      .eq("soccerway_team_id", u.team)
+      .eq("player_slug", u.slug)
+      .maybeSingle()
+
+    const { error, count } = await supabase
+      .from("team_squads")
+      .update({ name_kr: u.nameKr, status: "confirmed", updated_at: new Date().toISOString() })
+      .eq("soccerway_team_id", u.team)
+      .eq("player_slug", u.slug)
+    if (error) {
+      failed.push(`${u.slug}: ${error.message}`)
+      continue
+    }
+    updated += count ?? 1
+
+    // 표기 사전은 문이 하나다 — 여기서 직접 만지지 않고 sync-news 를 거친다
+    if (before?.name_en) {
+      const r = await recordNameCorrection(supabase, {
+        nameEn: String(before.name_en),
+        oldNameKr: before.name_kr ? String(before.name_kr) : null,
+        newNameKr: u.nameKr,
+      }).catch(() => "no_entry" as const)
+      if (r === "updated") corrections++
+    }
+  }
+  return { updated, corrections, failed }
+}
+
 const csvImportSchema = z.object({
   action: z.literal("csv_import"),
   csv: z.string().min(1),
@@ -252,18 +304,8 @@ export async function POST(req: NextRequest) {
       }
       updates.push({ team: r.soccerway_team_id, slug: r.player_slug, nameKr })
     }
-    let updated = 0
-    const failed: string[] = []
-    for (const u of updates) {
-      const { error, count } = await supabase
-        .from("team_squads")
-        .update({ name_kr: u.nameKr, status: "confirmed", updated_at: new Date().toISOString() })
-        .eq("soccerway_team_id", u.team)
-        .eq("player_slug", u.slug)
-      if (error) failed.push(`${u.slug}: ${error.message}`)
-      else updated += count ?? 1
-    }
-    return NextResponse.json({ updated, failed, skipped })
+    const { updated, corrections, failed } = await applySquadNames(supabase, updates)
+    return NextResponse.json({ updated, corrections, failed, skipped })
   }
 
   // ── 팀 단위 확정 ──
@@ -361,17 +403,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ dry_run: true, would_update: updates.length, skipped })
   }
 
-  let updated = 0
-  const failed: string[] = []
-  for (const u of updates) {
-    const { error, count } = await supabase
-      .from("team_squads")
-      .update({ name_kr: u.nameKr, status: "confirmed", updated_at: new Date().toISOString() })
-      .eq("soccerway_team_id", u.team)
-      .eq("player_slug", u.slug)
-    if (error) failed.push(`${u.slug}: ${error.message}`)
-    else updated += count ?? 1
-  }
+  const { updated, corrections, failed } = await applySquadNames(supabase, updates)
 
-  return NextResponse.json({ updated, failed, skipped })
+  return NextResponse.json({ updated, corrections, failed, skipped })
 }
