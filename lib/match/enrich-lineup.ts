@@ -1,3 +1,4 @@
+import { foldLatin } from "@/lib/text/fold-latin"
 import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
 import type { LfaTimelineEvent } from "@/lib/lfa/match"
 
@@ -28,10 +29,9 @@ interface Player {
 }
 
 function toks(s: string): string[] {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
+  // ⚠️ player-name.ts 와 **같은 규칙**이어야 한다. 여기만 foldLatin 이 빠져 있어서,
+  //    라인업에는 한글로 뜨는 선수가 타임라인에는 "M. Ødegaard" 로 남았다 (2026-09-01).
+  return foldLatin(s)
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
     .filter((t) => t.length >= 3)

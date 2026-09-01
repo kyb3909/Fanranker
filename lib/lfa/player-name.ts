@@ -5,6 +5,7 @@
  *    못 돌았다 — 그래서 MoTM 투표판에 피드 약어("Palacios C.")가 그대로 나가는데도
  *    **테스트를 붙일 수가 없었다.** injury-terms·day-freshness 와 같은 이유로 뺀다.
  */
+import { foldLatin } from "@/lib/text/fold-latin"
 
 export interface SquadName {
   nameEn: string
@@ -13,10 +14,10 @@ export interface SquadName {
 }
 
 function tokens(s: string): string[] {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
+  // ⚠️ foldLatin 을 거치지 않으면 Ø·Ł 같은 **분해되지 않는 글자**가 아래 [^a-z] 에서
+  //    통째로 지워진다 — "Ødegaard" 가 "degaard" 가 되어 스쿼드의 "Odegaard" 와
+  //    영영 안 맞는다 (2026-09-01 실사고, fold-latin.ts 참조).
+  return foldLatin(s)
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
     .filter((t) => t.length >= 3)
