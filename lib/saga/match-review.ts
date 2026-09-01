@@ -13,7 +13,7 @@ import { getMatchExtras } from "@/lib/soccerway/match-extras"
  * 12시간이면 기사가 붙을 시간은 충분히 주면서 창이 닫히기 전에 폴백할 여유가 남는다.
  */
 const REPORT_WAIT_HOURS = 12
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 /**
  * 경기 리뷰 카드 — 시즌 실록의 엔트리 (D17, 2026-08-17).
@@ -108,7 +108,10 @@ async function callLLM(system: string, user: unknown): Promise<string | null> {
         ],
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logUsageFailure("saga-match-review", MODEL, `http_${res.status}`)
+      return null
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("saga-match-review", MODEL, data)
     return data.choices?.[0]?.message?.content ?? null

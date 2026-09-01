@@ -1,7 +1,7 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 /**
  * 운영 인사이트 — "무엇을 주목하고, 다음에 무엇을 할지".
@@ -153,6 +153,7 @@ export async function generateInsight(
       signal: AbortSignal.timeout(90_000),
     })
     if (!res.ok) {
+      logUsageFailure("admin-insight", DEFAULT_MODEL, `http_${res.status}`)
       console.error("[insight] OpenAI HTTP", res.status)
       return null
     }

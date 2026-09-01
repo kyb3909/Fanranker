@@ -74,8 +74,31 @@ export function estimateCostUsd(model: string, usage: LlmUsage): number | null {
  *
  * ⚠️ await 하지 않는다. 기록이 느리다고 본 작업이 기다릴 이유가 없다.
  */
-export function logUsage(task: string, model: string, payload: unknown, ok = true): void {
-  void record(task, model, payload, ok, 0)
+export function logUsage(task: string, model: string, payload: unknown): void {
+  void record(task, model, payload, true, 0)
+}
+
+/**
+ * **실패 기록** (2026-09-02 추가).
+ *
+ * 종전엔 `logUsage` 의 네 번째 인자 `ok = true` 가 이 자리를 맡는 척했지만, **false 를
+ * 넘기는 호출부가 하나도 없었다**(전수 확인). 실패는 어디에도 안 남았고, `ok` 컬럼은
+ * 쓰기만 하고 읽는 곳도 없었다. 그래서 계기판이 이런 상태였다:
+ *
+ *   "오늘 뉴스가 한 건도 안 올라왔다" → 로그의 호출 수는 정상 → 원인 못 찾음
+ *
+ * 이 파이프라인 상당수가 fail-closed 다. 400 하나가 "에러 없이 발행 정지"가 되는데,
+ * 계기판이 실패를 안 세면 그 정지가 **정상 조용함과 구분이 안 된다.**
+ *
+ * `reason` 은 짧은 키로 통일한다 — `http_400` · `timeout` · `network` · `parse`.
+ * 자유 문장을 넣으면 집계(api_cost_summary 의 failReasons)가 흩어져 못 읽는다.
+ *
+ * ⚠️ 실패 행은 토큰이 없으므로 추정 비용이 0 이다 — 비용 합계를 흔들지 않는다.
+ *    다만 `callsToday` 에는 잡히므로, 뷰가 성공/실패를 나눠 보여준다
+ *    (`supabase/migrations/20260902_llm_usage_failures.sql`).
+ */
+export function logUsageFailure(task: string, model: string, reason: string, latencyMs = 0): void {
+  void record(task, model, null, false, latencyMs, reason)
 }
 
 /**
@@ -97,6 +120,7 @@ export async function openaiChat(
   const startedAt = Date.now()
   let payload: unknown = null
   let ok = false
+  let reason: string | undefined
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -107,11 +131,14 @@ export async function openaiChat(
     if (res.ok) {
       payload = await res.json()
       ok = true
+    } else {
+      reason = `http_${res.status}`
     }
-  } catch {
-    /* 네트워크 실패도 아래에서 ok=false 로 남긴다 */
+  } catch (e) {
+    // AbortSignal.timeout 은 AbortError 로 온다 — 네트워크 단절과 구분해서 남긴다
+    reason = e instanceof Error && e.name === "AbortError" ? "timeout" : "network"
   }
-  void record(task, model, payload, ok, Date.now() - startedAt)
+  void record(task, model, payload, ok, Date.now() - startedAt, reason)
   return ok ? payload : null
 }
 
@@ -133,7 +160,8 @@ async function record(
   model: string,
   payload: unknown,
   ok: boolean,
-  latencyMs: number
+  latencyMs: number,
+  failReason?: string
 ): Promise<void> {
   try {
     const usage = readUsage(payload)
@@ -149,6 +177,7 @@ async function record(
         estimated_cost_usd: estimateCostUsd(model, usage),
         ok,
         latency_ms: latencyMs,
+        fail_reason: failReason ?? null,
       })
   } catch {
     /* 계기판이 본 파이프라인을 막으면 안 된다 */

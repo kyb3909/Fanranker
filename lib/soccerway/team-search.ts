@@ -13,7 +13,7 @@
  */
 
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 const SEARCH_BASE = "https://s.livesport.services/api/v2/search/"
 const SOCCERWAY_PROJECT_ID = "2020"
@@ -137,7 +137,10 @@ export async function proposeSearchQueries(
       }),
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      logUsageFailure("team-search", "gpt-5.6-luna", `http_${res.status}`)
+      return []
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("team-search", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {

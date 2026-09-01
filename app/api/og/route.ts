@@ -4,7 +4,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { assertPublicUrl, SsrfBlockedError } from "@/lib/ssrf-guard"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export const runtime = "nodejs"
 
@@ -270,7 +270,10 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
         response_format: { type: "json_object" },
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logUsageFailure("og-image", "gpt-5.6-luna", `http_${res.status}`)
+      return null
+    }
     const data = await res.json()
     logUsage("og-image", "gpt-5.6-luna", data)
     const content = data.choices?.[0]?.message?.content

@@ -4,7 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -166,6 +166,7 @@ JSON으로 응답해:
     })
 
     if (!res.ok) {
+      logUsageFailure("reddit-seed", OPENAI_MODEL, `http_${res.status}`)
       const errText = await res.text()
       console.error(`[reddit-seed] OpenAI error ${res.status}:`, errText)
       return null

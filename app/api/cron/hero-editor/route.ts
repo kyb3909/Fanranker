@@ -3,7 +3,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -96,7 +96,10 @@ JSON만: {"picks": [{"id": "...", "reason": "..."}, ...]} — 정확히 3개, id
       }),
       signal: AbortSignal.timeout(30000),
     })
-    if (!res.ok) return NextResponse.json({ ok: false, error: `LLM HTTP ${res.status}` })
+    if (!res.ok) {
+      logUsageFailure("hero-editor", "gpt-5.6-luna", `http_${res.status}`)
+      return NextResponse.json({ ok: false, error: `LLM HTTP ${res.status}` })
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("hero-editor", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {

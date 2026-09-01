@@ -14,9 +14,18 @@ interface TaskRow {
   task: string
   model: string
   calls: number
+  /** 그중 실패 (2026-09-02). calls 에 포함된 수다 — 따로 더하면 이중 계상 */
+  fails: number
   inputTokens: number
   outputTokens: number
   costUsd: number
+}
+
+/** 실패 사유 분포 — "몇 건 실패"만으로는 다시 코드를 뒤져야 한다 */
+interface FailRow {
+  reason: string
+  task: string
+  calls: number
 }
 
 export interface DailyRow {
@@ -25,6 +34,7 @@ export interface DailyRow {
   lfaCallsToday: number
   llmUsd: number
   llmCalls: number
+  llmFails: number
 }
 
 export interface ApiCostData {
@@ -37,11 +47,15 @@ export interface ApiCostData {
   }
   llm: {
     callsToday: number
+    /** 오늘 실패 (2026-09-02). callsToday 에 **포함**된 수다 */
+    failsToday: number
     costToday: number
     costWeek: number
+    failsWeek: number
     /** 기록이 하나도 없으면 계기판이 아직 안 도는 것 — 화면에서 구분해 알린다 */
     hasData: boolean
     byTask: TaskRow[]
+    failReasons: FailRow[]
   }
   /** 최근 7일 일별 추이 — 운영자: "하루에 얼마씩 쓰는지 로그를 계속" */
   daily: DailyRow[]
@@ -106,9 +120,16 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
           </div>
           <dl className="mt-3 space-y-1 text-sm">
             <Row label="오늘 호출" value={`${num(llm.callsToday)}건`} />
+            <Row label="오늘 실패" value={`${num(llm.failsToday)}건`} warn={llm.failsToday > 0} />
             <Row label="최근 7일" value={usd(llm.costWeek)} />
             <Row label="월 환산" value={`~${usd(llm.costWeek * (30 / 7))}`} />
           </dl>
+          {llm.failsToday > 0 && (
+            <p className="mt-2 text-xs font-semibold text-red-600">
+              이 파이프라인 상당수가 fail-closed 입니다 — 실패는 에러 없이 발행을 멈춥니다. 아래
+              사유를 먼저 보세요.
+            </p>
+          )}
           {!llm.hasData && (
             <p className="text-muted-foreground mt-2 text-xs">
               아직 기록이 없습니다. 계기판은 2026-08-25 배포분부터 쌓입니다.
@@ -116,6 +137,32 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
           )}
         </div>
       </div>
+
+      {/* ── 실패 사유 (최근 7일) ──
+          ⚠️ 실패가 없으면 이 블록은 통째로 안 그린다. 0 을 보여주는 표는 눈을 길들여
+             정작 숫자가 붙었을 때 안 보이게 만든다. */}
+      {llm.failReasons.length > 0 && (
+        <div className="border-border bg-card rounded-xl border p-4">
+          <div className="text-xs font-bold tracking-wider text-red-600 uppercase">
+            LLM 실패 · 최근 7일 {num(llm.failsWeek)}건
+          </div>
+          <ul className="mt-2 space-y-1 text-sm">
+            {llm.failReasons.map((f) => (
+              <li key={`${f.task}:${f.reason}`} className="flex justify-between gap-3">
+                <span className="text-foreground font-semibold">
+                  {f.task}
+                  <span className="text-muted-foreground ml-2 font-normal">{f.reason}</span>
+                </span>
+                <span className="font-bold text-red-600 tabular-nums">{num(f.calls)}건</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-muted-foreground mt-2 text-xs">
+            http_400 이 몰려 있으면 모델 세대와 파라미터가 어긋난 것입니다 —
+            lib/llm/openai-params.ts 의 chatParams 규약을 확인하세요.
+          </p>
+        </div>
+      )}
 
       {/* ── 일별 추이 ──
           ⚠️ 축구는 **크레딧**, OpenAI 는 **달러**다. 한 표에 놓되 열을 분명히 갈라
@@ -130,6 +177,7 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
                 <th className="px-3 py-2 text-right font-bold">축구 호출</th>
                 <th className="px-3 py-2 text-right font-bold">OpenAI $</th>
                 <th className="px-3 py-2 text-right font-bold">OpenAI 호출</th>
+                <th className="px-3 py-2 text-right font-bold">실패</th>
               </tr>
             </thead>
             <tbody>
@@ -148,6 +196,11 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
                   <td className="text-muted-foreground px-3 py-2 text-right tabular-nums">
                     {num(r.llmCalls)}
                   </td>
+                  <td
+                    className={`px-3 py-2 text-right tabular-nums ${r.llmFails > 0 ? "font-bold text-red-600" : "text-muted-foreground"}`}
+                  >
+                    {num(r.llmFails)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -164,6 +217,7 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
                 <th className="px-3 py-2 text-left font-bold">작업</th>
                 <th className="px-3 py-2 text-left font-bold">모델</th>
                 <th className="px-3 py-2 text-right font-bold">호출</th>
+                <th className="px-3 py-2 text-right font-bold">실패</th>
                 <th className="px-3 py-2 text-right font-bold">입력</th>
                 <th className="px-3 py-2 text-right font-bold">출력</th>
                 <th className="px-3 py-2 text-right font-bold">비용(7일)</th>
@@ -175,6 +229,11 @@ export function ApiCostCard({ data }: { data: ApiCostData }) {
                   <td className="text-foreground px-3 py-2 font-semibold">{r.task}</td>
                   <td className="text-muted-foreground px-3 py-2">{r.model}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{num(r.calls)}</td>
+                  <td
+                    className={`px-3 py-2 text-right tabular-nums ${r.fails > 0 ? "font-bold text-red-600" : "text-muted-foreground"}`}
+                  >
+                    {num(r.fails)}
+                  </td>
                   <td className="text-muted-foreground px-3 py-2 text-right tabular-nums">
                     {num(r.inputTokens)}
                   </td>

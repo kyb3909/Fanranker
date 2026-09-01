@@ -11,7 +11,7 @@
  */
 
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export interface ExtractInput {
   /** 원제목 ([브래킷 출처] 포함 가능) */
@@ -88,7 +88,10 @@ export async function extractTransferBatch(
       }),
       signal: AbortSignal.timeout(60000),
     })
-    if (!res.ok) return inputs.map(() => null)
+    if (!res.ok) {
+      logUsageFailure("saga-extract", "gpt-5.6-luna", `http_${res.status}`)
+      return inputs.map(() => null)
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("saga-extract", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {

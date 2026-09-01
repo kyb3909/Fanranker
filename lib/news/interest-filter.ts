@@ -10,7 +10,7 @@
 import { chatParams } from "@/lib/llm/openai-params"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 /** LLM 에 딸려 보낼 본문 앞부분 — 제목만으론 농도를 못 가린다 */
 export const LEAD_CHARS = 180
@@ -216,6 +216,7 @@ export async function judgeInterest(
       signal: AbortSignal.timeout(45000),
     })
     if (!res.ok) {
+      logUsageFailure("news-interest-filter", model, `http_${res.status}`)
       console.error("[news-interest-filter] LLM HTTP", res.status)
       return items.map(() => null)
     }

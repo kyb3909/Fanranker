@@ -1,6 +1,6 @@
 import "server-only"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 /**
  * 독자 오류 제보 감지 (2026-08-07 운영자: "기사 잘못됐다는 댓글 자동 반영 —
@@ -97,6 +97,7 @@ export async function classifyErrorReports(
       signal: AbortSignal.timeout(25000),
     })
     if (!res.ok) {
+      logUsageFailure("news-comment-reports", MODEL, `http_${res.status}`)
       console.error("[comment-reports] OpenAI HTTP", res.status)
       return null
     }

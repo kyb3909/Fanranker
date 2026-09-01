@@ -29,7 +29,7 @@ import {
   cachedPersons,
   cachedSquadPairs,
 } from "@/lib/soccerway/lineup-lookup"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 /**
  * 매치 부가정보 — 기초 스탯 + 경기 리포트 (2026-08-16, 운영자 요청).
@@ -282,7 +282,10 @@ async function callLLM(
       ],
     }),
   })
-  if (!res.ok) return null
+  if (!res.ok) {
+    logUsageFailure("match-report", model, `http_${res.status}`)
+    return null
+  }
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
   logUsage("match-report", model, data)
   return data.choices?.[0]?.message?.content ?? null

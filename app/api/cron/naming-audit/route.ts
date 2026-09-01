@@ -15,7 +15,7 @@ import { registerVerifiedPlayer } from "@/lib/news/naming-verify-loop"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -76,7 +76,10 @@ async function extractNames(
       }),
       signal: AbortSignal.timeout(30000),
     })
-    if (!res.ok) return empty
+    if (!res.ok) {
+      logUsageFailure("naming-audit", "gpt-5.6-luna", `http_${res.status}`)
+      return empty
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("naming-audit", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {

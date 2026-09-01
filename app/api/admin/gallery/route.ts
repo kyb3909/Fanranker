@@ -3,7 +3,7 @@ import { z } from "zod"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { apiBadRequest, apiError } from "@/lib/api-error"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export const dynamic = "force-dynamic"
 
@@ -57,7 +57,10 @@ async function judgeIdolPhotos(urls: string[]): Promise<boolean[]> {
         ],
       }),
     })
-    if (!res.ok) return urls.map(() => true)
+    if (!res.ok) {
+      logUsageFailure("admin-gallery", "gpt-5.6-luna", `http_${res.status}`)
+      return urls.map(() => true)
+    }
     const d = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("admin-gallery", "gpt-5.6-luna", d)
     const parsed = JSON.parse(d.choices?.[0]?.message?.content ?? "{}") as {

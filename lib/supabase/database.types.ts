@@ -3122,6 +3122,7 @@ export type Database = {
           cached_tokens: number | null
           called_at: string
           estimated_cost_usd: number | null
+          fail_reason: string | null
           id: number
           input_tokens: number | null
           latency_ms: number | null
@@ -3134,6 +3135,7 @@ export type Database = {
           cached_tokens?: number | null
           called_at?: string
           estimated_cost_usd?: number | null
+          fail_reason?: string | null
           id?: never
           input_tokens?: number | null
           latency_ms?: number | null
@@ -3146,6 +3148,7 @@ export type Database = {
           cached_tokens?: number | null
           called_at?: string
           estimated_cost_usd?: number | null
+          fail_reason?: string | null
           id?: never
           input_tokens?: number | null
           latency_ms?: number | null
@@ -7549,6 +7552,7 @@ export type Database = {
           lfa_credits: number | null
           lfa_credits_left: number | null
           llm_calls: number | null
+          llm_fail_calls: number | null
           llm_input_tokens: number | null
           llm_output_tokens: number | null
           llm_usd: number | null

@@ -12,7 +12,7 @@ import "server-only"
 import { extractClubName, pickWinner, type SpellingVerdict } from "./pick"
 import { naverNewsCount } from "./naver"
 import { chatParams } from "@/lib/llm/openai-params"
-import { logUsage } from "@/lib/llm/usage-log"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 interface SpellingProposal {
   /** 영문 표준 표기 (사전 romanized 키용) */
@@ -57,7 +57,10 @@ JSON만: {"romanized": "...", "candidates": ["표기1", "표기2", "표기3"]}`,
       }),
       signal: AbortSignal.timeout(20000),
     })
-    if (!res.ok) return empty
+    if (!res.ok) {
+      logUsageFailure("naming-verify", "gpt-5.6-luna", `http_${res.status}`)
+      return empty
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     logUsage("naming-verify", "gpt-5.6-luna", data)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
