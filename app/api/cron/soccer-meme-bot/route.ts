@@ -4,6 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 import { SOCCER_MEME_BOT_USER_ID } from "@/lib/constants/bot-users"
 import {
   parseRedditMemeFeed,
@@ -143,8 +144,12 @@ async function translateTitle(title: string): Promise<string | null> {
         ],
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logUsageFailure("soccer-meme-title", TITLE_MODEL, `http_${res.status}`)
+      return null
+    }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    logUsage("soccer-meme-title", TITLE_MODEL, json)
     const raw = json.choices?.[0]?.message?.content
     if (!raw) return null
     const ko = String((JSON.parse(raw) as { ko?: unknown }).ko ?? "").trim()

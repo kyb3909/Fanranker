@@ -75,7 +75,21 @@ export function estimateCostUsd(model: string, usage: LlmUsage): number | null {
  * ⚠️ await 하지 않는다. 기록이 느리다고 본 작업이 기다릴 이유가 없다.
  */
 export function logUsage(task: string, model: string, payload: unknown): void {
-  void record(task, model, payload, true, 0)
+  void record(task, model, readUsage(payload), true, 0)
+}
+
+/**
+ * 토큰 수를 **이미 뽑아둔** 호출부용 (2026-09-02).
+ *
+ * 뉴스 데스크(`app/api/cron/news-assignment-desk/route.ts`)가 그렇다. 자체 표로 이미
+ * 상세히 기록하고 있어서 응답 원본이 그 자리까지 안 온다. 그런데 통합 계기판은
+ * `llm_usage_log` 만 읽으므로 **데스크 비용이 대시보드에서 통째로 빠져 있었다** —
+ * 운영자가 보는 "오늘 $X" 가 실제보다 적었다.
+ *
+ * 판정·프롬프트 같은 상세는 데스크 표가 정본이고, 여기는 비용 원장이다. 역할이 갈린다.
+ */
+export function logUsageTokens(task: string, model: string, usage: LlmUsage, latencyMs = 0): void {
+  void record(task, model, usage, true, latencyMs)
 }
 
 /**
@@ -98,7 +112,14 @@ export function logUsage(task: string, model: string, payload: unknown): void {
  *    (`supabase/migrations/20260902_llm_usage_failures.sql`).
  */
 export function logUsageFailure(task: string, model: string, reason: string, latencyMs = 0): void {
-  void record(task, model, null, false, latencyMs, reason)
+  void record(
+    task,
+    model,
+    { inputTokens: null, cachedTokens: null, outputTokens: null },
+    false,
+    latencyMs,
+    reason
+  )
 }
 
 /**
@@ -138,7 +159,7 @@ export async function openaiChat(
     // AbortSignal.timeout 은 AbortError 로 온다 — 네트워크 단절과 구분해서 남긴다
     reason = e instanceof Error && e.name === "AbortError" ? "timeout" : "network"
   }
-  void record(task, model, payload, ok, Date.now() - startedAt, reason)
+  void record(task, model, readUsage(payload), ok, Date.now() - startedAt, reason)
   return ok ? payload : null
 }
 
@@ -158,13 +179,12 @@ export async function openaiChat(
 async function record(
   task: string,
   model: string,
-  payload: unknown,
+  usage: LlmUsage,
   ok: boolean,
   latencyMs: number,
   failReason?: string
 ): Promise<void> {
   try {
-    const usage = readUsage(payload)
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     await createServiceRoleClient()
       .from("llm_usage_log")

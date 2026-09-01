@@ -15,6 +15,7 @@ import {
   type AssignmentVerdict,
 } from "@/lib/news/assignment-desk"
 import { newsCandidateRunId } from "@/lib/news/candidate-ledger"
+import { logUsageFailure, logUsageTokens } from "@/lib/llm/usage-log"
 import type { TipTapNode } from "@/types/post"
 
 export const maxDuration = 120
@@ -250,7 +251,10 @@ async function run(request: NextRequest) {
     }
 
     const result = await requestAssignment(input, { apiKey })
+    // ⚠️ 데스크는 자체 표에 상세를 남기지만 통합 계기판은 llm_usage_log 만 읽는다 —
+    //    여기서 얹지 않으면 데스크 비용이 대시보드에서 통째로 빠진다(실제로 빠져 있었다).
     if (result.ok) {
+      logUsageTokens("news-assignment-desk", result.verdict.model, result.usage, result.latencyMs)
       rows.push(
         verdictRow({ candidateId, runId, contentHash, attempt }, result.verdict, {
           latencyMs: result.latencyMs,
@@ -266,6 +270,12 @@ async function run(request: NextRequest) {
       continue
     }
 
+    logUsageFailure(
+      "news-assignment-desk",
+      ASSIGNMENT_MODEL,
+      result.httpStatus ? `http_${result.httpStatus}` : result.kind,
+      result.latencyMs
+    )
     const status = classifyAssignmentFailure({
       kind: result.kind,
       httpStatus: result.httpStatus,

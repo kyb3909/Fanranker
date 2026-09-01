@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { apiBadRequest, apiError, checkRateLimit } from "@/lib/api-error"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsageFailure, logUsageTokens, readUsage, type LlmUsage } from "@/lib/llm/usage-log"
 import { CRISIS_MESSAGE, CRISIS_RESOURCES, GAMBLING_MESSAGE, checkSafety } from "@/lib/tarot/safety"
 import { SYSTEM_PROMPT } from "@/lib/tarot/prompt"
 
@@ -117,11 +118,16 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             ...chatParams("gpt-5.6-luna", { temperature: 0.85, max_tokens: 700 }),
             stream: true,
+            // ⚠️ stream 응답은 본문에 usage 가 없다 — include_usage 를 켜야 **마지막
+            //    청크**로 따로 온다. 그 청크는 choices 가 비어 있어서 아래 델타 파싱이
+            //    자연히 건너뛴다(기존 동작 그대로).
+            stream_options: { include_usage: true },
             messages,
           }),
           signal: AbortSignal.timeout(55000),
         })
         if (!res.ok || !res.body) {
+          logUsageFailure("tarot-followup", "gpt-5.6-luna", `http_${res.status}`)
           controller.enqueue(line({ type: "error", message: "루나가 대답을 고르다 멈췄어요." }))
           controller.close()
           return
@@ -129,6 +135,7 @@ export async function POST(request: NextRequest) {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
         let buf = ""
+        let usage: LlmUsage | null = null
         for (;;) {
           const { done, value } = await reader.read()
           if (done) break
@@ -141,7 +148,11 @@ export async function POST(request: NextRequest) {
             const payload = t.slice(5).trim()
             if (payload === "[DONE]") continue
             try {
-              const j = JSON.parse(payload) as { choices?: { delta?: { content?: string } }[] }
+              const j = JSON.parse(payload) as {
+                choices?: { delta?: { content?: string } }[]
+                usage?: unknown
+              }
+              if (j.usage) usage = readUsage(j)
               const d = j.choices?.[0]?.delta?.content
               if (d) controller.enqueue(line({ type: "delta", t: d }))
             } catch {
@@ -149,6 +160,7 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+        if (usage) logUsageTokens("tarot-followup", "gpt-5.6-luna", usage)
         controller.enqueue(line({ type: "done" }))
       } catch (e) {
         console.error("[tarot] followup failed", e)
