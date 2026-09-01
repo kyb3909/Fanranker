@@ -1,4 +1,5 @@
 import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
+import { foldLatin } from "@/lib/text/fold-latin"
 
 /**
  * MoTM 후보판 계산 — **순수 모듈** (2026-08-31 분리).
@@ -31,11 +32,24 @@ interface LineupPlayerLike {
   subIn?: string | null
 }
 
+/**
+ * 옵션 key — 투표 무결성의 축이다 (투표 API 가 이 key 화이트리스트로만 검증한다).
+ *
+ * ⚠️ 종전엔 `normalize("NFD")` 뒤에 **결합 문자 제거가 빠져 있었다.** 이 저장소의 다른
+ *    정규화 12곳은 전부 있는데 여기만 없었다. 결과가 조용히 이상했다:
+ *      "Leão"     → NFD → lea + ◌̃ + o → **"lea-o"**   (분음부호가 하이픈이 된다)
+ *      "Ødegaard" → Ø 는 NFD 로 안 쪼개짐 → **"degaard"** (앞이 통째로 잘린다)
+ *    key 는 화면에 안 보여서 손해가 즉시 드러나지 않지만, 같은 선수가 표기에 따라 다른
+ *    key 를 받으므로 후보판 보강(mergeMotmOptions)이 같은 사람을 둘로 셀 수 있다.
+ *
+ * ⚠️ **고치는 시점이 중요했다.** key 를 바꾸면 이미 던진 표가 무효가 되는데, 전수 확인
+ *    결과 MoTM 표는 1건뿐이고 그마저 **마감된 폴**에 있었다(2026-09-01, key 도 발음부호가
+ *    없어 안 바뀜). 마감 폴은 보강 대상이 아니므로 손실 0 으로 넘어간다. 표가 쌓인 뒤였다면
+ *    key 마이그레이션이 선행돼야 했다.
+ */
 function optionKeyFor(p: LineupPlayerLike, team: "home" | "away", used: Set<string>): string {
   const base =
-    (p.roman ?? "")
-      .toLowerCase()
-      .normalize("NFD")
+    foldLatin(p.roman ?? "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 28) || (p.number != null ? `n${p.number}` : "p")

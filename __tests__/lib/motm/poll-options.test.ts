@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest"
-import { mergeMotmOptions, pickRichestLineup, type MotmOption } from "@/lib/motm/options"
+import {
+  buildMotmOptions,
+  mergeMotmOptions,
+  pickRichestLineup,
+  type MotmOption,
+} from "@/lib/motm/options"
 import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
 
 /**
@@ -74,5 +79,59 @@ describe("mergeMotmOptions", () => {
 
   it("표가 없어도 후보가 늘지 않으면 건드리지 않는다", () => {
     expect(mergeMotmOptions(existing, [opt("h-a"), opt("h-b")], false)).toBeNull()
+  })
+})
+
+/**
+ * 2026-09-01 — 옵션 key 정규화 결함.
+ *
+ * `normalize("NFD")` 뒤에 결합 문자 제거가 빠져 있어 분음부호가 **하이픈이 됐다**.
+ * key 는 화면에 안 보여서 손해가 즉시 드러나지 않지만, 같은 선수가 표기에 따라 다른
+ * key 를 받으면 후보판 보강이 같은 사람을 둘로 셀 수 있다. (투표 API 가 key 로만 검증한다)
+ */
+describe("buildMotmOptions — 옵션 key 정규화", () => {
+  const withRoman = (romans: string[]): LineupResponse => {
+    const side = (rs: string[]) => ({
+      teamLabel: "T",
+      formation: null,
+      starters: rs.map((r, i) => ({ label: r, number: i + 1, roman: r })),
+      bench: [],
+    })
+    return {
+      status: "ready",
+      kickoff: "2026-09-01T19:00:00.000Z",
+      fetchedAt: "2026-09-01T19:00:00.000Z",
+      home: side(romans),
+      away: side(romans.map((r) => `${r} away`)),
+    } as unknown as LineupResponse
+  }
+
+  const keysFor = (romans: string[]) =>
+    (buildMotmOptions(withRoman(romans)) ?? []).map((o) => o.key)
+
+  it("분음부호는 벗겨서 붙인다 — 종전엔 'lea-o' 처럼 하이픈이 됐다", () => {
+    const keys = keysFor(Array.from({ length: 11 }, (_, i) => (i === 0 ? "Leão" : `p${i}`)))
+    expect(keys[0]).toBe("h-leao")
+    expect(keys[0]).not.toContain("lea-o")
+  })
+
+  it("⚠️ NFD 로 안 쪼개지는 글자는 지우지 않고 바꾼다 — 종전엔 앞이 통째로 잘렸다", () => {
+    const keys = keysFor(Array.from({ length: 11 }, (_, i) => (i === 0 ? "Ødegaard" : `p${i}`)))
+    expect(keys[0]).toBe("h-odegaard")
+    expect(keys[0]).not.toBe("h-degaard")
+  })
+
+  it("key 는 여전히 폴 안에서 유일하다 (동명이인 접미 유지)", () => {
+    const keys = keysFor(["Leão", "Leao", ...Array.from({ length: 9 }, (_, i) => `p${i}`)])
+    expect(keys[0]).toBe("h-leao")
+    expect(keys[1]).toBe("h-leao-2")
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it("roman 이 비면 번호로 떨어진다 (fail-open)", () => {
+    const lu = withRoman(Array.from({ length: 11 }, (_, i) => `p${i}`))
+    ;(lu as unknown as { home: { starters: { roman: string | null }[] } }).home.starters[0].roman =
+      null
+    expect((buildMotmOptions(lu) ?? [])[0].key).toBe("h-n1")
   })
 })
