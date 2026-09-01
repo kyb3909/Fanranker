@@ -15,6 +15,7 @@ import {
   type MotmOption,
 } from "@/lib/motm/options"
 import { lfaDetailRow, pickFtScore, type LfaDetailRow } from "@/lib/motm/ft-evidence"
+import { matchKeyOf } from "@/lib/match/match-key"
 
 // 기존 import 경로를 지킨다 (매치 페이지·투표 API·카드가 여기서 가져간다)
 export { buildMotmOptions, mergeMotmOptions, pickRichestLineup }
@@ -143,7 +144,13 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
   const byKey = new Map<string, Cand>()
   for (const g of rows ?? []) {
     if (!isMatchPageLeague(g.league_code as string | null)) continue
-    const key = `${g.home_team_name}_${g.away_team_name}_${g.match_time}`
+    // ⚠️ 키 생성은 공용 함수를 쓴다 — 불변식 감사관(`motm_poll_missing`)이 같은 함수로
+    //    키를 만들어 대조하므로, 여기서 형식이 갈리면 폴을 못 찾아 결번 오탐이 전량 난다
+    const key = matchKeyOf({
+      homeTeam: String(g.home_team_name),
+      awayTeam: String(g.away_team_name),
+      matchTime: String(g.match_time),
+    })
     const prev = byKey.get(key)
     if (prev) {
       prev.gameIds.push(String(g.id))

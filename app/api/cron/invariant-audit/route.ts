@@ -16,6 +16,23 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
 import { findIdentityMismatches } from "@/lib/saga/identity-audit"
+import { isMatchPageLeague } from "@/lib/match/leagues"
+import { matchKeyOf, matchLabelOf } from "@/lib/match/match-key"
+import {
+  lfaDetailRow,
+  pickFtScore,
+  type BetmanScore,
+  type LfaDetailRow,
+} from "@/lib/motm/ft-evidence"
+import { findDuplicateReports, type GameRow } from "@/lib/ops/match-report-dup"
+import { assessMotmCoverage, MOTM_GRACE_MS } from "@/lib/ops/motm-coverage"
+import {
+  assessTimelineLatin,
+  findFixableTimelineNames,
+  type FixableName,
+  type TimelineEventLike,
+} from "@/lib/ops/timeline-latin"
+import type { RosterEntry } from "@/lib/lfa/scorer-name"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -27,7 +44,7 @@ export const maxDuration = 60
  * 발행 전 게이트(1층)는 아이템 하나만 보므로 원리상 못 잡는 것들 — 경로 간 규칙
  * 불일치, 발행쌍 중복, 표기 흔들림, 크론 무호출 — 을 가로로 늘어놓고 본다.
  *
- * 불변식 5종:
+ * 불변식 10종:
  *   1. saga_title_korean   — 노출 사가 제목은 한글이다 (영문 제목 10건 실사고)
  *   2. cron_heartbeat      — 등록된 크론은 기대 주기 안에 cron_run_log 를 남긴다
  *                            (news-learn-edits 무기록 결번 실사고)
@@ -41,6 +58,17 @@ export const maxDuration = 60
  *   7. lineup_bench_empty  — 끝난 경기의 저장 라인업에 벤치가 있다 (2026-08-31 실사고:
  *                            LFA 벤치 필드명 오독으로 164행 전부 벤치 0 — 교체 표기와
  *                            MoTM 교체 후보가 통째로 사라졌는데 신호가 없었다)
+ *   8. match_report_dup    — 한 경기에 리포트는 하나다 (2026-09-01 실사고: 저장 확인이
+ *                            행 단위라 형제 betman 행마다 LLM 체인 재실행 — 5경기 15건)
+ *   9. motm_poll_missing   — FT+2시간이면 MoTM 폴이 있다 (2026-09-01 실사고: FT 근거가
+ *                            무료 피드 하나뿐이라 생성이 최대 7시간 40분 늦었다)
+ *  10. timeline_name_latin — 저장 타임라인에 **고칠 수 있는데 안 고쳐진** 영문 이름이
+ *                            없다 (2026-09-01 실사고: Ø 가 정규화에서 지워져 287경기.
+ *                            비한글 전량이 아니라 재판정으로 한글이 되는 것만 센다 —
+ *                            미검수 선수는 원문 유지가 설계라 배경으로 깔린다)
+ *
+ * ⚠️ 8~10 은 셋 다 **저장분이 스스로 낫지 않는** 자리를 본다. 우는 시점에 이미 굳어
+ *    있으므로, 코드 수리와 별개로 백필이 필요한지 늘 함께 판단할 것.
  *
  * 자동 수정은 하지 않는다 — 확정은 사람 (독자 제보 파이프라인과 같은 원칙, 오탐 무해).
  * 알림 피로 방지: invariant_findings 원장에 fingerprint 로 기록하고 **open 전이 시
@@ -56,6 +84,114 @@ interface Finding {
 }
 
 const H = 3600000
+
+/** maxDuration 60s 안에서 검사를 마치기 위한 예산 — 넘으면 resolve 를 보류한다 */
+const AUDIT_TIME_BUDGET_MS = 45_000
+/** MoTM FT 관례 — lib/motm/poll.ts 와 같은 킥오프+110분 */
+const MOTM_FT_AFTER_MS = 110 * 60_000
+/** 타임라인 검사 상한 — 예산 안에서 도는 경기 수 (최근 것부터) */
+const TIMELINE_SCAN_LIMIT = 60
+/** `.in()` 은 큰 배열에서 400 이 온다 — 이 저장소의 재발 패턴 */
+const IN_CHUNK = 100
+
+/** gameId 들의 betman 행 (경기 키 계산용). PostgREST 400 을 피해 끊어서 부른다 */
+async function loadGamesByIds(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  gameIds: string[]
+): Promise<GameRow[]> {
+  const ids = [...new Set(gameIds)]
+  const out: GameRow[] = []
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from("betman_games")
+      .select("id, home_team_name, away_team_name, match_time")
+      .in("id", ids.slice(i, i + IN_CHUNK))
+    for (const g of data ?? []) {
+      out.push({
+        id: String(g.id),
+        homeTeam: String(g.home_team_name),
+        awayTeam: String(g.away_team_name),
+        matchTime: String(g.match_time),
+      })
+    }
+  }
+  return out
+}
+
+/** gameId → LFA 상세 행들 (FT 증거 판정 입력) */
+async function loadDetailRows(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  gameIds: string[]
+): Promise<Map<string, LfaDetailRow[]>> {
+  const out = new Map<string, LfaDetailRow[]>()
+  const ids = [...new Set(gameIds)]
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from("match_details_cache")
+      .select("game_id, finished, payload")
+      .in("game_id", ids.slice(i, i + IN_CHUNK))
+    for (const row of data ?? []) {
+      const key = String(row.game_id)
+      const list = out.get(key) ?? []
+      list.push(
+        lfaDetailRow(row as { finished?: unknown; payload?: { homeScore?: unknown } | null })
+      )
+      out.set(key, list)
+    }
+  }
+  return out
+}
+
+/** 확정 라인업이 저장된 gameId 집합 — 라인업이 없으면 MoTM 폴이 없는 게 정상이다 */
+async function loadReadyLineupIds(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  gameIds: string[]
+): Promise<Set<string>> {
+  const out = new Set<string>()
+  const ids = [...new Set(gameIds)]
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from("match_lineups")
+      .select("game_id, payload")
+      .in("game_id", ids.slice(i, i + IN_CHUNK))
+    for (const row of data ?? []) {
+      if ((row.payload as { status?: string } | null)?.status === "ready") {
+        out.add(String(row.game_id))
+      }
+    }
+  }
+  return out
+}
+
+/** gameId → 대조 로스터 (선발+벤치 양 팀) */
+async function loadRosters(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  gameIds: string[]
+): Promise<Map<string, RosterEntry[]>> {
+  const out = new Map<string, RosterEntry[]>()
+  const ids = [...new Set(gameIds)]
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from("match_lineups")
+      .select("game_id, payload")
+      .in("game_id", ids.slice(i, i + IN_CHUNK))
+    for (const row of data ?? []) {
+      const p = row.payload as {
+        status?: string
+        home?: { starters?: RosterEntry[]; bench?: RosterEntry[] }
+        away?: { starters?: RosterEntry[]; bench?: RosterEntry[] }
+      } | null
+      if (p?.status !== "ready") continue
+      out.set(String(row.game_id), [
+        ...(p.home?.starters ?? []),
+        ...(p.home?.bench ?? []),
+        ...(p.away?.starters ?? []),
+        ...(p.away?.bench ?? []),
+      ])
+    }
+  }
+  return out
+}
 
 async function handler(req: NextRequest) {
   const denied = verifyCronSecret(req)
@@ -355,6 +491,198 @@ async function handler(req: NextRequest) {
     }
   } catch (e) {
     checkErrors.push(`lineup_bench_empty: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 8. match_report_dup — 한 경기에 리포트는 하나다 ──
+  //
+  // 2026-09-01 실사고: 저장 확인이 행 단위라 짝짓기가 다른 형제 행을 고를 때마다 LLM
+  // 체인을 다시 돌았다 (5경기 15건). 수리는 조회를 경기 단위로 바꾼 것이고 **저장은
+  // 여전히 행 단위**라, 읽기 경로가 되돌아가면 그대로 재발한다. 중복 1건 = LLM 실비.
+  try {
+    const { data: reps } = await supabase
+      .from("match_reports")
+      .select("game_id, event_id, title")
+      .gte("created_at", new Date(now - 7 * 24 * H).toISOString())
+    const reports = (reps ?? []).map((r) => ({
+      gameId: String(r.game_id),
+      eventId: r.event_id ? String(r.event_id) : null,
+      title: String(r.title ?? ""),
+    }))
+    if (reports.length > 0) {
+      const games = await loadGamesByIds(
+        supabase,
+        reports.map((r) => r.gameId)
+      )
+      for (const g of findDuplicateReports(reports, games)) {
+        findings.push({
+          invariant: "match_report_dup",
+          fingerprint: `match_report_dup:${g.key}`,
+          summary:
+            `같은 경기에 리포트 ${g.gameIds.length}건 — ${g.label}` +
+            (g.titles.length > 1 ? ` (제목 ${g.titles.length}종이라 지면마다 내용이 다르다)` : "") +
+            `. 저장 확인이 행 단위로 되돌아갔는지 hasStoredReport 의 형제 확장을 볼 것`,
+          detail: { gameIds: g.gameIds, titles: g.titles.slice(0, 3) },
+        })
+      }
+    }
+  } catch (e) {
+    checkErrors.push(`match_report_dup: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 9. motm_poll_missing — FT 가 지났으면 MoTM 폴이 있다 ──
+  //
+  // 2026-09-01 실사고: FT 근거가 무료 피드 스코어 하나뿐이라 폴 생성이 최대 7시간 40분
+  // 늦었다. 마감이 익일 11:00 이라 정작 투표할 시간대가 지나간 뒤에 열렸다.
+  // ⚠️ FT 증거 판정은 생성 파이프라인과 **같은 모듈**(pickFtScore)을 쓴다 — 복제 금지.
+  try {
+    const { data: mrows } = await supabase
+      .from("betman_games")
+      .select("id, home_team_name, away_team_name, league_code, match_time, home_score, away_score")
+      .eq("sport", "축구")
+      .in("status", ["in_progress", "completed"])
+      .gt("match_time", new Date(now - 26 * H).toISOString())
+      .lte("match_time", new Date(now - (MOTM_FT_AFTER_MS + MOTM_GRACE_MS)).toISOString())
+      .neq("home_team_name", "미정")
+      .not("home_team_name", "is", null)
+
+    const byKey = new Map<
+      string,
+      { key: string; label: string; ftAtMs: number; ids: string[]; score: BetmanScore }
+    >()
+    for (const g of mrows ?? []) {
+      if (!isMatchPageLeague(g.league_code as string | null)) continue
+      const parts = {
+        homeTeam: String(g.home_team_name),
+        awayTeam: String(g.away_team_name),
+        matchTime: String(g.match_time),
+      }
+      const key = matchKeyOf(parts)
+      const hit = byKey.get(key)
+      if (hit) {
+        hit.ids.push(String(g.id))
+        if (hit.score.homeScore == null && g.home_score != null) {
+          hit.score = { homeScore: Number(g.home_score), awayScore: Number(g.away_score) }
+        }
+        continue
+      }
+      byKey.set(key, {
+        key,
+        label: matchLabelOf(parts),
+        ftAtMs: new Date(parts.matchTime).getTime() + MOTM_FT_AFTER_MS,
+        ids: [String(g.id)],
+        score: {
+          homeScore: g.home_score != null ? Number(g.home_score) : null,
+          awayScore: g.away_score != null ? Number(g.away_score) : null,
+        },
+      })
+    }
+
+    if (byKey.size > 0) {
+      const allIds = [...byKey.values()].flatMap((m) => m.ids)
+      const [detailsByGame, lineupGameIds] = await Promise.all([
+        loadDetailRows(supabase, allIds),
+        loadReadyLineupIds(supabase, allIds),
+      ])
+      const candidates = [...byKey.values()].map((m) => ({
+        matchKey: m.key,
+        label: m.label,
+        ftAtMs: m.ftAtMs,
+        hasLineup: m.ids.some((id) => lineupGameIds.has(id)),
+        hasFtEvidence: !!pickFtScore(
+          m.score,
+          m.ids.flatMap((id) => detailsByGame.get(id) ?? [])
+        ),
+      }))
+      const { data: pollRows } = await supabase
+        .from("polls")
+        .select("match_key")
+        .eq("kind", "motm")
+        .in("match_key", [...byKey.keys()])
+      const have = new Set((pollRows ?? []).map((p) => String(p.match_key)))
+
+      const cov = assessMotmCoverage(candidates, have, now)
+      if (cov.alert) {
+        const pct = Math.round(cov.ratio * 100)
+        findings.push({
+          invariant: "motm_poll_missing",
+          fingerprint: "motm_poll_missing",
+          summary: `FT+2시간이 지난 경기 ${cov.missing.length}/${cov.eligible}건(${pct}%)에 MoTM 폴이 없다 — 생성 크론(15분)이나 FT 증거 경로가 막혔는지 볼 것`,
+          detail: {
+            missing: cov.missing.slice(0, 20).map((m) => m.label),
+            missing_count: cov.missing.length,
+            eligible: cov.eligible,
+          },
+        })
+      }
+    }
+  } catch (e) {
+    checkErrors.push(`motm_poll_missing: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 10. timeline_name_latin — 저장 타임라인에 고칠 수 있는 영문 이름이 남아 있다 ──
+  //
+  // 2026-09-01 실사고: Ø·Ł 이 정규화에서 지워져 이름 대조가 실패했고(287경기),
+  // 리포트에는 실재하지 않는 이름("Martin degaard")까지 발행됐다.
+  // ⚠️ **저장분은 스스로 안 낫는다** — 끝난 경기 상세는 수명이 사실상 무한이다.
+  //    그래서 이 규칙이 울면 백필(scripts/backfill-timeline-names.ts --post)이 필요하다.
+  try {
+    const { data: drows } = await supabase
+      .from("match_details_cache")
+      .select("game_id, payload")
+      .eq("finished", true)
+      .gte("updated_at", new Date(now - 3 * 24 * H).toISOString())
+      .limit(TIMELINE_SCAN_LIMIT)
+
+    const withTimeline = (drows ?? []).filter((r) => {
+      const tl = (r.payload as { timeline?: unknown[] } | null)?.timeline
+      return Array.isArray(tl) && tl.length > 0
+    })
+    if (withTimeline.length > 0) {
+      const ids = withTimeline.map((r) => String(r.game_id))
+      const [games, rosterByGame] = await Promise.all([
+        loadGamesByIds(supabase, ids),
+        loadRosters(supabase, ids),
+      ])
+      const gameById = new Map(games.map((g) => [g.id, g]))
+      const perMatch: FixableName[][] = []
+      for (const r of withTimeline) {
+        const gid = String(r.game_id)
+        const roster = rosterByGame.get(gid) ?? []
+        if (roster.length === 0) continue // 라인업이 없으면 대조 근거가 없다 — 세지 않는다
+        const g = gameById.get(gid)
+        const events = ((r.payload as { timeline?: TimelineEventLike[] }).timeline ??
+          []) as TimelineEventLike[]
+        perMatch.push(
+          findFixableTimelineNames(events, roster, g ? matchLabelOf(g) : gid.slice(0, 8))
+        )
+      }
+      const verdict = assessTimelineLatin(perMatch)
+      if (verdict.alert) {
+        findings.push({
+          invariant: "timeline_name_latin",
+          fingerprint: "timeline_name_latin",
+          summary: `저장 타임라인 ${verdict.matchCount}경기에 **지금 규칙으로는 한글이 되는** 영문 이름 ${verdict.names.length}개 — 정규화(fold-latin)를 부르는 자리를 빠뜨렸는지 보고, 저장분은 scripts/backfill-timeline-names.ts --post 로 고칠 것`,
+          detail: {
+            names: verdict.names
+              .slice(0, 20)
+              .map((n) => `${n.label} ${n.minute}' ${n.before}→${n.after}`),
+            name_count: verdict.names.length,
+            match_count: verdict.matchCount,
+          },
+        })
+      }
+    }
+  } catch (e) {
+    checkErrors.push(`timeline_name_latin: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ⚠️ 시간 예산 초과는 **반드시 checkErrors 에 넣는다.** 아래 resolve 는 checkErrors 가
+  //    비었을 때만 도는데, 예산 때문에 검사를 덜 돌고도 조용히 넘어가면 "위반이 사라졌다"고
+  //    오판해 열린 항목을 전부 닫아버린다 (감사관이 자기 눈을 감는 최악의 실패).
+  if (Date.now() - now > AUDIT_TIME_BUDGET_MS) {
+    checkErrors.push(
+      `시간 예산 초과 (${Math.round((Date.now() - now) / 1000)}s) — 일부 검사가 덜 돌았을 수 있어 resolve 를 보류한다`
+    )
   }
 
   // ── 원장 반영: 신규/재발만 알림, 사라진 위반은 resolved ──
