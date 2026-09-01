@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { apiError } from "@/lib/api-error"
+import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { currentUser } from "@clerk/nextjs/server"
 import { assertPublicUrl, SsrfBlockedError } from "@/lib/ssrf-guard"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 import { chatParams } from "@/lib/llm/openai-params"
@@ -13,6 +14,21 @@ export const runtime = "nodejs"
  * URL에서 OG 이미지를 추출하여 반환
  * - og:image 메타태그 우선
  * - twitter:image 폴백
+ *
+ * ## ⚠️ 문을 두 겹으로 나눈 이유 (2026-09-02 감사)
+ * 이 라우트는 **바깥 URL 을 가져와 LLM 에 넣는다**(`summarize=1`). 그런데 인증도
+ * 레이트리밋도 없어서, 저장소 전체에서 **외부인이 우리 OpenAI 비용을 발생시킬 수 있는
+ * 유일한 지점**이었다. 응답에 CDN 캐시(`s-maxage=3600`)가 붙어 있지만 캐시 키가 URL 이라
+ * URL 만 바꾸면 무한히 우회된다.
+ *
+ * 그렇다고 라우트 전체를 막으면 안 된다 — 메타 추출은 에디터가 링크를 붙일 때마다 부르는
+ * 가벼운 경로다. 그래서 **비용이 드는 쪽에만** 문을 건다:
+ *   · 메타 추출  → 레이트리밋만 (STANDARD)
+ *   · LLM 요약   → 로그인 필수 + STRICT(10/분). 유일한 호출부가 글쓰기 에디터라
+ *                  (`hooks/use-write-og.ts:25`) 로그인 요구가 정상 사용을 막지 않는다.
+ *
+ * ⚠️ 레이트리밋은 인메모리라 인스턴스별로 독립이다(`lib/rate-limit.ts`). 전역 한도가
+ *    아니므로 완전한 방어가 아니지만, 무제한과는 다르다. 전역화는 별건.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +37,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "URL이 필요합니다." }, { status: 400 })
     }
     const wantSummary = request.nextUrl.searchParams.get("summarize") === "1"
+
+    // 요약은 LLM 1회 = 실비. 로그인 + 빡빡한 한도를 먼저 통과해야 한다
+    const limited = checkRateLimit(request, wantSummary ? "STRICT" : "STANDARD")
+    if (limited) return limited
+    if (wantSummary && !(await currentUser())) return apiUnauthorized()
 
     // URL 유효성 검증 (scheme)
     let parsedUrl: URL
