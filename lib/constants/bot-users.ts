@@ -13,3 +13,12 @@ export function isBotUserId(userId: string | null | undefined): boolean {
 
 /** 불판(라이브 매치 스레드) 봇 — 닉네임 "중계불판" (2026-08-20 운영자 지정) */
 export const MATCH_THREAD_BOT_USER_ID = "user_bot_matchthread"
+
+/**
+ * 축구 밈 봇 — 닉네임 "축구밈봇" (2026-09-01 운영자 지정).
+ *
+ * ⚠️ 애그리게이터 페르소나(`user_persona_*`)와 성격이 반대다. 그쪽은 닉네임을 일반인처럼
+ *    지어 **봇 티를 지우는** 방향이었는데(2026-07-26), 이 계정은 이름부터 봇이라고 밝히고
+ *    출처도 레딧이라고 적는다. 퍼온 밈을 사람인 척 올리지 않겠다는 뜻이다.
+ */
+export const SOCCER_MEME_BOT_USER_ID = "user_bot_soccermeme"
