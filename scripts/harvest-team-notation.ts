@@ -25,6 +25,7 @@
 import "dotenv/config"
 import { createClient } from "@supabase/supabase-js"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 import { koSimilarity } from "@/lib/news/alias-suggest"
 import { pickWinner } from "@/lib/naming/pick"
 import { proposeCandidates } from "@/lib/naming/verify"
@@ -98,8 +99,12 @@ JSON만: {"names": ["..."]}`,
     }),
     signal: AbortSignal.timeout(60000),
   })
-  if (!res.ok) return []
+  if (!res.ok) {
+    logUsageFailure("team-notation-harvest", "gpt-5.6-luna", `http_${res.status}`)
+    return []
+  }
   const d = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+  logUsage("team-notation-harvest", "gpt-5.6-luna", d)
   const p = JSON.parse(d.choices?.[0]?.message?.content ?? "{}") as { names?: unknown[] }
   return Array.isArray(p.names)
     ? [...new Set(p.names.map(String).filter((s) => /^[가-힣][가-힣 ]{1,14}$/.test(s)))]

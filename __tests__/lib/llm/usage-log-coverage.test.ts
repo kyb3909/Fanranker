@@ -41,20 +41,16 @@ const EXEMPT: Record<string, string> = {
   "scripts/news-scanner.mjs": "VPS 무의존 단일 파일 — @/lib import 불가",
   "scripts/vps-news-scanner/news-scanner.mjs": "VPS 무의존 단일 파일 — @/lib import 불가",
 
-  // ⚠️ tsx 로 도는 수동 CLI 는 계기판을 못 쓴다. `lib/llm/usage-log.ts` 첫 줄이
-  //    `import "server-only"` 인데, 그 패키지는 react-server 조건이 없는 런타임에서
-  //    **throw 한다**(2026-09-02 실측). 우회하려면 계측기를 한 벌 더 만들어야 하고,
-  //    그러면 VPS 복제본과 같은 드리프트 표면이 하나 더 생긴다. 손으로 돌리는 스크립트는
-  //    사람이 출력을 보고 있으므로 대시보드 가치도 낮다 — 안 하는 쪽을 택했다.
-  "scripts/draft-squad-names.ts": "수동 CLI — tsx 에서 server-only 가 throw",
-  "scripts/reddit-daily-seed.ts": "수동 CLI — tsx 에서 server-only 가 throw",
-  "scripts/seed-replies.ts": "수동 CLI — tsx 에서 server-only 가 throw",
-  "scripts/_eval-tarot.ts": "평가용 CLI — tsx 에서 server-only 가 throw",
-
-  // ⚠️ 이건 면제가 아니라 **고장**이다. `@/lib/naming/verify`(server-only)를 import 해서
-  //    import 단계에서 throw 한다 — 지금 상태로는 아예 실행되지 않는다. package.json 에도
-  //    vercel.json 에도 안 걸려 있다. 고치거나 지우는 건 별건으로 남긴다.
-  "scripts/harvest-team-notation.ts": "현재 실행 불가(server-only throw) — 별건",
+  // ⚠️ 맨 `tsx` 로 돌리면 `usage-log.ts` 첫 줄의 `import "server-only"` 가 throw 한다.
+  //    **다만 그건 스크립트의 결함이 아니라 실행법 문제다** — `scripts/tsconfig.server-stub.json`
+  //    이 server-only 를 빈 모듈로 바꿔치기하고, 스크립트 10여 개가 이미 그 방식으로 돈다:
+  //        pnpm exec tsx --tsconfig scripts/tsconfig.server-stub.json scripts/<이름>.ts
+  //    아래 셋은 문서화된 실행법이 맨 tsx 라 그 우회를 안 거친다. 계측을 붙이려면 실행
+  //    명령을 바꿔야 하는데, 운영자가 손으로 돌리는 것들이라 옛 명령으로 돌리면 통째로
+  //    죽는다. 그 위험을 지금 지지 않는다 — 붙일 거면 실행법 변경과 **같이** 해야 한다.
+  "scripts/draft-squad-names.ts": "맨 tsx 실행 — 붙이려면 스텁 tsconfig 로 실행법 변경이 선행",
+  "scripts/reddit-daily-seed.ts": "맨 tsx 실행 — 붙이려면 스텁 tsconfig 로 실행법 변경이 선행",
+  "scripts/seed-replies.ts": "맨 tsx 실행 — 붙이려면 스텁 tsconfig 로 실행법 변경이 선행",
 }
 
 function walk(dir: string, out: string[] = []): string[] {

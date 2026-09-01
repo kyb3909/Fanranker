@@ -25,6 +25,7 @@ import "dotenv/config"
 import { SYSTEM_PROMPT, buildUserPrompt, splitExpressionTag } from "@/lib/tarot/prompt"
 import { drawCards } from "@/lib/tarot/draw"
 import { chatParams } from "@/lib/llm/openai-params"
+import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 
 /** 실제 들어올 법한 질문 12개. 종류를 흩어 한 유형에 최적화되지 않게 한다. */
@@ -106,8 +107,17 @@ async function read(model: string, question: string, i: number): Promise<string>
     }),
     signal: AbortSignal.timeout(120000),
   })
-  const j: { choices?: { message?: { content?: string } }[]; error?: { message?: string } } = await r.json()
-  if (!r.ok) throw new Error(`${model}: ${j.error?.message}`)
+  const j: {
+    choices?: { message?: { content?: string } }[]
+    error?: { message?: string }
+  } = await r.json()
+  // 평가 배치는 한 번에 수십 건이라 조용히 새면 티가 크다. task 를 따로 둬서
+  // 어드민 작업별 표에서 프로덕션 비용과 섞이지 않게 한다.
+  if (!r.ok) {
+    logUsageFailure("tarot-eval", model, `http_${r.status}`)
+    throw new Error(`${model}: ${j.error?.message}`)
+  }
+  logUsage("tarot-eval", model, j)
   return splitExpressionTag(j.choices?.[0]?.message?.content ?? "")[1]
 }
 

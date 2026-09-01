@@ -64,6 +64,9 @@ const ALLOWED: Record<string, string> = {
   "scripts/saga-backfill-dryrun.ts": "사가 백필 CLI — player 한정(의도적)",
   "scripts/saga-drain-queue.ts": "사가 큐 처리 CLI — player 한정(의도적)",
   "scripts/saga-seed-aliases.ts": "사가 별칭 시드 CLI — player 한정(의도적)",
+  // 2026-08-30 `e347159d` 에서 생겼는데 등록이 빠져 시험이 그때부터 빨간불이었다.
+  // 코드는 이미 `.eq("category","player")` 로 사가 정책을 지키고 있다 — 위반이 아니라 누락이었다.
+  "lib/saga/reconcile.ts": "사가 이름 정본 대조 — player 한정(의도적)",
 }
 
 function walk(dir: string, out: string[] = []): string[] {
