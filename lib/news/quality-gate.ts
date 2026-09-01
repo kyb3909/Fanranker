@@ -219,7 +219,19 @@ export async function inspectImage(imageUrl: string): Promise<ImageVerdict> {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-5.6-terra",
+        // ⚠️ 규약(2026-09-02 감사): 모델은 `chatParams` 로만 만든다. 종전엔 여기만
+        //    `model:` 을 직접 적었고 — 저장소의 openai 호출 27자리 중 **유일한 우회**였다 —
+        //    같은 파일 위쪽 luna 호출(158행)은 규약을 지키고 있어서 파일 단위 grep 으로는
+        //    안 잡혔다. 지금은 값이 같지만(`chatParams` 는 파라미터가 없으면 model 만
+        //    낸다) 모델 문자열을 바꾸는 순간 갈라진다. 그게 이 규약이 막으려는 것이다.
+        //    재발 방지는 __tests__/lib/llm/chat-params-coverage.test.ts 가 맡는다.
+        //
+        // ⚠️ 토큰 상한은 일부러 안 건다. 응답은 한 줄 JSON 이라 작아 보이지만 5세대에서
+        //    `max_completion_tokens` 는 추론 토큰까지 포함하고, 우리는 그 사용량을 재본
+        //    적이 없다. 이 경로는 fail-closed 라 상한이 짧으면 응답이 잘려 파싱이 비고
+        //    → `pass:false` + `infra` 없음 → **멀쩡한 기사가 부당 반려된다.** 아래 주석의
+        //    2026-08-06 오반려 사고와 같은 형태다. 재려면 먼저 실측하고 걸 것.
+        ...chatParams("gpt-5.6-terra"),
         response_format: { type: "json_object" },
         messages: [
           {
