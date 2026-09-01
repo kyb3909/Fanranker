@@ -1,5 +1,6 @@
 import "server-only"
 
+import { cache as reactCache } from "react"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
@@ -743,22 +744,63 @@ interface MatchExtras {
  */
 export async function hasStoredReport(gameId: string): Promise<boolean> {
   try {
+    // ⚠️ 경기 단위로 본다 — 행 단위 확인이 중복 생성의 뿌리였다 (matchSiblingIds 참조)
+    const ids = await matchSiblingIds(gameId)
     const { count } = await createServiceRoleClient()
       .from("match_reports")
       .select("game_id", { count: "exact", head: true })
-      .eq("game_id", gameId)
+      .in("game_id", ids)
     return (count ?? 0) > 0
   } catch {
     return false
   }
 }
 
+/**
+ * 이 경기의 형제 gameId 전부 — betman 은 같은 경기를 마켓별 다중 행으로 갖는다.
+ *
+ * ⚠️ 리포트 저장·조회가 행 단위였던 것이 **중복 생성의 뿌리**다 (2026-09-01 실측:
+ *    레체-로마 하루 3건, 리버풀-노팅엄 5건 — 5경기에 리포트 15건). 짝짓기가 회차마다
+ *    다른 형제 행을 고르면 `hasStoredReport(그 행)` 이 기존 리포트를 못 보고 LLM 체인
+ *    (작성 + 검증)을 통째로 다시 돌렸다. 확인을 경기 단위로 바꾸면 어느 행으로 물어도
+ *    같은 답이 난다 — 불판이 같은 이유로 둔 중복 방지(제목 대조)와 같은 규율이고,
+ *    형제 확장 자체는 resolveEventCore ②와 같은 걸음이다.
+ *
+ *    행을 못 찾으면 자기 자신만 돌려준다 — 종전 동작으로 접힌다 (fail-open).
+ */
+const matchSiblingIds = reactCache(async (gameId: string): Promise<string[]> => {
+  try {
+    const supabase = createServiceRoleClient()
+    const { data: game } = await supabase
+      .from("betman_games")
+      .select("home_team_name, away_team_name, match_time")
+      .eq("id", gameId)
+      .maybeSingle()
+    if (!game?.match_time) return [gameId]
+    const { data: siblings } = await supabase
+      .from("betman_games")
+      .select("id")
+      .eq("home_team_name", game.home_team_name)
+      .eq("away_team_name", game.away_team_name)
+      .eq("match_time", game.match_time)
+    const ids = (siblings ?? []).map((s) => String(s.id))
+    return ids.length > 0 ? ids : [gameId]
+  } catch {
+    return [gameId]
+  }
+})
+
 /** 저장해 둔 리포트 — 창 밖이어도, 원본 기사가 내려가도 그대로 보여준다 */
 async function loadStoredReport(gameId: string): Promise<MatchReport | null> {
+  const ids = await matchSiblingIds(gameId)
   const { data } = await createServiceRoleClient()
     .from("match_reports")
     .select("title, paragraphs")
-    .eq("game_id", gameId)
+    .in("game_id", ids)
+    // ⚠️ 결정론이어야 한다 — 어느 형제 행으로 들어와도 **같은 리포트**가 보이게.
+    //    가장 먼저 만들어진 것 = FT 직후 원문으로 쓴 그 리포트다.
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle()
   if (!data?.title) return null
   return { title: String(data.title), paragraphs: (data.paragraphs as string[]) ?? [] }
