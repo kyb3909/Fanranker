@@ -49,6 +49,16 @@ async function cronGet(request: NextRequest) {
     // 2건(데워져 있으면 각 0.5초)을 더해도 maxDuration 120초 안에 넉넉히 든다.
     // ⚠️ 더 늘리려면 (슬롯 ÷ 동시) × 12초가 아래 90초 가드를 넘지 않는지 먼저 계산할 것.
     const fixtures = await getFixturesForDay(today).catch(() => [])
+    // ⚠️ 매치데이는 KST 06:00 에 넘어간다 (lib/match/get-fixtures MATCHDAY_START_HOUR_KST). 03:45·04:00
+    //    킥오프 경기는 06:00 직전이 FT 인데, 넘어간 뒤 회차는 "오늘" 목록에 그 경기가 없어 FT·스탯을
+    //    영영 못 받았다 (2026-09-03 챔피언십 밀월·번리 — 05:45 회차의 86'·68' 에서 굳음, MoTM 폴 미생성).
+    //    전날 매치데이 경기 중 킥오프 4시간 안쪽(경기 창 3.5h + 여유)은 함께 데운다.
+    const yesterday = new Date(new Date(`${today}T12:00:00+09:00`).getTime() - 24 * 3600_000)
+      .toISOString()
+      .slice(0, 10)
+    const tail = (await getFixturesForDay(yesterday).catch(() => [])).filter(
+      (f) => Date.now() - new Date(f.matchTime).getTime() <= 4 * 3600_000
+    )
     // ⚠️ 슬롯 24개는 **진행 중일 법한 경기 먼저** (2026-08-25 실측 수정).
     //    종전엔 "시작된 경기" 를 시간순 앞에서 12개 잘랐다 — 바쁜 매치데이엔 그게
     //    몇 시간 전에 끝난 경기들이라, 정작 지금 뛰는 경기가 슬롯 밖으로 밀렸다.
@@ -62,7 +72,7 @@ async function cronGet(request: NextRequest) {
       const ko = new Date(f.matchTime).getTime()
       return nowMs - ko <= 3.5 * 3600_000
     }
-    const targets = fixtures
+    const targets = [...fixtures, ...tail]
       .filter((f) => f.gameId && isMatchPageLeague(f.leagueCode))
       .filter((f) => new Date(f.matchTime).getTime() <= nowMs)
       .sort((a, b) => Number(inWindow(b)) - Number(inWindow(a)))
