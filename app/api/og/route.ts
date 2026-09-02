@@ -163,6 +163,9 @@ export async function GET(request: NextRequest) {
     const ogTitle = extractMeta(html, "og:title")
     const ogDescription = extractMeta(html, "og:description")
     const ogSiteName = extractMeta(html, "og:site_name")
+    // 기사 게시 시각 — 스캐너가 "레딧엔 방금 올라왔지만 기사는 3주 전"인 재탕을 거른다
+    // (2026-09-03 애스턴 빌라-PSG 슈퍼컵 recap: 8/13 경기가 9/3 에 다시 발행됐다).
+    const publishedAt = extractPublishedAt(html, parsedUrl)
 
     // <title> 태그 폴백 (ogTitle 은 extractMeta 에서 이미 디코딩됨)
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i)
@@ -198,6 +201,7 @@ export async function GET(request: NextRequest) {
         image: absoluteImageUrl,
         title: pageTitle,
         description: ogDescription || "",
+        publishedAt,
         siteName: ogSiteName || parsedUrl.hostname,
         url: parsedUrl.toString(),
         summary,
@@ -212,6 +216,30 @@ export async function GET(request: NextRequest) {
     }
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
+}
+
+/**
+ * 기사 게시 시각 (ISO) — `article:published_time` → JSON-LD `datePublished` → URL 경로의
+ * /YYYY/MM/DD/ 순. 어느 것도 없으면 null (판정하지 않는다 — 스캐너가 "모름"으로 통과시킨다).
+ */
+function extractPublishedAt(html: string, url: URL): string | null {
+  const candidates: (string | null)[] = [
+    extractMeta(html, "article:published_time"),
+    html.match(/"datePublished"\s*:\s*"([^"]+)"/i)?.[1] ?? null,
+  ]
+  const pathDate = url.pathname.match(/\/(20\d{2})\/(\d{1,2})\/(\d{1,2})\//)
+  if (pathDate)
+    candidates.push(
+      `${pathDate[1]}-${pathDate[2].padStart(2, "0")}-${pathDate[3].padStart(2, "0")}T12:00:00Z`
+    )
+  for (const c of candidates) {
+    if (!c) continue
+    const t = Date.parse(c)
+    if (Number.isFinite(t) && t > Date.parse("2000-01-01") && t < Date.now() + 86400_000) {
+      return new Date(t).toISOString()
+    }
+  }
+  return null
 }
 
 function extractMeta(html: string, property: string): string | null {

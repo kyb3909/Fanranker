@@ -28,6 +28,9 @@ import { execFileSync } from "node:child_process"
 const BASE_URL = (process.env.BASE_URL || "https://gongnori.fan").replace(/\/$/, "")
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const CRON_SECRET = process.env.CRON_SECRET
+// 기사 게시 시각이 이보다 오래됐으면 초안을 안 만든다 — 레딧엔 방금 올라와도 기사는 옛것인 재탕 차단
+// (2026-09-03 애스턴 빌라-PSG 슈퍼컵 recap: 8/13 경기가 9/3 에 다시 발행됐다). /api/og 의 publishedAt 이 근거.
+const STALE_ARTICLE_HOURS = Number(process.env.STALE_ARTICLE_HOURS || 72)
 const SEEN_FILE = process.env.SEEN_FILE || "./news-scanner-seen.json"
 const MODEL = process.env.SCANNER_MODEL || "gpt-5.6-luna"
 /**
@@ -750,6 +753,7 @@ async function buildArticleOg(url) {
   return {
     imageNode: d?.image ? { type: "image", attrs: { src: d.image } } : null,
     ogSummary: d?.summary || null,
+    publishedAt: d?.publishedAt || null,
   }
 }
 
@@ -1330,7 +1334,14 @@ ${v.summary || ""}`,
         // 원문 = 영상 그 자체. embed-card 가 url 로 플레이어 iframe 을 만든다 (html 불필요)
         mediaNode = { type: "embed", attrs: { url: p.url, provider: "streamable" } }
       } else if (isExternalArticle(p.url)) {
-        const { imageNode, ogSummary } = await buildArticleOg(p.url)
+        const { imageNode, ogSummary, publishedAt } = await buildArticleOg(p.url)
+        const articleAgeH = publishedAt ? (Date.now() - Date.parse(publishedAt)) / 3600e3 : null
+        if (articleAgeH != null && articleAgeH > STALE_ARTICLE_HOURS) {
+          log(
+            `skip(오래된 기사 ${Math.round(articleAgeH / 24)}일 전) [${p.subreddit}/${p.id}] ${p.url}`
+          )
+          continue
+        }
         mediaNode = imageNode
         if (ogSummary && (summary || "").length < 40) summary = ogSummary
       }
