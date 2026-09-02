@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import Image from "next/image"
 import { MessageCircle, Share2 } from "lucide-react"
 import { useAuth, useClerk } from "@clerk/nextjs"
@@ -23,7 +23,9 @@ import type { PopularPost } from "@/lib/home/popular-posts"
  * - 미디어: 본문 첫 동영상 > 첫 이미지. 4:3 고정 프레임(폭·높이 예약 → CLS 0) 안에 통째로
  *   담고(contain), 빈 여백은 같은 이미지를 흐려 채운다 — 레딧 문법. 세로 영상도 잘리지 않는다.
  * - 동영상은 포스터 + 재생 버튼이 기본, 피드 자동 재생 없음.
- * - 댓글은 글 페이지 부품 그대로(InlineComments). 카드가 화면 근처에 왔을 때만 불러온다.
+ * - 댓글은 글 페이지 부품 그대로(InlineComments). **기본 닫힘** — 댓글 버튼을 눌러야 열리고 그때
+ *   불러온다 (2026-09-03 운영자: "처음에는 모두 닫힌 채"). 카드마다 댓글창이 열려 있으면 피드가
+ *   댓글판이 된다.
  * - 타임스탬프를 내지 않는다 — 어제의 공방이 "낡은 글"로 읽히면 콜드스타트에서 진다.
  */
 export type WallPost = PopularPost
@@ -43,26 +45,7 @@ export function WallPostCard({
   const [voteCount, setVoteCount] = useState(post.upvotes)
   const [myVote, setMyVote] = useState<"up" | "down" | null>(null)
   const [commentCount, setCommentCount] = useState(post.comments)
-  const [commentsExpanded, setCommentsExpanded] = useState(false)
-  const [inView, setInView] = useState(false)
-  const ref = useRef<HTMLElement>(null)
-
-  // 댓글은 카드가 화면 근처에 왔을 때만 — 카드마다 즉시 부르면 첫 화면에서 댓글 API 를 N번 때린다
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setInView(true)
-          io.disconnect()
-        }
-      },
-      { rootMargin: "300px" }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
+  const [commentsOpen, setCommentsOpen] = useState(false)
 
   const href = `/post/${post.id}?utm_source=wall_now`
   const openPost = () =>
@@ -122,7 +105,6 @@ export function WallPostCard({
 
   return (
     <article
-      ref={ref}
       className="overflow-hidden rounded-2xl"
       style={{
         background: "var(--wc-card)",
@@ -223,8 +205,8 @@ export function WallPostCard({
         <VoteButtons voteCount={voteCount} myVote={myVote} onVote={vote} size="md" />
         <button
           type="button"
-          onClick={() => setCommentsExpanded((e) => !e)}
-          aria-expanded={commentsExpanded}
+          onClick={() => setCommentsOpen((o) => !o)}
+          aria-expanded={commentsOpen}
           className="inline-flex h-[34px] items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-colors hover:bg-[var(--wc-soft)]"
           style={{ color: "var(--wc-mute)" }}
         >
@@ -246,14 +228,7 @@ export function WallPostCard({
         </button>
       </div>
 
-      {inView && (
-        <InlineComments
-          postId={post.id}
-          expanded={commentsExpanded}
-          onExpand={() => setCommentsExpanded(true)}
-          onCountChange={setCommentCount}
-        />
-      )}
+      {commentsOpen && <InlineComments postId={post.id} onCountChange={setCommentCount} />}
     </article>
   )
 }
