@@ -84,6 +84,14 @@ export function teamMatches(lfaName: string, ourEn: string): boolean {
 export interface TeamSided {
   homeTeam: string
   awayTeam: string
+  /**
+   * 후보(LFA 행)의 영문 원명 — 있으면 영문 대조는 이걸로 한다 (2026-09-02).
+   * homeTeam 이 사전을 거쳐 한글이 된 뒤에는 `teamMatches(한글, 영문)` 이 토큰 0개로 항상 실패한다.
+   * 사전 표기("셀타 비고")와 betman 표기("RC셀타데비고")가 다른 팀은 접두도 안 겹쳐 두 경로가
+   * 다 죽었고, 후보가 하나뿐일 때의 팀명 가드가 그걸 드러냈다 (레알 소시에다드–셀타 링크 소실).
+   */
+  homeTeamEn?: string
+  awayTeamEn?: string
 }
 
 /**
@@ -105,18 +113,26 @@ export function pickLfaCounterpart<T extends TeamSided>(
   const baEn = teamEn.get(betman.awayTeam.trim())
   const overlaps = (x: string, y: string) =>
     x.length >= 2 && y.length >= 2 && (x.startsWith(y) || y.startsWith(x))
-  const sideMatch = (candName: string, korNorm: string, en: string | undefined) =>
-    overlaps(normTeam(candName), korNorm) || (!!en && teamMatches(candName, en))
+  // 한글 접두 겹침 → 영문 원명 대조 → (원명이 없는 옛 호출부용) 후보명 자체를 영문으로 간주
+  const sideMatch = (
+    candName: string,
+    candEn: string | undefined,
+    korNorm: string,
+    en: string | undefined
+  ) =>
+    overlaps(normTeam(candName), korNorm) ||
+    (!!en && !!candEn && teamMatches(candEn, en)) ||
+    (!!en && teamMatches(candName, en))
+  const agrees = (c: T) =>
+    sideMatch(c.homeTeam, c.homeTeamEn, bh, bhEn) && sideMatch(c.awayTeam, c.awayTeamEn, ba, baEn)
   if (candidates.length === 1) {
     const only = candidates[0]
     // 후보가 하나여도 사전이 양 팀을 알면 이름이 맞아야 한다 (2026-09-02, lib/lfa/match.ts
     // resolveMatch 와 같은 규칙). 사전이 모르면 종전대로 채택 — 한글 후보명은 toKorean 을
     // 거친 것이라 표기가 흔들릴 수 있고, 그때 끊는 건 판정이 아니라 손실이다.
     if (!bhEn || !baEn) return only
-    return sideMatch(only.homeTeam, bh, bhEn) && sideMatch(only.awayTeam, ba, baEn) ? only : null
+    return agrees(only) ? only : null
   }
-  const hits = candidates.filter(
-    (c) => sideMatch(c.homeTeam, bh, bhEn) && sideMatch(c.awayTeam, ba, baEn)
-  )
+  const hits = candidates.filter(agrees)
   return hits.length === 1 ? hits[0] : null
 }

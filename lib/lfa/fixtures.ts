@@ -31,6 +31,13 @@ export interface LfaFixture {
   leagueCode: string
   homeTeam: string
   awayTeam: string
+  /**
+   * LFA 영문 원명 (2026-09-02). 짝짓기의 영문 대조는 **이 값**으로 한다 — homeTeam 은 사전을 거쳐
+   * 한글이 된 뒤라, 사전 표기("셀타 비고")와 betman 표기("RC셀타데비고")가 다르면 접두도 안 겹치고
+   * 영문 대조도 한글을 받아 죽는다. 그날 레알 소시에다드–셀타가 그렇게 링크를 잃었다.
+   */
+  homeTeamEn: string
+  awayTeamEn: string
   /** UTC ISO — betman match_time 과 같은 축 */
   matchTime: string
   status: "scheduled" | "in_progress" | "completed" | "cancelled"
@@ -173,6 +180,8 @@ export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFix
           leagueCode: code,
           homeTeam: toKorean(m.home, index),
           awayTeam: toKorean(m.away, index),
+          homeTeamEn: String(m.home?.name ?? ""),
+          awayTeamEn: String(m.away?.name ?? ""),
           matchTime: iso,
           status: toStatus(m),
           homeScore: toNum(m.home?.score),

@@ -95,6 +95,41 @@ describe("pickLfaCounterpart — 동시 킥오프 슬롯", () => {
     expect(pickLfaCounterpart(row("첼시", "브라이턴&호브 앨비언"), [only], TEAM_EN)).toBe(only)
   })
 
+  // Regression: ISSUE-001 — 사전 표기("셀타 비고")와 betman 표기("RC셀타데비고")가 다르고
+  // 홈은 LFA 축약("R. Sociedad")이라 한글화도 안 된 경기가, 팀명 가드 뒤 링크를 잃었다.
+  // Found by /qa on 2026-09-02 (프로덕션 /matches?date=2026-09-03 실측)
+  // Report: .gstack/qa-reports/qa-report-gongnori-fan-2026-09-02.md
+  it("사전 한글 표기가 betman 과 달라도 LFA 영문 원명으로 붙는다 (레알 소시에다드–셀타 실사고)", () => {
+    const dict = new Map([
+      ["레알 소시에다드", "Real Sociedad"],
+      ["RC셀타데비고", "Celta Vigo"],
+    ])
+    const betman = row("레알 소시에다드", "RC셀타데비고")
+    const cand = {
+      homeTeam: "R. Sociedad",
+      awayTeam: "셀타 비고",
+      homeTeamEn: "R. Sociedad",
+      awayTeamEn: "Celta Vigo",
+    }
+    expect(pickLfaCounterpart(betman, [cand], dict)).toBe(cand)
+    // 영문 원명이 없는 옛 호출부 입력은 여전히 실패한다 — 그게 이 사고의 모양이었다
+    expect(pickLfaCounterpart(betman, [row("R. Sociedad", "셀타 비고")], dict)).toBeNull()
+  })
+
+  it("영문 원명이 있어도 다른 팀이면 붙지 않는다", () => {
+    const dict = new Map([
+      ["레알 소시에다드", "Real Sociedad"],
+      ["RC셀타데비고", "Celta Vigo"],
+    ])
+    const stranger = {
+      homeTeam: "Osasuna",
+      awayTeam: "헤타페",
+      homeTeamEn: "Osasuna",
+      awayTeamEn: "Getafe",
+    }
+    expect(pickLfaCounterpart(row("레알 소시에다드", "RC셀타데비고"), [stranger], dict)).toBeNull()
+  })
+
   it("엉뚱한 경기는 여전히 안 붙는다", () => {
     const hit = pickLfaCounterpart(row("아스널", "토트넘"), CANDIDATES, TEAM_EN)
     expect(hit).toBeNull()

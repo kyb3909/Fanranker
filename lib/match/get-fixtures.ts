@@ -38,6 +38,9 @@ export interface FixtureRow {
   gameId: string | null
   homeTeam: string
   awayTeam: string
+  /** LFA 행의 영문 원명 — 짝짓기의 영문 대조용 (lib/match/pair-fixtures.ts TeamSided 참조) */
+  homeTeamEn?: string
+  awayTeamEn?: string
   leagueCode: string
   matchTime: string
   status: "scheduled" | "in_progress" | "completed" | "cancelled"
@@ -174,6 +177,8 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       gameId: null,
       homeTeam: f.homeTeam,
       awayTeam: f.awayTeam,
+      homeTeamEn: f.homeTeamEn,
+      awayTeamEn: f.awayTeamEn,
       leagueCode: f.leagueCode,
       matchTime: f.matchTime,
       status: f.status,
