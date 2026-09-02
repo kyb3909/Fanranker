@@ -8,7 +8,9 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
-import { isBotUserId } from "@/lib/constants/bot-users"
+import { PopularStream } from "@/components/home/popular-stream"
+import type { WallPost } from "@/components/home/wall-post-card"
+import { trackEvent } from "@/lib/analytics/events"
 import { QuickComposer } from "@/components/home/quick-composer"
 import { isMatchPageLeague } from "@/lib/match/leagues"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
@@ -48,8 +50,8 @@ interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
-  /** 운동장 새 글 (2026-09-03) — 댓글 0 이라도 인터리브에 낀다 (cached-home-data.getCachedFreshBoardPosts) */
-  initialFreshBoardPosts?: unknown[]
+  /** 인기 게시글 풀 (2026-09-03) — 떡밥 사이 큰 카드 + 뉴스 끈 스트림 (cached-home-data.getCachedPopularBoardPosts) */
+  initialPopularPosts?: WallPost[]
   initialGlobalNotices?: GlobalNotice[]
   initialSort?: SortType
   initialTab?: FeedTab
@@ -78,7 +80,7 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
-  initialFreshBoardPosts,
+  initialPopularPosts,
   initialGlobalNotices,
   initialSort = "new",
   initialTab = "cardnews",
@@ -95,80 +97,38 @@ export function HomeClient({
   const [sortBy, setSortBy] = useState<SortType>(initialSort)
   const [feedTab, setFeedTab] = useState<FeedTab>(initialTab)
 
-  // 담벼락 인터리브 재료 (2026-08-20) — 사이드바용으로 이미 프리페치된 최근 댓글 글에서
-  // **사람 글만** 거른다 (봇 기사는 이미 피드의 주인공이라 인터리브에 낄 이유가 없다).
-  // 뉴스:게시글 비율은 site_settings 다이얼 (운영자: "비율을 점진적으로 바꿔나갈 거야")
-  // — 사람 글이 늘면 SQL 한 줄로 게시판 쪽으로 기울인다.
+  // 인기 게시글 풀 (2026-09-03 운영자: "전체에서는 진짜 인기 게시물 몇 개만, 뉴스를 끄면 쫙").
+  // 떡밥 사이 담벼락 카드는 앞 maxWallCards 장(site_settings 다이얼), 뉴스를 끄면 풀 전체가
+  // 스트림으로 흐른다. 같은 풀이라 두 화면의 순서가 일치한다 — "전체에서 본 그 글이 위에 있다".
   const maxWallCards = wallRatio?.maxWallCards ?? 4
-  const humanWallPosts = useMemo(
-    () =>
-      (
-        (initialRecentComments ?? []) as {
-          id: string
-          title: string
-          community_slug: string
-          comment_count?: number
-          user_id?: string
-          image?: string | null
-        }[]
-      )
-        .filter((p) => !isBotUserId(p.user_id))
-        .map((p) => ({
-          id: p.id,
-          title: p.title,
-          communitySlug: p.community_slug,
-          comments: p.comment_count || 1,
-          image: p.image ?? null,
-          kind: "commented" as const,
-        })),
-    [initialRecentComments]
-  )
-  // 운동장 새 글 (2026-09-03) — 댓글이 없어도 피드에 낀다. 댓글 글과 **번갈아** 섞는다:
-  // 새 글만 앞세우면 댓글 글이 밀리고, 댓글 글만 앞세우면 새 글이 영영 안 보인다.
-  const freshWallPosts = useMemo(
-    () =>
-      (
-        (initialFreshBoardPosts ?? []) as {
-          id: string
-          title: string
-          community_slug: string
-          comment_count?: number
-          image?: string | null
-        }[]
-      ).map((p) => ({
-        id: p.id,
-        title: p.title,
-        communitySlug: p.community_slug,
-        comments: p.comment_count ?? 0,
-        image: p.image ?? null,
-        kind: "fresh" as const,
-      })),
-    [initialFreshBoardPosts]
-  )
-  const mergedWallPosts = useMemo(() => {
-    const out: Array<(typeof freshWallPosts)[number] | (typeof humanWallPosts)[number]> = []
-    const seen = new Set<string>()
-    const n = Math.max(freshWallPosts.length, humanWallPosts.length)
-    for (let i = 0; i < n; i++) {
-      for (const p of [freshWallPosts[i], humanWallPosts[i]]) {
-        if (p && !seen.has(p.id)) {
-          seen.add(p.id)
-          out.push(p)
-        }
-      }
-    }
-    return out
-  }, [freshWallPosts, humanWallPosts])
-  const wallPosts = useMemo(
-    () => mergedWallPosts.slice(0, maxWallCards),
-    [mergedWallPosts, maxWallCards]
-  )
+  const popularPosts = useMemo(() => initialPopularPosts ?? [], [initialPopularPosts])
+  const wallPosts = useMemo(() => popularPosts.slice(0, maxWallCards), [popularPosts, maxWallCards])
   // 피드 종단 실물 (2026-08-21 리포트 Top5-5) — 인터리브에 안 실린 다음 순번 2건.
   // 같은 글이 인터리브와 종단에 두 번 나오는 중복을 막는다. 없으면 빈 배열 → 도선 폴백
   const endWallPosts = useMemo(
-    () => mergedWallPosts.slice(maxWallCards, maxWallCards + 2),
-    [mergedWallPosts, maxWallCards]
+    () => popularPosts.slice(maxWallCards, maxWallCards + 2),
+    [popularPosts, maxWallCards]
   )
+  // 뉴스 끄기 (2026-09-03) — 선택은 이 기기에 남긴다 (SNS 의 "내 피드" 설정처럼).
+  // 첫 렌더는 항상 뉴스 켬 — 저장값을 SSR 이 모르므로 hydration 뒤에 읽는다 (#418 전례).
+  const [newsOff, setNewsOff] = useState(false)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("home-news-off") === "1") setNewsOff(true)
+    } catch {
+      // 저장소 차단(사생활 모드 등) — 기본값 유지
+    }
+  }, [])
+  const toggleNews = () => {
+    const next = !newsOff
+    setNewsOff(next)
+    try {
+      localStorage.setItem("home-news-off", next ? "1" : "0")
+    } catch {
+      // 저장 실패해도 이번 방문에는 적용된다
+    }
+    trackEvent({ name: "home_news_toggle", params: { news_on: !next } })
+  }
   // FT 사건 행 (2026-08-21 리포트 Top5-2, 편집 "사건 행" 문법) — 당일 종료 경기가
   // 자기 종료 시각(킥오프+110분)으로 시간순 스트림에 참여한다. 목적지는 매치센터
   // (2026-08-22 운영자: "매치센터 들어갈 방법이 없어졌다" — 불판은 매치센터 안에서).
@@ -396,11 +356,33 @@ export function HomeClient({
                   </button>
                 )
               })}
+              {/* 뉴스 끄기 (2026-09-03 운영자: "뉴스를 끄면 쫙 인기 게시물들이 올라와서 SNS 처럼").
+                  떡밥 탭에서만 뜻이 있다. 끈 상태는 burgundy — 평소와 다른 화면임을 알린다 */}
+              {feedTab === "cardnews" && (
+                <button
+                  type="button"
+                  onClick={toggleNews}
+                  aria-pressed={newsOff}
+                  className={`ml-auto inline-flex shrink-0 items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${!newsOff ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
+                  style={{
+                    height: 34,
+                    padding: "0 14px",
+                    background: newsOff ? "var(--wc-burgundy)" : "var(--wc-card)",
+                    color: newsOff ? "white" : "var(--wc-mute)",
+                    border: newsOff ? "1px solid var(--wc-burgundy)" : "1px solid var(--wc-line-2)",
+                  }}
+                >
+                  {newsOff ? "뉴스 켜기" : "뉴스 끄기"}
+                </button>
+              )}
             </div>
 
             {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
-            {feedTab === "cardnews" && (
+            {feedTab === "cardnews" && newsOff && (
+              <PopularStream posts={popularPosts} onNewsOn={toggleNews} />
+            )}
+            {feedTab === "cardnews" && !newsOff && (
               <div className="space-y-3">
                 {/* 오늘의 경기 일정은 상단 MatchdayBand 가 담당 — 여기서 중복 렌더 X */}
                 <CardNewsFeed

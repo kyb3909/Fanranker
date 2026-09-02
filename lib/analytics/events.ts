@@ -128,8 +128,17 @@ type AnalyticsEvent =
   // ── 담벼락 지금 블록 (2026-08-20 — 떡밥 피드에 박은 커뮤니티 진입로) ──
   // 블록 CTR·board 탭 진입 변화가 "봇 글 담벼락 제외" 재검토의 판정 근거다.
   // surface: cardnews=홈 떡밥 피드 주입 / post=봇 기사 상세 하단
-  | { name: "wall_now_open_post"; params: { post_id: string; surface: "cardnews" | "post" } }
+  //   stream = 뉴스를 끈 인기 스트림 (2026-09-03)
+  | {
+      name: "wall_now_open_post"
+      params: { post_id: string; surface: "cardnews" | "post" | "stream" }
+    }
   | { name: "wall_now_open_board"; params: { surface: "cardnews" | "post" } }
+  // ── 담벼락 큰 카드 + 뉴스 끄기 (2026-09-03 운영자: "SNS·인스타그램처럼") ──
+  // 판정 지표: 뉴스 끈 세션의 comment_submit·wall_video_play 가 켠 세션보다 높은가
+  | { name: "wall_video_play"; params: { post_id: string; surface: "cardnews" | "stream" } }
+  | { name: "home_news_toggle"; params: { news_on: boolean } }
+  | { name: "home_popular_stream_open"; params: { count: number } }
   // ── 경기장 지도 (2026-08-27 /stadium 복셀 지도 개편) ──
   // 판정 지표는 마커 오픈율(marker_open / stadium_map_view ≥ 50%) 과
   // 벽돌 전환율(brick_purchase / brick_cta_click ≥ 10%). 소급 계측이 안 되므로

@@ -4,6 +4,8 @@ import { unstable_cache } from "next/cache"
 import { createAnonClient } from "@/lib/supabase/server"
 import { fetchCardNews, fetchHeroCards, type CardNewsItem } from "@/lib/feed/cardnews"
 import { MATCH_THREAD_BOT_USER_ID } from "@/lib/constants/bot-users"
+import { rankPopularPosts, type PopularPost } from "@/lib/home/popular-posts"
+import type { TipTapNode } from "@/types/post"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
 
 /**
@@ -166,13 +168,15 @@ export function getCachedRecentComments(): Promise<unknown[]> {
 }
 
 /**
- * 운동장 새 글 (2026-09-03 운영자: "오늘의 떡밥 사이에 운동장 글이 올라온 거 표현").
+ * 인기 게시글 풀 (2026-09-03 운영자: "전체 보기에서는 진짜 인기 게시물 몇 개만, 뉴스를 끄면 쫙").
  *
- * 인터리브 재료가 "댓글 달린 글"뿐이라 방금 올라온 글(댓글 0)은 홈 떡밥 피드에 낄 길이 없었다.
- * 최근 48시간 게시판 글을 최신순으로 — 뉴스 봇(떡밥의 주인공)과 중계불판(매치센터 안에서
- * 산다)만 뺀다. 축구밈봇·사람 글은 들어간다. 소비처(home-client)가 댓글 글과 섞는다.
+ * 떡밥 사이 담벼락 카드(앞 maxWallCards 장)와 뉴스를 끈 스트림(전부)이 **같은 풀**을 쓴다.
+ * 재료 = 최근 30일에 올라왔거나 댓글이 달린 글 (2026-09-03 실측: 7일 창은 2건, 30일 창은 41건 —
+ * 이 볼륨에서 7일은 빈 SNS 다). 뉴스봇(떡밥의 주인공)·중계불판(매치센터
+ * 안에서 산다)은 DB 에서, 나머지 봇은 rankPopularPosts 가 뺀다 — 축구밈봇·사람 글만 남는다.
+ * 점수·정렬은 lib/home/popular-posts (순수 — 시험 가능). 상위 40건만 실어 보낸다.
  */
-export function getCachedFreshBoardPosts(): Promise<unknown[]> {
+export function getCachedPopularBoardPosts(): Promise<PopularPost[]> {
   return unstable_cache(
     async () => {
       const supabase = createAnonClient()
@@ -181,25 +185,65 @@ export function getCachedFreshBoardPosts(): Promise<unknown[]> {
         .select("slug")
         .eq("is_active", true)
       const activeSlugs = (activeCats ?? []).map((c) => c.slug)
-      const since = new Date(Date.now() - 48 * 3600_000).toISOString()
+      const now = Date.now()
+      const since30d = new Date(now - 30 * 24 * 3600_000).toISOString()
       const { data } = await supabase
         .from("posts")
-        .select("id, title, community_slug, comment_count, created_at, user_id, image, content")
+        .select(
+          "id, title, community_slug, user_id, image, content, vote_count, comment_count, created_at, last_comment_at"
+        )
         .is("deleted_at", null)
         .in("community_slug", activeSlugs)
         .not("user_id", "in", `("user_bot_soccer_kr","${MATCH_THREAD_BOT_USER_ID}")`)
-        .gte("created_at", since)
+        .or(`created_at.gte.${since30d},last_comment_at.gte.${since30d}`)
         .order("created_at", { ascending: false })
-        .limit(8)
-      const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
-      return (data ?? []).map(({ content, ...row }) => ({
-        ...row,
-        image: (row.image as string | null) ?? extractFirstImageSrcFromTipTapJSON(content),
+        .limit(150)
+      const [
+        { extractFirstImageSrcFromTipTapJSON, extractFirstVideoSrcFromTipTapJSON },
+        { extractTextFromTipTapJSON },
+      ] = await Promise.all([
+        import("@/lib/utils/tiptap-embeds"),
+        import("@/lib/tiptap/extract-text"),
+      ])
+      const rows = (data ?? []).map(({ content, ...row }) => {
+        const text =
+          content && typeof content === "object"
+            ? extractTextFromTipTapJSON(content as TipTapNode).trim()
+            : typeof content === "string"
+              ? content.trim()
+              : ""
+        return {
+          ...row,
+          image: (row.image as string | null) ?? extractFirstImageSrcFromTipTapJSON(content),
+          video: extractFirstVideoSrcFromTipTapJSON(content),
+          excerpt: text ? text.slice(0, 140) : null,
+        }
+      })
+      const ranked = rankPopularPosts(rows, now).slice(0, 40)
+      const userIds = [...new Set(ranked.map((r) => r.user_id))]
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, nickname, avatar_url")
+        .in("user_id", userIds.length ? userIds : ["-"])
+      const byUser = new Map((profiles ?? []).map((p) => [p.user_id, p]))
+      return ranked.map((r) => ({
+        id: r.id,
+        title: r.title,
+        communitySlug: r.community_slug,
+        userId: r.user_id,
+        author: byUser.get(r.user_id)?.nickname || "익명",
+        avatar: byUser.get(r.user_id)?.avatar_url ?? null,
+        image: r.image,
+        video: r.video,
+        excerpt: r.excerpt,
+        upvotes: r.vote_count ?? 0,
+        comments: r.comment_count ?? 0,
+        createdAt: r.created_at,
       }))
     },
-    ["home-fresh-board-v1"],
+    ["home-popular-board-v2"],
     { revalidate: 60, tags: [HOME_TAGS.posts] }
-  )().catch(() => [] as unknown[])
+  )().catch(() => [] as PopularPost[])
 }
 
 /**

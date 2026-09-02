@@ -7,7 +7,7 @@ import {
   getCachedFeed,
   getCachedCategories,
   getCachedRecentComments,
-  getCachedFreshBoardPosts,
+  getCachedPopularBoardPosts,
   getCachedGlobalNotices,
   getCachedWorldcupStatus,
   getCachedCardNews,
@@ -46,7 +46,7 @@ async function fetchAllHomeData(sort: SortType) {
     gamesResult,
     wallRatio,
     tomorrowMatchTitle,
-    freshBoardPostsResult,
+    popularPostsResult,
   ] = await Promise.all([
     // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
     getCachedFeed(sort),
@@ -97,8 +97,8 @@ async function fetchAllHomeData(sort: SortType) {
     // 10) 피드 종단 "내일 경기 예고" 한 줄 (2026-08-21 데드엔드 리포트 Top5-5)
     getCachedTomorrowMatchTitle(),
 
-    // 11) 운동장 새 글 — 댓글 0 이라도 떡밥 사이에 끼는 재료 (2026-09-03)
-    getCachedFreshBoardPosts(),
+    // 11) 인기 게시글 풀 (2026-09-03) — 떡밥 사이 담벼락 큰 카드 + 뉴스 끈 스트림, 같은 풀
+    getCachedPopularBoardPosts(),
   ])
 
   // 히어로 확정: 운영자 핀 우선. **핀이 하나라도 있으면 그것만** 올린다(채워넣기 없음 —
@@ -118,7 +118,7 @@ async function fetchAllHomeData(sort: SortType) {
     initialFeed: feedResult,
     initialCategories: categoriesResult,
     initialRecentComments: recentCommentsResult,
-    initialFreshBoardPosts: freshBoardPostsResult,
+    initialPopularPosts: popularPostsResult,
     initialGlobalNotices: globalNoticesResult as {
       id: string
       title: string
@@ -160,7 +160,7 @@ export default async function Home({
         initialFeed={homeData.initialFeed}
         initialCategories={homeData.initialCategories}
         initialRecentComments={homeData.initialRecentComments}
-        initialFreshBoardPosts={homeData.initialFreshBoardPosts}
+        initialPopularPosts={homeData.initialPopularPosts}
         initialGlobalNotices={homeData.initialGlobalNotices}
         initialSort={initialSort}
         initialTab={
