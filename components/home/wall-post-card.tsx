@@ -109,7 +109,7 @@ export function WallPostCard({
       // --wall-* 는 색 시안 전환기(wall-tint-lab, 개발 전용)가 주입한다. 없으면 흰 카드 기본값.
       style={{
         background: "var(--wall-bg, var(--wc-card))",
-        border: "1px solid var(--wall-border, var(--wc-line))",
+        border: "var(--wall-border-width, 1px) solid var(--wall-border, var(--wc-line))",
         boxShadow: "var(--wall-shadow, var(--wc-shadow-1))",
       }}
     >
@@ -119,16 +119,28 @@ export function WallPostCard({
       >
         <AuthorAvatar name={post.author} src={post.avatar} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
+          <p
+            className="truncate text-[13px] font-bold"
+            style={{ color: "var(--wall-head-fg, var(--wc-ink))" }}
+          >
             {post.author}
           </p>
           {/* 키커 — 뉴스 카드의 출처 자리에 "담벼락"이 선다 */}
           <p className="flex items-center gap-1.5 text-[12px] font-bold">
-            <span style={{ color: "var(--wc-burgundy)" }}>담벼락</span>
-            <span aria-hidden style={{ color: "var(--wc-mute-2)" }}>
+            <span
+              className="rounded-full"
+              style={{
+                color: "var(--wall-kicker-fg, var(--wc-burgundy))",
+                background: "var(--wall-kicker-bg, transparent)",
+                padding: "var(--wall-kicker-pad, 0)",
+              }}
+            >
+              담벼락
+            </span>
+            <span aria-hidden style={{ color: "var(--wall-head-fg-2, var(--wc-mute-2))" }}>
               ·
             </span>
-            <span style={{ color: "var(--wc-mute)" }}>{community}</span>
+            <span style={{ color: "var(--wall-head-fg-2, var(--wc-mute))" }}>{community}</span>
             {isNew && (
               <span
                 className="rounded-full px-1.5 py-px"

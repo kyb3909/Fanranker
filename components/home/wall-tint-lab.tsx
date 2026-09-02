@@ -16,7 +16,13 @@ import { useEffect, useState } from "react"
 const VARS = [
   "--wall-bg",
   "--wall-border",
+  "--wall-border-width",
   "--wall-head-bg",
+  "--wall-head-fg",
+  "--wall-head-fg-2",
+  "--wall-kicker-bg",
+  "--wall-kicker-fg",
+  "--wall-kicker-pad",
   "--wall-foot-bg",
   "--wall-shadow",
 ] as const
@@ -64,6 +70,61 @@ const VARIANTS: { id: string; label: string; note: string; vars: Vars }[] = [
       "--wall-shadow": "var(--wc-shadow-3)",
     },
   },
+  // ── 진한 계열 (2026-09-03 운영자: "너무 밋밋한데, 좀 확실하게 구분이 갔으면") ──
+  {
+    id: "f",
+    label: "F 와인 12% 바탕 + 테두리",
+    note: "D 의 두 배 — 스크롤 중에도 한눈에",
+    vars: {
+      "--wall-bg": "color-mix(in srgb, var(--wc-burgundy) 12%, var(--wc-card))",
+      "--wall-border": "color-mix(in srgb, var(--wc-burgundy) 45%, var(--wc-line))",
+    },
+  },
+  {
+    id: "g",
+    label: "G 와인 헤더 밴드",
+    note: "작성자 줄이 버건디 띠, 글씨는 흰색 — 본문은 흰 카드",
+    vars: {
+      "--wall-head-bg": "var(--wc-burgundy)",
+      "--wall-head-fg": "var(--wc-card)",
+      "--wall-head-fg-2": "color-mix(in srgb, var(--wc-card) 78%, var(--wc-burgundy))",
+      "--wall-kicker-fg": "var(--wc-card)",
+      "--wall-kicker-bg": "color-mix(in srgb, var(--wc-card) 18%, var(--wc-burgundy))",
+      "--wall-kicker-pad": "1px 7px",
+      "--wall-border": "color-mix(in srgb, var(--wc-burgundy) 45%, var(--wc-line))",
+    },
+  },
+  {
+    id: "h",
+    label: "H 와인 18% 바탕 (진함)",
+    note: "카드 전체가 분명한 분홍빛 와인",
+    vars: {
+      "--wall-bg": "color-mix(in srgb, var(--wc-burgundy) 18%, var(--wc-card))",
+      "--wall-border": "color-mix(in srgb, var(--wc-burgundy) 40%, var(--wc-line))",
+    },
+  },
+  {
+    id: "i",
+    label: "I 굵은 와인 테두리 2px",
+    note: "연한 와인 바탕 + 테두리 2px 버건디 65%",
+    vars: {
+      "--wall-bg": "var(--wc-wine-tint)",
+      "--wall-border": "color-mix(in srgb, var(--wc-burgundy) 65%, var(--wc-line))",
+      "--wall-border-width": "2px",
+    },
+  },
+  {
+    id: "j",
+    label: "J 담벼락 태그 + 와인 12%",
+    note: '"담벼락" 이 버건디로 채운 태그, 바탕은 F',
+    vars: {
+      "--wall-bg": "color-mix(in srgb, var(--wc-burgundy) 12%, var(--wc-card))",
+      "--wall-border": "color-mix(in srgb, var(--wc-burgundy) 30%, var(--wc-line))",
+      "--wall-kicker-bg": "var(--wc-burgundy)",
+      "--wall-kicker-fg": "var(--wc-card)",
+      "--wall-kicker-pad": "1px 7px",
+    },
+  },
 ]
 
 export function WallTintLab() {
@@ -103,6 +164,8 @@ export function WallTintLab() {
       className="fixed left-4 z-[60] flex flex-col gap-1"
       style={{
         bottom: 84,
+        maxHeight: "72vh",
+        overflowY: "auto",
         width: 248,
         padding: 10,
         borderRadius: 14,
