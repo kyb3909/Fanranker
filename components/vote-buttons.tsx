@@ -7,12 +7,25 @@ interface VoteButtonsProps {
   myVote: "up" | "down" | null
   onVote: (type: "up" | "down") => void
   size?: "sm" | "md"
+  /**
+   * 0 이고 내 표도 없을 때 숫자 대신 보여줄 동사 (예: "추천"). 홈 담벼락 포스트가 쓴다 —
+   * "👍 0" 은 콜드스타트에서 "아무도 없다"를 가장 크게 말하는 글자다 (2026-09-03 디자인 리뷰).
+   * 안 넘기면 종전과 똑같이 숫자를 찍는다 (글 상세 등 무변경).
+   */
+  emptyLabel?: string
 }
 
-export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButtonsProps) {
+export function VoteButtons({
+  voteCount,
+  myVote,
+  onVote,
+  size = "sm",
+  emptyLabel,
+}: VoteButtonsProps) {
   const h = size === "md" ? 34 : 26
   const fs = size === "md" ? 13.5 : 12
   const iconSize = size === "md" ? 17 : 14
+  const showLabel = !!emptyLabel && voteCount === 0 && myVote === null
 
   return (
     <span
@@ -50,18 +63,23 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         key={voteCount}
         className="tnum animate-vote-bump"
         style={{
-          minWidth: 26,
+          minWidth: showLabel ? "auto" : 26,
+          padding: showLabel ? "0 6px" : 0,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           height: "100%",
           textAlign: "center",
-          fontSize: fs,
-          fontWeight: 800,
-          color: myVote === "up" ? "var(--wc-burgundy)" : "var(--wc-ink)",
+          fontSize: showLabel ? 13 : fs,
+          fontWeight: showLabel ? 600 : 800,
+          color: showLabel
+            ? "var(--wc-mute)"
+            : myVote === "up"
+              ? "var(--wc-burgundy)"
+              : "var(--wc-ink)",
         }}
       >
-        {voteCount}
+        {showLabel ? emptyLabel : voteCount}
       </span>
       <button
         style={{

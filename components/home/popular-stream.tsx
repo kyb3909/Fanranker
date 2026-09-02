@@ -1,32 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import Link from "@/components/ui/app-link"
-import { WallPostCard, type WallPost } from "@/components/home/wall-post-card"
+import { WallChromeContext, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
 import { trackEvent } from "@/lib/analytics/events"
 
 const PAGE = 8
-
-/**
- * 뉴스를 끈 스트림은 전부 담벼락 글 — 구분할 상대가 없으니 구분색을 **전부 뺀다**
- * (2026-09-03 운영자: "뉴스 끄니까 죄다 와인색 헤더라 정신 사납다"). 시안 전환기가
- * .worldcup-scope 에 건 --wall-* 를 여기서 initial 로 끊으면 카드는 흰색 기본값으로 떨어진다.
- * 색은 떡밥 사이에 끼는 카드(surface=cardnews)에서만 뜻이 있다.
- */
-const NO_TINT = {
-  "--wall-bg": "initial",
-  "--wall-border": "initial",
-  "--wall-border-width": "initial",
-  "--wall-head-bg": "initial",
-  "--wall-head-fg": "initial",
-  "--wall-head-fg-2": "initial",
-  "--wall-kicker-bg": "initial",
-  "--wall-kicker-fg": "initial",
-  "--wall-kicker-pad": "initial",
-  "--wall-foot-bg": "initial",
-  "--wall-shadow": "initial",
-} as React.CSSProperties
 
 /**
  * 뉴스를 끈 홈 (2026-09-03 운영자: "뉴스를 끄면 쫙 인기 게시물들이 올라와서 진짜 SNS나
@@ -36,6 +16,7 @@ const NO_TINT = {
  * 한다 — 한 달치 사람 글이 40건을 넘는 날이 오면 그때 페이지 API 를 단다.
  */
 export function PopularStream({ posts, onNewsOn }: { posts: WallPost[]; onNewsOn: () => void }) {
+  const chrome = useContext(WallChromeContext)
   const [shown, setShown] = useState(PAGE)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -78,17 +59,19 @@ export function PopularStream({ posts, onNewsOn }: { posts: WallPost[]; onNewsOn
   }
 
   return (
-    <div className="flex flex-col gap-3" style={NO_TINT}>
+    // 전부 담벼락 글 — 구분할 상대가 없으니 구분 장치도 없다 (운영자: "죄다 와인색 헤더라 정신 사납다").
+    // flat: 포스트 사이 괘선 한 줄(gap-0) = 인스타 타임라인 / card: 데스크톱은 카드 열(gap-3), 모바일은 괘선
+    <div className={chrome === "card" ? "flex flex-col gap-0 sm:gap-3" : "flex flex-col gap-0"}>
       {posts.slice(0, shown).map((p) => (
         <WallPostCard key={p.id} post={p} surface="stream" />
       ))}
       {shown < posts.length ? (
-        <div ref={sentinelRef} className="flex h-10 items-center justify-center">
+        <div ref={sentinelRef} className="mt-3 flex h-10 items-center justify-center">
           <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
         </div>
       ) : (
         <div
-          className="flex items-baseline justify-between rounded-xl px-4 py-3"
+          className="mt-3 flex items-baseline justify-between rounded-xl px-4 py-3"
           style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
         >
           <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>

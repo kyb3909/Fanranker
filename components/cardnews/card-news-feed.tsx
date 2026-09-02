@@ -993,7 +993,8 @@ export function CardNewsFeed({
             {/* 2026-09-03: 데스크톱에도 보인다 (종전 lg:hidden — 사이드바가 있으니 모바일만).
                 운영자: "오늘의 떡밥 사이에 운동장 글이 올라온 거 표현" — 화면 폭과 무관하게 한 피드다 */}
             {wallAt.has(i) && (
-              <div className="flex flex-col gap-1.5">
+              // py-4: 앞뒤 8+16=24px, 뉴스끼리는 8px — 근접성으로 "덩어리 / 섬". my-* 는 space-y 와 상쇄된다.
+              <div className="flex flex-col gap-1.5 py-4">
                 <WallPostCard post={wallAt.get(i)!} />
                 {i === lastWallIndex && <WallMoreRow />}
               </div>

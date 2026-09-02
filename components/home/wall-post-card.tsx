@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { createContext, useContext, useState, type ReactNode } from "react"
 import Image from "next/image"
 import { MessageCircle, Share2 } from "lucide-react"
 import { useAuth, useClerk } from "@clerk/nextjs"
@@ -8,29 +8,44 @@ import Link from "@/components/ui/app-link"
 import { VoteButtons } from "@/components/vote-buttons"
 import { InlineComments } from "@/components/home/inline-comments"
 import { toast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 import { trackEvent } from "@/lib/analytics/events"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import type { PopularPost } from "@/lib/home/popular-posts"
 
 /**
- * 담벼락 카드 — 떡밥 피드 사이에 끼는 사람 글 (2026-08-20 인터리브 → 2026-09-03 큰 카드).
+ * 담벼락 포스트 — 떡밥(봇 뉴스) 피드 사이에 끼는 사람 글 (2026-08-20 인터리브 → 2026-09-03 큰 카드
+ * → 2026-09-03 밤 디자인 리뷰 "타임라인 포스트").
  *
- * 운영자 결정(2026-09-03): "미리보기 창이 레딧이나 인스타그램처럼 크게, 거기에 바로 댓글을
- * 달고 볼 수 있게". 그래서 뉴스 카드(CompactCard, 썸네일 한 줄)와 **일부러 밀도가 다르다** —
- * 이 카드는 피드의 각주가 아니라 SNS 의 포스트다. 바탕은 뉴스 카드와 같은 흰색(운영자:
- * 웜 페이퍼 틴트는 "탁하다") — 구분은 크기와 "담벼락" 키커가 한다.
+ * 디자인 리뷰 결론(편집·SNS·시스템·UX 네 관점 + 디렉터, 2026-09-03): 뉴스와 갈라 보이지 않던 이유는
+ * 색이 아니라 **골격**이 같아서였다 — 둘 다 흰 둥근 카드 + 12px 키커 줄 + 굵은 제목. 색 시안 열 개
+ * (연한 와인 ~ 버건디 밴드)는 전부 폐기: 연한 쪽은 지각 문턱 아래, 진한 쪽은 이 시스템에서 뜻이
+ * 틀린다(와인 채움=활성 칩, 핑크 면=공지, 2px 테두리=선택, 버건디 밴드=페이지 선언·버튼).
  *
- * - 미디어: 본문 첫 동영상 > 첫 이미지. 4:3 고정 프레임(폭·높이 예약 → CLS 0) 안에 통째로
- *   담고(contain), 빈 여백은 같은 이미지를 흐려 채운다 — 레딧 문법. 세로 영상도 잘리지 않는다.
- * - 동영상은 포스터 + 재생 버튼이 기본, 피드 자동 재생 없음.
- * - 댓글은 글 페이지 부품 그대로(InlineComments). **기본 닫힘** — 댓글 버튼을 눌러야 열리고 그때
- *   불러온다 (2026-09-03 운영자: "처음에는 모두 닫힌 채"). 카드마다 댓글창이 열려 있으면 피드가
- *   댓글판이 된다.
- * - 타임스탬프를 내지 않는다 — 어제의 공방이 "낡은 글"로 읽히면 콜드스타트에서 진다.
+ * 그래서 종류가 다른 것은 **형태**로 가른다:
+ * - 실루엣: 뉴스는 카드, 담벼락은 카드가 아니다. 모바일은 화면 끝까지 붙는 평판(-mx-4), 위아래 괘선
+ *   `--wc-line-2` 양면(한쪽 액센트 보더가 아니다). 데스크톱은 chrome 에 따라 평판(flat) 또는 카드(card).
+ * - 진입부: 40px 중성 아바타 + 14px 이름 + "담벼락 · 게시판" 12px mute. 버건디 0 · 필 0 · 라틴 0.
+ *   (와인틴트+버건디 글자 폴백 아바타는 칩으로 읽혔다 — 폐기. "새 글" 필은 콜드스타트에서 전 카드에
+ *   붙어 배지가 아니었다 — 폐기.)
+ * - 크기: 제목 20px — 뉴스 14 대비 1.43배. 16(1.14배)은 스크롤 속도에서 무의미했다.
+ * - 퇴장부: 추천·댓글·공유가 같은 링을 두른 알약 셋. 0 이면 숫자 대신 동사("추천"·"댓글 달기") —
+ *   "👍 0 · 댓글 0"은 어떤 틴트보다 크게 "아무도 없다"를 말한다.
+ * - 미디어: 본문 첫 동영상 > 첫 이미지. 4:3 예약 프레임(CLS 0)에 통째로 담고 빈 곳은 흐린 배경.
+ *   동영상은 포스터 + 재생 버튼, 자동 재생 없음.
+ * - 댓글: 글 페이지 부품 그대로(InlineComments), 기본 닫힘 — 댓글 버튼을 눌러야 불러온다.
+ * - 타임스탬프 없음 — 어제의 공방이 "낡은 글"로 읽히면 콜드스타트에서 진다.
  */
 export type WallPost = PopularPost
 
 type Surface = "cardnews" | "stream"
+
+/**
+ * 데스크톱(sm+) 크롬 — 리뷰 최종 후보 1(flat, 디렉터 추천)과 2(card, 안전판)는 이 값 하나만 다르다.
+ * 모바일은 둘 다 풀블리드 평판. 운영자가 고르면 기본값을 박고 Provider 는 걷어낸다.
+ */
+export type WallChrome = "flat" | "card"
+export const WallChromeContext = createContext<WallChrome>("flat")
 
 export function WallPostCard({
   post,
@@ -40,6 +55,7 @@ export function WallPostCard({
   /** cardnews = 떡밥 사이 인터리브 / stream = 뉴스를 끈 인기 스트림 */
   surface?: Surface
 }) {
+  const chrome = useContext(WallChromeContext)
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
   const [voteCount, setVoteCount] = useState(post.upvotes)
@@ -99,67 +115,53 @@ export function WallPostCard({
   }
 
   const community = COMMUNITY_NAMES[post.communitySlug] || post.communitySlug
-  // 아무도 안 누른 새 글 — 숫자 0 을 내보이지 않는다 (콜드스타트에서 "아무도 안 본 글"로 읽힌다)
-  const isNew = post.upvotes === 0 && post.comments === 0
   const media = post.video ? "video" : post.image ? "image" : "none"
 
   return (
     <article
-      className="overflow-hidden rounded-2xl"
-      // --wall-* 는 색 시안 전환기(wall-tint-lab, 개발 전용)가 주입한다. 없으면 흰 카드 기본값.
-      style={{
-        background: "var(--wall-bg, var(--wc-card))",
-        border: "var(--wall-border-width, 1px) solid var(--wall-border, var(--wc-line))",
-        boxShadow: "var(--wall-shadow, var(--wc-shadow-1))",
-      }}
+      className={cn(
+        // 모바일: 컬럼 패딩(px-4)을 뚫고 화면 끝까지 — 홈 main 이 px-4 sm:px-6 이라 -mx-4 는 <sm 에서만 뜻이 있다.
+        // 위아래 괘선 양면. sm+ 는 컬럼 폭(sm~lg 은 600 가운데 정렬이라 뷰포트에 못 닿는다 — 늘리지 말 것).
+        "-mx-4 overflow-hidden border-y sm:mx-0",
+        // 후보 2(card): 데스크톱만 지금의 카드로 — radius 표(12) 정상화, 링은 그림자에 내장
+        chrome === "card" && "sm:rounded-xl sm:border-0 sm:shadow-[var(--wc-shadow-1)]",
+        // 스트림(전부 담벼락): 포스트 사이 괘선 한 줄만 — 인스타 타임라인
+        surface === "stream" && "border-t-0 first:border-t"
+      )}
+      style={{ background: "var(--wc-card)", borderColor: "var(--wc-line-2)" }}
     >
-      <header
-        className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5"
-        style={{ background: "var(--wall-head-bg, transparent)" }}
-      >
-        <AuthorAvatar name={post.author} src={post.avatar} />
-        <div className="min-w-0 flex-1">
-          <p
-            className="truncate text-[13px] font-bold"
-            style={{ color: "var(--wall-head-fg, var(--wc-ink))" }}
-          >
-            {post.author}
-          </p>
-          {/* 키커 — 뉴스 카드의 출처 자리에 "담벼락"이 선다 */}
-          <p className="flex items-center gap-1.5 text-[12px] font-bold">
+      <header className="flex items-center gap-3 px-4 pt-3 pb-2">
+        <Link
+          href={`/profile/${post.userId}`}
+          className="flex min-w-0 flex-1 items-center gap-3 no-underline"
+        >
+          <AuthorAvatar name={post.author} src={post.avatar} />
+          <span className="min-w-0 flex-1">
             <span
-              className="rounded-full"
-              style={{
-                color: "var(--wall-kicker-fg, var(--wc-burgundy))",
-                background: "var(--wall-kicker-bg, transparent)",
-                padding: "var(--wall-kicker-pad, 0)",
-              }}
+              className="block truncate text-[14px] font-bold"
+              style={{ color: "var(--wc-ink)" }}
             >
-              담벼락
+              {post.author}
             </span>
-            <span aria-hidden style={{ color: "var(--wall-head-fg-2, var(--wc-mute-2))" }}>
-              ·
+            <span
+              className="block truncate text-[12px] font-medium"
+              style={{ color: "var(--wc-mute)" }}
+            >
+              담벼락 · {community}
             </span>
-            <span style={{ color: "var(--wall-head-fg-2, var(--wc-mute))" }}>{community}</span>
-            {isNew && (
-              <span
-                className="rounded-full px-1.5 py-px"
-                style={{ background: "var(--wc-wine-tint)", color: "var(--wc-burgundy)" }}
-              >
-                새 글
-              </span>
-            )}
-          </p>
-        </div>
+          </span>
+        </Link>
       </header>
 
       <Link href={href} className="block px-4 pb-3 no-underline" onClick={openPost}>
         <h2
+          className="line-clamp-3"
           style={{
-            fontSize: 16,
+            fontSize: 20,
             fontWeight: 700,
-            lineHeight: 1.35,
-            letterSpacing: "-0.01em",
+            lineHeight: 1.3,
+            letterSpacing: "-0.02em",
+            textWrap: "balance",
             color: "var(--wc-ink)",
             wordBreak: "keep-all",
             overflowWrap: "anywhere",
@@ -169,8 +171,8 @@ export function WallPostCard({
         </h2>
         {media === "none" && post.excerpt && (
           <p
-            className="mt-1.5 line-clamp-3 text-[14px]"
-            style={{ color: "var(--wc-mute)", wordBreak: "keep-all", overflowWrap: "anywhere" }}
+            className="mt-2 line-clamp-3 text-[14px] leading-[1.55] font-normal"
+            style={{ color: "var(--wc-ink-2)", wordBreak: "keep-all", overflowWrap: "anywhere" }}
           >
             {post.excerpt}
           </p>
@@ -200,7 +202,7 @@ export function WallPostCard({
                 src={post.image}
                 alt=""
                 fill
-                sizes="(max-width: 640px) 100vw, 560px"
+                sizes="(max-width: 640px) 100vw, 600px"
                 className="object-contain"
               />
             ) : (
@@ -217,23 +219,37 @@ export function WallPostCard({
         </Link>
       )}
 
-      <div
-        className="flex items-center gap-1.5 px-3 pt-2.5 pb-1.5"
-        style={{ background: "var(--wall-foot-bg, transparent)" }}
-      >
-        <VoteButtons voteCount={voteCount} myVote={myVote} onVote={vote} size="md" />
+      {/* 퇴장부 — 같은 링을 두른 알약 셋. 뉴스 카드엔 없는 아랫단 실루엣 */}
+      <div className="flex items-center gap-2 px-4 pt-2 pb-3">
+        <VoteButtons
+          voteCount={voteCount}
+          myVote={myVote}
+          onVote={vote}
+          size="md"
+          emptyLabel="추천"
+        />
         <button
           type="button"
           onClick={() => setCommentsOpen((o) => !o)}
           aria-expanded={commentsOpen}
           className="inline-flex h-[34px] items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-colors hover:bg-[var(--wc-soft)]"
-          style={{ color: "var(--wc-mute)" }}
+          style={{
+            color: "var(--wc-mute)",
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line-2)",
+          }}
         >
           <MessageCircle className="h-4 w-4" />
-          <span>댓글</span>
-          <b className="gn-num" style={{ color: "var(--wc-ink)" }}>
-            {commentCount}
-          </b>
+          {commentCount === 0 ? (
+            <span>댓글 달기</span>
+          ) : (
+            <>
+              <span>댓글</span>
+              <b className="gn-num" style={{ color: "var(--wc-ink)" }}>
+                {commentCount}
+              </b>
+            </>
+          )}
         </button>
         <span className="flex-1" />
         <button
@@ -241,7 +257,11 @@ export function WallPostCard({
           onClick={share}
           aria-label="공유"
           className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full transition-colors hover:bg-[var(--wc-soft)]"
-          style={{ color: "var(--wc-mute)" }}
+          style={{
+            color: "var(--wc-mute)",
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line-2)",
+          }}
         >
           <Share2 className="h-4 w-4" />
         </button>
@@ -278,21 +298,22 @@ function MediaFrame({ backdrop, children }: { backdrop: string | null; children:
   )
 }
 
+/** 40px 원형. 이미지 없으면 중성 원 + 이니셜 — 구글·슬랙식 "계정" 문법 (와인 폴백은 칩으로 읽혔다) */
 function AuthorAvatar({ name, src }: { name: string; src: string | null }) {
   return (
     <span
-      className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full"
-      style={{ background: "var(--wc-wine-tint)", color: "var(--wc-burgundy)" }}
+      className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full"
+      style={{ background: "var(--wc-tint)", color: "var(--wc-ink-2)" }}
     >
       {src ? (
         src.startsWith("/") ? (
-          <Image src={src} alt="" fill sizes="36px" className="object-cover" />
+          <Image src={src} alt="" fill sizes="40px" className="object-cover" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
         )
       ) : (
-        <span className="flex h-full w-full items-center justify-center text-[13px] font-bold">
+        <span className="flex h-full w-full items-center justify-center text-[14px] font-bold">
           {(name || "?").slice(0, 1)}
         </span>
       )}
@@ -303,7 +324,7 @@ function AuthorAvatar({ name, src }: { name: string; src: string | null }) {
 /** 인터리브 대열의 마지막 카드 뒤에 한 번만 붙는 담벼락 진입로 */
 export function WallMoreRow() {
   return (
-    <div className="-mt-1 flex justify-end px-1">
+    <div className="-mt-1 flex justify-end px-4">
       <Link
         href="/?tab=board"
         className="text-[12px] font-bold no-underline"
