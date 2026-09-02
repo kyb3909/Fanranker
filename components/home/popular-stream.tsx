@@ -9,6 +9,26 @@ import { trackEvent } from "@/lib/analytics/events"
 const PAGE = 8
 
 /**
+ * 뉴스를 끈 스트림은 전부 담벼락 글 — 구분할 상대가 없으니 구분색을 **전부 뺀다**
+ * (2026-09-03 운영자: "뉴스 끄니까 죄다 와인색 헤더라 정신 사납다"). 시안 전환기가
+ * .worldcup-scope 에 건 --wall-* 를 여기서 initial 로 끊으면 카드는 흰색 기본값으로 떨어진다.
+ * 색은 떡밥 사이에 끼는 카드(surface=cardnews)에서만 뜻이 있다.
+ */
+const NO_TINT = {
+  "--wall-bg": "initial",
+  "--wall-border": "initial",
+  "--wall-border-width": "initial",
+  "--wall-head-bg": "initial",
+  "--wall-head-fg": "initial",
+  "--wall-head-fg-2": "initial",
+  "--wall-kicker-bg": "initial",
+  "--wall-kicker-fg": "initial",
+  "--wall-kicker-pad": "initial",
+  "--wall-foot-bg": "initial",
+  "--wall-shadow": "initial",
+} as React.CSSProperties
+
+/**
  * 뉴스를 끈 홈 (2026-09-03 운영자: "뉴스를 끄면 쫙 인기 게시물들이 올라와서 진짜 SNS나
  * 인스타그램처럼"). 인기 풀(cached-home-data.getCachedPopularBoardPosts)을 큰 카드로 흘린다.
  *
@@ -58,7 +78,7 @@ export function PopularStream({ posts, onNewsOn }: { posts: WallPost[]; onNewsOn
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" style={NO_TINT}>
       {posts.slice(0, shown).map((p) => (
         <WallPostCard key={p.id} post={p} surface="stream" />
       ))}
