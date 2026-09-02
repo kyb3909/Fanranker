@@ -1326,6 +1326,8 @@ ${v.summary || ""}`,
       }
       let mediaNode = null
       let summary = v.summary
+      // 기사 게시 시각 — agent-draft 로 넘겨 자동발행이 서버 쪽에서도 옛 기사를 거른다 (VPS 파일은 표류할 수 있다)
+      let articlePublishedAt = null
       if (isTweet(p.url)) {
         mediaNode = tweetData?.node ?? null
       } else if (isBsky(p.url)) {
@@ -1342,6 +1344,7 @@ ${v.summary || ""}`,
           )
           continue
         }
+        articlePublishedAt = publishedAt
         mediaNode = imageNode
         if (ogSummary && (summary || "").length < 40) summary = ogSummary
       }
@@ -1371,6 +1374,7 @@ ${v.summary || ""}`,
         tags: Array.isArray(v.tags) ? v.tags.slice(0, 10) : [],
         scores: { credibility: v.credibility, importance: v.importance },
         dedupe_key: `reddit:${p.id}`,
+        ...(articlePublishedAt ? { published_at: articlePublishedAt } : {}),
         // 종목 표기 — 발행이 이 값으로 게시판을 고른다 (미표기 = football, 하위 호환)
         ...(sport !== "football" ? { sport } : {}),
         ...(vs ? { vs } : {}),

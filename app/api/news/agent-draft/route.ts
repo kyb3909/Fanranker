@@ -41,6 +41,8 @@ const BodySchema = z.object({
   source_text: z.string().max(4000).optional(),
   /** 발견 출처 (r/soccer 글 등) */
   origin_url: z.string().url().optional(),
+  /** 기사 게시 시각(ISO) — /api/og publishedAt. 자동발행이 옛 기사 재탕을 거르는 근거 (2026-09-03) */
+  published_at: z.string().max(40).optional(),
   tags: z.array(z.string()).max(20).optional(),
   /** {credibility, importance} 등 — Hermes 판단 점수 */
   scores: z.record(z.unknown()).optional(),
@@ -206,6 +208,7 @@ export async function POST(req: NextRequest) {
       ...(d.source_text ? { source_text: d.source_text } : {}),
       // 종목은 불변 스냅샷(raw)에 둔다 — draft 는 검수 편집이 덮을 수 있다
       ...(d.sport ? { sport: d.sport } : {}),
+      ...(d.published_at ? { published_at: d.published_at } : {}),
     },
     scores: d.scores ?? {},
     dedupe_key: d.dedupe_key,

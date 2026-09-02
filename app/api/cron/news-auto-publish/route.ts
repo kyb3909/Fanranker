@@ -34,6 +34,7 @@ import {
 } from "@/lib/news/breaking"
 import { stripUnevidencedAmounts } from "@/lib/news/amount-evidence"
 import { resolveTeamCard } from "@/lib/news/team-card"
+import { articleAgeHours, MAX_ARTICLE_AGE_HOURS } from "@/lib/news/article-age"
 import { naverNewsCount } from "@/lib/naming/verify"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import {
@@ -154,7 +155,7 @@ async function run(request: NextRequest) {
       decision: Record<string, unknown> | null
       created_at: string
       /** 원문 스냅샷 — 금액 증거 검사(오피셜)·종목 라우팅용 */
-      raw: { source_text?: string; sport?: string } | null
+      raw: { source_text?: string; sport?: string; published_at?: string } | null
     })[]),
   ].sort((a, b) => {
     const [ua, ub] = [at(a) <= urgentCutoff, at(b) <= urgentCutoff]
@@ -306,6 +307,35 @@ async function run(request: NextRequest) {
     // 개인 블로그·뉴스레터 출처는 자동발행 금지 (2026-08-04 Substack 실사고)
     if (row.urls?.source && PERSONAL_BLOG_RE.test(row.urls.source)) {
       noteSkip(row.id, "personal_blog")
+      continue
+    }
+    // 옛 기사 재탕 차단 (2026-09-03 슈퍼컵 recap — 8/13 경기가 9/3 에 다시 발행됐다).
+    // 초안 신선도(MAX_AGE_HOURS)는 초안 생성 시각 기준이라 "레딧엔 방금, 기사는 3주 전"을 못 걸렀다.
+    // 스캐너가 raw.published_at(/api/og publishedAt)을 넘기고, 없으면 원문 URL 의 /YYYY/MM/DD/ 로 본다.
+    // 스캐너 쪽 가드(STALE_ARTICLE_HOURS)와 같은 값 — VPS 파일은 표류할 수 있어 여기서 한 번 더.
+    // 게시 시각을 모르면 판정하지 않는다.
+    const articleAge = articleAgeHours({
+      publishedAt: row.raw?.published_at,
+      sourceUrl: row.urls?.source,
+    })
+    if (articleAge != null && articleAge > MAX_ARTICLE_AGE_HOURS) {
+      const { error: staleErr } = await supabase
+        .from("news_reservoir")
+        .update({
+          status: "rejected",
+          decision: {
+            ...(row.decision ?? {}),
+            action: "reject",
+            reason: "stale_article",
+            reviewer: "auto",
+            article_age_hours: Math.round(articleAge),
+            at: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      if (staleErr) errors.push(`${row.id}: 옛 기사 반려 기록 실패 — ${staleErr.message}`)
+      noteSkip(row.id, "stale_article", "rejected")
       continue
     }
     // 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04, 2026-08-09 재확인).
