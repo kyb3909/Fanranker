@@ -80,7 +80,11 @@ export function WallTintLab() {
   }, [])
 
   useEffect(() => {
-    const root = document.documentElement.style
+    // wc 토큰은 :root 가 아니라 .worldcup-scope 안에서만 정의된다 — <html> 에 걸면
+    // var(--wc-*) 가 거기서 풀리지 않아 무효가 되고 카드는 기본값(흰색)으로 떨어진다.
+    const scope =
+      (document.querySelector(".worldcup-scope") as HTMLElement | null) ?? document.documentElement
+    const root = scope.style
     const v = VARIANTS.find((x) => x.id === id) ?? VARIANTS[0]
     for (const k of VARS) {
       const val = v.vars[k]
