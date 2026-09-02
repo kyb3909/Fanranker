@@ -8,9 +8,11 @@ import { BETMAN_CODE_BY_LFA_ID } from "@/lib/lfa/leagues"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 
 /**
- * 일정의 정본 — 대상 리그 전 경기 (2026-08-17).
+ * 대상 리그 전 경기 (2026-08-17). ⚠️ 2026-09-02 부터 일정의 **정본은 betman** 이고 이 목록은
+ * 같은 경기의 라이브 상태·스코어를 얹는 보강 소스다 (lib/match/get-fixtures.ts getFixturesForDay
+ * doc 참조 — 운영자: "경기 일정 다뤄야 하는 건 베트맨에 있는 거 기준"). 아래 8/17 논지는 역사 기록.
  *
- * ## 왜 betman 이 정본이 될 수 없나
+ * ## (8/17) 왜 betman 이 정본이 될 수 없다고 봤나
  * betman 은 **베팅 마켓이 열린 경기만** 싣는다. 2026-08-17 실측: 향후 일정이 이틀치뿐이고
  * EPL 개막 라운드(8/22)·라리가 2R 이 통째로 없었다. 일정 페이지를 betman 으로 채우면
  * "5대 리그·유럽 대항전 전 경기"라는 요구를 구조적으로 만족할 수 없다 (운영자 제보).

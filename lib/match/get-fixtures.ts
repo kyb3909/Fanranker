@@ -6,6 +6,7 @@ import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
 import { cachedTeamEn } from "@/lib/lfa/match"
 import { normTeam, pickLfaCounterpart } from "@/lib/match/pair-fixtures"
+import { isPopularFixture } from "@/lib/match/popular-teams"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
 
 /**
@@ -152,13 +153,23 @@ function slotKey(leagueCode: string, matchTime: string): string {
  */
 
 /**
- * 매치데이 전 경기 — **LFA 가 정본, betman 이 보강**.
+ * 매치데이 전 경기 — **betman 이 정본, LFA 가 보강** (2026-09-02 운영자: "경기 일정 다뤄야
+ * 하는 건 베트맨에 있는 거 기준").
  *
- * betman 은 마켓이 열린 경기만 있어 일정이 이틀치뿐이다 (2026-08-17 실측: EPL 개막
- * 라운드 부재). 그래서 목록의 뼈대는 LFA 에서 가져오고, 같은 경기가 betman 에도 있으면
- * gameId·한글 팀명·확정 스코어를 덮어씌운다 (매치 페이지·라인업이 betman id 로 걸려 있다).
+ * 8/20 의 "LFA 정본" 결정을 뒤집었다. LFA 전용 행(betman 미판매 경기)은 gameId 가 없어 매치센터·
+ * 불판·예측 어느 동선으로도 못 가고, 팀명도 사전에 없으면 영문으로 남아 반쪽짜리 행이었다
+ * (2026-09-02 /qa: "Osnabrück vs 바이에른 뮌헨", "파르마 – Cremonese"). 이 사이트의 경기 동선은
+ * 승부예측(betman)에서 시작하므로 일정도 betman 이 파는 경기만 싣는다. 대가: betman 은 마켓이
+ * 열린 경기만·보통 이틀치만 실어 먼 날짜 탭은 빈다 — 운영자가 받아들인 트레이드오프.
  *
- * LFA 가 죽으면 betman 목록만 남는다 (fail-open) — 예전 동작으로 자연 강등된다.
+ * LFA 는 같은 경기의 라이브 상태·스코어를 얹는다. 짝을 못 찾은 betman 행도 **버리지 않는다**
+ * (링크·한글명은 betman 것이니 잃을 게 없다 — 라이브 스코어만 없다). LFA 가 죽으면 betman
+ * 목록 그대로 (fail-open).
+ *
+ * **예외 — 인기 팀 경기는 betman 에 없어도 싣는다** (같은 날 운영자: "빅6 와 인기 팀으로 구분한
+ * 팀들은 예외. 포칼이나 컵대회에서 하부리그 팀과 만나도 그 팀들이 나왔으면"). 정의와 대조 규칙은
+ * lib/match/popular-teams.ts — 팀 게시판 14팀, LFA 표기 정확일치. 이런 행은 gameId 가 없어
+ * 매치센터 링크 없이 일정에만 실린다.
  */
 export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   const [betman, lfa] = await Promise.all([
@@ -167,9 +178,8 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   ])
   if (lfa.length === 0) return betman
 
-  // ⚠️ 경기 단위 키는 lfaId 다. (리그, 킥오프)로 키를 잡으면 같은 라운드 동시 킥오프
-  //    경기들이 서로를 덮어쓴다 (2026-08-17 실측: EPL 개막 14:00 UTC 3경기 → 1경기).
-  const byLfaId = new Map<string, FixtureRow>()
+  // ⚠️ 슬롯 = (리그, 킥오프). 같은 라운드 동시 킥오프는 한 슬롯에 여러 후보가 들어가고
+  //    pickLfaCounterpart 가 팀명으로 고른다 (2026-08-17 실측: EPL 개막 14:00 UTC 3경기).
   const slots = new Map<string, FixtureRow[]>()
   for (const f of lfa) {
     const row: FixtureRow = {
@@ -185,7 +195,6 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       homeScore: f.homeScore,
       awayScore: f.awayScore,
     }
-    byLfaId.set(f.lfaId, row)
     const k = slotKey(f.leagueCode, f.matchTime)
     slots.set(k, [...(slots.get(k) ?? []), row])
   }
@@ -194,8 +203,6 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   const consumed = new Set<FixtureRow>()
   // 한글→영문 사전 — 예선 마이너 팀 대조용 (실패 시 빈 맵 → ① 축만으로 동작)
   const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
-  // LFA 가 그날 실제로 커버하는 리그 — 아래 "짝 없는 betman 버리기"의 안전선
-  const leaguesInLfa = new Set(lfa.map((f) => f.leagueCode))
   const droppedForLog: {
     betman: string
     league: string
@@ -224,13 +231,10 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
         homeEn: teamEn.get(b.homeTeam.trim()) ?? null,
         awayEn: teamEn.get(b.awayTeam.trim()) ?? null,
       })
-      // ⚠️ 짝 못 찾은 betman 행은 **버린다** (2026-08-20 운영자: "돈 내고 가져오는
-      //    피드를 우선시" — LFA 가 정본, betman 은 링크·한글명 주석). 종전엔 그대로
-      //    실어서 이름 대조가 빗나갈 때마다 같은 경기가 두 줄이 됐다 — 대조를 아무리
-      //    다듬어도 실패 케이스는 남으므로, 실패의 결과를 "두 줄"이 아니라 "링크 없는
-      //    한 줄"로 바꾼다. 단 LFA 가 그 리그를 그날 아예 안 주면(리그 매핑 공백)
-      //    betman 행을 살린다 — 리그가 통째로 증발하는 것이 더 큰 사고다.
-      if (!leaguesInLfa.has(b.leagueCode)) merged.push(b)
+      // 짝 못 찾은 betman 행은 **그대로 싣는다** (2026-09-02, betman 정본). 링크·한글명은
+      // betman 것이라 잃을 게 없고 라이브 스코어만 없다. 8/20 엔 "두 줄" 을 막으려 버렸는데,
+      // 이제 LFA 전용 행을 아예 안 실으므로 두 줄이 생길 수 없다.
+      merged.push(b)
       continue
     }
     consumed.add(hit)
@@ -257,12 +261,15 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   }
   if (droppedForLog.length > 0) {
     console.warn(
-      `[fixtures] betman 짝짓기 실패 ${droppedForLog.length}건 (사전 ${teamEn.size}개) — ` +
-        `이 경기들은 매치 링크·불판·예열을 잃는다: ` +
+      `[fixtures] betman↔LFA 짝짓기 실패 ${droppedForLog.length}건 (사전 ${teamEn.size}개) — ` +
+        `행은 살아 있지만 라이브 스코어가 없고, 매치센터의 LFA 링크도 같은 이유로 비었을 수 있다: ` +
         JSON.stringify(droppedForLog)
     )
   }
-  for (const row of byLfaId.values()) if (!consumed.has(row)) merged.push(row)
+  // LFA 전용 행(betman 미판매)은 인기 팀 경기만 싣는다 — 2026-09-02 운영자 결정 (위 doc 참조)
+  for (const rows of slots.values()) {
+    for (const row of rows) if (!consumed.has(row) && isPopularFixture(row)) merged.push(row)
+  }
 
   return merged.sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 }

@@ -161,8 +161,9 @@ export default async function MatchesPage({
   // ⚠️ 종전 "접힘"은 hidden 클래스만 붙이고 펼칠 수단이 없는 **영구 삭제**였다
   //    (2026-08-19 PM 실측: FA컵 130경기 도달 불가).
   const expanded = new Set((params.expand ?? "").split(",").filter(Boolean))
-  // getFixturesForDay 가 LFA(정본) + betman(보강)을 이미 병합해 준다 — 스코어·종료 판정도
-  // 그 안에서 끝난다. 예전의 별도 LFA 보정 단계는 중복이라 제거했다 (2026-08-17).
+  // getFixturesForDay 가 betman(정본, 2026-09-02) + LFA(라이브 보강) 을 이미 병합해 준다 —
+  // 스코어·종료 판정도 그 안에서 끝난다. 예전의 별도 LFA 보정 단계는 중복이라 제거했다 (2026-08-17).
+  // betman 에 없는 경기는 인기 팀(팀 게시판 14팀)이 뛸 때만 링크 없이 실린다.
   const fixtures: FixtureRow[] = await getFixturesForDay(date)
 
   // 리그별 섹션 — 대항전 → 5대 리그 → 컵 (leagues.ts 삽입 순서)
