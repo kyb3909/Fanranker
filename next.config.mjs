@@ -259,6 +259,34 @@ const nextConfig = {
         destination: '/prediction',
         permanent: false,
       },
+      // 시즌 개막·코그 이벤트 페이지 폐쇄 (2026-09-02 운영자: "승부예측 이벤트 페이지도 모두
+      // 닫아놓고"). 월드컵과 같은 이유로 307 — 루트 app/loading.tsx 때문에 layout 의
+      // redirect() 는 여전히 200 + meta refresh 다(2026-09-02 재실측). layout 쪽은 안전망.
+      // /event/gunners-season 은 page 가 /season 으로 넘기던 옛 허브 — 두 홉 대신 바로.
+      // ⚠️ /season/:path* 로 쓰면 안 된다 — redirect 는 public/ 보다 먼저 평가되는데
+      // public/season/crest-*.png 가 팀 게시판 엠블럼(lib/constants/team-boards.ts)으로
+      // 사이트 전역에서 쓰인다. 하위 라우트 세 개만 명시한다.
+      // 재개 시 이 네 항목을 지우고 두 layout 의 redirect 도 함께 제거 (gunners-season.ts 주석).
+      {
+        source: '/season/:sub(join|big4|results)',
+        destination: '/prediction',
+        permanent: false,
+      },
+      {
+        source: '/season',
+        destination: '/prediction',
+        permanent: false,
+      },
+      {
+        source: '/cog-event',
+        destination: '/prediction',
+        permanent: false,
+      },
+      {
+        source: '/event/gunners-season',
+        destination: '/prediction',
+        permanent: false,
+      },
     ]
   },
   // Supabase Storage URL을 자체 도메인으로 프록시 (도메인 노출 방지)

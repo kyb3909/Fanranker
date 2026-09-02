@@ -38,7 +38,9 @@ const tabs = [
   {
     // 승부예측 → 이벤트 페이지 (2026-08-14, GNB 와 같은 이유: 예측이 이벤트 전용이라
     // 규칙·참가를 먼저 보여주고 넘긴다). match 는 예측 화면에서도 이 탭이 켜지게 유지.
-    href: "/season",
+    // 2026-09-02: 이벤트 페이지 폐쇄(/season → /prediction redirect) 동안은 예측 화면으로 바로.
+    // 재개 시 "/season" 으로 되돌린다.
+    href: "/prediction",
     icon: Target,
     label: "승부예측",
     match: (p: string) =>

@@ -42,7 +42,12 @@ export const GUNNERS_SEASON = {
    * 그대로라 /prediction 자체는 평시 모드로 계속 열려 있다 (예측 기능은 닫는 게 아님).
    * DB events(season-open-2026).status 도 'draft' 로 내려 등록 API 를 막았다 —
    * 2026-09-02 운영자 "이벤트는 일단 모두 닫아줘" 로 season-open·cog-duel 둘 다 'closed'.
-   * 재개 시 이 값을 true 로 + status='open' 두 개를 같이 되돌릴 것 (코그는 채널 합의도).
+   * 같은 날 "이벤트 페이지도 모두 닫아놓고" — /season·/cog-event 는 layout 에서 /prediction
+   * 으로 redirect (app/season/layout.tsx · app/cog-event/layout.tsx), GNB·탭바·홈 프리뷰의
+   * 승부예측 href 는 /prediction 으로 옮겼다.
+   * 재개 시 되돌릴 것 네 가지: ① 이 값 true ② status='open' ③ 두 layout 의 redirect 제거
+   * ④ 승부예측 href 를 /season 으로 (header-nav · mobile-tab-bar · community-bridge).
+   * 코그는 채널 합의도 필요.
    */
   open: false,
 } as const

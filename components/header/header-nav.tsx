@@ -107,7 +107,10 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             경기
           </span>
         </Link>
-        <Link href="/season" prefetch={true}>
+        {/* 승부예측 — 이벤트 페이지(/season)가 닫혀 있는 동안은 예측 화면으로 바로 (2026-09-02).
+            /season 은 layout 에서 /prediction 으로 redirect 되므로 링크를 거기 두면 한 홉이 낭비다.
+            이벤트 재개 시 /season 으로 되돌린다 (app/season/layout.tsx 주석). */}
+        <Link href="/prediction" prefetch={true}>
           <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
             <Target className="h-[18px] w-[18px] shrink-0" />
             승부예측

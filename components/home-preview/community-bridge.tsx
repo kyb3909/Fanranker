@@ -45,7 +45,8 @@ const SECTIONS: {
     match: (p) => p.startsWith("/explore") || p.startsWith("/community"),
   },
   {
-    href: "/season",
+    // 이벤트 페이지 폐쇄 동안 /prediction (2026-09-02, header-nav·mobile-tab-bar 와 동일). 재개 시 /season.
+    href: "/prediction",
     label: "승부예측",
     Icon: Target,
     match: (p) =>
