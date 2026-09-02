@@ -108,7 +108,10 @@ export default async function AdminDashboardPage() {
          디스코드 알림. **정산은 막지 않는다** — 지급 기준은 betman 이고, 어긋남이 진짜면
          사람이 사후 정정한다 (운영자: "결과가 다르게 나온 것 같다는 것만 어드민에서 표시만"). */
       label: "결과 교차검증",
-      value: d.resultMismatches === 0 ? "불일치 0건" : `불일치 ${d.resultMismatches}건 · 확인 필요`,
+      value:
+        d.resultMismatches === 0
+          ? "최근 48h 불일치 0건"
+          : `최근 48h 불일치 ${d.resultMismatches}건 · 확인 필요`,
       ok: d.resultMismatches === 0,
       action: "확인",
       href: "/admin/matches",

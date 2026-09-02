@@ -314,15 +314,20 @@ export async function loadDashboardData(): Promise<DashboardData> {
         .maybeSingle(),
     ])
 
+  const since48h = new Date(Date.now() - 48 * 3600_000).toISOString()
+
   // 결과 교차검증 불일치 — 표시·알림 전용 (2026-09-02). 정산은 이 verdict 를 보지 않는다.
+  // 창은 교차검증의 재검사 창(result-crosscheck.ts LOOKBACK_HOURS=48)과 같은 48h — 창을 벗어난
+  // 행은 다시 검사되지 않아 checked_at 이 멈추므로, 창 없이 세면 옛 오판이 영원히 빨간불로
+  // 남는다 (2026-09-02 실측: 8/29~31 슬롯 충돌·핸디캡 오독 시절 43건이 수리 후에도 그대로).
   const { count: resultMismatches } = await supabase
     .from("betman_result_checks")
     .select("*", { count: "exact", head: true })
     .eq("verdict", "mismatch")
+    .gte("checked_at", since48h)
 
   // 경기 리포트 미생성 — 실패 원장(최근 48h)에서 경기별 **마지막** 사유만 센다.
   // 저장 리포트가 생긴 경기는 뺀다(나중에 성공한 건 실패가 아니다).
-  const since48h = new Date(Date.now() - 48 * 3600_000).toISOString()
   const [attemptsRes, reportedRes] = await Promise.all([
     supabase
       .from("match_report_attempts")
