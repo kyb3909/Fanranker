@@ -862,7 +862,8 @@ export function CardNewsFeed({
     [cards, chip, chipMatch]
   )
 
-  // 담벼락 인터리브 배치 — 뉴스 newsPerWall장마다 대기열에서 하나씩 (기본 5:1 → i=4,9,14…).
+  // 담벼락 인터리브 배치 — 첫 장은 뉴스 1장 뒤(i=1), 이후 newsPerWall 간격 (5:1 → 1,6,11,16…).
+  // 첫 장이 첫 화면에 보여야 한다 (2026-09-03 운영자: "홈 화면에서 보여줘야지" — 큰 카드가 4장 뒤면 없는 것).
   // 소진되면 자연히 뉴스만 흐른다. 인덱스→글 매핑을 미리 굳혀 무한스크롤로 카드가 늘어도
   // 자리가 안 밀린다. 비율을 조이면(3:1 등) 기존 주입물 자리와 겹칠 수 있어 한 칸 미룬다
   // — 같은 카드 뒤에 주입물 2개가 연달아 쌓이는 밀집 방지.
@@ -870,7 +871,7 @@ export function CardNewsFeed({
     const n = Math.max(2, Math.floor(newsPerWall))
     const RESERVED = new Set([2, 5, 12, 18]) // 폴·이적·디스코드·글쓰기 프롬프트 자리
     const m = new Map<number, WallPost>()
-    let idx = n - 1
+    let idx = 1
     for (const p of wallPosts ?? []) {
       while (RESERVED.has(idx) || m.has(idx)) idx++
       m.set(idx, p)
