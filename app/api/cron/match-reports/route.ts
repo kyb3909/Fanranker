@@ -6,6 +6,7 @@ import { getFixturesForDay, todayKst } from "@/lib/match/get-fixtures"
 import { isMatchPageLeague } from "@/lib/match/leagues"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
+import { hasRecentReportAttempt, recordReportAttempt } from "@/lib/soccerway/report-attempts"
 
 /**
  * 매치 리포트 자동 생성 (2026-08-30).
@@ -74,9 +75,23 @@ async function cronGet(request: NextRequest) {
         continue
       }
       // 실패해도 다음 경기로 넘어간다 — 한 경기의 원문 부재가 스윕을 멈추면 안 된다
-      const extras = await getMatchExtras(f.gameId as string).catch(() => null)
+      const gameId = f.gameId as string
+      const extras = await getMatchExtras(gameId).catch(() => null)
       if (extras?.report) made++
-      else failed.push(`${f.homeTeam} vs ${f.awayTeam}`)
+      else {
+        failed.push(`${f.homeTeam} vs ${f.awayTeam}`)
+        // 안쪽 게이트(원문·문단·추출·스코어·검증)는 각자 원장에 남긴다. 아무 행도 안 남았다면
+        // 그 전 단계 — soccerway 경기 해석(resolveMatchEvent) — 에서 끊긴 것이다. 그것도 남긴다.
+        // 종전엔 이 failed[] 가 응답 JSON 에만 담기고 어디에도 저장되지 않았다 (2026-09-02).
+        if (!(await hasRecentReportAttempt(gameId, 10 * 60_000))) {
+          recordReportAttempt(
+            gameId,
+            null,
+            "resolve",
+            "soccerway 경기 해석 실패 (창 안, 매핑 없음)"
+          )
+        }
+      }
     }
 
     return NextResponse.json({

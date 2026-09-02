@@ -21,6 +21,8 @@ import {
   type ArticleMeta,
 } from "@/lib/soccerway/report-article"
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
+import { recordReportAttempt } from "@/lib/soccerway/report-attempts"
+import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import {
   getLineupForGame,
@@ -601,15 +603,27 @@ function cachedReport(
   return unstable_cache(
     async (): Promise<MatchReport | null> => {
       // 전용 리포트가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다
+      // ⚠️ 게이트마다 실패 원장(match_report_attempts)에 한 줄 남긴다 (2026-09-02).
+      //    7일간 대상 23경기 중 리포트 10개 — 나머지는 어느 문에서 멈췄는지 아무도 몰랐다.
+      //    fail-closed 는 그대로다. 눈만 단다.
       const article = await findReportArticle(eventId, candidateUrl, kickoffMs)
-      if (!article) return null
+      if (!article) {
+        recordReportAttempt(gameId, eventId, "article", "전용 리포트 기사 없음 (soccerway 목록)")
+        return null
+      }
       const paragraphs = await fetchArticleParagraphs(article.id, article.slug)
-      if (!paragraphs) return null
+      if (!paragraphs) {
+        recordReportAttempt(gameId, eventId, "paragraphs", `문단 부족: ${article.slug}`)
+        return null
+      }
       const body = { title: article.title, paragraphs }
 
       // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
       const extracted = await extractEvents(body.title, body.paragraphs)
-      if (!extracted) return null
+      if (!extracted) {
+        recordReportAttempt(gameId, eventId, "extract", "사건 추출 결과 없음")
+        return null
+      }
       const lineup = await getLineupForGame(gameId).catch(
         () => ({ status: "none" }) as LineupResponse
       )
@@ -633,7 +647,11 @@ function cachedReport(
        * 스코어는 FT 뒤 잠깐 비어 있다가 채워진다. 그때까지 **안 쓰는 게 맞다** —
        * 위 주석 그대로 "틀린 리포트는 없는 리포트보다 나쁘다". TTL(30분) 뒤 재시도한다.
        */
-      if (!finalScore) return null
+      if (!finalScore) {
+        // 사유는 getMatchExtras 가 확정 단계에서 이미 남겼다 — 여기선 기사까지 있었다는 것만
+        recordReportAttempt(gameId, eventId, "score", "기사는 있으나 확정 스코어 없음")
+        return null
+      }
 
       const stats = await cachedStats(eventId)().catch(() => null)
       // ⚠️⚠️ 스코어는 **우리 DB 가 정본**이다 (2026-08-25).
@@ -698,7 +716,10 @@ function cachedReport(
           goalFacts,
           feedback
         )
-        if (!ko) break
+        if (!ko) {
+          recordReportAttempt(gameId, eventId, "compose", `작성 LLM 빈 응답 (${attempt + 1}차)`)
+          break
+        }
         const gate = numbersGate(ko, sources)
         // ⚠️ 소속 표기 게이트 — "○○의 <선수>" 에서 팀이 반대면 그 자리에서 떨어뜨린다.
         //    실사고 문장이 정확히 이 형태였다("크리스털 팰리스의 잔루이지 돈나룸마").
@@ -721,6 +742,9 @@ function cachedReport(
           verdict.problems.slice(0, 5).join(" | ")
         )
         feedback = verdict.problems
+      }
+      if (feedback.length > 0) {
+        recordReportAttempt(gameId, eventId, "verify", feedback.slice(0, 3).join(" | "))
       }
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
@@ -864,10 +888,42 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
   const needReport = !stored && isReportWorthyMatch(resolved.homeTeam, resolved.awayTeam)
   let confirmedScore: string | null = null
   if (needReport) {
-    const lfa = await lookupLfaScore(resolved.leagueCode, resolved.matchTime)
+    /**
+     * ⚠️⚠️ 산 피드 증거는 **우리 DB 부터** (2026-09-02 실사고).
+     *
+     * 종전엔 일별 색인을 (리그, 킥오프 HH:MM) 로만 조인했다. 동시 킥오프 슬롯에서 다른
+     * 경기 점수를 받았다 — 첼시 4-3 브라이턴이 선덜랜드 1-0 풀럼을 받아 "두 출처 불일치"로
+     * 리포트가 죽었다(인테르전도). 7일간 대상 23경기 중 5개가 이것.
+     *
+     * 매치센터가 경기별 LFA id 로 정확히 매핑해 둔 `match_details_cache`(finished 행)가
+     * 이미 있다. 그걸 먼저 보고, 없을 때만 색인(충돌 키는 이제 버려진다)을 쓴다.
+     * 교차검증 규칙(confirmScore) 자체는 그대로다 — 출처만 정확해졌다.
+     */
+    let lfa: (ScoreSide & { finished: boolean }) | null = null
+    try {
+      const ids = await matchSiblingIds(gameId)
+      const { data: rows } = await createServiceRoleClient()
+        .from("match_details_cache")
+        .select("finished, payload")
+        .in("game_id", ids)
+      for (const row of rows ?? []) {
+        const ev = lfaDetailRow(row as Parameters<typeof lfaDetailRow>[0])
+        if (ev.finished && ev.homeScore != null && ev.awayScore != null) {
+          lfa = { home: ev.homeScore, away: ev.awayScore, finished: true }
+          break
+        }
+      }
+    } catch {
+      /* fail-open — 아래 색인 폴백 */
+    }
+    if (!lfa) lfa = await lookupLfaScore(resolved.leagueCode, resolved.matchTime)
+
     const verdict = confirmScore(lfa, { home: resolved.homeScore, away: resolved.awayScore })
     if (verdict.ok) confirmedScore = verdict.score
-    else console.warn(`[match-report] 스코어 확정 실패 (${gameId}): ${verdict.reason}`)
+    else {
+      console.warn(`[match-report] 스코어 확정 실패 (${gameId}): ${verdict.reason}`)
+      recordReportAttempt(gameId, resolved.eventId, "score", verdict.reason)
+    }
   }
 
   const [stats, fresh] = await Promise.all([

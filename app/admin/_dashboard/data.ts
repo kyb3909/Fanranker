@@ -2,6 +2,7 @@ import "server-only"
 
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isBreakingNewsItem } from "@/lib/news/breaking"
+import { summarizeReportGaps } from "@/lib/soccerway/report-gaps"
 
 /**
  * 관제실(관리자 홈) 데이터 로더 — 읽기 전용.
@@ -80,8 +81,14 @@ export interface DashboardData {
   ticker: { lastAt: string | null; count24h: number; recent: { id: string; title: string }[] }
   activeGames: number
   dailyRound: { roundNum: number | null; closeAt: string | null }
-  /** 결과 교차검증(베트맨×와이즈토토×LFA) 불일치 — 정산 보류 중인 경기 (2026-08-30 신설) */
+  /** 결과 교차검증(베트맨×LFA) 불일치 — 표시·알림 전용, 정산과 무관 (2026-09-02 역할 변경) */
   resultMismatches: number
+  /**
+   * 경기 리포트 미생성 (2026-09-02 신설). 최근 48h 킥오프 · 대상 경기인데 저장 리포트가 없고
+   * 실패 원장(match_report_attempts)에 사유가 남은 경기 수 + 사유별 분포.
+   * 운영자: 7일간 대상 23경기 중 10개만 리포트 — 나머지 13개는 이유가 어디에도 안 남았었다.
+   */
+  reportGaps: { games: number; reasons: { stage: string; n: number }[] }
 }
 
 const EXPIRE_HOURS = 24
@@ -313,6 +320,23 @@ export async function loadDashboardData(): Promise<DashboardData> {
     .select("*", { count: "exact", head: true })
     .eq("verdict", "mismatch")
 
+  // 경기 리포트 미생성 — 실패 원장(최근 48h)에서 경기별 **마지막** 사유만 센다.
+  // 저장 리포트가 생긴 경기는 뺀다(나중에 성공한 건 실패가 아니다).
+  const since48h = new Date(Date.now() - 48 * 3600_000).toISOString()
+  const [attemptsRes, reportedRes] = await Promise.all([
+    supabase
+      .from("match_report_attempts")
+      .select("game_id, stage, attempted_at")
+      .gte("attempted_at", since48h)
+      .order("attempted_at", { ascending: false })
+      .limit(2000),
+    supabase.from("match_reports").select("game_id").gte("created_at", since48h),
+  ])
+  const reportGaps = summarizeReportGaps(
+    (attemptsRes.data ?? []) as { game_id: string; stage: string; attempted_at: string }[],
+    ((reportedRes.data ?? []) as { game_id: string }[]).map((r) => r.game_id)
+  )
+
   // 클럽명 매핑 — team_dictionary (name_kr ↔ soccerway_team_id)
   const { data: teamDictRows } = await supabase
     .from("team_dictionary")
@@ -488,6 +512,7 @@ export async function loadDashboardData(): Promise<DashboardData> {
     },
     activeGames: activeGamesRes.count ?? 0,
     resultMismatches: resultMismatches ?? 0,
+    reportGaps,
     dailyRound: {
       roundNum: roundRes.data?.daily_id
         ? parseInt(String(roundRes.data.daily_id).replace(/\D/g, ""), 10) || null

@@ -114,6 +114,23 @@ export default async function AdminDashboardPage() {
       href: "/admin/matches",
     },
     {
+      /* 2026-09-02 신설 — 리포트 파이프라인은 fail-closed 라(틀린 리포트 < 없는 리포트) 실패가
+         조용하다. 7일간 대상 23경기 중 10개만 리포트였고 나머지는 이유가 어디에도 없었다.
+         이제 게이트마다 실패 원장(match_report_attempts)에 사유가 남고, 여기 사유별로 센다.
+         빨간불 = 최근 48h 대상 경기 중 리포트가 안 나온 게 있다. 검증 강도는 그대로다. */
+      label: "경기 리포트",
+      value:
+        d.reportGaps.games === 0
+          ? "미생성 0건"
+          : `미생성 ${d.reportGaps.games}건 · ${d.reportGaps.reasons
+              .slice(0, 3)
+              .map((r) => `${r.stage} ${r.n}`)
+              .join(" · ")}`,
+      ok: d.reportGaps.games === 0,
+      action: "확인",
+      href: "/admin/matches",
+    },
+    {
       label: "크롤러 실패 (오늘)",
       value: `${d.crawlerFailsToday}건`,
       ok: d.crawlerFailsToday === 0,

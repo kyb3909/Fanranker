@@ -3472,6 +3472,33 @@ export type Database = {
           },
         ]
       }
+      match_report_attempts: {
+        Row: {
+          attempted_at: string
+          event_id: string | null
+          game_id: string
+          id: number
+          reason: string | null
+          stage: string
+        }
+        Insert: {
+          attempted_at?: string
+          event_id?: string | null
+          game_id: string
+          id?: never
+          reason?: string | null
+          stage: string
+        }
+        Update: {
+          attempted_at?: string
+          event_id?: string | null
+          game_id?: string
+          id?: never
+          reason?: string | null
+          stage?: string
+        }
+        Relationships: []
+      }
       match_reports: {
         Row: {
           created_at: string
