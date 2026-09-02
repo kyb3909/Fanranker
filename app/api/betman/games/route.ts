@@ -148,7 +148,23 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const { error } = await supabase.from("betman_games").upsert(rows, {
+    // ⚠️ 상태는 되돌리지 않는다 (2026-09-03 챔피언십 시험 실측). VPS 목록 동기화는 status 를 안 실어
+    //    여기서 "scheduled" 로 채웠고, upsert 가 그대로 덮어 **끝난 경기가 매시 :10 마다 scheduled 로
+    //    돌아갔다** (결과·스코어는 남고 status 만 — 07:16 completed → 08:10 scheduled). 이미 completed·
+    //    cancelled·in_progress 인 행은 그 상태를 유지한다. 새 행만 scheduled.
+    const { data: existing } = await supabase
+      .from("betman_games")
+      .select("game_no, status")
+      .eq("round_id", roundId)
+      .neq("status", "scheduled")
+    const keepStatus = new Map(
+      (existing ?? []).map((e) => [Number(e.game_no), String(e.status)] as const)
+    )
+    const rowsKeepingStatus = rows.map((r) =>
+      keepStatus.has(r.game_no) ? { ...r, status: keepStatus.get(r.game_no) as string } : r
+    )
+
+    const { error } = await supabase.from("betman_games").upsert(rowsKeepingStatus, {
       onConflict: "round_id,game_no",
       ignoreDuplicates: false,
     })
