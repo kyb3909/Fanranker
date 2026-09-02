@@ -104,10 +104,11 @@ export default async function AdminDashboardPage() {
       href: "/admin/news-review",
     },
     {
-      /* 2026-08-30 신설 — 베트맨×와이즈토토×LFA 스코어가 다르면 그 경기 정산이 자동으로
-         멈추고 디스코드 알림이 온다. 여기 빨간불 = 지금 정산 보류 중인 경기가 있다 */
+      /* 2026-08-30 신설 → 2026-09-02 역할 변경. 베트맨×LFA 스코어가 다르면 여기 빨간불 +
+         디스코드 알림. **정산은 막지 않는다** — 지급 기준은 betman 이고, 어긋남이 진짜면
+         사람이 사후 정정한다 (운영자: "결과가 다르게 나온 것 같다는 것만 어드민에서 표시만"). */
       label: "결과 교차검증",
-      value: d.resultMismatches === 0 ? "불일치 0건" : `불일치 ${d.resultMismatches}건 · 정산 보류`,
+      value: d.resultMismatches === 0 ? "불일치 0건" : `불일치 ${d.resultMismatches}건 · 확인 필요`,
       ok: d.resultMismatches === 0,
       action: "확인",
       href: "/admin/matches",

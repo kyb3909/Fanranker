@@ -62,10 +62,15 @@ export function mapGameResult(
  * 실제 스코어와 게임 조건으로부터 결과를 추론한다.
  * 크롤러가 GAME_RESULT를 주지 않거나 매핑 실패 시 fallback.
  *
- * - 핸디캡/S핸디캡: homeScore에 handicap을 더한 값으로 비교
+ * - 핸디캡/S핸디캡/소수핸디캡: homeScore에 handicap을 더한 값으로 비교
  * - 언더오버/S언더오버: 총점과 line 비교. line이 0이면 ""로 반환(결과 불명).
  * - SUM: 총점이 짝수면 "even", 홀수면 "odd"
  * - 그 외(일반): 단순 점수 비교
+ *
+ * ⚠️ "소수핸디캡"(−3.5 같은 반점 핸디)이 빠져 있었다 (2026-09-02 실사고). 이 분기를
+ *    못 타면 일반 승패로 떨어져, 바르사 5-2 핸디 −3.5 를 "home" 으로 계산했다 — 정답은
+ *    away(5−3.5=1.5 < 2). 결과 대조기가 그걸 "result 불일치"로 찍어 4일간 6경기가
+ *    가짜 mismatch 였다. 유형 유니온이 `| string` 이라 타입이 잡아주지 않는다.
  */
 export function deriveResultFromScore(
   homeScore: number,
@@ -74,7 +79,7 @@ export function deriveResultFromScore(
   handicap: number | null,
   overUnderLine: number | null
 ): BetmanResult {
-  if (gameType === "핸디캡" || gameType === "S핸디캡") {
+  if (gameType === "핸디캡" || gameType === "S핸디캡" || gameType === "소수핸디캡") {
     const adjusted = homeScore + (handicap ?? 0)
     if (adjusted > awayScore) return "home"
     if (adjusted < awayScore) return "away"

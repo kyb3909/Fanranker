@@ -307,7 +307,7 @@ export async function loadDashboardData(): Promise<DashboardData> {
         .maybeSingle(),
     ])
 
-  // 결과 교차검증 불일치 — 정산이 멈춰 있는 경기 (settle-gate 가 이 verdict 를 본다)
+  // 결과 교차검증 불일치 — 표시·알림 전용 (2026-09-02). 정산은 이 verdict 를 보지 않는다.
   const { count: resultMismatches } = await supabase
     .from("betman_result_checks")
     .select("*", { count: "exact", head: true })

@@ -80,6 +80,21 @@ describe("deriveResultFromScore", () => {
     it.each(["핸디캡", "S핸디캡"] as const)("%s: handicap이 null이면 0으로 취급", (gameType) => {
       expect(deriveResultFromScore(3, 1, gameType, null, null)).toBe("home")
     })
+  })
+
+  describe("소수핸디캡 — 2026-09-02 실사고 재현", () => {
+    it("바르사 5-2 · 핸디 −3.5 → away (종전엔 분기가 없어 home 으로 떨어졌다)", () => {
+      // 5 − 3.5 = 1.5 < 2 → 핸디캡 적용 후 원정 승. 대조기가 이걸 mismatch 로 찍어
+      // 4일간 6경기가 가짜 불일치였다.
+      expect(deriveResultFromScore(5, 2, "소수핸디캡", -3.5, null)).toBe("away")
+    })
+    it("맨유 5-2 · 핸디 −2.5 → home", () => {
+      expect(deriveResultFromScore(5, 2, "소수핸디캡", -2.5, null)).toBe("home")
+    })
+    it("반점 핸디는 무승부가 나올 수 없다", () => {
+      expect(deriveResultFromScore(1, 1, "소수핸디캡", -0.5, null)).toBe("away")
+      expect(deriveResultFromScore(1, 1, "소수핸디캡", 0.5, null)).toBe("home")
+    })
 
     it.each(["핸디캡", "S핸디캡"] as const)("%s: 음수 handicap (원정 우위)", (gameType) => {
       // 2:1 에서 홈 핸디캡 -2 → 0:1 → away

@@ -349,6 +349,21 @@ export async function getLfaDayIndex(dateKst: string): Promise<Map<string, LfaDa
     // 이미 다 지난 날이면 값이 굳었으므로 길게 캐시한다
     const elapsed = Date.now() > endMs
 
+    /**
+     * ⚠️⚠️ 같은 키에 경기가 둘 이상이면 **그 키는 버린다** (2026-09-02 실사고).
+     *
+     * 키가 (리그, 킥오프 HH:MM) 뿐이라 토요일 23:00 EPL 처럼 동시 킥오프가 흔한 슬롯에서는
+     * 마지막에 쓴 경기 하나가 그 슬롯 전체를 대표했다. 8/30 22:00 KST EPL 3경기 —
+     * 첼시 4-3 브라이턴, 리즈 1-1 브렌트퍼드가 둘 다 **선덜랜드 1-0 풀럼**의 점수를 받았다.
+     * 결과 대조기는 그걸 "불일치"로 찍어 첼시 당첨 슬립을 63시간 얼렸고, 리포트
+     * 파이프라인은 같은 점수로 스코어 접지에 실패해 첼시·인테르 리포트를 못 썼다.
+     * 4일간 mismatch 45건 중 35건이 이 충돌이었다.
+     *
+     * 모호한 키는 null 을 돌려주는 게 맞다 — "모른다"는 "틀린 값"보다 언제나 낫다.
+     * 경기 단위 정확한 값은 match_details_cache(경기별 LFA id) 가 들고 있으니 호출부는
+     * 그쪽을 먼저 보고 색인은 폴백으로만 쓴다.
+     */
+    const seen = new Map<string, number>()
     for (const d of dates) {
       const matches = await getDayMatches(d, !elapsed)
       for (const m of matches) {
@@ -359,13 +374,16 @@ export async function getLfaDayIndex(dateKst: string): Promise<Map<string, LfaDa
           const n = Number(v)
           return v != null && v !== "" && Number.isFinite(n) ? n : null
         }
-        index.set(dayKey(lid, ko), {
+        const key = dayKey(lid, ko)
+        seen.set(key, (seen.get(key) ?? 0) + 1)
+        index.set(key, {
           finished: m.status?.state === "postGame" || m.status?.display === "FT",
           homeScore: toNum(m.home?.score),
           awayScore: toNum(m.away?.score),
         })
       }
     }
+    for (const [key, n] of seen) if (n > 1) index.delete(key)
   } catch {
     // fail-open — 색인이 비면 호출부가 betman 값을 그대로 쓴다
   }

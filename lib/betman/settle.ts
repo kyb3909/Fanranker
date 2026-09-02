@@ -2,7 +2,6 @@ import { SupabaseClient } from "@supabase/supabase-js"
 import * as Sentry from "@sentry/nextjs"
 import { batchUpdateUserStats } from "./stats"
 import { retryRefundTokens } from "./refund-tokens"
-import { filterVerifiedForSettle } from "./settle-gate"
 import { syncStadiumContributions } from "@/lib/stadium/contribution-sync"
 
 /**
@@ -136,27 +135,22 @@ export async function settlePredictions(
   const actor = options.actor ?? "cron:settle"
 
   /**
-   * ── 결과 교차검증 게이트 (2026-08-30 운영자 확정) ──
-   * 축구 completed 경기는 LFA×와이즈토토 verdict(match/waived)를 받아야만 정산한다.
-   * "크로스 체크 완료 + 오류 없음이 확인돼야 맞춘 것도 정산 진행."
+   * ── 결과 교차검증은 정산을 막지 않는다 (2026-09-02 운영자 확정) ──
    *
-   * 정산 진입로가 네 곳(results·settle·predictions/settle·sweep)이지만 전부 이
-   * 함수로 모이므로 게이트는 여기 한 곳이다 — 경로별로 따로 막으면 반드시 한쪽이
-   * 뒤처진다 (2026-08-29 자책골 사고에서 배운 규율).
+   * 2026-08-30 에 "LFA×와이즈토토 verdict 가 match/waived 여야만 정산" 게이트를 여기
+   * 세웠다가 걷어냈다. 4일간의 실측:
+   *   · mismatch 45건 = **전부 대조기 자신의 오류**(동시 킥오프 매칭 충돌 35, 소수핸디캡
+   *     미처리 6, 리그 오매핑 4). 진짜 betman-LFA 불일치 0건.
+   *   · 경기의 68% 는 LFA 커버리지 밖이라 검증 자체가 불가(waived) — 게이트가 볼 수 없었다.
+   *   · 그 사이 첼시-브라이턴 당첨 슬립 하나가 63시간 동결됐고, 풀 버튼도 없었다.
+   *   · 기록 전체(5/30 무결성 리뷰 28건 100% 일치 포함)에 betman 오결과 사례가 없다.
    *
-   * 보류된 경기의 픽은 pending 으로 남고, 15분 스윕이 교차검증 후 다시 온다.
+   * 운영자: "waive 처리는 없어야 해. 결과가 다르게 나온 것 같다는 것만 어드민에서 표시만
+   * 해주는 거지, 일치해야만 통과는 말이 안 돼."
+   *
+   * 지급 기준은 betman 이다. 대조기(result-crosscheck)는 계속 돌지만 **표시·알림 전용**이고,
+   * 어긋남이 진짜면 사람이 사후에 정정한다. 여기서 games 를 거르지 않는다.
    */
-  const { allowed, held } = await filterVerifiedForSettle(supabase, games)
-  if (held.length > 0) {
-    console.warn(
-      `[settle] 교차검증 미통과로 보류 ${held.length}경기 (${actor}):`,
-      held
-        .slice(0, 5)
-        .map((g) => g.id)
-        .join(", ")
-    )
-  }
-  games = allowed
 
   const auditRows: AuditRow[] = []
   // 슬립 확정(won/lost) 시 유저에게 인앱 알림 — 스키마/UI(settlement_result)는

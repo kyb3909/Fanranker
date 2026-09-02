@@ -2,26 +2,39 @@ import "server-only"
 
 import { SupabaseClient } from "@supabase/supabase-js"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
+import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 import { notifyDiscordOps } from "@/lib/discord-notify"
-import { decideVerdict, checkResultConsistency, type CheckVerdict } from "./crosscheck-verdict"
+import {
+  decideVerdict,
+  checkResultConsistency,
+  type CheckVerdict,
+  type LfaEvidence,
+} from "./crosscheck-verdict"
 import { deriveResultFromScore } from "./result-mapper"
 
 /**
- * 축구 결과 교차검증 러너 + 정산 게이트 (2026-08-30 운영자 확정).
+ * 축구 결과 교차검증 러너 — **표시·알림 전용** (2026-09-02 운영자 확정).
  *
- * "크로스 체크가 완료되고, 오류가 있으면 알림으로 알려주고, 그게 다 되어야
- *  이후에 맞춘 것도 정산."
+ * 2026-08-30 엔 "verdict 가 match/waived 여야만 정산" 게이트의 앞단이었다. 4일 실측에서
+ * mismatch 45건이 전부 대조기 자신의 오류였고 진짜 불일치는 0건, 그 사이 당첨 슬립
+ * 하나가 63시간 얼었다. 게이트는 settle.ts 에서 걷어냈다(그쪽 주석에 전말). 운영자:
+ * "결과가 다르게 나온 것 같다는 것만 어드민에서 표시만 해주는 거지, 일치해야만 통과는
+ * 말이 안 돼." 이제 이 러너의 산출은 어드민 빨간불 + 디스코드 알림이고, 정산은 보지 않는다.
  *
  * ## 흐름
- * settle-pending 크론(15분)이 ① crosscheckFootballResults 로 최근 완료 축구 경기를
- * LFA 와 대조해 betman_result_checks 에 verdict 를 남기고(불일치는 디스코드 알림),
- * ② settlePredictions 안의 filterVerifiedForSettle 이 verdict 없는/불합격 축구
- * 경기를 정산에서 제외한다. 정산 진입로가 네 곳(results·settle·predictions/settle·
- * sweep)이지만 전부 settlePredictions 로 모이므로 게이트는 거기 하나다.
+ * settle-pending 크론(15분)이 최근 완료 축구 경기를 LFA 와 대조해 betman_result_checks 에
+ * verdict 를 남긴다(불일치는 디스코드 알림, 경기당 1회). 그게 전부다.
+ *
+ * ## LFA 증거는 **우리 DB 부터** (2026-09-02)
+ * 종전엔 일별 색인을 (리그, 킥오프 HH:MM) 로 조인했는데, 동시 킥오프 슬롯에서 다른
+ * 경기 점수를 받았다 — 첼시 4-3 이 선덜랜드 1-0 을 받아 "불일치". 45건 중 35건이
+ * 이것이었다. 매치센터가 이미 경기별 LFA id 로 정확히 들고 있는 `match_details_cache`
+ * (finished 행의 스코어)를 먼저 보고, 없을 때만 색인(충돌 키는 이제 null)을 쓴다.
  *
  * ## 크레딧 규율 (⚠️ 2026-08-25 하루 10,885건 화재 전력)
  * LFA 는 **하루치 색인**(getLfaDayIndex, KST 날짜당 fetch ≤2회 + 캐시)만 쓴다.
  * 검사 대상이 없으면 색인 자체를 부르지 않는다. 대상은 최근 48시간 완료 경기뿐.
+ * match_details_cache 읽기는 DB 조회라 크레딧이 안 나간다.
  */
 
 const LOOKBACK_HOURS = 48
@@ -53,8 +66,8 @@ export interface CrosscheckSummary {
   scanned: number
   match: number
   mismatch: number
+  /** LFA 로 확인 불가(커버리지 밖·종료 전). 정산과 무관 — 표시용 */
   pending: number
-  waived: number
   alerted: number
 }
 
@@ -64,9 +77,10 @@ function kstDate(iso: string): string {
 }
 
 /**
- * ① 최근 완료 축구 경기 교차검증 — verdict upsert + 불일치·유예 알림.
- * match/waived 로 이미 굳은 경기는 다시 보지 않는다. mismatch·pending 은 재검한다
- * (와이즈토토가 나중에 정정하거나 LFA 가 뒤늦게 채워질 수 있다).
+ * 최근 완료 축구 경기 교차검증 — verdict upsert + 불일치 알림.
+ * match 로 굳은 경기는 다시 보지 않는다. mismatch·pending 은 매번 재검한다 — LFA 가
+ * 뒤늦게 채워지거나(pending→match) 매핑이 고쳐지면(mismatch→match) 스스로 풀린다.
+ * 옛 waived 행도 재검 대상이다(2026-09-02 이전 값 — 이제 만들지 않는다).
  */
 export async function crosscheckFootballResults(
   supabase: SupabaseClient
@@ -76,7 +90,6 @@ export async function crosscheckFootballResults(
     match: 0,
     mismatch: 0,
     pending: 0,
-    waived: 0,
     alerted: 0,
   }
 
@@ -100,20 +113,36 @@ export async function crosscheckFootballResults(
     .select("game_id, verdict")
     .in("game_id", ids)
   const settled = new Set(
-    ((existing ?? []) as { game_id: string; verdict: CheckVerdict }[])
-      .filter((c) => c.verdict === "match" || c.verdict === "waived")
+    ((existing ?? []) as { game_id: string; verdict: string }[])
+      .filter((c) => c.verdict === "match")
       .map((c) => c.game_id)
   )
   const targets = rows.filter((g) => !settled.has(g.id))
   if (targets.length === 0) return summary
   summary.scanned = targets.length
 
-  // 날짜별 색인 — 필요한 KST 날짜만, 한 번씩
-  const dates = [...new Set(targets.map((g) => kstDate(g.match_time)))]
+  // ── LFA 증거 1순위: 우리 DB 의 경기별 상세 캐시 (2026-09-02) ──
+  // 매치센터가 경기별 LFA id 로 정확히 매핑해 둔 값이다. finished 행의 스코어만 증거로
+  // 친다 — 경기 중 스코어는 "종료 전"이라 pending 으로 남는 게 맞다.
+  const targetIds = targets.map((g) => g.id)
+  const evidenceByGame = new Map<string, LfaEvidence>()
+  const { data: details } = await supabase
+    .from("match_details_cache")
+    .select("game_id, finished, payload")
+    .in("game_id", targetIds)
+  for (const row of (details ?? []) as { game_id: string; finished: unknown; payload: unknown }[]) {
+    const ev = lfaDetailRow(row as Parameters<typeof lfaDetailRow>[0])
+    const prev = evidenceByGame.get(row.game_id)
+    // 같은 경기 행이 여럿이면 finished 인 쪽이 이긴다
+    if (!prev || (!prev.finished && ev.finished)) evidenceByGame.set(row.game_id, ev)
+  }
+
+  // ── 2순위: 날짜별 색인 — 상세 캐시가 없는 경기만. 동시 킥오프 키는 색인이 이미 버린다 ──
+  const needIndex = targets.filter((g) => !evidenceByGame.get(g.id)?.finished)
+  const dates = [...new Set(needIndex.map((g) => kstDate(g.match_time)))]
   const indexes = new Map<string, Awaited<ReturnType<typeof getLfaDayIndex>>>()
   for (const d of dates) indexes.set(d, await getLfaDayIndex(d))
 
-  const now = Date.now()
   const upserts: {
     game_id: string
     verdict: CheckVerdict
@@ -131,11 +160,15 @@ export async function crosscheckFootballResults(
   }[] = []
 
   for (const g of targets) {
-    const index = indexes.get(kstDate(g.match_time))
-    const lfaEntry =
-      index && g.league_code
+    // 상세 캐시(finished) → 없으면 색인. 둘 다 없으면 null = pending
+    const detail = evidenceByGame.get(g.id)
+    let lfaEntry: LfaEvidence | null = detail?.finished ? detail : null
+    if (!lfaEntry && g.league_code) {
+      const index = indexes.get(kstDate(g.match_time))
+      lfaEntry = index
         ? (lookupLfaDayEntry(index, { leagueCode: g.league_code, matchTime: g.match_time }) ?? null)
         : null
+    }
     const kickoffMs = new Date(g.match_time).getTime()
     // 와이즈토토 보존값 — 경기 끝난 뒤 캡처분만 인정 (전반 1-0 같은 미완 스코어 차단)
     const wtFinal =
@@ -145,7 +178,6 @@ export async function crosscheckFootballResults(
       betman: { home: g.home_score, away: g.away_score },
       wisetoto: wtFinal ? { home: g.wisetoto_home_score, away: g.wisetoto_away_score } : null,
       lfa: lfaEntry,
-      hoursSinceKickoff: (now - kickoffMs) / 3600_000,
     })
     let verdict = r.verdict
     let note: string | null = r.note
@@ -209,9 +241,9 @@ export async function crosscheckFootballResults(
     const fresh = newMismatches.filter((m) => !alreadyAlerted.has(m.game.id))
     if (fresh.length > 0) {
       await notifyDiscordOps({
-        title: `⚠️ 경기 결과 불일치 ${fresh.length}건 — 정산 보류 중`,
+        title: `⚠️ 경기 결과 불일치 ${fresh.length}건 — 확인 필요 (정산은 진행됨)`,
         description:
-          "와이즈토토와 산 피드(LFA)의 스코어가 다릅니다. 확인 전까지 해당 경기 정산이 멈춰 있습니다.",
+          "베트맨과 산 피드(LFA)의 스코어가 다릅니다. 정산은 베트맨 결과대로 이미 나갔습니다 — 베트맨이 틀린 것으로 확인되면 사후 정정하세요.",
         level: "alert",
         url: "/admin/matches",
         fields: fresh.slice(0, 6).map((m) => ({
@@ -233,6 +265,6 @@ export async function crosscheckFootballResults(
   return summary
 }
 
-/* 정산 게이트(filterVerifiedForSettle)는 lib/betman/settle-gate.ts 로 분리했다 —
-   이 파일은 server-only + LFA + 디스코드를 물고 있어 settle.ts 가 import 하면
-   settle 테스트 파일이 열리지 못한다 (0 test 함정). */
+/* 정산 게이트(settle-gate.ts)는 2026-09-02 에 폐지했다 — 이 파일의 verdict 는 이제
+   정산과 무관하다. settle.ts 는 이 파일을 import 하지 않는다 (server-only + LFA +
+   디스코드를 물고 있어 settle 테스트가 열리지 못하는 0 test 함정도 그대로 피한다). */
