@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import { Zap } from "lucide-react"
 import { NewsTalkBoard } from "./news-talk-board"
 
@@ -25,76 +26,17 @@ export interface TickerItem {
   id: string
   tag: TickerTag
   text: string
+  /** 우리 글 페이지 (떡밥 공급원). 있으면 패널을 열지 않고 여기로 이동한다 (2026-09-02) */
+  href?: string
   detail?: TickerItemDetail
 }
 
-// 게시판별 틱커 데이터 (폴백 목업)
-const COMMUNITY_TICKER_ITEMS: Record<string, TickerItem[]> = {
-  football: [
-    { id: "fb-1", tag: "live", text: "손흥민 10호골 달성! EPL 득점 랭킹 5위 등극" },
-    {
-      id: "fb-2",
-      tag: "breaking",
-      text: "레알 마드리드, 발렌시아 원정에서 카레라스 결승골로 1-0 승리",
-    },
-    { id: "fb-3", tag: "result", text: "PSG 4-0 마르세유, 뎀벨레·크바라츠헬리아 멀티골" },
-    {
-      id: "fb-4",
-      tag: "breaking",
-      text: "K리그1 개막전: 울산 vs 전북, 대한민국 A매치 소집 명단 발표",
-    },
-    { id: "fb-5", tag: "result", text: "바이에른 뮌헨 3-1 도르트문트, 김민재 풀타임" },
-  ],
-  baseball: [
-    { id: "bb-1", tag: "breaking", text: "KBO 시범경기 일정 확정, 2월 28일 개막" },
-    { id: "bb-2", tag: "live", text: "김도영, 스프링캠프 첫 실전 타격 3타수 2안타" },
-    { id: "bb-3", tag: "result", text: "LG 트윈스 vs 삼성 라이온즈 시범경기 5-3" },
-    { id: "bb-4", tag: "breaking", text: "SSG 랜더스, 새 외국인 투수 계약 완료" },
-  ],
-  basketball: [
-    { id: "bk-1", tag: "live", text: "NBA 르브론 제임스 통산 42,000득점 달성" },
-    { id: "bk-2", tag: "result", text: "KBL 원주 DB vs 서울 SK 87-82" },
-    { id: "bk-3", tag: "breaking", text: "허웅, KBL 올스타전 팬투표 1위 선정" },
-    { id: "bk-4", tag: "result", text: "NBA 보스턴 셀틱스 112-98 마이애미 히트" },
-  ],
-  volleyball: [
-    { id: "vb-1", tag: "live", text: "V리그 대한항공 vs 현대캐피탈 3세트 진행 중" },
-    { id: "vb-2", tag: "result", text: "흥국생명 3-1 GS칼텍스, 이소영 25득점" },
-    { id: "vb-3", tag: "breaking", text: "V리그 남자부 플레이오프 일정 확정" },
-    { id: "vb-4", tag: "result", text: "OK금융그룹 3-0 삼성화재, 레오 20득점" },
-  ],
-  game: [
-    { id: "gm-1", tag: "result", text: "LCK 스프링 T1 vs GEN 결과: T1 2-1 승리" },
-    { id: "gm-2", tag: "live", text: "VCT 퍼시픽 DRX vs PRX 1맵 진행 중" },
-    { id: "gm-3", tag: "breaking", text: "T1 페이커, LCK 통산 500승 달성 눈앞" },
-    { id: "gm-4", tag: "result", text: "LCK 한화생명 2-0 농심, 제카 MVP" },
-  ],
-  music: [
-    { id: "mu-1", tag: "breaking", text: "아이유 신곡 발매, 음원차트 1위 올킬" },
-    { id: "mu-2", tag: "live", text: "코첼라 2026 라인업 공개, 한국 아티스트 다수 포함" },
-    { id: "mu-3", tag: "result", text: "이번 주 빌보드 HOT 100 K-POP 진입 현황" },
-  ],
-  idol: [
-    { id: "id-1", tag: "breaking", text: "뉴진스 컴백 확정, 미니 앨범 3월 발매" },
-    { id: "id-2", tag: "live", text: "세븐틴 월드투어 서울 공연 실시간" },
-    { id: "id-3", tag: "result", text: "에스파 일본 돔 투어 전석 매진" },
-  ],
-  anime: [
-    { id: "an-1", tag: "breaking", text: "귀멸의 칼날 새 시즌 방영일 확정" },
-    { id: "an-2", tag: "live", text: "주술회전 완결편 동시 방영 시작" },
-    { id: "an-3", tag: "result", text: "이번 분기 신작 애니 인기 투표 결과" },
-  ],
-  "free-board": [
-    { id: "fr-1", tag: "breaking", text: "오늘의 인기글: 스포츠 직관 꿀팁 모음" },
-    { id: "fr-2", tag: "live", text: "실시간 인기 토론: 역대 최고의 스포츠 명장면은?" },
-    { id: "fr-3", tag: "result", text: "이번 주 베스트 유머글 TOP 5 선정" },
-  ],
-  movies: [
-    { id: "mv-1", tag: "breaking", text: "아카데미 시상식 후보작 발표, 올해의 영화는?" },
-    { id: "mv-2", tag: "live", text: "마블 신작 예고편 공개, 팬들 반응 폭발" },
-    { id: "mv-3", tag: "result", text: "이번 주 북미 박스오피스 1위 영화 확정" },
-  ],
-}
+/*
+ * ⚠️ 여기 있던 `COMMUNITY_TICKER_ITEMS` 목업(게시판별 가짜 헤드라인 60여 줄)은 지웠다
+ * (2026-09-02). API 가 비면 그걸 실시간인 척 띄웠다 — "손흥민 10호골" 같은 지어낸 소식을.
+ * API 쪽 주석이 이미 "목업 폴백에 기대지 않는다"고 적어 놓았는데 컴포넌트는 여전히 기대고
+ * 있었다. 이제 비면 "지금은 새 소식이 없습니다" 다. 그게 정직하다.
+ */
 
 interface NewsTickerProps {
   communitySlug: string
@@ -111,7 +53,6 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
    */
   const [loading, setLoading] = useState(true)
 
-  // Fetch real data from API, fallback to mock
   useEffect(() => {
     let cancelled = false
 
@@ -120,16 +61,10 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
         const res = await fetch(`/api/community/${communitySlug}/ticker`)
         if (!res.ok) throw new Error("API error")
         const data = await res.json()
-        if (!cancelled && data.items && data.items.length > 0) {
-          setTickerItems(data.items)
-          return
-        }
+        if (!cancelled) setTickerItems(Array.isArray(data.items) ? data.items : [])
       } catch {
-        // silently fallback
-      }
-      // Fallback to mock data
-      if (!cancelled) {
-        setTickerItems(COMMUNITY_TICKER_ITEMS[communitySlug] || [])
+        // 실패·빈 결과 모두 빈 배열 — 가짜 소식으로 메우지 않는다
+        if (!cancelled) setTickerItems([])
       }
     }
 
@@ -238,18 +173,33 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
               ref={scrollRef}
               className="flex items-center gap-10 whitespace-nowrap will-change-transform"
             >
-              {items.map((item, i) => (
-                <button
-                  key={`${item.id}-${i}`}
-                  onClick={() => setSelectedItem(item)}
-                  className="group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 border-none bg-transparent p-0 sm:min-h-0"
-                >
-                  <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-500" />
-                  <span className="text-[14px] font-medium text-neutral-300 transition-colors group-hover:text-white">
-                    {item.text}
-                  </span>
-                </button>
-              ))}
+              {items.map((item, i) =>
+                item.href ? (
+                  // 떡밥 항목 — 우리 글로 간다. 패널의 자체 댓글 스레드를 열면 글의 진짜
+                  // 토론과 갈라진 그림자 스레드가 생기므로 패널을 쓰지 않는다 (2026-09-02).
+                  <Link
+                    key={`${item.id}-${i}`}
+                    href={item.href}
+                    className="group inline-flex min-h-11 shrink-0 items-center gap-2 sm:min-h-0"
+                  >
+                    <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-500" />
+                    <span className="text-[14px] font-medium text-neutral-300 transition-colors group-hover:text-white">
+                      {item.text}
+                    </span>
+                  </Link>
+                ) : (
+                  <button
+                    key={`${item.id}-${i}`}
+                    onClick={() => setSelectedItem(item)}
+                    className="group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 border-none bg-transparent p-0 sm:min-h-0"
+                  >
+                    <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-500" />
+                    <span className="text-[14px] font-medium text-neutral-300 transition-colors group-hover:text-white">
+                      {item.text}
+                    </span>
+                  </button>
+                )
+              )}
             </div>
           </div>
         </div>

@@ -1,22 +1,67 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError } from "@/lib/api-error"
+import {
+  postsToTickerItems,
+  tickerRootOf,
+  TICKER_BOT_BY_ROOT,
+  TICKER_WINDOW_MS,
+} from "@/lib/ticker/from-posts"
 
 /**
  * GET /api/community/[slug]/ticker
  *
- * Returns ticker items for a community board.
- * Queries news_ticker_items by community_slug, returns up to 20 items
- * from the last 24 hours, ordered by importance DESC, posted_at DESC.
- *
  * Response matches the TickerItem interface in news-ticker.tsx:
- *   { items: [{ id, tag, text, detail }] }
+ *   { items: [{ id, tag, text, href? , detail? }] }
+ *
+ * ## 공급원이 둘이다 (2026-09-02)
+ *
+ * 1. **오늘의 떡밥** — 종목에 뉴스봇이 있으면(`TICKER_BOT_BY_ROOT`) 그 봇의 발행 글.
+ *    떡밥 피드(`lib/feed/cardnews.ts`)와 같은 규칙: 24h 창 · 순수 최신순 · 한국 매체 제외.
+ *    항목은 `href` 로 **우리 글 페이지**에 연결된다 — 토론은 거기 있다.
+ *    운영자(2026-09-02): "티커는 오늘의 떡밥 컨텐츠를 활용하는 걸로 대체".
+ *
+ * 2. **레거시 `news_ticker_items`** — 봇이 없는 종목만. Vultr 크롤러가 GPT 요약으로 채운다.
+ *    축구는 이제 이 표를 읽지 않는다. 같은 소식을 두 번 요약하고, 클릭이 밖으로 새던 구조였다.
+ *
+ * 팀 게시판은 종목 루트를 본다 (2026-08-25 운영자: "팀 게시판은 그냥 축구 게시판에 있는
+ * 티커 보여주면 될 것 같은데"). 루트는 `categories.parent_slug` 로 푼다.
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params
     const supabase = createServiceRoleClient()
 
+    // ── 1) 떡밥 경로 — 종목 루트에 뉴스봇이 있으면 여기서 끝난다 ──────────────
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("parent_slug")
+      .eq("slug", slug)
+      .maybeSingle()
+    const root = tickerRootOf(slug, cat?.parent_slug)
+    const botUserId = TICKER_BOT_BY_ROOT[root]
+    if (botUserId) {
+      const { data: posts, error: postsError } = await supabase
+        .from("posts")
+        .select("id, title, source_url, created_at")
+        .eq("user_id", botUserId)
+        .eq("community_slug", root)
+        .is("deleted_at", null)
+        .gte("created_at", new Date(Date.now() - TICKER_WINDOW_MS).toISOString())
+        .order("created_at", { ascending: false })
+        // 한국 매체 제외로 몇 건 빠질 수 있어 넉넉히 뽑고 매핑에서 20으로 자른다
+        .limit(40)
+      if (postsError) {
+        apiError("Ticker posts query error", 500, postsError)
+        return NextResponse.json({ items: [] })
+      }
+      return NextResponse.json(
+        { items: postsToTickerItems(posts ?? []) },
+        { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" } }
+      )
+    }
+
+    // ── 2) 레거시 경로 — 봇 없는 종목 ─────────────────────────────────────────
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
     const COLUMNS =
@@ -48,14 +93,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
      *    지어낸 소식을 실시간인 척 띄우는 것이기 때문이다.
      */
     if (!error && (rows?.length ?? 0) === 0) {
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("parent_slug")
-        .eq("slug", slug)
-        .maybeSingle()
-      const parent = cat?.parent_slug
-      if (parent && parent !== slug) {
-        const up = await fetchFor(parent)
+      // 루트는 위에서 이미 풀었다 — 팀 게시판이면 root !== slug
+      if (root !== slug) {
+        const up = await fetchFor(root)
         if (!up.error && (up.data?.length ?? 0) > 0) rows = up.data
       }
     }

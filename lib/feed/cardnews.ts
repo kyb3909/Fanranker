@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { classifyTier } from "@/lib/saga/tier"
+import { isKoreanSource, SOURCE_PREFIX_RE } from "@/lib/feed/source-rules"
 import {
   extractFirstImageSrcFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
@@ -44,18 +45,9 @@ export interface CardNewsItem {
 /** 봇 발행량(하루 ~20건)이면 최근분이 한 번에 다 담긴다 — 커서 페이지네이션 불필요 */
 const FEED_LIMIT = 60
 
-/**
- * 한국 매체 출처 판정 — 떡밥에 넣지 않는다 (2026-08-04 운영자: "한국 뉴스에서
- * 퍼온 건 안 넣을 거야"). .kr TLD + 네이버/다음 + .com 을 쓰는 국내 매체.
- * 현재 파이프라인(레딧 스캐너)은 전부 해외 원문이라 지금은 0건 — 미래 유입 가드.
- */
-const KOREAN_SOURCE_RE =
-  /\.kr(\/|$)|naver\.com|daum\.net|chosun\.com|donga\.com|newsis\.com|joongang\.co|hankyung\.com|starnewskorea\.com/i
-
-function isKoreanSource(sourceUrl: string | null): boolean {
-  return !!sourceUrl && KOREAN_SOURCE_RE.test(sourceUrl)
-}
-const SOURCE_RE = /^\[([^\]]{1,24})\]\s*/
+// 한국 매체 판정·[출처] 프리픽스 규칙은 lib/feed/source-rules.ts 로 옮겼다 (2026-09-02) —
+// 티커가 같은 규칙을 쓰는데 이 파일은 최상위 supabase import 때문에 순수하게 못 부른다.
+const SOURCE_RE = SOURCE_PREFIX_RE
 
 /** AI 뉴스룸 발행 계정 (news-review publish) — 카드뉴스는 이 계정 글만 큐레이션 */
 const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
