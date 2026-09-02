@@ -29,7 +29,12 @@ const EXT = /\.(ts|tsx|mjs|js)$/
 const SKIP = new Set(["node_modules", ".next", "dist", "build", ".turbo"])
 
 /** openai 를 부른다고 볼 수 있는 흔적 — 직접 fetch 와 SDK 둘 다 */
-const CALLS_OPENAI = /api\.openai\.com\/v1\/chat|chat\.completions\.create\(|new OpenAI\(/
+// ⚠️ 세 번째 형태: `${baseUrl}/chat/completions` 처럼 호스트를 변수로 빼면 `api.openai.com/v1/chat`
+//    리터럴이 안 남는다(data/agent-test/runner.js 가 그렇게 빠져나갔다, 2026-09-02). 경로 조각으로도 잡는다.
+//    호스트는 `/v1/chat` 까지 붙여 좁힌다 — `api.openai.com` 만 보면 `/v1/images` 생성 스크립트 6개가
+//    딸려 온다. 이미지 API 는 처음부터 대상 밖이다(샘플링 파라미터도 usage 도 없다).
+const CALLS_OPENAI =
+  /api\.openai\.com\/v1\/chat|chat\.completions\.create\(|new OpenAI\(|\/chat\/completions/
 
 /** 계측했다고 볼 수 있는 흔적. chatWithRetry·recordUsage 는 data/crawlers 쪽 계측기다 */
 const INSTRUMENTED =
@@ -49,6 +54,15 @@ const EXEMPT: Record<string, string> = {
   //    (openai-params-vps-sync.test.ts). 계측은 아직 복제하지 않았다 — 넣으려면
   //    supabase 클라이언트까지 복제해야 해서 배포 단위가 무너진다.
   "scripts/news-scanner.mjs": "VPS 무의존 단일 파일 — @/lib import 불가",
+
+  // ⚠️ 페르소나 글 생성 테스트 하네스(수동, 별도 package.json, 맨 node). gpt-4o-mini 기본.
+  //    2026-09-02 대시보드에서 우리 키에 gpt-4o-mini 200만 토큰이 찍혔는데 repo 본체엔 4o 호출이
+  //    없었다 — 이게 후보다. 무의존 패키지라 계기판을 못 부른다. 돌릴 때 비용이 대시보드에만 남는다.
+  "data/agent-test/runner.js": "수동 테스트 하네스 — 무의존 패키지, 계기판 import 불가",
+  "data/agent-test/gen.js": "수동 테스트 하네스 — 무의존 패키지, 계기판 import 불가",
+  "data/agent-test/gen2.mjs": "수동 테스트 하네스 — 무의존 패키지, 계기판 import 불가",
+  "data/agent-test/gen-comments.mjs": "수동 테스트 하네스 — 무의존 패키지, 계기판 import 불가",
+  "data/agent-test/generate-content.js": "수동 테스트 하네스 — 무의존 패키지, 계기판 import 불가",
   "scripts/vps-news-scanner/news-scanner.mjs": "VPS 무의존 단일 파일 — @/lib import 불가",
 
   // ⚠️ 맨 `tsx` 로 돌리면 `usage-log.ts` 첫 줄의 `import "server-only"` 가 throw 한다.
