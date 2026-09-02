@@ -251,11 +251,19 @@ async function run(request: NextRequest) {
   const alertBreakingHeld = (id: string, reason: string) => {
     if (!isBreaking(id)) return
     const row = rowById.get(id)
+    // 사유 코드는 사람 말로 (2026-09-02). 코드만 오면 받는 사람이 무엇을 확인해야 할지 모른다.
+    const REASON_KO: Record<string, string> = {
+      official_unverified: "오피셜인데 공식 출처(구단·리그 공식 채널)가 확인되지 않음",
+      basketball_manual_only: "농구는 수동 발행만 하도록 잠겨 있음",
+      prior_gate_rejected: "앞 단계 게이트가 이미 거절한 초안이 다시 올라옴",
+    }
     notifyDiscordOps({
-      title: `브레이킹 막힘 — ${reason}`,
-      description: `${row?.draft?.title?.slice(0, 120) ?? id}\n오피셜급 뉴스가 자동발행되지 못하고 검수 대기입니다.`,
+      title: `🚨 브레이킹 막힘 — ${REASON_KO[reason] ?? reason}`,
+      description: `${row?.draft?.title?.slice(0, 120) ?? id}\n오피셜급 뉴스가 자동발행되지 못하고 검수 대기로 들어갔습니다.`,
       level: "alert",
       url: "/admin/news-review",
+      impact: "경쟁 매체보다 늦게 나가거나, 검수가 늦으면 48시간 뒤 자동 반려됩니다.",
+      action: `뉴스 검수에서 이 초안을 열어 원문을 확인하고 발행 또는 반려합니다. (사유 코드: ${reason})`,
     }).catch(() => {})
   }
 

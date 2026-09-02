@@ -28,6 +28,7 @@ import { findDuplicateReports, type GameRow } from "@/lib/ops/match-report-dup"
 import { assessMotmCoverage, MOTM_GRACE_MS } from "@/lib/ops/motm-coverage"
 import { auditLfaLinks, type LfaNamedMatch, type LinkedGame } from "@/lib/ops/lfa-link-audit"
 import { cachedTeamEn } from "@/lib/lfa/match"
+import { describeInvariant, formatFindingField } from "@/lib/ops/invariant-catalog"
 import {
   assessTimelineLatin,
   findFixableTimelineNames,
@@ -93,6 +94,7 @@ interface Finding {
 }
 
 const H = 3600000
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://gongnori.fan"
 
 /** maxDuration 60s 안에서 검사를 마치기 위한 예산 — 넘으면 resolve 를 보류한다 */
 const AUDIT_TIME_BUDGET_MS = 45_000
@@ -869,14 +871,33 @@ async function handler(req: NextRequest) {
   }
 
   if (fresh.length > 0) {
+    // 알림 한 통이 세 질문에 답하게 (2026-09-02): 무엇이 깨졌나(카탈로그 label) · 어디서(summary 의
+    // 경기·기사·사가) · 뭘 하면 되나(action + 관제실 링크). 종전엔 영문 코드 + 180자 절단이라
+    // 조치 부분이 잘려 나갔다. 같은 종류가 여럿이면 종류별로 묶어 첫 건만 펼치고 나머지는 센다.
+    const byKind = new Map<string, typeof fresh>()
+    for (const f of fresh) byKind.set(f.invariant, [...(byKind.get(f.invariant) ?? []), f])
+    const kinds = [...byKind.entries()]
+    const headline = kinds
+      .map(([id, list]) => `${describeInvariant(id).label} ${list.length}건`)
+      .join(" · ")
     await notifyDiscordOps({
       level: "warn",
-      title: "🧿 불변식 위반 감지",
-      description: `발행 후 감사에서 신규 위반 ${fresh.length}건. (같은 위반은 재알림하지 않음)`,
+      title: `🧿 불변식 위반 ${fresh.length}건 — ${headline}`.slice(0, 240),
+      description:
+        `매시 44분 감사에서 새로 잡힌 것만 보냅니다. 같은 건은 다시 알리지 않고, 사라지면 자동으로 닫힙니다.\n` +
+        `전체 목록과 이력은 관제실 → 운영.`,
       url: "/admin/operations",
-      fields: fresh
-        .slice(0, 10)
-        .map((f) => ({ name: f.invariant, value: f.summary.slice(0, 180) })),
+      fields: kinds.slice(0, 10).map(([id, list]) => {
+        const first = formatFindingField(list[0], SITE)
+        const more =
+          list.length > 1
+            ? `\n＋ 같은 종류 ${list.length - 1}건 더: ${list
+                .slice(1, 4)
+                .map((f) => f.summary.split(" — ")[1]?.slice(0, 60) ?? f.summary.slice(0, 60))
+                .join(" / ")}${list.length > 4 ? " …" : ""}`
+            : ""
+        return { name: first.name, value: `${first.value}${more}` }
+      }),
     })
     await supabase
       .from("invariant_findings")

@@ -44,9 +44,11 @@ export async function POST(req: NextRequest) {
     if (ageH > 3) {
       issues.push({
         name: "🕷️ betman 동기화 지연",
-        value: Number.isFinite(ageH)
-          ? `마지막 체크 ${Math.round(ageH)}시간 전${sync?.last_error ? ` · ${sync.last_error}` : ""}`
-          : "동기화 상태 없음",
+        value:
+          (Number.isFinite(ageH)
+            ? `마지막 체크 ${Math.round(ageH)}시간 전 (평소 매시 :10)${sync?.last_error ? ` · 마지막 에러: ${sync.last_error}` : ""}`
+            : "동기화 상태 기록이 아예 없음") +
+          `. 새 경기·배당이 안 들어와 승부예측 목록이 비어 간다 — ssh 후 \`tail -20 /opt/betman/sync.log\`, \`crontab -l\` 확인`,
       })
     }
   } catch (e) {
@@ -66,10 +68,12 @@ export async function POST(req: NextRequest) {
       : Infinity
     if (ageH > 2) {
       issues.push({
-        name: "🕷️ 뉴스 크롤러 지연",
-        value: Number.isFinite(ageH)
-          ? `마지막 갱신 ${Math.round(ageH)}시간 전`
-          : "티커 데이터 없음",
+        name: "🕷️ 뉴스 크롤러(티커) 지연",
+        value:
+          (Number.isFinite(ageH)
+            ? `마지막 갱신 ${Math.round(ageH)}시간 전 (평소 10분 주기)`
+            : "티커 데이터가 아예 없음") +
+          `. 사가 수집(saga-ingest)이 티커 표를 읽으므로 이적 사가 갱신이 같이 멈춘다 — ssh 후 \`tail -20 /opt/crawlers/logs/cron.log\` 확인`,
       })
     }
   } catch (e) {
@@ -195,7 +199,9 @@ export async function POST(req: NextRequest) {
     if ((count ?? 0) > 0) {
       issues.push({
         name: "💸 미정산(고아) 예측",
-        value: `${count}건 — 경기 끝났는데 pending. settle-pending 점검 필요`,
+        value:
+          `${count}건 — 결과가 난 지 1시간 넘었는데 아직 pending. 사용자 화면엔 적중/미적중이 안 뜬다. ` +
+          `settle-pending(15분 크론)이 돌고 있는지 관제실 크론 표에서 보고, 돌고 있는데도 남으면 그 픽의 게임 status/result 를 확인`,
       })
     }
   } catch (e) {

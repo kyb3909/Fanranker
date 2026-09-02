@@ -240,9 +240,13 @@ async function cronGet(request: Request) {
             clubConflict = { dominant: verdict.dominant }
             notifyDiscordOps({
               title: `오피셜 클럽 모순 의심 — ${ex.player_kr ?? ex.player}`,
-              description: `이번 표기 [${ex.clubs.join(", ")}] vs 최근 7일 지배 클럽 "${verdict.dominant}". 자동 발행 보류 — 검수 필요.\n${row.title.slice(0, 140)}`,
+              description: `이번 기사는 [${ex.clubs.join(", ")}] 인데 최근 7일 기사 대부분은 "${verdict.dominant}" 입니다. 자동 발행을 보류했습니다.\n${row.title.slice(0, 140)}`,
               level: "warn",
-              url: "/admin2/saga",
+              // /admin2 는 폐기됐다 (2026-09-02 수정) — 사가 검수는 /admin/saga-review
+              url: "/admin/saga-review",
+              impact:
+                "둘 중 하나는 동명이인이거나 오보입니다. 그대로 발행하면 사가가 엉뚱한 클럽으로 굳습니다.",
+              action: "사가 검수에서 원문을 열어 어느 클럽이 맞는지 확인하고 발행 또는 반려합니다.",
             }).catch(() => {})
           }
         }

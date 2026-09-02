@@ -241,14 +241,21 @@ export async function crosscheckFootballResults(
     const fresh = newMismatches.filter((m) => !alreadyAlerted.has(m.game.id))
     if (fresh.length > 0) {
       await notifyDiscordOps({
-        title: `⚠️ 경기 결과 불일치 ${fresh.length}건 — 확인 필요 (정산은 진행됨)`,
+        title: `⚠️ 경기 결과 불일치 ${fresh.length}건 — ${fresh
+          .slice(0, 2)
+          .map((m) => `${m.game.home_team_name} ${m.betman ?? "?"} vs LFA ${m.lfa ?? "?"}`)
+          .join(", ")}${fresh.length > 2 ? " 외" : ""}`.slice(0, 240),
         description:
-          "베트맨과 산 피드(LFA)의 스코어가 다릅니다. 정산은 베트맨 결과대로 이미 나갔습니다 — 베트맨이 틀린 것으로 확인되면 사후 정정하세요.",
+          "베트맨이 준 확정 스코어와 산 피드(LFA)의 스코어가 다릅니다. 정산은 베트맨 결과대로 **이미 나갔습니다** — 지급이 막힌 건 아닙니다.",
         level: "alert",
         url: "/admin/matches",
+        impact:
+          "베트맨이 맞으면 아무 일도 없습니다. LFA 가 맞으면 그 경기의 적중·미적중이 뒤바뀐 채 정산된 것이라 사후 정정이 필요합니다.",
+        action:
+          "경기별 실제 결과를 확인하고, 베트맨이 틀린 것으로 드러나면 관제실에서 정산을 정정하세요. 우리 DB 상세 캐시가 이미 LFA 편이면 대개 LFA 가 맞습니다.",
         fields: fresh.slice(0, 6).map((m) => ({
           name: `${m.game.home_team_name} vs ${m.game.away_team_name}`,
-          value: m.note ?? `와이즈토토 ${m.betman ?? "?"} · LFA ${m.lfa ?? "?"}`,
+          value: `베트맨 ${m.betman ?? "?"} · LFA ${m.lfa ?? "?"}${m.note ? ` — ${m.note}` : ""}`,
         })),
       })
       await supabase
