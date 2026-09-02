@@ -820,7 +820,28 @@ async function handler(req: NextRequest) {
       // 그러니 라인업이 ready 인데 불판이 없으면 창 안에 그 경기가 **후보로 안 잡힌 것**이다 —
       // 2026-08-27~30 실사고: 일정 짝짓기(한글 정규화)가 동시 킥오프 슬롯을 놓쳐 24경기가
       // 라인업·MoTM 은 있는데 불판만 없었다. 라인업 자체가 없는 경기(LFA 미커버)는 세지 않는다.
-      const readyIds = await loadReadyLineupIds(supabase, ids)
+      //
+      // ⚠️ "라인업이 **창 안에** 있었나"로 센다 (2026-09-02 첫 회차 오탐 8건). 챔피언십을 시험
+      //    리그로 소급 추가하자 전날 끝난 경기 8건의 라인업이 배포 직후 예열로 뒤늦게 저장됐고,
+      //    불판 창은 그때 이미 닫혀 있었다 — 사실이지만 조치할 게 없는 finding 이다. 라인업 행의
+      //    최초 저장 시각(created_at)이 창 종료(킥오프+120분, lib/match/thread.ts WINDOW_AFTER_MS)
+      //    이전인 경기만 "불판이 깔렸어야 했던 경기"다. 리그 소급 추가·라인업 백필은 여기 안 걸린다.
+      const THREAD_WINDOW_AFTER_MS = 120 * 60_000
+      const readyCreatedAt = new Map<string, number>()
+      for (let i = 0; i < ids.length; i += IN_CHUNK) {
+        const { data } = await supabase
+          .from("match_lineups")
+          .select("game_id, created_at, payload")
+          .in("game_id", ids.slice(i, i + IN_CHUNK))
+        for (const row of data ?? []) {
+          if ((row.payload as { status?: string } | null)?.status !== "ready") continue
+          const t = new Date(String(row.created_at)).getTime()
+          if (!Number.isFinite(t)) continue
+          const gid = String(row.game_id)
+          const prev = readyCreatedAt.get(gid)
+          if (prev == null || t < prev) readyCreatedAt.set(gid, t)
+        }
+      }
       const threadedIds = new Set<string>()
       for (let i = 0; i < ids.length; i += IN_CHUNK) {
         const { data } = await supabase
@@ -831,9 +852,13 @@ async function handler(req: NextRequest) {
         for (const r of data ?? []) if (r.match_game_id) threadedIds.add(String(r.match_game_id))
       }
       for (const [key, rows] of rowsByKey) {
-        const hasReady = rows.some((g) => readyIds.has(g.id))
+        const windowEnd = new Date(rows[0].matchTime).getTime() + THREAD_WINDOW_AFTER_MS
+        const hasReadyInWindow = rows.some((g) => {
+          const t = readyCreatedAt.get(g.id)
+          return t != null && t <= windowEnd
+        })
         const hasThread = rows.some((g) => threadedIds.has(g.id))
-        if (!hasReady || hasThread) continue
+        if (!hasReadyInWindow || hasThread) continue
         const rep = rows[0]
         findings.push({
           invariant: "match_thread_missing",
