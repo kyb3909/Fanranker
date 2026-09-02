@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
-import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { apiError, checkRateLimit } from "@/lib/api-error"
 import { currentUser } from "@clerk/nextjs/server"
+import { timingSafeEqual } from "crypto"
 import { assertPublicUrl, SsrfBlockedError } from "@/lib/ssrf-guard"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 import { chatParams } from "@/lib/llm/openai-params"
 import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
 export const runtime = "nodejs"
+
+/** `Authorization: Bearer <CRON_SECRET>` — lib/cron-auth 와 같은 비교(타이밍 안전). 비밀이 없으면 항상 false */
+function isInternalCaller(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false
+  const a = Buffer.from(request.headers.get("authorization") || "")
+  const b = Buffer.from(`Bearer ${secret}`)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 /**
  * GET /api/og?url=...
@@ -38,10 +48,15 @@ export async function GET(request: NextRequest) {
     }
     const wantSummary = request.nextUrl.searchParams.get("summarize") === "1"
 
-    // 요약은 LLM 1회 = 실비. 로그인 + 빡빡한 한도를 먼저 통과해야 한다
-    const limited = checkRateLimit(request, wantSummary ? "STRICT" : "STANDARD")
+    // 내부 호출(VPS 뉴스 스캐너 — scripts/vps-news-scanner)은 CRON_SECRET 으로 신원을 밝힌다.
+    // 2026-09-02 잠금(a89c4dc3)이 "유일한 호출부는 글쓰기 에디터"라고 봤지만 스캐너도 이 경로를
+    // summarize=1 로 불렀고, 401 을 받자 `{}` 로 떨어져 **이미지까지** 잃었다 — 초안 사진
+    // 44/83(9/1) → 6/69(9/2) → 0/10(9/3), 전부 구단 카드로 발행. 메타·이미지는 비로그인
+    // 공개 경로와 비용이 같으므로 401 이 아니라 **요약만 뺀다**. LLM 은 여전히 로그인·비밀 뒤.
+    const internal = isInternalCaller(request)
+    const limited = checkRateLimit(request, wantSummary && !internal ? "STRICT" : "STANDARD")
     if (limited) return limited
-    if (wantSummary && !(await currentUser())) return apiUnauthorized()
+    const summarize = wantSummary && (internal || !!(await currentUser()))
 
     // URL 유효성 검증 (scheme)
     let parsedUrl: URL
@@ -171,7 +186,7 @@ export async function GET(request: NextRequest) {
 
     // 본문 5줄 요약 (요청 시 + 저렴 모델). 실패해도 메타는 정상 반환.
     let summary: string[] | null = null
-    if (wantSummary) {
+    if (summarize) {
       const bodyText = extractArticleText(html)
       if (bodyText.length > 200) {
         summary = await summarizeArticle(bodyText, pageTitle)

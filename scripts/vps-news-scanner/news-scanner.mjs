@@ -483,7 +483,10 @@ function extractJsonLdBody(html) {
   }
   if (!found.length) return null
   const best = found.sort((a, b) => b.length - a.length)[0]
-  return decodeHTML(best).replace(/[ \t]+/g, " ").trim().slice(0, 2800)
+  return decodeHTML(best)
+    .replace(/[ \t]+/g, " ")
+    .trim()
+    .slice(0, 2800)
 }
 
 /** og:description — 최후의 재료. 짧지만(150~300자) 제목뿐인 것보단 낫다 */
@@ -668,10 +671,13 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
  * 그걸 기사 재료로 공급한다 (기사 원문과 같은 원리 — 실재 팩트만 옮긴다).
  */
 async function fetchTweetData(url) {
-  const res = await fetch(`${BASE_URL}/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`, {
-    headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(15000),
-  })
+  const res = await fetch(
+    `${BASE_URL}/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
+    {
+      headers: { "User-Agent": UA },
+      signal: AbortSignal.timeout(15000),
+    }
+  )
   if (!res.ok) return null
   const d = await res.json().catch(() => null)
   if (!d?.html) return null
@@ -699,10 +705,13 @@ async function fetchTweetData(url) {
  * /api/oembed 가 embed.bsky.app 을 프록시하고 title 에 포스트 본문을 담아준다.
  */
 async function fetchBskyData(url) {
-  const res = await fetch(`${BASE_URL}/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`, {
-    headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(15000),
-  })
+  const res = await fetch(
+    `${BASE_URL}/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
+    {
+      headers: { "User-Agent": UA },
+      signal: AbortSignal.timeout(15000),
+    }
+  )
   if (!res.ok) return null
   const d = await res.json().catch(() => null)
   if (!d) return null
@@ -727,13 +736,21 @@ async function fetchBskyData(url) {
 
 /** 기사 → og 이미지 노드 + 요약 */
 async function buildArticleOg(url) {
+  // CRON_SECRET 으로 내부 호출임을 밝힌다 — /api/og 의 요약(summarize=1)은 로그인 또는 이 비밀 뒤에 있다
+  // (2026-09-02 잠금 뒤 401 → 이미지까지 잃었던 사고). 비밀이 없으면 메타·이미지만 받는다.
   const res = await fetch(`${BASE_URL}/api/og?url=${encodeURIComponent(url)}&summarize=1`, {
-    headers: { "User-Agent": UA },
+    headers: {
+      "User-Agent": UA,
+      ...(CRON_SECRET ? { Authorization: `Bearer ${CRON_SECRET}` } : {}),
+    },
     signal: AbortSignal.timeout(20000),
   })
   if (!res.ok) return {}
   const d = await res.json().catch(() => ({}))
-  return { imageNode: d?.image ? { type: "image", attrs: { src: d.image } } : null, ogSummary: d?.summary || null }
+  return {
+    imageNode: d?.image ? { type: "image", attrs: { src: d.image } } : null,
+    ogSummary: d?.summary || null,
+  }
 }
 
 function buildContent(summary, mediaNode) {
@@ -984,7 +1001,8 @@ function buildNamingHints(naming, sourceText) {
      */
     if (!matched && Array.isArray(row.enTeam) && row.enTeam.length > 0) {
       const teamSeen = (row.team ?? []).some(
-        (t) => t && (includesProperNoun(sourceText, lower, t.toLowerCase()) || sourceText.includes(t))
+        (t) =>
+          t && (includesProperNoun(sourceText, lower, t.toLowerCase()) || sourceText.includes(t))
       )
       if (teamSeen) matched = pick(row.enTeam)
     }
@@ -1332,7 +1350,10 @@ ${v.summary || ""}`,
         content: buildContent(summary, mediaNode),
         // 원문 재료를 초안에 보존 — 검수자가 원문과 대조하며 고칠 수 있게
         source_text: material
-          ? `[${material.kind === "tweet" ? `트윗 · ${material.author || "작성자 미상"}` : "기사 발췌"}]\n${material.text}`.slice(0, 4000)
+          ? `[${material.kind === "tweet" ? `트윗 · ${material.author || "작성자 미상"}` : "기사 발췌"}]\n${material.text}`.slice(
+              0,
+              4000
+            )
           : undefined,
         source_url: p.url && /^https?:/.test(p.url) ? p.url : undefined,
         origin_url: p.permalink || undefined,
