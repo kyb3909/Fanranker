@@ -41,7 +41,8 @@ export const GUNNERS_SEASON = {
    * 카드·슬립 이벤트 귀속(eventSlug)이 일괄 꺼진다. ⚠️hasEventStarted 는 시간 기준
    * 그대로라 /prediction 자체는 평시 모드로 계속 열려 있다 (예측 기능은 닫는 게 아님).
    * DB events(season-open-2026).status 도 'draft' 로 내려 등록 API 를 막았다 —
-   * 재개 시 이 값을 true 로 + status='open' 두 개를 같이 되돌릴 것.
+   * 2026-09-02 운영자 "이벤트는 일단 모두 닫아줘" 로 season-open·cog-duel 둘 다 'closed'.
+   * 재개 시 이 값을 true 로 + status='open' 두 개를 같이 되돌릴 것 (코그는 채널 합의도).
    */
   open: false,
 } as const
