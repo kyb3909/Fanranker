@@ -44,7 +44,10 @@ export function InlineComments({
   return (
     <div
       className="flex flex-col gap-3 px-4 pt-3 pb-4"
-      style={{ borderTop: "1px solid var(--wc-line)" }}
+      style={{
+        borderTop: "1px solid var(--wc-line)",
+        background: "var(--wall-foot-bg, transparent)",
+      }}
     >
       {isLoadingComments ? (
         <div className="flex flex-col gap-2" aria-hidden>

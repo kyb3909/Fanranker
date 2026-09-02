@@ -9,6 +9,7 @@ import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { PopularStream } from "@/components/home/popular-stream"
+import { WallTintLab } from "@/components/home/wall-tint-lab"
 import type { WallPost } from "@/components/home/wall-post-card"
 import { trackEvent } from "@/lib/analytics/events"
 import { QuickComposer } from "@/components/home/quick-composer"
@@ -424,6 +425,8 @@ export function HomeClient({
 
         {/* 실시간 인기글 토스트 — 로그인 시 */}
         {isSignedIn && <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />}
+        {/* 담벼락 카드 색 시안 전환기 — 개발 전용 (2026-09-03). 시안 확정 후 제거 */}
+        {process.env.NODE_ENV === "development" && <WallTintLab />}
       </main>
     </div>
   )

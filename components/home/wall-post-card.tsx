@@ -106,13 +106,17 @@ export function WallPostCard({
   return (
     <article
       className="overflow-hidden rounded-2xl"
+      // --wall-* 는 색 시안 전환기(wall-tint-lab, 개발 전용)가 주입한다. 없으면 흰 카드 기본값.
       style={{
-        background: "var(--wc-card)",
-        border: "1px solid var(--wc-line)",
-        boxShadow: "var(--wc-shadow-1)",
+        background: "var(--wall-bg, var(--wc-card))",
+        border: "1px solid var(--wall-border, var(--wc-line))",
+        boxShadow: "var(--wall-shadow, var(--wc-shadow-1))",
       }}
     >
-      <header className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5">
+      <header
+        className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5"
+        style={{ background: "var(--wall-head-bg, transparent)" }}
+      >
         <AuthorAvatar name={post.author} src={post.avatar} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
@@ -201,7 +205,10 @@ export function WallPostCard({
         </Link>
       )}
 
-      <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1.5">
+      <div
+        className="flex items-center gap-1.5 px-3 pt-2.5 pb-1.5"
+        style={{ background: "var(--wall-foot-bg, transparent)" }}
+      >
         <VoteButtons voteCount={voteCount} myVote={myVote} onVote={vote} size="md" />
         <button
           type="button"
