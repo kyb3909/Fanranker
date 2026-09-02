@@ -76,6 +76,9 @@ export const maxDuration = 60
  *  12. lfa_link_missing    — 매치 페이지 대상 리그의 끝난 경기는 LFA 링크가 있다 (집계형:
  *                            11번 가드가 이름 불일치를 **끊는** 쪽으로 처리하므로, 사전 결손·
  *                            LFA 표기 변덕은 "오연결"이 아니라 "링크 없음"으로 나타난다)
+ *  13. match_thread_missing — 라인업이 확정된 끝난 경기엔 불판이 있다 (2026-08-27~30 실사고:
+ *                            일정 짝짓기가 동시 킥오프를 놓쳐 24경기가 라인업·MoTM 은 있는데
+ *                            불판만 없었다. 불판 크론은 창 안 후보만 보므로 스스로 모른다)
  *
  * ⚠️ 8~10 은 셋 다 **저장분이 스스로 낫지 않는** 자리를 본다. 우는 시점에 이미 굳어
  *    있으므로, 코드 수리와 별개로 백필이 필요한지 늘 함께 판단할 것.
@@ -104,6 +107,15 @@ const MOTM_FT_AFTER_MS = 110 * 60_000
 const TIMELINE_SCAN_LIMIT = 60
 /** `.in()` 은 큰 배열에서 400 이 온다 — 이 저장소의 재발 패턴 */
 const IN_CHUNK = 100
+
+/**
+ * vercel.json 밖에서 돌지만 cron_run_log 를 남기는 작업 — VPS 발 (2026-09-02).
+ * `betman-results` = VPS fetch-results.sh(15분)가 결과 갱신 직후 부르는 POST /api/betman/settle.
+ * 이게 끊기면 결과 수집이 죽은 것인데 종전엔 아무 심박이 없었다(settle-pending 안전망이 대신
+ * 정산하는 동안 아무도 모름). 새 결과가 없는 회차는 호출을 건너뛸 수 있어 기대 주기를 30분으로
+ * 잡는다 (임계 = 60분).
+ */
+const EXTRA_HEARTBEATS: { job: string; gap: number | null }[] = [{ job: "betman-results", gap: 30 }]
 
 /** gameId 들의 betman 행 (경기 키 계산용). PostgREST 400 을 피해 끊어서 부른다 */
 async function loadGamesByIds(
@@ -242,8 +254,13 @@ async function handler(req: NextRequest) {
   // ── 2) 크론 심박 불변식 ──
   try {
     const crons = (vercelConfig as { crons: { path: string; schedule: string }[] }).crons
-    const jobs = crons
-      .map((c) => ({ job: cronJobNameFromPath(c.path), gap: cronMaxGapMinutes(c.schedule) }))
+    const jobs = [
+      ...crons.map((c) => ({
+        job: cronJobNameFromPath(c.path),
+        gap: cronMaxGapMinutes(c.schedule),
+      })),
+      ...EXTRA_HEARTBEATS,
+    ]
       // 자기 자신은 제외 — 죽으면 어차피 자기가 못 알린다 (ops-monitor 몫)
       .filter((c) => c.job !== "invariant-audit" && c.gap !== null)
     const lastRuns = await Promise.all(
@@ -795,6 +812,35 @@ async function handler(req: NextRequest) {
             },
           })
         }
+      }
+
+      // ── 13. match_thread_missing — 라인업이 확정된 끝난 경기엔 불판이 있다 ──
+      //
+      // 불판은 킥오프 -90분~+120분 창에서 "라인업 ready" 인 화이트리스트 경기에만 깔린다.
+      // 그러니 라인업이 ready 인데 불판이 없으면 창 안에 그 경기가 **후보로 안 잡힌 것**이다 —
+      // 2026-08-27~30 실사고: 일정 짝짓기(한글 정규화)가 동시 킥오프 슬롯을 놓쳐 24경기가
+      // 라인업·MoTM 은 있는데 불판만 없었다. 라인업 자체가 없는 경기(LFA 미커버)는 세지 않는다.
+      const readyIds = await loadReadyLineupIds(supabase, ids)
+      const threadedIds = new Set<string>()
+      for (let i = 0; i < ids.length; i += IN_CHUNK) {
+        const { data } = await supabase
+          .from("posts")
+          .select("match_game_id")
+          .in("match_game_id", ids.slice(i, i + IN_CHUNK))
+          .is("deleted_at", null)
+        for (const r of data ?? []) if (r.match_game_id) threadedIds.add(String(r.match_game_id))
+      }
+      for (const [key, rows] of rowsByKey) {
+        const hasReady = rows.some((g) => readyIds.has(g.id))
+        const hasThread = rows.some((g) => threadedIds.has(g.id))
+        if (!hasReady || hasThread) continue
+        const rep = rows[0]
+        findings.push({
+          invariant: "match_thread_missing",
+          fingerprint: `match_thread_missing:${key}`,
+          summary: `불판 없음 — ${matchLabelOf(rep)} 은 라인업이 확정됐는데 불판 글이 없다. 창(킥오프 -90~+120분) 안에 후보로 안 잡힌 것 — 일정 짝짓기를 의심. 수동 생성: /api/cron/match-threads?gameId=${rep.id}`,
+          detail: { game_id: rep.id, sibling_ids: rows.map((g) => g.id) },
+        })
       }
 
       // 집계형 결손 — 개별 경기는 정당할 수 있다(LFA 미커버 예선 등). 비율로만 본다

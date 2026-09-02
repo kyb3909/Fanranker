@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { settlePredictions } from "@/lib/betman/settle"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { ERR } from "@/lib/error-messages"
 import { z } from "zod"
@@ -28,8 +29,14 @@ const settlePostSchema = z
  * - 정산 후 유저별 종목 통계 자동 갱신
  *
  * Body: { round_id?: string, gm_ts?: string, daily_round_id?: string, daily_id?: string }
+ *
+ * 호출자는 VPS `fetch-results.sh` (15분, 결과 갱신 직후) — 이 호출이 곧 **결과 수집의 심박**이다
+ * (2026-09-02). VPS bash 는 손대지 않는 자리라(과거 5일 장애 이력) 로그는 여기서 남긴다:
+ * cron_run_log job_name `betman-results`. 감사관 cron_heartbeat 가 60분 넘게 안 오면 운다.
  */
-export async function POST(request: NextRequest) {
+export const POST = withCronLog("betman-results", settleHandler)
+
+async function settleHandler(request: NextRequest) {
   try {
     const authError = verifyCronSecret(request)
     if (authError) return authError
