@@ -1,15 +1,28 @@
-import OpenAI from 'openai'
+import { chatWithRetry } from './openai-client.js'
 
-let client = null
+/**
+ * 요약 모델 (2026-09-02).
+ *
+ * 종전 `gpt-5.1` 은 의도된 선택이 아니었다 — 무관한 스타일 커밋(`2db7c69d`)에 묻어 들어온
+ * 일괄 치환이고, 근거가 어디에도 없다. 출력 단가가 $10/Mtok 로 luna($1.2)의 8배인데,
+ * 하는 일은 "뉴스인지 판별 + 한 줄 헤드라인 + 세 줄 요약" — 본체 앱이 luna 로 돌리는
+ * hero-editor·interest-filter 와 같은 부류다.
+ *
+ * env 로 되돌릴 수 있다: CRAWLER_SUMMARY_MODEL=gpt-5.1
+ * ⚠️ 이 repo 는 VPS 배포 경로가 아니다(/opt/crawlers 는 별도 사본). 여기 바꿔도 VPS 에
+ *    복사하기 전엔 아무것도 안 바뀐다.
+ */
+const SUMMARY_MODEL = process.env.CRAWLER_SUMMARY_MODEL || 'gpt-5.6-luna'
 
-function getClient() {
-  if (!client) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('Missing OPENAI_API_KEY')
-    }
-    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  }
-  return client
+/**
+ * 모델 세대에 맞는 파라미터. `lib/llm/openai-params.ts` 와 같은 규칙 — 5세대는
+ * temperature(≠1) 를 400 으로 거부한다. 이 패키지는 본체를 import 못 하므로 복제.
+ * 400 이면 크롤러가 10분마다 조용히 실패해 티커가 멈춘다 — 그래서 여기 있다.
+ */
+function summaryModelParams() {
+  return /^gpt-5/i.test(SUMMARY_MODEL)
+    ? { model: SUMMARY_MODEL }
+    : { model: SUMMARY_MODEL, temperature: 0.3 }
 }
 
 /** Category-specific prompt hints to improve summarization quality */
@@ -200,9 +213,8 @@ ${categoryHints.newsExamples}
 Return JSON: { "items": [{ "index": 1, "is_news": true/false, "category": "...", "importance": 3, "headline_kr": "...", "summary_lines": ["...", "...", "..."] }] }
 Include ALL articles in the response (non-newsworthy = is_news=false).`
 
-  const openai = getClient()
-  const response = await openai.chat.completions.create({
-    model: 'gpt-5.1',
+  const response = await chatWithRetry({
+    ...summaryModelParams(),
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: systemPrompt },
@@ -211,9 +223,8 @@ Include ALL articles in the response (non-newsworthy = is_news=false).`
         content: `다음 ${source.prompt_category} 뉴스 기사를 분석해주세요:\n\n${postsText}`,
       },
     ],
-    temperature: 0.3,
     max_completion_tokens: 3000,
-  })
+  }, 2, 'crawler-summarize')
 
   const content = response.choices[0].message.content
   let result
@@ -304,9 +315,8 @@ Rules:
 Return JSON: { "items": [{ "index": 1, "is_news": true/false, "category": "...", "importance": 3, "headline_kr": "...", "summary_lines": ["...", "...", "..."] }] }
 Include ALL posts in the response (even non-news ones with is_news=false).`
 
-  const openai = getClient()
-  const response = await openai.chat.completions.create({
-    model: 'gpt-5.1',
+  const response = await chatWithRetry({
+    ...summaryModelParams(),
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: systemPrompt },
@@ -315,9 +325,8 @@ Include ALL posts in the response (even non-news ones with is_news=false).`
         content: `Analyze these ${source.prompt_category} posts from r/${source.subreddit}:\n\n${postsText}`,
       },
     ],
-    temperature: 0.3,
     max_completion_tokens: 3000,
-  })
+  }, 2, 'crawler-summarize')
 
   const content = response.choices[0].message.content
   let result

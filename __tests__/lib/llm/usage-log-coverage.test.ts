@@ -13,6 +13,12 @@ import { describe, expect, it } from "vitest"
  * 새 호출부를 추가할 때 계측을 같이 붙이는 건 사람이 기억해야 하는 일이었다. 그래서
  * 여기로 옮긴다 — 안 붙이면 이 시험이 먼저 빨개진다.
  *
+ * ## ⚠️ SDK 도 본다 (2026-09-02 같은 날 두 번째 수정)
+ * 첫 판은 `api.openai.com/v1/chat` 문자열만 훑었다. 그래서 `openai` SDK 로 부르는
+ * `data/crawlers/`·`data/agents/`(별도 package.json) 가 **통째로 빠졌다** — 운영자가
+ * "어제 여러 번 충전됐다"고 했을 때 계기판엔 $1 이 찍혀 있었고, 그 차이가 여기 있었다.
+ * 스캔 패턴을 `chat.completions.create(` · `new OpenAI(` 까지 넓힌다.
+ *
  * ## 면제 목록에 이유를 같이 적는 이유
  * 이유 없는 면제는 다음 사람이 지워도 되는지 판단할 수 없다. 그리고 면제 항목이 실제로
  * 존재하는지도 함께 검사한다 — 파일이 사라졌는데 면제만 남으면 목록이 거짓말을 한다.
@@ -22,8 +28,12 @@ const ROOTS = ["app", "lib", "scripts", "data"]
 const EXT = /\.(ts|tsx|mjs|js)$/
 const SKIP = new Set(["node_modules", ".next", "dist", "build", ".turbo"])
 
-/** 계측했다고 볼 수 있는 흔적 */
-const INSTRUMENTED = /\b(logUsage|logUsageTokens|logUsageFailure|openaiChat)\b/
+/** openai 를 부른다고 볼 수 있는 흔적 — 직접 fetch 와 SDK 둘 다 */
+const CALLS_OPENAI = /api\.openai\.com\/v1\/chat|chat\.completions\.create\(|new OpenAI\(/
+
+/** 계측했다고 볼 수 있는 흔적. chatWithRetry·recordUsage 는 data/crawlers 쪽 계측기다 */
+const INSTRUMENTED =
+  /\b(logUsage|logUsageTokens|logUsageFailure|openaiChat|chatWithRetry|recordUsage)\b/
 
 const EXEMPT: Record<string, string> = {
   "lib/llm/usage-log.ts": "계기판 본체 — 자기가 자기를 부를 수는 없다",
@@ -65,11 +75,14 @@ function walk(dir: string, out: string[] = []): string[] {
 
 describe("LLM 사용량 계측 전수", () => {
   const files = ROOTS.flatMap((r) => walk(join(process.cwd(), r)))
-    .filter((f) => readFileSync(f, "utf8").includes("api.openai.com/v1/chat"))
+    .filter((f) => CALLS_OPENAI.test(readFileSync(f, "utf8")))
     .map((f) => relative(process.cwd(), f).replace(/\\/g, "/"))
 
   it("스캔이 살아 있다 — 대상 0개면 아무것도 안 본 것이다", () => {
     expect(files.length).toBeGreaterThan(15)
+    // SDK 경로가 실제로 스캔에 잡히는지 — 이게 빠지면 첫 판의 구멍이 그대로 다시 열린다.
+    // (summarizer 가 아니라 래퍼다: summarizer 는 chatWithRetry 만 부르므로 SDK 흔적이 없다 — 그게 정상)
+    expect(files).toContain("data/crawlers/core/openai-client.js")
   })
 
   it("openai 를 부르는 파일은 사용량을 남긴다", () => {
