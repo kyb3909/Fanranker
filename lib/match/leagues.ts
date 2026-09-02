@@ -9,7 +9,7 @@
  * 아직 발매된 적 없는 대회(독일 슈퍼컵, 스페인 수페르코파 등)는 코드가 관측되면
  * 여기 한 줄 추가한다.
  */
-export const MATCH_PAGE_LEAGUES: ReadonlySet<string> = new Set([
+const BASE_MATCH_PAGE_LEAGUES = [
   // 유럽 대항전
   "UCL", // 챔피언스리그
   "UEL", // 유로파리그
@@ -32,10 +32,40 @@ export const MATCH_PAGE_LEAGUES: ReadonlySet<string> = new Set([
   "독일FA컵", // DFB 포칼
   "프랑FA컵", // 쿠프 드 프랑스
   "프슈퍼컵", // 트로페 데 샹피옹
-])
+] as const
+
+/**
+ * 기간 한정 시험 리그 (2026-09-02 운영자: "이번주만 일단 테스트하는거로 하자. 검증이 필요해").
+ *
+ * `until` 이 지나면 **자동으로 대상에서 빠진다** — 되돌리는 배포가 필요 없다. 시험 중 만들어진
+ * 불판 글은 남는다(글은 지우지 않는다). 시험을 상시로 올리려면 위 BASE 로 옮긴다.
+ *
+ * ⚠️ 이 목록은 매치센터·일정·불판·MoTM 에만 닿는다. 리포트(LLM)는 별도 목록이라 안 붙는다.
+ */
+export const TRIAL_MATCH_PAGE_LEAGUES: readonly { code: string; until: string; why: string }[] = [
+  {
+    code: "EFL챔", // 잉글랜드 챔피언십
+    until: "2026-09-07T00:00:00+09:00",
+    why: "9/3 새벽 4경기(03:45 동시 킥오프 3 + 04:00 1)로 일정→LFA→매치센터→불판 체인 실전 검증",
+  },
+]
+
+/** 지금 시각에 유효한 대상 리그 — 시험 리그는 만료 전까지만 */
+export function matchPageLeaguesAt(now: number = Date.now()): ReadonlySet<string> {
+  const trial = TRIAL_MATCH_PAGE_LEAGUES.filter((t) => new Date(t.until).getTime() > now).map(
+    (t) => t.code
+  )
+  return new Set([...BASE_MATCH_PAGE_LEAGUES, ...trial])
+}
+
+/**
+ * 모듈 로드 시점의 스냅샷 — Set 을 직접 `.has()` 하는 호출부용. 시험 리그의 만료는 인스턴스가
+ * 새로 뜰 때 반영되므로 최대 몇 시간 늦을 수 있다. 정확해야 하는 자리는 isMatchPageLeague 를 쓴다.
+ */
+export const MATCH_PAGE_LEAGUES: ReadonlySet<string> = matchPageLeaguesAt()
 
 export function isMatchPageLeague(leagueCode: string | null | undefined): boolean {
-  return !!leagueCode && MATCH_PAGE_LEAGUES.has(leagueCode)
+  return !!leagueCode && matchPageLeaguesAt().has(leagueCode)
 }
 
 /**
@@ -80,6 +110,8 @@ const LEAGUE_LABELS: ReadonlyMap<string, string> = new Map([
   ["독일FA컵", "DFB 포칼"],
   ["프랑FA컵", "쿠프 드 프랑스"],
   ["프슈퍼컵", "트로페 데 샹피옹"],
+  // 시험 리그 (TRIAL_MATCH_PAGE_LEAGUES) — 만료돼도 라벨은 무해하다
+  ["EFL챔", "챔피언십"],
 ])
 
 export function leagueLabel(code: string): string {

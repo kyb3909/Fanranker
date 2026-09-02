@@ -144,13 +144,28 @@ function main() {
  * "Cup"(코파 이탈리아·쿠프 드 프랑스·DFB 포칼)이고 슈퍼컵은 "Super Cup" 이다.
  */
 
+import { isMatchPageLeague } from "@/lib/match/leagues"
+
 /** betman league_code → LFA league id */
 export const LFA_LEAGUE_IDS: ReadonlyMap<string, string> = new Map([
 ${lines}
 ])
 
+/**
+ * 크레딧 게이트 (2026-08-24 크레딧 30,100 소진 사고 후속).
+ *
+ * 매핑이 있어도 **매치센터 대상 리그가 아니면 null** — 여기서 null 이면 resolveMatch 가 조기
+ * 반환해 경기별 호출(details·lineups·preview)이 통째로 안 나간다. 대상 밖(K/J리그·MLS·
+ * 호주·ASEAN·코파·CONCACAF·에레디비지에 등)은 매치 페이지 자체가 없어 크레딧을 쓸 이유가 없다.
+ * 일정 페이지 스코어는 날짜 단위 1콜에서 오므로 여기 영향 없음.
+ *
+ * 기준 목록은 lib/match/leagues.ts 의 화이트리스트 **하나**다 — 여기 복사본을 두지 않는다
+ * (2026-09-02: 복사본이 있었고 이미 갈라져 있었다. 시험 리그의 만료도 그쪽이 결정한다).
+ * ⚠️ 이 게이트는 생성기 템플릿에 있다 — 종전엔 손으로 덧붙인 것이라 재생성 한 번이면 사라졌다.
+ */
 export function lfaLeagueId(betmanLeagueCode: string | null | undefined): string | null {
   if (!betmanLeagueCode) return null
+  if (!isMatchPageLeague(betmanLeagueCode)) return null
   return LFA_LEAGUE_IDS.get(betmanLeagueCode) ?? null
 }
 
