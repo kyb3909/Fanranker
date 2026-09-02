@@ -74,9 +74,25 @@ describe("pickLfaCounterpart — 동시 킥오프 슬롯", () => {
     expect(hit?.homeTeam).toBe("첼시")
   })
 
-  it("후보가 하나면 이름 대조 없이 채택한다 (실사고를 가려주던 분기)", () => {
+  it("후보가 하나이고 사전이 모르면 이름 대조 없이 채택한다 (실사고를 가려주던 분기)", () => {
     const only = row("파리FC", "니스")
     expect(pickLfaCounterpart(row("파리FC", "OGC니스"), [only], new Map())).toBe(only)
+  })
+
+  // 2026-09-02: 후보가 하나여도 사전이 양 팀을 알면 이름이 맞아야 한다 — 두 일정이 어긋난 날
+  // 같은 시각의 남의 경기에 붙는 구멍. resolveMatch(lib/lfa/match.ts)와 같은 규칙.
+  it("후보가 하나여도 사전이 양 팀을 아는데 이름이 다르면 붙이지 않는다", () => {
+    const stranger = row("토트넘", "본머스")
+    const dict = new Map([
+      ["아스널", "Arsenal"],
+      ["리즈 유나이티드", "Leeds"],
+    ])
+    expect(pickLfaCounterpart(row("아스널", "리즈 유나이티드"), [stranger], dict)).toBeNull()
+  })
+
+  it("후보가 하나이고 사전이 양 팀을 알며 이름이 맞으면 채택한다", () => {
+    const only = row("첼시", "브라이턴")
+    expect(pickLfaCounterpart(row("첼시", "브라이턴&호브 앨비언"), [only], TEAM_EN)).toBe(only)
   })
 
   it("엉뚱한 경기는 여전히 안 붙는다", () => {

@@ -51,6 +51,17 @@ export function normTeam(s: string): string {
  *    타임라인 이름을 **저장 시점에** 한글화할 때도 쓰므로, 실패가 저장분에 굳었다 —
  *    끝난 경기 상세는 수명이 Infinity 라 스스로 낫지 않는다. (fold-latin.ts 참조)
  */
+/**
+ * LFA 가 `lang=en` 인데도 섞어 쓰는 터키식 지명 → 영문 (2026-09-02 실측).
+ * "Marsilya"(마르세유)는 사전 "Marseille" 와 토큰이 하나도 안 겹쳐 14일 136경기 중 유일한
+ * 헛거절이었다. "Sofya"(소피아)도 같은 계열. 우리 사전의 문제가 아니라 **소스의 표기 버릇**이라
+ * 사전이 아닌 여기서 흡수한다 — 관측된 것만 넣는다.
+ */
+const LFA_EXONYMS: Record<string, string> = {
+  marsilya: "marseille",
+  sofya: "sofia",
+}
+
 export function tokens(s: string): string[] {
   return (
     foldLatin(s)
@@ -58,6 +69,7 @@ export function tokens(s: string): string[] {
       .split(/\s+/)
       // 3글자 미만은 버린다 — "fc"·"sc" 같은 접미가 서로 다른 팀을 이어붙인다
       .filter((t) => t.length >= 3 && !["afc", "the"].includes(t))
+      .map((t) => LFA_EXONYMS[t] ?? t)
   )
 }
 
@@ -87,7 +99,6 @@ export function pickLfaCounterpart<T extends TeamSided>(
   candidates: T[],
   teamEn: Map<string, string>
 ): T | null {
-  if (candidates.length === 1) return candidates[0]
   const bh = normTeam(betman.homeTeam)
   const ba = normTeam(betman.awayTeam)
   const bhEn = teamEn.get(betman.homeTeam.trim())
@@ -96,6 +107,14 @@ export function pickLfaCounterpart<T extends TeamSided>(
     x.length >= 2 && y.length >= 2 && (x.startsWith(y) || y.startsWith(x))
   const sideMatch = (candName: string, korNorm: string, en: string | undefined) =>
     overlaps(normTeam(candName), korNorm) || (!!en && teamMatches(candName, en))
+  if (candidates.length === 1) {
+    const only = candidates[0]
+    // 후보가 하나여도 사전이 양 팀을 알면 이름이 맞아야 한다 (2026-09-02, lib/lfa/match.ts
+    // resolveMatch 와 같은 규칙). 사전이 모르면 종전대로 채택 — 한글 후보명은 toKorean 을
+    // 거친 것이라 표기가 흔들릴 수 있고, 그때 끊는 건 판정이 아니라 손실이다.
+    if (!bhEn || !baEn) return only
+    return sideMatch(only.homeTeam, bh, bhEn) && sideMatch(only.awayTeam, ba, baEn) ? only : null
+  }
   const hits = candidates.filter(
     (c) => sideMatch(c.homeTeam, bh, bhEn) && sideMatch(c.awayTeam, ba, baEn)
   )

@@ -299,17 +299,43 @@ async function resolveMatch(game: BetmanGameKey): Promise<LfaMatch | null> {
   //    (2026-08-16 실측: 매치 페이지 대상 리그 10경기 전부 이 단계에서 확정)
   const hhmm = new Date(game.matchTime).toISOString().slice(11, 16)
   const sameTime = inLeague.filter((m) => m.kickoff === hhmm)
-  if (sameTime.length === 1) return sameTime[0]
+
+  const dict = new Map(await cachedTeamEn())
+  const homeEnKnown = dict.get(game.homeTeam.trim())
+  const awayEnKnown = dict.get(game.awayTeam.trim())
+  const homeEn = homeEnKnown ?? game.homeTeam
+  const awayEn = awayEnKnown ?? game.awayTeam
+  const byName = (pool: LfaMatch[]) =>
+    pool.filter(
+      (m) => teamMatches(m.home?.name ?? "", homeEn) && teamMatches(m.away?.name ?? "", awayEn)
+    )
+
+  if (sameTime.length === 1) {
+    const only = sameTime[0]
+    /**
+     * 후보가 하나여도 **사전이 양 팀을 알면 팀명이 맞아야 붙인다** (2026-09-02).
+     *
+     * 종전엔 시각만 맞으면 확정했다. 두 일정이 어긋나는 날 — 연기, 킥오프 변경, betman 이
+     * 그 경기를 안 파는 날 — 같은 시각의 **남의 경기**에 붙고, 종료 전까지 매치센터·
+     * 라인업·MoTM 이 남의 경기를 보여준다. 결과 대조는 FT 뒤에야 안다.
+     * 14일 실측(136경기): 팀명 대조를 걸어도 135 통과, 1건은 LFA 의 터키식 표기
+     * ("Marsilya")였고 그건 tokens() 의 exonym 정규화로 흡수했다.
+     *
+     * 사전이 한쪽이라도 모르면 종전대로 시각을 믿는다 — 한글명 토큰은 영문과 겹칠 수
+     * 없어 대조 자체가 불가능하고, 그 경우 링크를 끊는 건 "모른다"가 아니라 손실이다.
+     */
+    if (!homeEnKnown || !awayEnKnown) return only
+    if (byName([only]).length === 1) return only
+    // 시각은 같은데 팀이 다르다 = 일정이 어긋난 날. 리그 전체를 이름으로 다시 찾고,
+    // 그래도 정확히 하나가 아니면 붙이지 않는다 (남의 경기 스코어가 최악).
+    const moved = byName(inLeague)
+    return moved.length === 1 ? moved[0] : null
+  }
 
   // ② 같은 시각에 여러 경기(리그 라운드 동시 킥오프)면 팀명으로 좁힌다.
   //    시각이 아예 안 맞으면(양쪽 일정 편차) 리그 전체를 후보로 둔다.
-  const dict = new Map(await cachedTeamEn())
-  const homeEn = dict.get(game.homeTeam.trim()) ?? game.homeTeam
-  const awayEn = dict.get(game.awayTeam.trim()) ?? game.awayTeam
   const pool = sameTime.length > 0 ? sameTime : inLeague
-  const hits = pool.filter(
-    (m) => teamMatches(m.home?.name ?? "", homeEn) && teamMatches(m.away?.name ?? "", awayEn)
-  )
+  const hits = byName(pool)
   // 정확히 1건일 때만 — 애매하면 붙이지 않는다 (남의 경기 스코어가 최악)
   return hits.length === 1 ? hits[0] : null
 }

@@ -26,6 +26,8 @@ import {
 } from "@/lib/motm/ft-evidence"
 import { findDuplicateReports, type GameRow } from "@/lib/ops/match-report-dup"
 import { assessMotmCoverage, MOTM_GRACE_MS } from "@/lib/ops/motm-coverage"
+import { auditLfaLinks, type LfaNamedMatch, type LinkedGame } from "@/lib/ops/lfa-link-audit"
+import { cachedTeamEn } from "@/lib/lfa/match"
 import {
   assessTimelineLatin,
   findFixableTimelineNames,
@@ -44,7 +46,7 @@ export const maxDuration = 60
  * 발행 전 게이트(1층)는 아이템 하나만 보므로 원리상 못 잡는 것들 — 경로 간 규칙
  * 불일치, 발행쌍 중복, 표기 흔들림, 크론 무호출 — 을 가로로 늘어놓고 본다.
  *
- * 불변식 10종:
+ * 불변식 12종:
  *   1. saga_title_korean   — 노출 사가 제목은 한글이다 (영문 제목 10건 실사고)
  *   2. cron_heartbeat      — 등록된 크론은 기대 주기 안에 cron_run_log 를 남긴다
  *                            (news-learn-edits 무기록 결번 실사고)
@@ -66,6 +68,13 @@ export const maxDuration = 60
  *                            없다 (2026-09-01 실사고: Ø 가 정규화에서 지워져 287경기.
  *                            비한글 전량이 아니라 재판정으로 한글이 되는 것만 센다 —
  *                            미검수 선수는 원문 유지가 설계라 배경으로 깔린다)
+ *  11. lfa_link_team_mismatch — betman 경기에 붙은 LFA 매치는 **같은 팀의 경기**다
+ *                            (2026-09-02: 연결이 (리그, 킥오프 시각)만 보고 확정하던 지름길을
+ *                            막았지만, 연결 함수와 같은 자로 링크를 매시 다시 잰다. 그날 LFA
+ *                            목록 사본(lfa_day_cache)의 팀명 vs 사전 영문명 — 크레딧 0)
+ *  12. lfa_link_missing    — 매치 페이지 대상 리그의 끝난 경기는 LFA 링크가 있다 (집계형:
+ *                            11번 가드가 이름 불일치를 **끊는** 쪽으로 처리하므로, 사전 결손·
+ *                            LFA 표기 변덕은 "오연결"이 아니라 "링크 없음"으로 나타난다)
  *
  * ⚠️ 8~10 은 셋 다 **저장분이 스스로 낫지 않는** 자리를 본다. 우는 시점에 이미 굳어
  *    있으므로, 코드 수리와 별개로 백필이 필요한지 늘 함께 판단할 것.
@@ -674,6 +683,132 @@ async function handler(req: NextRequest) {
     }
   } catch (e) {
     checkErrors.push(`timeline_name_latin: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 11·12. lfa_link_team_mismatch / lfa_link_missing — 링크는 같은 팀의 경기다 ──
+  //
+  // 연결(lib/lfa/match.ts resolveMatch)은 (리그, 킥오프 HH:MM) 이 첫 신호라, 두 일정이
+  // 어긋난 날 남의 경기에 붙을 수 있었다. 2026-09-02 에 팀명 가드를 넣었지만 가드는
+  // 연결 **시점**에만 서고, 저장된 링크·다른 경로(일정 페이지 짝짓기)·LFA 의 사후 개명은
+  // 못 본다. 그래서 저장분을 매시 같은 자(teamMatches)로 다시 잰다. 크레딧은 쓰지 않는다 —
+  // 팀명은 그날 LFA 목록 사본(lfa_day_cache)에서 읽는다.
+  try {
+    const linkFrom = new Date(now - 48 * H).toISOString()
+    const linkTo = new Date(now - 3 * H).toISOString()
+    const { data: recentGames } = await supabase
+      .from("betman_games")
+      .select("id, home_team_name, away_team_name, match_time, league_code")
+      .eq("sport", "축구")
+      .gte("match_time", linkFrom)
+      .lte("match_time", linkTo)
+      .limit(2000)
+    const targetRows: GameRow[] = (recentGames ?? [])
+      .filter((g) => isMatchPageLeague(String(g.league_code)))
+      .map((g) => ({
+        id: String(g.id),
+        homeTeam: String(g.home_team_name),
+        awayTeam: String(g.away_team_name),
+        matchTime: String(g.match_time),
+      }))
+    // 경기 단위 (형제 행은 하나로) — 형제 중 한 행이라도 링크가 있으면 그 경기는 연결된 것
+    const rowsByKey = new Map<string, GameRow[]>()
+    for (const g of targetRows) {
+      const k = matchKeyOf(g)
+      rowsByKey.set(k, [...(rowsByKey.get(k) ?? []), g])
+    }
+    if (rowsByKey.size > 0) {
+      const linkByGame = new Map<string, { lfaId: string; updated: string }>()
+      const ids = targetRows.map((g) => g.id)
+      for (let i = 0; i < ids.length; i += IN_CHUNK) {
+        const { data } = await supabase
+          .from("match_details_cache")
+          .select("game_id, lfa_match_id, updated_at")
+          .in("game_id", ids.slice(i, i + IN_CHUNK))
+          .not("lfa_match_id", "is", null)
+        for (const r of data ?? []) {
+          const gid = String(r.game_id)
+          const prev = linkByGame.get(gid)
+          if (!prev || String(r.updated_at) > prev.updated) {
+            linkByGame.set(gid, { lfaId: String(r.lfa_match_id), updated: String(r.updated_at) })
+          }
+        }
+      }
+      const linked: LinkedGame[] = []
+      const unlinked: string[] = []
+      for (const [, rows] of rowsByKey) {
+        const rep = rows[0]
+        const hit = rows.map((g) => linkByGame.get(g.id)).find(Boolean)
+        if (!hit) {
+          unlinked.push(matchLabelOf(rep))
+          continue
+        }
+        linked.push({
+          gameId: rep.id,
+          label: matchLabelOf(rep),
+          homeKr: rep.homeTeam,
+          awayKr: rep.awayTeam,
+          lfaMatchId: hit.lfaId,
+        })
+      }
+
+      if (linked.length > 0) {
+        // 그날 LFA 목록 사본은 킥오프의 UTC 날짜로 저장돼 있다 (resolveMatch 의 utcDate 와 같다)
+        const dateSet = new Set<string>()
+        for (const [, rows] of rowsByKey) {
+          const d = new Date(rows[0].matchTime)
+          if (Number.isFinite(d.getTime())) dateSet.add(d.toISOString().slice(0, 10))
+        }
+        const { data: days } = await supabase
+          .from("lfa_day_cache")
+          .select("date_utc, payload")
+          .in("date_utc", [...dateSet])
+        const lfaById = new Map<string, LfaNamedMatch>()
+        for (const d of days ?? []) {
+          const list =
+            (d.payload as
+              | { id?: unknown; home?: { name?: unknown }; away?: { name?: unknown } }[]
+              | null) ?? []
+          for (const m of list) {
+            if (!m?.id) continue
+            lfaById.set(String(m.id), {
+              id: String(m.id),
+              homeName: String(m.home?.name ?? ""),
+              awayName: String(m.away?.name ?? ""),
+            })
+          }
+        }
+        const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
+        const verdicts = auditLfaLinks(linked, lfaById, teamEn)
+        for (const v of verdicts) {
+          if (v.status !== "mismatch") continue
+          findings.push({
+            invariant: "lfa_link_team_mismatch",
+            fingerprint: `lfa_link_team_mismatch:${v.gameId}`,
+            summary: `LFA 링크가 남의 경기 — ${v.label} 에 "${v.lfaHome} v ${v.lfaAway}"(LFA) 가 붙어 있다 (사전: ${v.homeEn} v ${v.awayEn}). match_details_cache 의 해당 행을 지우면 다음 조회가 다시 붙인다`,
+            detail: {
+              game_id: v.gameId,
+              lfa_match_id: v.lfaMatchId,
+              lfa: `${v.lfaHome} v ${v.lfaAway}`,
+              dict: `${v.homeEn} v ${v.awayEn}`,
+            },
+          })
+        }
+      }
+
+      // 집계형 결손 — 개별 경기는 정당할 수 있다(LFA 미커버 예선 등). 비율로만 본다
+      const total = rowsByKey.size
+      if (total >= 8 && unlinked.length / total >= 0.25) {
+        const pct = Math.round((unlinked.length / total) * 100)
+        findings.push({
+          invariant: "lfa_link_missing",
+          fingerprint: "lfa_link_missing",
+          summary: `최근 48h 대상 리그 끝난 경기 ${unlinked.length}/${total}건(${pct}%)에 LFA 링크가 없다 — 사전 결손(팀명 가드가 끊음)·LFA 표기 변경·lfa-warm 결번 순으로 의심할 것`,
+          detail: { unlinked: unlinked.slice(0, 20), unlinked_count: unlinked.length, total },
+        })
+      }
+    }
+  } catch (e) {
+    checkErrors.push(`lfa_link: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // ⚠️ 시간 예산 초과는 **반드시 checkErrors 에 넣는다.** 아래 resolve 는 checkErrors 가
