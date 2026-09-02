@@ -6,6 +6,8 @@ import type { LfaMatchInfo } from "@/lib/lfa/match"
 import type { LfaMatch } from "@/lib/lfa/client"
 // 재구매 주기 정책 = 크레딧 비용의 절반. 순수 함수라 따로 두고 시험이 지킨다.
 import { dayFreshnessMs, detailsFreshnessMs } from "@/lib/lfa/day-freshness"
+import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { pickDetailsRow } from "@/lib/match/pick-sibling-row"
 
 /**
  * 경기 상세 영구 캐시 (2026-08-24 — "왜 자꾸 데이터가 제때 안 뜨냐" 에 대한 구조 답).
@@ -42,11 +44,18 @@ export async function readMatchDetails(
   matchTime?: string | null
 ): Promise<CachedMatchDetails | null> {
   try {
-    const { data } = await createServiceRoleClient()
+    // ⚠️ 형제 행까지 본다 (2026-09-02). 자기 행만 보면 다른 마켓 행으로 들어온 요청마다 LFA 를
+    //    다시 사고 복사본을 하나 더 만들었다. 여러 행이면 finished 가 이기고 → 최신
+    //    (첼시 4-3: 경기 중 1-0 으로 굳은 행 3개 옆에 FT 행이 있었다).
+    const supabase = createServiceRoleClient()
+    const ids = await getSiblingGameIds(supabase, gameId)
+    const { data: rows } = await supabase
       .from("match_details_cache")
-      .select("payload, finished, updated_at")
-      .eq("game_id", gameId)
-      .maybeSingle()
+      .select("game_id, payload, finished, updated_at")
+      .in("game_id", ids)
+    const data = pickDetailsRow(
+      (rows ?? []) as { game_id: string; payload: unknown; finished: unknown; updated_at: string }[]
+    )
     if (!data?.payload) return null
 
     const info = data.payload as unknown as LfaMatchInfo

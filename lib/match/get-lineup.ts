@@ -8,6 +8,8 @@ import {
 } from "@/lib/soccerway/lineup-lookup"
 import { getLfaLineup, getTeamSquadNames, localizePlayerName } from "@/lib/lfa/lineups"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
+import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { pickLineupRow } from "@/lib/match/pick-sibling-row"
 
 /**
  * 라인업 단일 진입점 (2026-08-20 운영자: "라인업이 너무 느리고 이름이 다 영어").
@@ -35,14 +37,24 @@ interface StoredRow {
 
 async function loadStored(gameId: string): Promise<StoredRow | null> {
   try {
-    const { data } = await createServiceRoleClient()
+    // ⚠️ 형제 행까지 본다 (2026-09-02) — 어느 마켓 행으로 들어와도 같은 라인업을 보고,
+    //    없는 행 때문에 바깥에 다시 묻지 않는다. 벤치 많은 ready 행 → 최신 (pick-sibling-row).
+    const supabase = createServiceRoleClient()
+    const ids = await getSiblingGameIds(supabase, gameId)
+    const { data } = await supabase
       .from("match_lineups")
-      .select("event_id, payload")
-      .eq("game_id", gameId)
-      .maybeSingle()
-    const payload = data?.payload as LineupResponse | undefined
-    if (!payload || payload.status !== "ready") return null
-    return { event_id: String(data!.event_id), payload }
+      .select("game_id, event_id, payload, updated_at")
+      .in("game_id", ids)
+    const best = pickLineupRow(
+      (data ?? []) as {
+        game_id: string
+        event_id: string | null
+        payload: LineupResponse | null
+        updated_at: string
+      }[]
+    )
+    if (!best?.payload) return null
+    return { event_id: String(best.event_id ?? ""), payload: best.payload }
   } catch {
     return null
   }

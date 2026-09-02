@@ -2,6 +2,8 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { pickLineupRow } from "@/lib/match/pick-sibling-row"
 import { fetchMatchPage, extractLivesportEventIds } from "@/lib/soccerway/match-page"
 import { fetchLineup, type LineupPlayer, type RawLineup } from "@/lib/soccerway/lineup"
 import { loadNotationSafe, findUniqueRomanizedMatch } from "@/lib/news/notation"
@@ -377,13 +379,19 @@ export async function resolveMatchEvent(gameId: string): Promise<{
  *    한꺼번에 사라졌다 — 같은 페이지가 열어보는 시각에 따라 달라졌다 (2026-08-18 운영자).
  */
 async function loadStoredLineup(gameId: string): Promise<LineupResponse | null> {
-  const { data } = await createServiceRoleClient()
+  // ⚠️ 형제 행까지 본다 (2026-09-02). 자기 행만 보면 다른 마켓 행으로 들어온 요청마다
+  //    soccerway 를 다시 묻고 복사본을 하나 더 만들었다 — 7일간 52경기 중 40경기가 2~6행.
+  //    여러 행이면 벤치가 많은 ready 행(교체 후보 누락 사고의 교훈) → 최신.
+  const supabase = createServiceRoleClient()
+  const ids = await getSiblingGameIds(supabase, gameId)
+  const { data } = await supabase
     .from("match_lineups")
-    .select("payload")
-    .eq("game_id", gameId)
-    .maybeSingle()
-  const payload = data?.payload as LineupResponse | undefined
-  return payload && payload.status === "ready" ? payload : null
+    .select("game_id, payload, updated_at")
+    .in("game_id", ids)
+  const best = pickLineupRow(
+    (data ?? []) as { game_id: string; payload: LineupResponse | null; updated_at: string }[]
+  )
+  return (best?.payload as LineupResponse | null) ?? null
 }
 
 /** 확보한 라인업을 영구 보관 — soccerway 는 하루 뒤 더 이상 주지 않는다 */
