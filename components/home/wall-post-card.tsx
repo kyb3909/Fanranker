@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import Image from "next/image"
 import { MessageCircle, Share2 } from "lucide-react"
 import { useAuth, useClerk } from "@clerk/nextjs"
@@ -24,7 +24,8 @@ import type { PopularPost } from "@/lib/home/popular-posts"
  *
  * 그래서 종류가 다른 것은 **형태**로 가른다:
  * - 실루엣: 뉴스는 카드, 담벼락은 카드가 아니다. 모바일은 화면 끝까지 붙는 평판(-mx-4), 위아래 괘선
- *   `--wc-line-2` 양면(한쪽 액센트 보더가 아니다). 데스크톱은 chrome 에 따라 평판(flat) 또는 카드(card).
+ *   `--wc-line-2` 양면(한쪽 액센트 보더가 아니다). 데스크톱도 평판 — 인스타·X 데스크톱 문법
+ *   (운영자 확정 2026-09-03, 후보 "타임라인 포스트").
  * - 진입부: 40px 중성 아바타 + 14px 이름 + "담벼락 · 게시판" 12px mute. 버건디 0 · 필 0 · 라틴 0.
  *   (와인틴트+버건디 글자 폴백 아바타는 칩으로 읽혔다 — 폐기. "새 글" 필은 콜드스타트에서 전 카드에
  *   붙어 배지가 아니었다 — 폐기.)
@@ -40,13 +41,6 @@ export type WallPost = PopularPost
 
 type Surface = "cardnews" | "stream"
 
-/**
- * 데스크톱(sm+) 크롬 — 리뷰 최종 후보 1(flat, 디렉터 추천)과 2(card, 안전판)는 이 값 하나만 다르다.
- * 모바일은 둘 다 풀블리드 평판. 운영자가 고르면 기본값을 박고 Provider 는 걷어낸다.
- */
-export type WallChrome = "flat" | "card"
-export const WallChromeContext = createContext<WallChrome>("flat")
-
 export function WallPostCard({
   post,
   surface = "cardnews",
@@ -55,7 +49,6 @@ export function WallPostCard({
   /** cardnews = 떡밥 사이 인터리브 / stream = 뉴스를 끈 인기 스트림 */
   surface?: Surface
 }) {
-  const chrome = useContext(WallChromeContext)
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
   const [voteCount, setVoteCount] = useState(post.upvotes)
@@ -122,9 +115,8 @@ export function WallPostCard({
       className={cn(
         // 모바일: 컬럼 패딩(px-4)을 뚫고 화면 끝까지 — 홈 main 이 px-4 sm:px-6 이라 -mx-4 는 <sm 에서만 뜻이 있다.
         // 위아래 괘선 양면. sm+ 는 컬럼 폭(sm~lg 은 600 가운데 정렬이라 뷰포트에 못 닿는다 — 늘리지 말 것).
+        // 데스크톱도 평판 — 운영자 확정 2026-09-03 ("1번 마음에 드네"). 후보 2(카드 유지)는 기각.
         "-mx-4 overflow-hidden border-y sm:mx-0",
-        // 후보 2(card): 데스크톱만 지금의 카드로 — radius 표(12) 정상화, 링은 그림자에 내장
-        chrome === "card" && "sm:rounded-xl sm:border-0 sm:shadow-[var(--wc-shadow-1)]",
         // 스트림(전부 담벼락): 포스트 사이 괘선 한 줄만 — 인스타 타임라인
         surface === "stream" && "border-t-0 first:border-t"
       )}

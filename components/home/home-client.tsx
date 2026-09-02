@@ -9,8 +9,7 @@ import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { PopularStream } from "@/components/home/popular-stream"
-import { WallChromeLab } from "@/components/home/wall-chrome-lab"
-import { WallChromeContext, type WallChrome, type WallPost } from "@/components/home/wall-post-card"
+import type { WallPost } from "@/components/home/wall-post-card"
 import { trackEvent } from "@/lib/analytics/events"
 import { QuickComposer } from "@/components/home/quick-composer"
 import { isMatchPageLeague } from "@/lib/match/leagues"
@@ -113,8 +112,6 @@ export function HomeClient({
   // 뉴스 끄기 (2026-09-03) — 선택은 이 기기에 남긴다 (SNS 의 "내 피드" 설정처럼).
   // 첫 렌더는 항상 뉴스 켬 — 저장값을 SSR 이 모르므로 hydration 뒤에 읽는다 (#418 전례).
   const [newsOff, setNewsOff] = useState(false)
-  // 담벼락 포스트 크롬 시안 (2026-09-03 디자인 리뷰 후보 1·2) — 개발 전용 전환기. 확정 후 제거.
-  const [wallChrome, setWallChrome] = useState<WallChrome>("flat")
   useEffect(() => {
     try {
       if (localStorage.getItem("home-news-off") === "1") setNewsOff(true)
@@ -382,26 +379,24 @@ export function HomeClient({
 
             {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
-            <WallChromeContext.Provider value={wallChrome}>
-              {feedTab === "cardnews" && newsOff && (
-                <PopularStream posts={popularPosts} onNewsOn={toggleNews} />
-              )}
-              {feedTab === "cardnews" && !newsOff && (
-                <div className="space-y-3">
-                  {/* 오늘의 경기 일정은 상단 MatchdayBand 가 담당 — 여기서 중복 렌더 X */}
-                  <CardNewsFeed
-                    initialCards={initialCardNews?.cards ?? []}
-                    initialCursor={initialCardNews?.nextCursor ?? null}
-                    excludeIds={heroCards?.map((h) => h.id)}
-                    wallPosts={wallPosts}
-                    newsPerWall={wallRatio?.newsPerWall}
-                    endWallPosts={endWallPosts}
-                    tomorrowTitle={tomorrowMatchTitle}
-                    ftRows={ftRows}
-                  />
-                </div>
-              )}
-            </WallChromeContext.Provider>
+            {feedTab === "cardnews" && newsOff && (
+              <PopularStream posts={popularPosts} onNewsOn={toggleNews} />
+            )}
+            {feedTab === "cardnews" && !newsOff && (
+              <div className="space-y-3">
+                {/* 오늘의 경기 일정은 상단 MatchdayBand 가 담당 — 여기서 중복 렌더 X */}
+                <CardNewsFeed
+                  initialCards={initialCardNews?.cards ?? []}
+                  initialCursor={initialCardNews?.nextCursor ?? null}
+                  excludeIds={heroCards?.map((h) => h.id)}
+                  wallPosts={wallPosts}
+                  newsPerWall={wallRatio?.newsPerWall}
+                  endWallPosts={endWallPosts}
+                  tomorrowTitle={tomorrowMatchTitle}
+                  ftRows={ftRows}
+                />
+              </div>
+            )}
 
             {feedTab === "games" && (
               <BettingPage bettingOnly showFilters initialGames={initialGames} />
@@ -429,10 +424,6 @@ export function HomeClient({
 
         {/* 실시간 인기글 토스트 — 로그인 시 */}
         {isSignedIn && <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />}
-        {/* 담벼락 포스트 크롬 전환기 — 개발 전용 (2026-09-03 디자인 리뷰). 시안 확정 후 제거 */}
-        {process.env.NODE_ENV === "development" && (
-          <WallChromeLab chrome={wallChrome} onChange={setWallChrome} />
-        )}
       </main>
     </div>
   )

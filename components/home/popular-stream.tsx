@@ -1,9 +1,9 @@
 "use client"
 
-import { useContext, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import Link from "@/components/ui/app-link"
-import { WallChromeContext, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
+import { WallPostCard, type WallPost } from "@/components/home/wall-post-card"
 import { trackEvent } from "@/lib/analytics/events"
 
 const PAGE = 8
@@ -16,7 +16,6 @@ const PAGE = 8
  * 한다 — 한 달치 사람 글이 40건을 넘는 날이 오면 그때 페이지 API 를 단다.
  */
 export function PopularStream({ posts, onNewsOn }: { posts: WallPost[]; onNewsOn: () => void }) {
-  const chrome = useContext(WallChromeContext)
   const [shown, setShown] = useState(PAGE)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -60,8 +59,8 @@ export function PopularStream({ posts, onNewsOn }: { posts: WallPost[]; onNewsOn
 
   return (
     // 전부 담벼락 글 — 구분할 상대가 없으니 구분 장치도 없다 (운영자: "죄다 와인색 헤더라 정신 사납다").
-    // flat: 포스트 사이 괘선 한 줄(gap-0) = 인스타 타임라인 / card: 데스크톱은 카드 열(gap-3), 모바일은 괘선
-    <div className={chrome === "card" ? "flex flex-col gap-0 sm:gap-3" : "flex flex-col gap-0"}>
+    // 포스트 사이 괘선 한 줄(gap-0) = 인스타 타임라인
+    <div className="flex flex-col gap-0">
       {posts.slice(0, shown).map((p) => (
         <WallPostCard key={p.id} post={p} surface="stream" />
       ))}
