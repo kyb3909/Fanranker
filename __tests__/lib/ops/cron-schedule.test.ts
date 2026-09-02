@@ -45,8 +45,8 @@ describe("cronJobNameFromPath", () => {
     expect(cronJobNameFromPath("/api/cron/news-auto-publish")).toBe("news-auto-publish")
   })
 
-  it("/api/wisetoto/sync → wisetoto-sync", () => {
-    expect(cronJobNameFromPath("/api/wisetoto/sync")).toBe("wisetoto-sync")
+  it("/api/x/y (cron 폴더 밖) → x-y — 옛 /api/wisetoto/sync 이 이 꼴이었다 (2026-09-02 폐지)", () => {
+    expect(cronJobNameFromPath("/api/foo/bar")).toBe("foo-bar")
   })
 })
 

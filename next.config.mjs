@@ -269,13 +269,11 @@ const nextConfig = {
         destination: `https://ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/:path*`,
       },
       {
-        // 크롤링 출처 은닉: 클라이언트는 /api/sports/, /api/live-scores/ 만 노출
+        // 크롤링 출처 은닉: 클라이언트는 /api/sports/ 만 노출
+        // (/api/live-scores → /api/wisetoto 별칭은 2026-09-02 에 걷어냈다 — wisetoto 가 문을
+        //  닫아 7일간 0건이었고, 라이브·FT 점수는 LFA 상세 캐시가 공급한다)
         source: '/api/sports/:path*',
         destination: '/api/betman/:path*',
-      },
-      {
-        source: '/api/live-scores/:path*',
-        destination: '/api/wisetoto/:path*',
       },
     ]
   },

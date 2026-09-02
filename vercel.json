@@ -23,10 +23,6 @@
       "schedule": "*/30 * * * *"
     },
     {
-      "path": "/api/wisetoto/sync",
-      "schedule": "* * * * *"
-    },
-    {
       "path": "/api/cron/weekly-analytics",
       "schedule": "0 0 * * 1"
     },

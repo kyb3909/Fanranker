@@ -11,6 +11,8 @@ import {
 import { dedupeMarketRows } from "@/lib/betman/market-dedup"
 // 국가대표 표기 정리 (`괌_남자` → `괌`). ⚠️ 라벨 전용 — matchKey·대조는 원문으로 돈다.
 import { stripNationalSuffix } from "@/lib/match/team-display"
+import { isLiveState, pickScore } from "@/lib/match/score-precedence"
+import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 
 /**
  * 오늘의 경기 응답 조립 — `/api/betman/games` GET 과 홈 SSR 이 **같은 함수**를 쓴다.
@@ -101,10 +103,16 @@ export function getGamesPayloadForSsr(sport = "all") {
  * 보호한다 — 킥오프한 경기가 예측 목록에 섞이면 안 된다. 그래서 진행/종료 경기는
  * **별도 필드로 운반**하고, 소비자(홈 매치데이 밴드·lineup-preview)가 명시적으로 꺼내 쓴다.
  *
- * ## 스코어는 어디서 오나
- * `/api/wisetoto/sync` cron 이 **매분** `betman_games.home_score/away_score` 를 갱신한다
- * (+VPS 크롤러 보조). 이 함수는 그 값을 읽기만 한다 — 수집 변경 0.
- * ⚠️ 발견 배경: 이 스코어를 읽는 사용자향 UI 가 지금까지 0개였다 (매분 수집 → 아무도 못 봄).
+ * ## 스코어는 어디서 오나 (2026-09-02 정정)
+ * 종전 주석은 "`/api/wisetoto/sync` 가 매분 갱신"이었다. **거짓이었다** — wisetoto 는 살아
+ * 있을 때도 라이브 점수를 준 적이 없고(실측: in_progress 20건 전부 null), 8/30 이후로는
+ * 사이트가 접근을 막아 0건이었다. 그 크론은 걷어냈다.
+ *
+ * 지금의 공급:
+ *   · 라이브  — LFA 상세 캐시(`match_details_cache`, 경기별 LFA id). 매치센터와 같은 출처
+ *   · FT      — betman 결과 크롤(VPS `fetch-results.sh`, 15분) ?? LFA
+ * 우선순위는 `pickScore`(라이브면 LFA 만, 아니면 betman ?? LFA) — 매치센터·일정과 같은 규칙.
+ * 종전엔 이 함수만 betman 컬럼을 단독으로 읽어 **경기 중엔 점수 없는 LIVE** 를 그렸다.
  */
 export interface LiveMatchRow {
   matchKey: string
@@ -145,8 +153,11 @@ async function fetchLiveFinishedMatches(
     .not("home_team_name", "is", null)
 
   const byKey = new Map<string, LiveMatchRow>()
+  // 경기 키 → 형제 game_id 전부 (LFA 상세 캐시는 형제 행 중 일부에만 있을 수 있다)
+  const idsByKey = new Map<string, string[]>()
   for (const g of data ?? []) {
     const key = `${g.home_team_name}_${g.away_team_name}_${g.match_time}`
+    idsByKey.set(key, [...(idsByKey.get(key) ?? []), String(g.id)])
     const prev = byKey.get(key)
     // 마켓별 다중 row — 스코어가 있는 row 를 우선해 한 경기로 접는다
     if (prev && prev.homeScore != null) continue
@@ -162,6 +173,45 @@ async function fetchLiveFinishedMatches(
       homeScore: g.home_score != null ? Number(g.home_score) : null,
       awayScore: g.away_score != null ? Number(g.away_score) : null,
     })
+  }
+
+  // ── LFA 상세 캐시 합치기 (2026-09-02) — 라이브면 LFA 만, 종료면 betman ?? LFA ──
+  // 매치센터·일정(get-fixtures)이 이미 쓰는 pickScore 규칙을 밴드에도 적용한다. 종전엔 여기만
+  // betman 컬럼을 단독으로 읽어, 경기 중엔 점수 없는 LIVE 를 그렸다(wisetoto 가 채운다고 믿었다).
+  // fail-open: 캐시 조회가 실패하면 betman 값 그대로.
+  try {
+    const allIds = [...idsByKey.values()].flat()
+    if (allIds.length > 0) {
+      const { data: details } = await supabase
+        .from("match_details_cache")
+        .select("game_id, finished, payload")
+        .in("game_id", allIds)
+      const lfaByGame = new Map<string, ReturnType<typeof lfaDetailRow>>()
+      for (const row of (details ?? []) as {
+        game_id: string
+        finished: unknown
+        payload: unknown
+      }[]) {
+        const ev = lfaDetailRow(row as Parameters<typeof lfaDetailRow>[0])
+        const prev = lfaByGame.get(row.game_id)
+        // 형제 행 중 finished 인 쪽이 이긴다 (경기 중 스코어로 굳은 행이 남아 있을 수 있다)
+        if (!prev || (!prev.finished && ev.finished)) lfaByGame.set(row.game_id, ev)
+      }
+      for (const [key, m] of byKey) {
+        // 이 경기의 형제 행 중 하나라도 LFA 스코어가 있으면 그것
+        let lfa: ReturnType<typeof lfaDetailRow> | undefined
+        for (const id of idsByKey.get(key) ?? []) {
+          const ev = lfaByGame.get(id)
+          if (!ev || ev.homeScore == null || ev.awayScore == null) continue
+          if (!lfa || (!lfa.finished && ev.finished)) lfa = ev
+        }
+        const live = isLiveState(m.status)
+        m.homeScore = pickScore(live, lfa?.homeScore, m.homeScore)
+        m.awayScore = pickScore(live, lfa?.awayScore, m.awayScore)
+      }
+    }
+  } catch {
+    /* fail-open */
   }
   const all = [...byKey.values()]
   return {

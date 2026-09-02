@@ -27,7 +27,8 @@ export function isLiveState(status: string | null | undefined): boolean {
  *
  * @param live   진행 중인가
  * @param lfa    산 피드(LFA) 값 — 라이브의 유일한 공급원
- * @param betman 와이즈토토 값 (`betman_games` 칼럼) — 종료 후에 채워진다
+ * @param betman `betman_games` 칼럼 — VPS betman 결과 크롤(15분)이 종료 후에 채운다
+ *               (2026-09-02 정정: 종전 주석의 "와이즈토토 값"은 틀렸다 — wisetoto 는 걷어냈다)
  */
 export function pickScore(
   live: boolean,

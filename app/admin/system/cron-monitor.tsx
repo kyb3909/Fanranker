@@ -21,7 +21,7 @@ interface CronJobMeta {
 
 /** vercel.json 의 cron 등록 목록 — 이 목록이 모니터의 기준이 된다 */
 export const CRON_JOBS: CronJobMeta[] = [
-  { name: "wisetoto-sync", label: "WiseToto 라이브 스코어", schedule: "매분", staleAfterMin: 10 },
+  // wisetoto-sync 는 2026-09-02 에 걷어냈다 — 사이트가 접근을 막아 7일간 점수 0건(매분 "success" 만 기록)
   { name: "betman-sync", label: "Betman 동기화 워치독", schedule: "30분마다", staleAfterMin: 90 },
   {
     name: "metaverse-cleanup-rooms",

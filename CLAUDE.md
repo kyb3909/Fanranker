@@ -78,7 +78,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 새 가드는 `lib/middleware/`에 추가하고 `middleware.ts` 체인에 끼워넣을 것. matcher가 정적 자산을 제외하므로 `/api/*`와 페이지에만 동작.
 
 ### API 라우트 (`next.config.mjs`)
-캐시 헤더 분류·출처 은닉 리라이트(`/api/sports`·`/api/live-scores`·`/storage`)·rate-limit
+캐시 헤더 분류·출처 은닉 리라이트(`/api/sports`·`/storage`)·rate-limit
 → **`gongnori-api-route` 스킬**
 
 ### 주기 작업
@@ -100,7 +100,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **LLM 호출 규약** (`lib/llm/openai-params.ts`) — OpenAI 호출·모델 교체 → **`gongnori-llm-call` 스킬**
 - **News Agents** (`data/agents/`) — fetch → credibility → korean naming → desk review → summary → reservoir. Phase A: r/soccer만, drafted 정지, 수동 검수, 한국어만.
 - **News Crawlers** (`data/crawlers/`) — Reddit 44 + Naver News 11 = 55개 소스, 하루 1회. Vultr VPS에서 cron. Agents 안정화 후 deprecate.
-- **Betman Sync** (`lib/betman/`, `scripts/betman-*.ts`) — Vultr 서울 VPS cron (`/opt/betman/sync.sh`, 2시간 간격). Vercel은 해외 IP라 betman.co.kr 직접 접근 불가.
+- **Betman Sync** (`lib/betman/`, `scripts/betman-*.ts`) — Vultr 서울 VPS cron (`/opt/betman/sync.sh` 매시 :10, `fetch-results.sh` 15분 — 2026-09-02 crontab 실측). Vercel은 해외 IP라 betman.co.kr 직접 접근 불가. 라이브·FT 점수의 다른 공급은 LFA 상세 캐시뿐 — wisetoto 동기화는 2026-09-02 폐지.
 - **Stadium** (`lib/stadium/`, `app/stadium/`, `public/map/`) — 팀 경기장 10단계 + 토사장 게이지 이벤트.
 - **Metaverse** (`app/metaverse/`, `lib/metaverse/`, `components/metaverse/`) — Phaser 4 월드맵 + Supabase Realtime Presence/Broadcast + 팀 플레어 → 카르마 루프. 격리 원칙 (단방향 의존), DB는 `metaverse_*` 접두사 + `posts.flair_team_id` 하나만 기존 확장. GNB에서 숨김 — `/metaverse` 직접 URL 접근. dev 에서만 guest 자동 진입. 데이터 기반 인도어 맵(`lib/metaverse/scenes/indoor-map-scene.ts` + `lib/metaverse/maps/map-config.ts`)으로 경기장 내부 씬 생성, 페이드 전환. 상세는 `docs/PRD-stadium-metaverse.md` + `lib/metaverse/README.md`.
 - **Live Room** (PRD draft, `docs/PRD-live-room.md`) — 진행 중 경기에 자동 생성되는 픽셀아트 응원방 (최대 20명, Supabase Realtime). Metaverse 와 인프라 공유하지만 별도 기능. 미구현 — 신규 작업 시 PRD 먼저 확인.

@@ -65,7 +65,7 @@ export function cronMaxGapMinutes(schedule: string): number | null {
   return maxGap
 }
 
-/** cron path → cron_run_log job_name (`/api/cron/x` → `x`, `/api/wisetoto/sync` → `wisetoto-sync`) */
+/** cron path → cron_run_log job_name (`/api/cron/x` → `x`, `/api/foo/bar` → `foo-bar`) */
 export function cronJobNameFromPath(path: string): string {
   return path
     .replace(/^\/api\/cron\//, "")

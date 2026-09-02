@@ -44,8 +44,9 @@ async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> 
   // UCL 예선 미확정 대진 — "OO vs 미정" 매치 페이지는 성립하지 않는다 (404)
   if (game.home_team_name === "미정" || game.away_team_name === "미정") return null
 
-  // 형제 row 전체에서 상태·스코어를 접는다 — 스코어는 wisetoto sync 가 어느 row 에
-  // 썼는지 보장이 없어(마켓별 다중 row) 값이 있는 row 를 우선한다.
+  // 형제 row 전체에서 상태·스코어를 접는다 — 결과 크롤이 어느 row 에 썼는지 보장이
+  // 없어(마켓별 다중 row) 값이 있는 row 를 우선한다. (2026-09-02: 쓰는 쪽은 VPS betman
+  // 결과 크롤이다 — 종전 주석의 wisetoto sync 는 걷어냈다)
   const { data: siblings } = await supabase
     .from("betman_games")
     .select("status, home_score, away_score")

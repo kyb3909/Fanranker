@@ -28,15 +28,18 @@ allowed-tools: Read, Edit, Grep, Bash
 
 ## 2. 출처 은닉
 
-클라이언트가 부를 수 있는 것은 **`/api/sports/*` 와 `/api/live-scores/*` 뿐**이다.
+클라이언트가 부를 수 있는 것은 **`/api/sports/*` 뿐**이다.
 
 `next.config.mjs` `rewrites()`:
 
 ```
 /api/sports/*       →  /api/betman/*
-/api/live-scores/*  →  /api/wisetoto/*
 /storage/*          →  ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/*
 ```
+
+`/api/live-scores/* → /api/wisetoto/*` 별칭은 2026-09-02 에 걷어냈다. wisetoto 가 접근을
+막아 7일간 점수 0건이었고(한국 IP 로도 빈 응답), 살아 있을 때도 라이브 점수는 준 적이 없다.
+라이브·FT 점수는 LFA 상세 캐시(`match_details_cache`)가 공급한다 — `pickScore` 우선순위.
 
 `/storage/*` 도 같은 이유다 — Supabase 도메인을 감춘다. 업로드 이미지는 이 경로로 낸다.
 
