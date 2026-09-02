@@ -48,6 +48,8 @@ interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
+  /** 운동장 새 글 (2026-09-03) — 댓글 0 이라도 인터리브에 낀다 (cached-home-data.getCachedFreshBoardPosts) */
+  initialFreshBoardPosts?: unknown[]
   initialGlobalNotices?: GlobalNotice[]
   initialSort?: SortType
   initialTab?: FeedTab
@@ -76,6 +78,7 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
+  initialFreshBoardPosts,
   initialGlobalNotices,
   initialSort = "new",
   initialTab = "cardnews",
@@ -116,18 +119,55 @@ export function HomeClient({
           communitySlug: p.community_slug,
           comments: p.comment_count || 1,
           image: p.image ?? null,
+          kind: "commented" as const,
         })),
     [initialRecentComments]
   )
+  // 운동장 새 글 (2026-09-03) — 댓글이 없어도 피드에 낀다. 댓글 글과 **번갈아** 섞는다:
+  // 새 글만 앞세우면 댓글 글이 밀리고, 댓글 글만 앞세우면 새 글이 영영 안 보인다.
+  const freshWallPosts = useMemo(
+    () =>
+      (
+        (initialFreshBoardPosts ?? []) as {
+          id: string
+          title: string
+          community_slug: string
+          comment_count?: number
+          image?: string | null
+        }[]
+      ).map((p) => ({
+        id: p.id,
+        title: p.title,
+        communitySlug: p.community_slug,
+        comments: p.comment_count ?? 0,
+        image: p.image ?? null,
+        kind: "fresh" as const,
+      })),
+    [initialFreshBoardPosts]
+  )
+  const mergedWallPosts = useMemo(() => {
+    const out: Array<(typeof freshWallPosts)[number] | (typeof humanWallPosts)[number]> = []
+    const seen = new Set<string>()
+    const n = Math.max(freshWallPosts.length, humanWallPosts.length)
+    for (let i = 0; i < n; i++) {
+      for (const p of [freshWallPosts[i], humanWallPosts[i]]) {
+        if (p && !seen.has(p.id)) {
+          seen.add(p.id)
+          out.push(p)
+        }
+      }
+    }
+    return out
+  }, [freshWallPosts, humanWallPosts])
   const wallPosts = useMemo(
-    () => humanWallPosts.slice(0, maxWallCards),
-    [humanWallPosts, maxWallCards]
+    () => mergedWallPosts.slice(0, maxWallCards),
+    [mergedWallPosts, maxWallCards]
   )
   // 피드 종단 실물 (2026-08-21 리포트 Top5-5) — 인터리브에 안 실린 다음 순번 2건.
   // 같은 글이 인터리브와 종단에 두 번 나오는 중복을 막는다. 없으면 빈 배열 → 도선 폴백
   const endWallPosts = useMemo(
-    () => humanWallPosts.slice(maxWallCards, maxWallCards + 2),
-    [humanWallPosts, maxWallCards]
+    () => mergedWallPosts.slice(maxWallCards, maxWallCards + 2),
+    [mergedWallPosts, maxWallCards]
   )
   // FT 사건 행 (2026-08-21 리포트 Top5-2, 편집 "사건 행" 문법) — 당일 종료 경기가
   // 자기 종료 시각(킥오프+110분)으로 시간순 스트림에 참여한다. 목적지는 매치센터

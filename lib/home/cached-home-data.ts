@@ -3,6 +3,7 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createAnonClient } from "@/lib/supabase/server"
 import { fetchCardNews, fetchHeroCards, type CardNewsItem } from "@/lib/feed/cardnews"
+import { MATCH_THREAD_BOT_USER_ID } from "@/lib/constants/bot-users"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
 
 /**
@@ -160,6 +161,43 @@ export function getCachedRecentComments(): Promise<unknown[]> {
     },
     // v4: active 필터 + limit 25 — 키를 안 올리면 revalidate 창 동안 옛 셰이프가 남는다 (실측 함정)
     ["home-recent-comments-v4"],
+    { revalidate: 60, tags: [HOME_TAGS.posts] }
+  )().catch(() => [] as unknown[])
+}
+
+/**
+ * 운동장 새 글 (2026-09-03 운영자: "오늘의 떡밥 사이에 운동장 글이 올라온 거 표현").
+ *
+ * 인터리브 재료가 "댓글 달린 글"뿐이라 방금 올라온 글(댓글 0)은 홈 떡밥 피드에 낄 길이 없었다.
+ * 최근 48시간 게시판 글을 최신순으로 — 뉴스 봇(떡밥의 주인공)과 중계불판(매치센터 안에서
+ * 산다)만 뺀다. 축구밈봇·사람 글은 들어간다. 소비처(home-client)가 댓글 글과 섞는다.
+ */
+export function getCachedFreshBoardPosts(): Promise<unknown[]> {
+  return unstable_cache(
+    async () => {
+      const supabase = createAnonClient()
+      const { data: activeCats } = await supabase
+        .from("categories")
+        .select("slug")
+        .eq("is_active", true)
+      const activeSlugs = (activeCats ?? []).map((c) => c.slug)
+      const since = new Date(Date.now() - 48 * 3600_000).toISOString()
+      const { data } = await supabase
+        .from("posts")
+        .select("id, title, community_slug, comment_count, created_at, user_id, image, content")
+        .is("deleted_at", null)
+        .in("community_slug", activeSlugs)
+        .not("user_id", "in", `("user_bot_soccer_kr","${MATCH_THREAD_BOT_USER_ID}")`)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(8)
+      const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
+      return (data ?? []).map(({ content, ...row }) => ({
+        ...row,
+        image: (row.image as string | null) ?? extractFirstImageSrcFromTipTapJSON(content),
+      }))
+    },
+    ["home-fresh-board-v1"],
     { revalidate: 60, tags: [HOME_TAGS.posts] }
   )().catch(() => [] as unknown[])
 }

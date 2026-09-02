@@ -25,13 +25,25 @@ export interface WallPost {
   comments: number
   /** 본문 첫 이미지 (2026-08-21 운영자: "아이돌 이미지도 하나 중간에") — 없으면 텍스트 행 */
   image?: string | null
+  /**
+   * 재료 출처 (2026-09-03). commented = 댓글이 달린 글(종전 유일 재료), fresh = 운동장 새 글
+   * (댓글 0 이라도 — 밈 봇 글 포함). fresh 는 댓글수 대신 "새 글" 칩을 단다.
+   */
+  kind?: "commented" | "fresh"
 }
+
+/**
+ * 색 구분 (2026-09-03 운영자: "담벼락 글들은 오늘의 떡밥 사이에서 약간 색을 다르게").
+ * 뉴스 카드는 --wc-card(흰색), 운동장 글은 --wc-soft(웜 페이퍼) — 토큰만 쓴다.
+ * 위계는 배경 틴트로만 준다 (한쪽 액센트 보더 금지 — 디자인 시스템 규칙).
+ */
+const WALL_BG = "var(--wc-soft)"
 
 export function WallPostCard({ post }: { post: WallPost }) {
   return (
     <article
       className="gn-card-lift relative overflow-hidden rounded-xl transition-transform active:scale-[.99]"
-      style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+      style={{ background: WALL_BG, boxShadow: "var(--wc-shadow-1)" }}
     >
       <div className="relative flex items-center gap-3 px-4 py-3">
         <Link
@@ -69,12 +81,22 @@ export function WallPostCard({ post }: { post: WallPost }) {
             }}
           >
             {post.title}
-            <span
-              className="gn-num ml-1.5 text-[12px] font-bold"
-              style={{ color: "var(--wc-burgundy)" }}
-            >
-              [{post.comments}]
-            </span>
+            {post.comments > 0 ? (
+              <span
+                className="gn-num ml-1.5 text-[12px] font-bold"
+                style={{ color: "var(--wc-burgundy)" }}
+              >
+                [{post.comments}]
+              </span>
+            ) : (
+              // 댓글 0 인 새 글 — 숫자 0 을 내보이지 않는다 (콜드스타트에서 "아무도 안 본 글"로 읽힌다)
+              <span
+                className="ml-1.5 inline-block rounded-full px-1.5 py-px align-middle text-[12px] font-bold"
+                style={{ background: "var(--wc-wine-tint)", color: "var(--wc-burgundy)" }}
+              >
+                새 글
+              </span>
+            )}
           </h2>
         </div>
         {/* 썸네일 — 뉴스 카드(CompactCard)와 같은 104×76 문법. 같은 출처(/) 만 next/image,

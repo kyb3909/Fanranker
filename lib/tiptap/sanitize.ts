@@ -33,6 +33,9 @@ const ALLOWED_NODES = new Set<string>([
   "tableRow",
   "tableHeader",
   "tableCell",
+  // video (2026-09-03): 에디터·뷰어 확장(lib/tiptap/extensions/video.ts)은 2026-08 부터 있었는데
+  // 여기 없어서 API 를 거치는 순간 조용히 잘렸다. 레딧 밈 영상(우리 스토리지 mp4)을 싣는 첫 자리.
+  "video",
 ])
 
 // streamable·bsky (2026-08-14): NBA 뉴스 소스가 스트리머블 클립·블루스카이(기자 이동)라
@@ -147,6 +150,14 @@ function sanitizeImageAttrs(attrs: unknown): Record<string, unknown> | null {
   return out
 }
 
+/** video: src 만. 이미지와 같은 규칙 — 자체 스토리지 경로 또는 http(s). 그 외(javascript:, data:)는 노드 drop */
+function sanitizeVideoAttrs(attrs: unknown): Record<string, unknown> | null {
+  if (!attrs || typeof attrs !== "object") return null
+  const src = getString(attrs, "src")
+  if (!src || (!src.startsWith("/storage/") && !isSafeUrl(src))) return null
+  return { src }
+}
+
 function sanitizeTextAlignAttrs(attrs: unknown): Record<string, unknown> | undefined {
   const ta = getString(attrs, "textAlign")
   if (ta && ALLOWED_TEXT_ALIGN.has(ta)) return { textAlign: ta }
@@ -198,6 +209,12 @@ function sanitizeNode(node: unknown): TipTapNode | null {
     case "embed": {
       const attrs = sanitizeEmbedAttrs(n.attrs)
       if (!attrs) return null
+      out.attrs = attrs
+      break
+    }
+    case "video": {
+      const attrs = sanitizeVideoAttrs(n.attrs)
+      if (!attrs) return null // src 없거나 unsafe 면 동영상 drop
       out.attrs = attrs
       break
     }
