@@ -35,6 +35,7 @@ JOIN cron.job USING (jobid) ORDER BY start_time DESC LIMIT 50;
 | 4 | reset-old-temperatures | `0 4 * * *` | `SELECT reset_expired_temperatures(7);` | 1 |
 | 5 | recalc-user-temperatures | `0 5 * * *` | `SELECT recalc_all_user_temperatures();` | 1 |
 | 6 | update-post-temperatures | `*/5 * * * *` | `SELECT update_active_post_temperatures();` | 288 |
+| 7 | cleanup-run-logs | `20 18 * * *` | `DELETE cron_run_log·crawler_run_log WHERE started_at < now()-90d` (2026-09-04 추가, `20260904c_pg_cron_cleanup_run_logs.sql`) | 1 |
 
 재생성 스켈레톤 (전면 재구축 시에만 — 평소엔 이미 등록돼 있음):
 
@@ -44,6 +45,7 @@ SELECT cron.schedule('process-temperature-queue', '* * * * *',   $$SELECT proces
 SELECT cron.schedule('reset-old-temperatures',    '0 4 * * *',   $$SELECT reset_expired_temperatures(7);$$);
 SELECT cron.schedule('recalc-user-temperatures',  '0 5 * * *',   $$SELECT recalc_all_user_temperatures();$$);
 SELECT cron.schedule('update-post-temperatures',  '*/5 * * * *', $$SELECT update_active_post_temperatures();$$);
+SELECT cron.schedule('cleanup-run-logs', '20 18 * * *', $$delete from public.cron_run_log where started_at < now() - interval '90 days'; delete from public.crawler_run_log where started_at < now() - interval '90 days';$$);
 -- jobid 2 (watchdog 트리거)는 net.http_post 로 Edge Function 을 호출 — URL·서비스 키가 들어가므로
 -- 재생성 시 DB 에서 기존 command 를 그대로 복사할 것 (여기엔 시크릿을 적지 않는다).
 ```
