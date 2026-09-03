@@ -66,34 +66,54 @@ async function cronGet(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
   try {
-    // ① 곧 경기가 있는 팀
-    const until = new Date(Date.now() + LOOKAHEAD_DAYS * 86400_000).toISOString()
-    const { data: games } = await supabase
-      .from("betman_games")
-      .select("home_team_name, away_team_name")
-      .gte("match_time", new Date().toISOString())
-      .lte("match_time", until)
-    const teamNames = new Set<string>()
-    for (const g of games ?? []) {
-      if (g.home_team_name) teamNames.add(String(g.home_team_name))
-      if (g.away_team_name) teamNames.add(String(g.away_team_name))
-    }
-    if (teamNames.size === 0) {
-      return NextResponse.json({ mode: "squad-sync", teams: 0, note: "예정 경기 없음" })
-    }
+    // ① 대상 팀 — 기본은 곧 경기가 있는 팀. `?scope=all&offset=&limit=` 이면 사전에서
+    //    lfa_team_id 가 있는 팀 전체를 잘라 돈다 (이적시장 마감 뒤 일괄 갈무리용,
+    //    2026-09-03). 팀당 1크레딧이라 한 번에 limit(기본 30·최대 40) 팀까지만 —
+    //    maxDuration 120s 안에서 끝나는 크기다.
+    const url = new URL(request.url)
+    const scopeAll = url.searchParams.get("scope") === "all"
+    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0)
+    const limit = Math.min(40, Math.max(1, Number(url.searchParams.get("limit")) || 30))
 
-    const { data: dict } = await supabase
-      .from("team_dictionary")
-      .select("soccerway_team_id, name_kr, lfa_team_id")
-      .in("name_kr", [...teamNames])
-      .not("lfa_team_id", "is", null)
+    let dict: { soccerway_team_id: string; name_kr: string | null; lfa_team_id: string | null }[]
+    if (scopeAll) {
+      const { data } = await supabase
+        .from("team_dictionary")
+        .select("soccerway_team_id, name_kr, lfa_team_id")
+        .not("lfa_team_id", "is", null)
+        .order("soccerway_team_id")
+        .range(offset, offset + limit - 1)
+      dict = data ?? []
+    } else {
+      const until = new Date(Date.now() + LOOKAHEAD_DAYS * 86400_000).toISOString()
+      const { data: games } = await supabase
+        .from("betman_games")
+        .select("home_team_name, away_team_name")
+        .gte("match_time", new Date().toISOString())
+        .lte("match_time", until)
+      const teamNames = new Set<string>()
+      for (const g of games ?? []) {
+        if (g.home_team_name) teamNames.add(String(g.home_team_name))
+        if (g.away_team_name) teamNames.add(String(g.away_team_name))
+      }
+      if (teamNames.size === 0) {
+        return NextResponse.json({ mode: "squad-sync", teams: 0, note: "예정 경기 없음" })
+      }
+
+      const { data } = await supabase
+        .from("team_dictionary")
+        .select("soccerway_team_id, name_kr, lfa_team_id")
+        .in("name_kr", [...teamNames])
+        .not("lfa_team_id", "is", null)
+      dict = data ?? []
+    }
 
     let added = 0
     let left = 0
     let scanned = 0
     const failures: string[] = []
 
-    for (const t of dict ?? []) {
+    for (const t of dict) {
       const teamId = String(t.soccerway_team_id)
       const lfaId = String(t.lfa_team_id)
       scanned++
@@ -162,6 +182,8 @@ async function cronGet(request: NextRequest) {
 
     return NextResponse.json({
       mode: "squad-sync",
+      scope: scopeAll ? "all" : "upcoming",
+      ...(scopeAll ? { offset, limit } : {}),
       teams: scanned,
       added,
       left,
