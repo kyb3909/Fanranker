@@ -34,6 +34,10 @@ export const maxDuration = 120
 const LOOKAHEAD_DAYS = 3
 
 interface LfaPlayer {
+  /** ⚠️ 피드의 실제 키는 `id` 다 (scripts/import-squads-lfa.ts 와 동일). `player_id` 만 읽던
+   *  2026-08-25~09-03 동안 id 가 항상 비어 slug 가 id 로 들어갔고, 이탈 판정은 "전원 이탈" 이었다
+   *  (CHECK 제약이 left 를 막고 있어 겉으로 안 보였을 뿐). */
+  id?: string | number
   player_id?: string | number
   name?: string
   shirt_number?: number | string
@@ -48,6 +52,11 @@ function extractPlayers(payload: unknown): LfaPlayer[] {
     if (Array.isArray(v)) return v as LfaPlayer[]
   }
   return []
+}
+
+function idOf(p: LfaPlayer): string | null {
+  const v = p.player_id ?? p.id
+  return v == null || v === "" ? null : String(v)
 }
 
 /** 이름 → 안정 키. LFA 가 표기를 조금씩 바꿔도 같은 선수로 보게 한다 */
@@ -109,6 +118,7 @@ async function cronGet(request: NextRequest) {
     }
 
     let added = 0
+    let upgraded = 0
     let left = 0
     let scanned = 0
     const failures: string[] = []
@@ -133,7 +143,8 @@ async function cronGet(request: NextRequest) {
       const feedIds = new Set<string>()
       const feedSlugs = new Set<string>()
       for (const p of players) {
-        if (p.player_id) feedIds.add(String(p.player_id))
+        const id = idOf(p)
+        if (id) feedIds.add(id)
         if (p.name) feedSlugs.add(slugOf(String(p.name)))
       }
 
@@ -143,14 +154,36 @@ async function cronGet(request: NextRequest) {
         .eq("soccerway_team_id", teamId)
       const knownIds = new Set((existing ?? []).map((r) => String(r.player_id)))
       const knownSlugs = new Set((existing ?? []).map((r) => String(r.player_slug)))
+      // 예전 동기화가 id 를 못 읽어 slug 를 id 로 넣은 행 (player_id === player_slug)
+      const legacySlugIds = new Set(
+        (existing ?? [])
+          .filter((r) => String(r.player_id) === String(r.player_slug))
+          .map((r) => String(r.player_slug))
+      )
 
       // ② 새로 온 선수 — name_kr 은 비워 둔다. 발음을 여기서 지어내지 않는다.
       //    id 가 이미 있으면 표기만 바뀐 기존 선수다 — 건드리지 않는다.
       for (const p of players) {
         if (!p.name) continue
-        const pid = p.player_id ? String(p.player_id) : slugOf(String(p.name))
         const slug = slugOf(String(p.name))
-        if (!slug || knownIds.has(pid) || knownSlugs.has(slug)) continue
+        const realId = idOf(p)
+        const pid = realId ?? slug
+        if (!slug || knownIds.has(pid)) continue
+        if (knownSlugs.has(slug)) {
+          // slug 를 id 로 갖고 있던 행은 진짜 id 로 승격 — 다음 재대조가 이름 포맷 변경에 안 흔들린다
+          if (realId && legacySlugIds.has(slug)) {
+            const { error } = await supabase
+              .from("team_squads")
+              .update({ player_id: realId, updated_at: new Date().toISOString() })
+              .eq("soccerway_team_id", teamId)
+              .eq("player_id", slug)
+            if (!error) {
+              knownIds.add(realId)
+              upgraded++
+            }
+          }
+          continue
+        }
         const { error } = await supabase.from("team_squads").insert({
           soccerway_team_id: teamId,
           player_slug: slug,
@@ -167,10 +200,13 @@ async function cronGet(request: NextRequest) {
       // ③ 떠난 선수 — 지우지 않고 표시만. 과거 경기 이름이 살아 있어야 한다.
       //    ⚠️ 판정은 source='lfa' 행에만 — 나무위키·soccerway 행의 id 는 LFA 피드에
       //    영영 안 나오므로, 포함하면 그 행 전부가 매번 "이탈" 로 오판된다.
+      //    id 나 이름(slug) 어느 한쪽이라도 피드에 있으면 "있는 선수" 다 — slug 를 id 로 가진
+      //    옛 행이 id 대조만으로 전원 이탈 처리된 2026-09-03 사고의 재발 방지.
       for (const r of existing ?? []) {
         if (String(r.source) !== "lfa") continue
         const status = String(r.status)
-        if (feedIds.has(String(r.player_id)) || status === "left" || status === "rejected") continue
+        if (status === "left" || status === "rejected") continue
+        if (feedIds.has(String(r.player_id)) || feedSlugs.has(String(r.player_slug))) continue
         const { error } = await supabase
           .from("team_squads")
           .update({ status: "left", updated_at: new Date().toISOString() })
@@ -186,6 +222,7 @@ async function cronGet(request: NextRequest) {
       ...(scopeAll ? { offset, limit } : {}),
       teams: scanned,
       added,
+      upgraded,
       left,
       failures: failures.slice(0, 10),
     })
