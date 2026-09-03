@@ -149,6 +149,7 @@ JSON으로 응답해:
 {"title": "한국어 제목", "body": "본문 내용"}`
 
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -166,14 +167,14 @@ JSON으로 응답해:
     })
 
     if (!res.ok) {
-      logUsageFailure("reddit-seed", OPENAI_MODEL, `http_${res.status}`)
+      logUsageFailure("reddit-seed", OPENAI_MODEL, `http_${res.status}`, Date.now() - llmStartedAt)
       const errText = await res.text()
       console.error(`[reddit-seed] OpenAI error ${res.status}:`, errText)
       return null
     }
 
     const data = await res.json()
-    logUsage("reddit-seed", OPENAI_MODEL, data)
+    logUsage("reddit-seed", OPENAI_MODEL, data, Date.now() - llmStartedAt)
     const content = data.choices?.[0]?.message?.content
     if (!content) return null
 

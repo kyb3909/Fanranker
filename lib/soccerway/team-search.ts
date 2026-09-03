@@ -117,6 +117,7 @@ export async function proposeSearchQueries(
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return []
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -138,11 +139,16 @@ export async function proposeSearchQueries(
       signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) {
-      logUsageFailure("team-search", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure(
+        "team-search",
+        "gpt-5.6-luna",
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return []
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("team-search", "gpt-5.6-luna", data)
+    logUsage("team-search", "gpt-5.6-luna", data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       queries?: unknown[]
     }

@@ -296,6 +296,7 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -314,11 +315,11 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
       }),
     })
     if (!res.ok) {
-      logUsageFailure("og-image", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure("og-image", "gpt-5.6-luna", `http_${res.status}`, Date.now() - llmStartedAt)
       return null
     }
     const data = await res.json()
-    logUsage("og-image", "gpt-5.6-luna", data)
+    logUsage("og-image", "gpt-5.6-luna", data, Date.now() - llmStartedAt)
     const content = data.choices?.[0]?.message?.content
     if (!content) return null
     const parsed = JSON.parse(content) as { lines?: unknown }

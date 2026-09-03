@@ -30,6 +30,7 @@ async function judgeIdolPhotos(urls: string[]): Promise<boolean[]> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey || urls.length === 0) return urls.map(() => true)
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -58,11 +59,16 @@ async function judgeIdolPhotos(urls: string[]): Promise<boolean[]> {
       }),
     })
     if (!res.ok) {
-      logUsageFailure("admin-gallery", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure(
+        "admin-gallery",
+        "gpt-5.6-luna",
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return urls.map(() => true)
     }
     const d = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("admin-gallery", "gpt-5.6-luna", d)
+    logUsage("admin-gallery", "gpt-5.6-luna", d, Date.now() - llmStartedAt)
     const parsed = JSON.parse(d.choices?.[0]?.message?.content ?? "{}") as {
       verdicts?: unknown[]
     }

@@ -119,6 +119,7 @@ async function translateTitle(title: string): Promise<string | null> {
   const key = process.env.OPENAI_API_KEY
   if (!key) return null
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -145,11 +146,16 @@ async function translateTitle(title: string): Promise<string | null> {
       }),
     })
     if (!res.ok) {
-      logUsageFailure("soccer-meme-title", TITLE_MODEL, `http_${res.status}`)
+      logUsageFailure(
+        "soccer-meme-title",
+        TITLE_MODEL,
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return null
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("soccer-meme-title", TITLE_MODEL, json)
+    logUsage("soccer-meme-title", TITLE_MODEL, json, Date.now() - llmStartedAt)
     const raw = json.choices?.[0]?.message?.content
     if (!raw) return null
     const ko = String((JSON.parse(raw) as { ko?: unknown }).ko ?? "").trim()

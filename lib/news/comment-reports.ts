@@ -73,6 +73,7 @@ export async function classifyErrorReports(
   if (!apiKey || items.length === 0) return items.length === 0 ? [] : null
 
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -97,12 +98,17 @@ export async function classifyErrorReports(
       signal: AbortSignal.timeout(25000),
     })
     if (!res.ok) {
-      logUsageFailure("news-comment-reports", MODEL, `http_${res.status}`)
+      logUsageFailure(
+        "news-comment-reports",
+        MODEL,
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       console.error("[comment-reports] OpenAI HTTP", res.status)
       return null
     }
     const json = await res.json()
-    logUsage("news-comment-reports", MODEL, json)
+    logUsage("news-comment-reports", MODEL, json, Date.now() - llmStartedAt)
     const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}") as {
       results?: { idx?: number; is_report?: boolean; claim?: string }[]
     }

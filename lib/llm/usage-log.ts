@@ -74,8 +74,8 @@ export function estimateCostUsd(model: string, usage: LlmUsage): number | null {
  *
  * ⚠️ await 하지 않는다. 기록이 느리다고 본 작업이 기다릴 이유가 없다.
  */
-export function logUsage(task: string, model: string, payload: unknown): void {
-  void record(task, model, readUsage(payload), true, 0)
+export function logUsage(task: string, model: string, payload: unknown, latencyMs = 0): void {
+  void record(task, model, readUsage(payload), true, latencyMs)
 }
 
 /**

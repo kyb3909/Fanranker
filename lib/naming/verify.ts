@@ -27,6 +27,7 @@ export async function proposeCandidates(name: string, context?: string): Promise
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return empty
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -58,11 +59,16 @@ JSON만: {"romanized": "...", "candidates": ["표기1", "표기2", "표기3"]}`,
       signal: AbortSignal.timeout(20000),
     })
     if (!res.ok) {
-      logUsageFailure("naming-verify", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure(
+        "naming-verify",
+        "gpt-5.6-luna",
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return empty
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("naming-verify", "gpt-5.6-luna", data)
+    logUsage("naming-verify", "gpt-5.6-luna", data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       romanized?: unknown
       candidates?: unknown[]

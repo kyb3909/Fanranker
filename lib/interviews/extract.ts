@@ -39,6 +39,7 @@ async function extractQuotes(title: string, material: string): Promise<Extracted
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -53,11 +54,11 @@ async function extractQuotes(title: string, material: string): Promise<Extracted
       signal: AbortSignal.timeout(60000),
     })
     if (!res.ok) {
-      logUsageFailure("interview-extract", MODEL, `http_${res.status}`)
+      logUsageFailure("interview-extract", MODEL, `http_${res.status}`, Date.now() - llmStartedAt)
       return null
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("interview-extract", MODEL, data)
+    logUsage("interview-extract", MODEL, data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       speaker?: unknown
       quotes?: unknown
@@ -107,6 +108,7 @@ export async function translateQuotes(
     : ""
   const body = quotes.map((q, i) => `${i + 1}. ${q}`).join("\n")
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -121,11 +123,11 @@ export async function translateQuotes(
       signal: AbortSignal.timeout(60000),
     })
     if (!res.ok) {
-      logUsageFailure("interview-extract", MODEL, `http_${res.status}`)
+      logUsageFailure("interview-extract", MODEL, `http_${res.status}`, Date.now() - llmStartedAt)
       return null
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("interview-extract", MODEL, data)
+    logUsage("interview-extract", MODEL, data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       headline_ko?: unknown
       speaker_ko?: unknown

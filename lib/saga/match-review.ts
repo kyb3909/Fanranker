@@ -96,6 +96,7 @@ async function callLLM(system: string, user: unknown): Promise<string | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -109,11 +110,11 @@ async function callLLM(system: string, user: unknown): Promise<string | null> {
       }),
     })
     if (!res.ok) {
-      logUsageFailure("saga-match-review", MODEL, `http_${res.status}`)
+      logUsageFailure("saga-match-review", MODEL, `http_${res.status}`, Date.now() - llmStartedAt)
       return null
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("saga-match-review", MODEL, data)
+    logUsage("saga-match-review", MODEL, data, Date.now() - llmStartedAt)
     return data.choices?.[0]?.message?.content ?? null
   } catch {
     return null

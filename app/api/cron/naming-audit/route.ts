@@ -59,6 +59,7 @@ async function extractNames(
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return empty
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -77,11 +78,16 @@ async function extractNames(
       signal: AbortSignal.timeout(30000),
     })
     if (!res.ok) {
-      logUsageFailure("naming-audit", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure(
+        "naming-audit",
+        "gpt-5.6-luna",
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return empty
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("naming-audit", "gpt-5.6-luna", data)
+    logUsage("naming-audit", "gpt-5.6-luna", data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       players?: unknown[]
       coaches?: unknown[]

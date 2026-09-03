@@ -51,6 +51,7 @@ async function generateVsIssue(title: string, content: unknown): Promise<VsIssue
   if (!bodyText || bodyText.length < 50) return null // 본문이 없으면 요약도 쟁점도 억지
 
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -65,13 +66,18 @@ async function generateVsIssue(title: string, content: unknown): Promise<VsIssue
       signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) {
-      logUsageFailure("news-vs-issue", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure(
+        "news-vs-issue",
+        "gpt-5.6-luna",
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return null
     }
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[]
     }
-    logUsage("news-vs-issue", "gpt-5.6-luna", data)
+    logUsage("news-vs-issue", "gpt-5.6-luna", data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       no_issue?: boolean
       question?: string

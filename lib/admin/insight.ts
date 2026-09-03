@@ -139,6 +139,7 @@ export async function generateInsight(
 
   const started = Date.now()
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -153,12 +154,17 @@ export async function generateInsight(
       signal: AbortSignal.timeout(90_000),
     })
     if (!res.ok) {
-      logUsageFailure("admin-insight", DEFAULT_MODEL, `http_${res.status}`)
+      logUsageFailure(
+        "admin-insight",
+        DEFAULT_MODEL,
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       console.error("[insight] OpenAI HTTP", res.status)
       return null
     }
     const json = await res.json()
-    logUsage("admin-insight", DEFAULT_MODEL, json)
+    logUsage("admin-insight", DEFAULT_MODEL, json, Date.now() - llmStartedAt)
     const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}") as Partial<Insight>
 
     // 형태 검증 — LLM 이 스키마를 어겨도 화면이 깨지지 않게 정규화한다

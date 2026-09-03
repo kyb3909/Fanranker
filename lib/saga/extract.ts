@@ -75,6 +75,7 @@ export async function extractTransferBatch(
     .join("\n")
 
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -89,11 +90,16 @@ export async function extractTransferBatch(
       signal: AbortSignal.timeout(60000),
     })
     if (!res.ok) {
-      logUsageFailure("saga-extract", "gpt-5.6-luna", `http_${res.status}`)
+      logUsageFailure(
+        "saga-extract",
+        "gpt-5.6-luna",
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       return inputs.map(() => null)
     }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    logUsage("saga-extract", "gpt-5.6-luna", data)
+    logUsage("saga-extract", "gpt-5.6-luna", data, Date.now() - llmStartedAt)
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       items?: unknown[]
     }

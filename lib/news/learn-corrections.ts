@@ -213,6 +213,7 @@ export async function learnFromDeskEdit(
   const note = params.operatorNote?.trim()
   let parsed: { corrections?: Correction[]; factual?: FactualCase[] }
   try {
+    const llmStartedAt = Date.now()
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -237,12 +238,17 @@ export async function learnFromDeskEdit(
       signal: AbortSignal.timeout(20000),
     })
     if (!res.ok) {
-      logUsageFailure("news-learn-corrections", MODEL, `http_${res.status}`)
+      logUsageFailure(
+        "news-learn-corrections",
+        MODEL,
+        `http_${res.status}`,
+        Date.now() - llmStartedAt
+      )
       console.error("[desk-learn] OpenAI HTTP", res.status)
       return empty
     }
     const json = await res.json()
-    logUsage("news-learn-corrections", MODEL, json)
+    logUsage("news-learn-corrections", MODEL, json, Date.now() - llmStartedAt)
     parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}")
   } catch (e) {
     console.error("[desk-learn] extract failed:", e)
