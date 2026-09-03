@@ -34,6 +34,7 @@
  *   pnpm exec tsx scripts/draft-squad-names.ts --team <soccerway_team_id> [--verbose]
  *   pnpm exec tsx scripts/draft-squad-names.ts --league 라리가
  *   pnpm exec tsx scripts/draft-squad-names.ts --all           # 화면에 뜨는 팀 전체
+ *   ... --since 2026-09-03T00:00:00+09:00   # 그 시각 이후 들어온 행만 (동기화 직후 갈무리용)
  *   ... --apply    # 붙이면 DB 에 쓴다 (기본은 미리보기)
  */
 import "dotenv/config"
@@ -50,6 +51,7 @@ const arg = (name: string): string | null => {
 const TEAM = arg("team")
 const LEAGUE = arg("league")
 const ALL = process.argv.includes("--all")
+const SINCE = arg("since")
 const VERBOSE = process.argv.includes("--verbose")
 const MODEL = process.env.SQUAD_DRAFT_MODEL || "gpt-5.6-luna"
 
@@ -101,13 +103,17 @@ async function loadTargets(): Promise<Row[]> {
   const ids = [...teamIds.keys()]
   // .in() 대량 배열은 400 이 난다 (메모리: reference_sentry_api 의 재발 패턴) — 잘라서 돈다
   for (let i = 0; i < ids.length; i += 50) {
-    const { data } = await supabase
+    let q = supabase
       .from("team_squads")
       .select("soccerway_team_id, player_slug, name_en")
       .in("soccerway_team_id", ids.slice(i, i + 50))
       .is("name_kr", null)
       .is("name_kr_draft", null)
       .neq("status", "rejected")
+      // 떠난 선수(squad-sync 가 left 로 표시)는 후보를 만들지 않는다 — 검수 지면에도 안 뜬다
+      .neq("status", "left")
+    if (SINCE) q = q.gte("created_at", new Date(SINCE).toISOString())
+    const { data } = await q
     for (const r of data ?? []) {
       out.push({
         soccerway_team_id: String(r.soccerway_team_id),
