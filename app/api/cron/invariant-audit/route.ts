@@ -903,11 +903,14 @@ async function handler(req: NextRequest) {
         .in("fingerprint", fingerprints)
     : { data: [] as { fingerprint: string; status: string }[] }
   const knownStatus = new Map((known ?? []).map((k) => [k.fingerprint, k.status]))
-  const fresh = findings.filter((f) => knownStatus.get(f.fingerprint) !== "open")
+  // ignored = 운영자가 "위반 아님(정상 후속 기사 등)" 으로 판정한 지문. 다시 열지도, 알리지도
+  // 않는다 — 판정 없이 매시 재알림되던 경보는 곧 무시당해 진짜 경보까지 묻었다 (2026-09-03).
+  const live = findings.filter((f) => knownStatus.get(f.fingerprint) !== "ignored")
+  const fresh = live.filter((f) => knownStatus.get(f.fingerprint) !== "open")
 
-  if (findings.length > 0) {
+  if (live.length > 0) {
     const { error: upsertError } = await supabase.from("invariant_findings").upsert(
-      findings.map((f) => ({
+      live.map((f) => ({
         invariant: f.invariant,
         fingerprint: f.fingerprint,
         detail: { ...f.detail, summary: f.summary },

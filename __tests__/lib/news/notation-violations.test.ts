@@ -61,3 +61,43 @@ describe("findNotationViolations", () => {
     expect(findNotationViolations("사비 알론소와 위르겐 클롭이 바르셀로나에서", DICT)).toEqual([])
   })
 })
+
+describe("findNotationViolations — 성씨 별칭·접두 오탐 (2026-09-03 열린 경보 8건 중 6건)", () => {
+  const DICT2: NotationEntry[] = [
+    {
+      id: "p_guela",
+      category: "player",
+      romanized: "",
+      surfaces: [],
+      preferred_ko: "겔라 두에",
+      hangul_alts: ["두에"],
+    },
+    {
+      id: "p_desire",
+      category: "player",
+      romanized: "",
+      surfaces: [],
+      preferred_ko: "데지레 두에",
+      hangul_alts: ["두에"],
+    },
+    {
+      id: "p_zirkzee",
+      category: "player",
+      romanized: "",
+      surfaces: [],
+      preferred_ko: "조슈아 지르크제이",
+      hangul_alts: ["조슈아 지르크제"],
+    },
+  ]
+  it("대표 표기의 한 토큰(성씨)인 alt 는 위반이 아니다 — 다른 항목과 성씨가 겹쳐도", () => {
+    expect(findNotationViolations("레버쿠젠, 겔라 두에 영입", DICT2)).toEqual([])
+  })
+  it("대표 표기의 앞부분인 alt 는 대표 표기 자리에서 걸리지 않는다", () => {
+    expect(findNotationViolations("조슈아 지르크제이, 맨유 잔류", DICT2)).toEqual([])
+  })
+  it("그래도 홀로 쓰인 접두 오표기는 잡는다", () => {
+    expect(findNotationViolations("조슈아 지르크제 영입 제안", DICT2).map((v) => v.alt)).toEqual([
+      "조슈아 지르크제",
+    ])
+  })
+})

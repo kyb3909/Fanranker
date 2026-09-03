@@ -486,7 +486,17 @@ export function findNotationViolations(
       // 본문에 있다고 위반으로 올리면 첫날부터 오탐이 쏟아지고, **시끄러운 감시는 곧
       // 무시당해 없느니만 못하다**. 포함 관계 한 줄이 둘을 정확히 가른다.
       if (alt.includes(d.preferred_ko)) continue
-      if (haystack.includes(alt)) {
+      // ⚠️ 반대 방향도 있다. alt 가 대표 표기의 **한 토큰**(성씨)이면 오표기가 아니라 대조용
+      //    별칭이다 — '두에'(대표: 겔라 두에), '버튼'(대표: 데이비드 버튼). 본문에 대표 표기가
+      //    있으면 성씨도 반드시 있으므로 위반으로 올리면 전부 오탐이다 (2026-09-03 열린
+      //    경보 8건 중 5건이 이것). 다른 항목과 성씨가 겹쳐도 같다.
+      if (d.preferred_ko.split(/\s+/).includes(alt)) continue
+      // alt 가 대표 표기의 앞부분이면('조슈아 지르크제' ⊂ '조슈아 지르크제이') 대표 표기 자리에서
+      // 걸린다. 대표 표기를 지운 뒤에도 남아 있어야 진짜 오표기다.
+      const hay = d.preferred_ko.includes(alt)
+        ? haystack.split(d.preferred_ko).join("\u0000")
+        : haystack
+      if (hay.includes(alt)) {
         out.push({ entryId: d.id, alt, preferred: d.preferred_ko })
       }
     }
