@@ -181,14 +181,29 @@ async function cronGet(request: Request) {
             ex.player_kr = recovered.ko ?? ex.player_kr
           } else {
             // 복구도 못 하면 **사가를 만들지 않는다.** 근거 없는 신원으로 문서를 여는
-            // 것보다 재료를 남겨두는 편이 낫다 (unknown_player 재평가가 나중에 집는다).
+            // 것보다 재료를 남겨두는 편이 낫다 — 검수 큐(queued + auto_hold)에 넣는다.
+            //
+            // ⚠️ 2026-09-04 이전엔 여기서 status='unknown_player' 를 썼는데 그 값은 CHECK
+            //    제약에 없다. UPDATE 가 조용히 거부돼 행이 'ingested' 로 남고, 다음 회차가
+            //    같은 행을 다시 LLM 에 보냈다 — 하루 100~150콜이 이 반복이었다(9/3 graph-qa).
+            //    'ungrounded_player' 사유가 붙어 있어 사전 등재만으로는 자동 부활하지 않는다.
             console.warn(
               `[saga-extract] 근거 없는 선수명 — 보류: "${rawPlayer}" (원문: ${row.title})`
             )
-            await supabase
+            const { error: holdError } = await supabase
               .from("saga_reservoir")
-              .update({ status: "unknown_player", updated_at: new Date().toISOString() })
+              .update({
+                status: "queued",
+                extracted: ex,
+                error: "auto_hold:unknown_player,ungrounded_player",
+                updated_at: new Date().toISOString(),
+              })
               .eq("id", row.id)
+            if (holdError) {
+              failed++
+              console.error("[saga-extract] 근거 없는 선수명 보류 기록 실패", row.id, holdError)
+              continue
+            }
             autoHeld++
             continue
           }
