@@ -28,7 +28,8 @@ import { getMotmPollByMatchKey } from "@/lib/motm/poll"
 import { MotmCard } from "@/components/motm/motm-card"
 import { findSeasonSagasForTeams } from "@/lib/saga/season"
 import { isEventLive } from "@/lib/event/gunners-season"
-import { pickScore } from "@/lib/match/score-precedence"
+import { matchTitleScore, pickScore } from "@/lib/match/score-precedence"
+import { readMatchDetails } from "@/lib/lfa/persist"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -59,8 +60,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!UUID_RE.test(gameId)) return { title: "경기" }
   const m = await getMatchByGameId(gameId)
   if (!m) return { title: "경기" }
-  const score =
-    m.homeScore != null && m.awayScore != null ? ` ${m.homeScore}:${m.awayScore} ` : " vs "
+  // 제목 스코어는 본문과 같은 우선순위 — betman 발표(FT 후 1~2시간) 전엔 LFA 확정 스코어를 쓴다
+  // (2026-09-03 운영자). 여기서는 DB 캐시만 읽는다(readMatchDetails) — 메타데이터 단계에서 LFA 를
+  // 사지 않는다. 본문(getLfaMatchInfo)이 같은 요청에서 이미 산다.
+  const cached = await readMatchDetails(gameId, m.matchTime).catch(() => null)
+  const score = matchTitleScore({
+    betmanStatus: m.status,
+    betmanHome: m.homeScore,
+    betmanAway: m.awayScore,
+    lfa: cached?.info ?? null,
+  })
   const title = `${m.homeTeam}${score}${m.awayTeam}`
   const description = `${m.leagueCode} — ${m.homeTeam} vs ${m.awayTeam} 경기 정보·스코어·선발 라인업`
   return {
