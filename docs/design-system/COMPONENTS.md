@@ -151,6 +151,13 @@ UX 의미가 다르면 합치지 않는다.
 
 ---
 
+## 매치센터 기록·라인업 (2026-09-05)
+
+- `MatchStatComparison`: 주요 13개는 `lib/match/stat-presentation.ts`의 순서로 표시하고 나머지는 공용 outline Button으로 펼친다. 누락 기록은 0으로 생성하지 않는다. 전체 수집 정책은 유지한다.
+- `MatchLineup`: 포메이션/선수 명단을 전환해 중복을 줄인다. 모바일은 팀 선택, sm 이상은 두 팀 비교. 벤치는 별도 details로 표시한다.
+- `FormationPitch`: 토큰 기반 피치와 12px 이상 선수 표기. 선발 11명·유효 포메이션 조건을 충족하지 못하면 호출부에서 명단으로 대체한다.
+- 개발 전용 `/dev/match-preview`는 가상 데이터로만 동작하며 운영 빌드에서는 404다.
+
 ## 중복 구현 현황 (Phase 2 조사 결과)
 
 조사 결과 `PrimaryButton` / `SubmitButton` 류의 **명시적 중복 컴포넌트는 없었다.**

@@ -1,19 +1,5 @@
 "use client"
 
-/**
- * 포메이션 피치 — 선발 11명을 실제 배치대로 그린다 (2026-08-17, FotMob 참고).
- *
- * ## 왜 그릴 수 있나
- * soccerway 라인업의 STARTERS 배열이 **포지션 순서**다 (2026-08-16 실측: 아스널 4-2-3-1 이
- * 라야 → 화이트·모스케라·가브리엘·칼라피오리 → 기마랑이스·루이스스켈리 → 마두에케·
- * 외데고르·촐리스 → 하베르츠 순으로 옴). 포메이션 문자열("4-2-3-1")로 줄 수를 끊어
- * 순서대로 채우면 배치가 나온다 — 좌표 데이터 없이도 성립한다.
- *
- * ## 안전장치
- * 포메이션 숫자 합이 10(필드 플레이어)이 아니거나 선발이 11명이 아니면 **그리지 않는다**
- * (null 반환) — 호출부가 기존 목록으로 폴백한다. 틀린 배치는 없는 배치보다 나쁘다.
- */
-
 interface PitchPlayer {
   label: string
   number: number | null
@@ -23,152 +9,160 @@ interface PitchPlayer {
   subOut?: string | null
 }
 
-/** "4-2-3-1" → [4,2,3,1] (GK 제외). 합이 10 이 아니면 null */
+/** LFA 선발 순서(GK → 수비 → 공격)를 포메이션 행으로 표시한다. */
 export function parseFormation(formation: string | null): number[] | null {
   if (!formation) return null
   const rows = formation.split(/[-–]/).map((n) => Number(n.trim()))
   if (rows.some((n) => !Number.isInteger(n) || n < 1 || n > 6)) return null
-  if (rows.reduce((a, b) => a + b, 0) !== 10) return null
-  return rows
+  return rows.reduce((a, b) => a + b, 0) === 10 ? rows : null
 }
 
-/** 선발 11명 → [GK행, ...필드 행들] */
-function toRows(starters: PitchPlayer[], formation: string | null): PitchPlayer[][] | null {
-  const shape = parseFormation(formation)
-  if (!shape || starters.length !== 11) return null
-  const rows: PitchPlayer[][] = [[starters[0]]] // 0번 = 골키퍼
-  let i = 1
-  for (const n of shape) {
-    rows.push(starters.slice(i, i + n))
-    i += n
-  }
-  return rows
-}
-
-function PlayerDot({ p, invert }: { p: PitchPlayer; invert: boolean }) {
-  const scored = (p.goals ?? 0) > 0 || (p.ownGoals ?? 0) > 0
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-[3px]" style={{ width: 60 }}>
-      <div className="relative">
-        <span
-          className="gn-num grid h-[26px] w-[26px] place-items-center rounded-full text-[11px] font-extrabold"
-          style={{
-            background: invert ? "var(--wc-card)" : "var(--wc-burgundy)",
-            color: invert ? "var(--wc-burgundy)" : "#fff",
-            border: invert ? "1.5px solid var(--wc-burgundy)" : "1.5px solid rgba(255,255,255,.5)",
-          }}
-        >
-          {p.number ?? "·"}
-        </span>
-        {/* 득점·퇴장·교체아웃은 점 하나로 — 피치가 아이콘으로 뒤덮이면 배치가 안 읽힌다 */}
-        {scored && (
-          <span
-            aria-label="득점"
-            className="absolute -top-[2px] -right-[2px] h-[9px] w-[9px] rounded-full"
-            style={{ background: "#f0c040", border: "1px solid rgba(0,0,0,.25)" }}
-          />
-        )}
-        {p.red && (
-          <span
-            aria-label="퇴장"
-            className="absolute -right-[3px] -bottom-[2px] rounded-[1px]"
-            style={{ width: 7, height: 9, background: "#c2352f" }}
-          />
-        )}
-        {p.subOut && (
-          <span
-            aria-label="교체 아웃"
-            className="absolute -bottom-[2px] -left-[3px] text-[8px] leading-none font-bold"
-            style={{ color: "#c2352f" }}
-          >
-            ▼
-          </span>
-        )}
-      </div>
-      <span
-        className="w-full truncate text-center text-[10px] leading-tight font-bold"
-        style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-        title={p.label}
-      >
-        {p.label}
-      </span>
-    </div>
-  )
-}
-
-function HalfPitch({
-  rows,
-  invert,
-  teamLabel,
-  formation,
-}: {
-  rows: PitchPlayer[][]
-  /** 원정팀은 위쪽에 뒤집어 그린다 (GK 가 맨 위) */
-  invert: boolean
+interface PitchSide {
   teamLabel: string
   formation: string | null
-}) {
-  const ordered = invert ? rows : [...rows].reverse() // 홈은 공격이 위로 향하도록
+  starters: PitchPlayer[]
+}
+
+export function canShowFormation(side: PitchSide): boolean {
+  return side.starters.length === 11 && parseFormation(side.formation) !== null
+}
+
+function TeamPitch({ side, away }: { side: PitchSide; away: boolean }) {
+  const shape = parseFormation(side.formation)!
+  let offset = 1
+  const rows = [
+    [side.starters[0]],
+    ...shape.map((count) => {
+      const row = side.starters.slice(offset, offset + count)
+      offset += count
+      return row
+    }),
+  ].reverse()
   return (
-    <div className="min-w-0 flex-1">
-      <div className="flex items-baseline justify-between px-2 pb-1">
-        <span className="truncate text-[12px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-          {teamLabel}
+    <section
+      aria-label={side.teamLabel + " 포메이션"}
+      className="min-w-0 overflow-hidden rounded-xl border border-[var(--wc-line)]"
+    >
+      <div
+        className="flex items-center justify-between gap-3 px-4 py-3"
+        style={{ background: "var(--wc-card)" }}
+      >
+        <div className="min-w-0">
+          <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
+            {away ? "AWAY" : "HOME"}
+          </p>
+          <h3 className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
+            {side.teamLabel}
+          </h3>
+        </div>
+        <span
+          className="gn-num shrink-0 rounded-full px-3 py-1 text-[13px] font-bold"
+          style={{ background: "var(--wc-soft)", color: "var(--wc-ink)" }}
+        >
+          {side.formation}
         </span>
-        {formation && (
-          <span
-            className="gn-num shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-bold"
-            style={{ background: "var(--wc-wine-tint)", color: "var(--wc-burgundy)" }}
-          >
-            {formation}
-          </span>
-        )}
       </div>
-      <div className="flex flex-col justify-around gap-3 py-3" style={{ minHeight: 210 }}>
-        {ordered.map((row, i) => (
-          <div key={i} className="flex items-start justify-evenly gap-1">
-            {row.map((p, j) => (
-              <PlayerDot key={j} p={p} invert={invert} />
-            ))}
-          </div>
-        ))}
+      <div
+        className="relative overflow-hidden px-2 py-5"
+        style={{ background: "color-mix(in srgb, var(--wc-go) 9%, var(--wc-card))" }}
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 320 400"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-3 h-[calc(100%-24px)] w-[calc(100%-24px)]"
+          fill="none"
+          stroke="var(--wc-go)"
+          strokeWidth="1"
+          opacity="0.2"
+        >
+          <rect x="1" y="1" width="318" height="398" rx="2" />
+          <path d="M1 200H319 M80 1V65H240V1 M120 1V25H200V1 M80 399V335H240V399 M120 399V375H200V399" />
+          <circle cx="160" cy="200" r="42" />
+          <circle cx="160" cy="200" r="2" fill="var(--wc-go)" />
+        </svg>
+        <div className="relative flex min-h-[360px] flex-col justify-between gap-5">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-start justify-evenly gap-1">
+              {row.map((p, j) => (
+                <div
+                  key={j}
+                  className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+                  style={{ maxWidth: 88 }}
+                >
+                  <div className="relative">
+                    <span
+                      className="gn-num grid size-8 place-items-center rounded-full border border-[var(--wc-burgundy)] text-[12px] font-extrabold shadow-sm"
+                      style={{
+                        background: away ? "var(--wc-card)" : "var(--wc-burgundy)",
+                        color: away ? "var(--wc-burgundy)" : "var(--wc-card)",
+                      }}
+                    >
+                      {p.number ?? "·"}
+                    </span>
+                    {((p.goals ?? 0) > 0 || (p.ownGoals ?? 0) > 0) && (
+                      <span
+                        role="img"
+                        aria-label={(p.goals ?? 0) > 0 ? "득점" : "자책골"}
+                        className="absolute -top-1 -right-2 rounded-full px-0.5 text-[12px]"
+                        style={{ background: "var(--wc-card)", color: "var(--wc-ink)" }}
+                      >
+                        ⚽
+                      </span>
+                    )}
+                    {p.red && (
+                      <span
+                        role="img"
+                        aria-label="퇴장"
+                        className="absolute -right-1 -bottom-1 h-3 w-2 rounded-sm"
+                        style={{ background: "var(--wc-down)" }}
+                      />
+                    )}
+                    {p.subOut && (
+                      <span
+                        role="img"
+                        aria-label="교체 아웃"
+                        className="absolute -bottom-1 -left-2 text-[12px]"
+                        style={{ color: "var(--wc-down)" }}
+                      >
+                        ▼
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className="line-clamp-2 w-full text-center text-[12px] leading-4 font-semibold break-words"
+                    style={{ color: "var(--wc-ink)" }}
+                    title={p.label}
+                  >
+                    {p.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   )
 }
 
 export function FormationPitch({
   home,
   away,
+  activeSide = 0,
 }: {
-  home: { teamLabel: string; formation: string | null; starters: PitchPlayer[] }
-  away: { teamLabel: string; formation: string | null; starters: PitchPlayer[] }
+  home: PitchSide
+  away: PitchSide
+  activeSide?: number
 }) {
-  const homeRows = toRows(home.starters, home.formation)
-  const awayRows = toRows(away.starters, away.formation)
-  // 한쪽이라도 배치를 못 만들면 피치를 포기한다 (호출부가 목록으로 폴백)
-  if (!homeRows || !awayRows) return null
-
+  if (!canShowFormation(home) || !canShowFormation(away)) return null
   return (
-    <div
-      className="overflow-hidden rounded-xl"
-      style={{
-        // 잔디 스트라이프 — 이미지 없이 CSS 만으로 (번들 0)
-        background:
-          "repeating-linear-gradient(to bottom, var(--wc-pitch-a, #e8efe6) 0 34px, var(--wc-pitch-b, #e2ebe0) 34px 68px)",
-        border: "1px solid var(--wc-line)",
-      }}
-    >
-      <div className="flex flex-col">
-        <HalfPitch rows={awayRows} invert teamLabel={away.teamLabel} formation={away.formation} />
-        <div aria-hidden className="mx-4 h-px" style={{ background: "rgba(0,0,0,.14)" }} />
-        <HalfPitch
-          rows={homeRows}
-          invert={false}
-          teamLabel={home.teamLabel}
-          formation={home.formation}
-        />
-      </div>
+    <div className="grid gap-4 sm:grid-cols-2">
+      {[home, away].map((side, i) => (
+        <div key={i} className={activeSide === i ? "min-w-0" : "hidden min-w-0 sm:block"}>
+          <TeamPitch side={side} away={i === 1} />
+        </div>
+      ))}
     </div>
   )
 }

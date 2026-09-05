@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { FormationPitch } from "@/components/match/formation-pitch"
+import { FormationPitch, canShowFormation } from "@/components/match/formation-pitch"
 import { EmptyScene } from "@/components/empty-scene"
+import { Button } from "@/components/ui/button"
 
 /**
  * 경기 라인업 (표시 전용, 2026-08-16) — /api/match/lineup 소비자.
@@ -46,14 +47,14 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
   )
   return (
     // shrink-0: 선수 이름이 먼저 살아남는다 — 잘리는 건 아래 교체 상대(max-w)뿐
-    <span className="inline-flex shrink-0 items-center gap-[4px] align-middle">
+    <span className="inline-flex flex-wrap items-center gap-1.5 align-middle">
       {goals > 0 && (
         <span className="inline-flex items-center gap-[2px]">
           {Array.from({ length: Math.min(goals, 3) }, (_, i) =>
             img("/match/icons/goal.png", "득점", `g${i}`)
           )}
           {p.goalMinutes && p.goalMinutes.length > 0 && (
-            <span className="gn-num text-[9px] font-bold" style={{ color: "var(--wc-mute)" }}>
+            <span className="gn-num text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
               {p.goalMinutes.join(" ")}
             </span>
           )}
@@ -62,7 +63,7 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
       {ownGoals > 0 && (
         <span className="inline-flex items-center gap-[1px]">
           {img("/match/icons/goal.png", "자책골")}
-          <span className="text-[9px] font-bold" style={{ color: "var(--wc-down, #c03a3a)" }}>
+          <span className="text-[12px] font-bold" style={{ color: "var(--wc-down)" }}>
             OG
           </span>
         </span>
@@ -70,17 +71,14 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
       {p.red && img("/match/icons/red-card.png", "퇴장")}
       {p.subOut && (
         <span className="inline-flex min-w-0 items-baseline gap-[3px]" title="교체 아웃">
-          <span className="text-[9px]" style={{ color: "var(--wc-down, #c03a3a)" }}>
+          <span className="text-[12px]" style={{ color: "var(--wc-down)" }}>
             ▼
           </span>
-          <span className="gn-num text-[9px]" style={{ color: "var(--wc-mute-2)" }}>
+          <span className="gn-num text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
             {p.subOut}
           </span>
           {p.subPartner && (
-            <span
-              className="max-w-[64px] truncate text-[9px]"
-              style={{ color: "var(--wc-mute-2)" }}
-            >
+            <span className="text-[12px] break-words" style={{ color: "var(--wc-mute-2)" }}>
               {p.subPartner}
             </span>
           )}
@@ -88,10 +86,10 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
       )}
       {p.subIn && (
         <span className="inline-flex items-baseline gap-[3px]" title="교체 투입">
-          <span className="text-[9px]" style={{ color: "var(--wc-go, #2f7d5b)" }}>
+          <span className="text-[12px]" style={{ color: "var(--wc-go)" }}>
             ▲
           </span>
-          <span className="gn-num text-[9px]" style={{ color: "var(--wc-mute-2)" }}>
+          <span className="gn-num text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
             {p.subIn}
           </span>
         </span>
@@ -134,8 +132,8 @@ interface MatchLineupProps {
   /** 매치 페이지처럼 라인업이 주인공인 곳은 접지 않고 바로 펼친다 (2026-08-16) */
   defaultOpen?: boolean
   /**
-   * 포메이션 피치를 목록 위에 그린다 (매치 센터 전용, 2026-08-17).
-   * 포메이션 파싱이 실패하면 스스로 빠지고 목록만 남는다.
+   * 포메이션/명단 보기 전환을 제공한다 (매치 센터 전용).
+   * 포메이션 파싱이 실패하면 명단만 표시한다.
    */
   withPitch?: boolean
   /** 토글 없이 항상 펼친 상태로 — 탭 안에서는 접기 버튼이 군더더기다 */
@@ -153,6 +151,8 @@ export function MatchLineup({
 }: MatchLineupProps) {
   const [data, setData] = useState<LineupResponse | null>(initial ?? null)
   const [open, setOpen] = useState(defaultOpen)
+  const [view, setView] = useState<"pitch" | "list">("pitch")
+  const [activeSide, setActiveSide] = useState(0)
   const polls = useRef(0)
 
   useEffect(() => {
@@ -233,122 +233,144 @@ export function MatchLineup({
     return null
   }
   const shown = alwaysOpen || open
+  const pitchAvailable = withPitch && canShowFormation(data.home) && canShowFormation(data.away)
+  const showPitch = pitchAvailable && view === "pitch"
 
   return (
     <div className={compact ? "mt-2" : "mt-2.5"}>
       {!alwaysOpen && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex items-center gap-1 text-[12px] font-bold transition-colors"
-          style={{ color: "var(--wc-burgundy)" }}
         >
           선발 라인업
-          <ChevronDown
-            className="h-3.5 w-3.5 transition-transform"
-            style={{ transform: open ? "rotate(180deg)" : undefined }}
-          />
-        </button>
+          <ChevronDown aria-hidden className={open ? "rotate-180" : ""} />
+        </Button>
       )}
-
-      {withPitch && shown && (
-        <div className="mb-3">
-          <FormationPitch home={data.home} away={data.away} />
-        </div>
-      )}
-
-      {/* 편집 지면 문법 (2026-08-16 리디자인) — 베이지 패널을 걷어내고 흰 지면 위에
-          괘선으로만 구조를 세운다. 등번호는 와인 틴트 칩, 포메이션은 pill. */}
       {shown && (
-        <div className="mt-2.5 grid grid-cols-2">
-          {[data.home, data.away].map((side, sideIdx) => (
-            <div
-              key={side.teamLabel}
-              className={`min-w-0 ${sideIdx === 0 ? "pr-3" : "pl-3"}`}
-              style={sideIdx === 1 ? { borderLeft: "1px solid var(--wc-line)" } : undefined}
-            >
-              {/* 팀 헤더 — 팀명 볼드 + 포메이션 pill, 아래 굵은 괘선 */}
-              <div
-                className="flex items-center justify-between gap-1.5 pb-1.5"
-                style={{ borderBottom: "2px solid var(--wc-ink)" }}
-              >
-                <span
-                  className="truncate text-[13px] font-extrabold"
-                  style={{ color: "var(--wc-ink)", letterSpacing: "-0.01em" }}
-                >
-                  {side.teamLabel}
-                </span>
-                {side.formation && (
-                  <span
-                    className="gn-num shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-bold"
-                    style={{
-                      background: "var(--wc-wine-tint)",
-                      color: "var(--wc-burgundy)",
-                    }}
-                  >
-                    {side.formation}
-                  </span>
-                )}
+        <div className="space-y-4">
+          {withPitch && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-[16px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                  라인업
+                </h2>
+                <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute)" }}>
+                  {showPitch ? "선발 배치 · 교체 기록은 선수 명단에서" : "선발 선수와 교체 기록"}
+                </p>
               </div>
-              <ol className="mt-1.5 space-y-[3px]">
-                {side.starters.map((p, i) => (
-                  <li key={i} className="flex items-center gap-2 text-[12px] leading-[1.5]">
-                    <span
-                      className="gn-num grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
-                      style={{
-                        background: "var(--wc-wine-tint)",
-                        color: "var(--wc-burgundy)",
-                      }}
-                    >
-                      {p.number ?? "·"}
-                    </span>
-                    <span
-                      className="truncate font-medium"
-                      style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-                    >
-                      {p.label}
-                    </span>
-                    <IncidentIcons p={p} />
-                  </li>
-                ))}
-              </ol>
-              {side.bench.length > 0 && (
-                // 교체 투입이 있으면 기본 펼침 — 누가 들어왔는지가 접혀 있으면 의미가 없다
-                <details className="mt-2" open={side.bench.some((p) => p.subIn)}>
-                  <summary
-                    className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full px-2 py-[2px] text-[10px] font-bold"
-                    style={{
-                      background: "var(--wc-soft)",
-                      color: "var(--wc-mute)",
-                      letterSpacing: "0.02em",
-                    }}
+              {pitchAvailable && (
+                <div role="group" aria-label="라인업 보기 방식" className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={showPitch ? "default" : "ghost"}
+                    aria-pressed={showPitch}
+                    onClick={() => setView("pitch")}
                   >
-                    벤치 {side.bench.length}
-                    <ChevronDown className="h-3 w-3" />
-                  </summary>
-                  <ol className="mt-1.5 space-y-[3px]">
-                    {side.bench.map((p, i) => (
-                      <li key={i} className="flex items-center gap-2 text-[11px] leading-[1.5]">
-                        <span
-                          className="gn-num grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[9px] font-bold"
-                          style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
-                        >
-                          {p.number ?? "·"}
-                        </span>
-                        <span className="truncate" style={{ color: "var(--wc-mute)" }}>
-                          {p.label}
-                        </span>
-                        <IncidentIcons p={p} size={11} />
-                      </li>
-                    ))}
-                  </ol>
-                </details>
+                    포메이션
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!showPitch ? "default" : "ghost"}
+                    aria-pressed={!showPitch}
+                    onClick={() => setView("list")}
+                  >
+                    선수 명단
+                  </Button>
+                </div>
               )}
             </div>
-          ))}
+          )}
+          <div role="group" aria-label="라인업 팀 선택" className="flex flex-wrap gap-2 sm:hidden">
+            {[data.home, data.away].map((side, i) => (
+              <Button
+                key={i}
+                type="button"
+                size="sm"
+                variant={activeSide === i ? "default" : "outline"}
+                aria-pressed={activeSide === i}
+                onClick={() => setActiveSide(i)}
+              >
+                {side.teamLabel}
+              </Button>
+            ))}
+          </div>
+          {showPitch && (
+            <FormationPitch home={data.home} away={data.away} activeSide={activeSide} />
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[data.home, data.away].map((side, i) => (
+              <section
+                key={i}
+                aria-label={side.teamLabel + " 선수 명단"}
+                className={activeSide === i ? "min-w-0" : "hidden min-w-0 sm:block"}
+              >
+                {!showPitch && (
+                  <div className="rounded-xl border border-[var(--wc-line)] p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                      <h3 className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                        {side.teamLabel}
+                      </h3>
+                      <span
+                        className="gn-num shrink-0 text-[12px]"
+                        style={{ color: "var(--wc-mute)" }}
+                      >
+                        {side.formation ?? "포메이션 미제공"}
+                      </span>
+                    </div>
+                    <PlayerList players={side.starters} label={side.teamLabel + " 선발 선수"} />
+                  </div>
+                )}
+                {side.bench.length > 0 && (
+                  <details
+                    className="group mt-3 rounded-xl border border-[var(--wc-line)] px-3"
+                    open={side.bench.some((p) => p.subIn)}
+                  >
+                    <summary
+                      className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[13px] font-semibold"
+                      style={{ color: "var(--wc-mute)" }}
+                    >
+                      <span>
+                        {side.teamLabel} · 벤치 <span className="gn-num">{side.bench.length}</span>
+                      </span>
+                      <ChevronDown aria-hidden className="size-4 group-open:rotate-180" />
+                    </summary>
+                    <PlayerList players={side.bench} label={side.teamLabel + " 벤치 선수"} />
+                  </details>
+                )}
+              </section>
+            ))}
+          </div>
         </div>
       )}
     </div>
+  )
+}
+
+function PlayerList({ players, label }: { players: DisplayPlayer[]; label: string }) {
+  return (
+    <ol aria-label={label} className="divide-y divide-[var(--wc-line)]">
+      {players.map((p, i) => (
+        <li key={i} className="flex min-h-11 items-center gap-3 py-2">
+          <span
+            className="gn-num grid size-7 shrink-0 place-items-center rounded-full text-[12px] font-bold"
+            style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+          >
+            {p.number ?? "·"}
+          </span>
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium break-words" style={{ color: "var(--wc-ink)" }}>
+              {p.label}
+            </p>
+            <IncidentIcons p={p} />
+          </div>
+        </li>
+      ))}
+    </ol>
   )
 }

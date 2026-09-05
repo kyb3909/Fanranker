@@ -1,4 +1,5 @@
 import type { LfaMatchInfo, LfaTimelineEvent } from "@/lib/lfa/match"
+import { MatchStatComparison } from "@/components/match/match-stat-comparison"
 
 /**
  * 매치 타임라인 + 경기 스탯 (2026-08-17 → 2026-08-19 데이터 회수 1차).
@@ -157,60 +158,7 @@ export function MatchStatsSection({
     <>
       {/* 말이 통계 탭이니 스탯이 먼저다 (2026-08-20 운영자) — 타임라인은 그 아래 */}
       {hasStats && (
-        <section>
-          <h2 className="sheet-lab">경기 스탯</h2>
-          <div
-            className="mt-1 flex items-baseline justify-between text-[12px] font-bold"
-            style={{ color: "var(--wc-mute)" }}
-          >
-            <span className="truncate">{homeTeam}</span>
-            <span className="truncate">{awayTeam}</span>
-          </div>
-          <ul className="mt-2 space-y-2.5">
-            {info.stats.map((s) => {
-              const total = s.homeNum != null && s.awayNum != null ? s.homeNum + s.awayNum : null
-              const homePct = total && total > 0 ? (s.homeNum! / total) * 100 : 50
-              return (
-                <li key={s.label}>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="gn-num text-[14px] font-bold"
-                      style={{ color: "var(--wc-ink)" }}
-                    >
-                      {s.home}
-                    </span>
-                    <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
-                      {s.label}
-                    </span>
-                    <span
-                      className="gn-num text-[14px] font-bold"
-                      style={{ color: "var(--wc-ink)" }}
-                    >
-                      {s.away}
-                    </span>
-                  </div>
-                  <div
-                    aria-hidden
-                    className="mt-1 flex h-[5px] gap-[3px] overflow-hidden rounded-full"
-                  >
-                    <span
-                      style={{
-                        width: `${homePct}%`,
-                        background: "var(--wc-burgundy)",
-                        borderRadius: 99,
-                      }}
-                    />
-                    {/* 상대 팀을 회색으로 칠하면 "비어 있음"으로 읽혀 바가 거짓말을 한다 */}
-                    <span
-                      className="flex-1"
-                      style={{ background: "var(--wc-ink)", opacity: 0.75, borderRadius: 99 }}
-                    />
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+        <MatchStatComparison stats={info.stats} homeTeam={homeTeam} awayTeam={awayTeam} />
       )}
       {!hideTimeline && timeline.length > 0 && (
         <section className={hasStats ? "mt-8" : ""}>
