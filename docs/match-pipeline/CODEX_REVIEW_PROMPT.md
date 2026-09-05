@@ -23,7 +23,7 @@
 | 3 | 불판 | `posts` (봇 작성, `match_game_id`) | 킥오프 −90분 ~ +120분 창, 라인업 `ready` 인 화이트리스트 경기만, 중복 방지 3중 |
 | 4 | 실시간 스탯 | **LFA** (`lfa_day_cache` · `match_details_cache`) | betman 은 라이브를 안 준다. 목록 5분 · 상세 120초 캐시. 스코어는 뒤로 안 간다(단조 증가). DB 가 정본 창고, 화면은 외부 API 를 기다리지 않는다 |
 | 5 | 종료 판정 | LFA `finished` | betman `completed` 는 정산 산물이라 FT 판정에 쓰지 않는다 |
-| 6 | 매치 리포트 | soccerway 원문 + LFA↔betman 스코어 교차검증 | fail-closed: 원문 없음 · 스코어 불일치 · 검증 실패면 쓰지 않고 `match_report_attempts` 에 사유를 남긴다. 대상은 `MATCH_EXTRAS_LEAGUES` 만 |
+| 6 | 매치 리포트 | Soccerway 원문 + LFA 종료 점수 | 2026-09-06 지시: 베트맨 결과 유무·불일치와 무관하게 진행. 원문 없음 · LFA 종료 점수 없음 · 작성 검증 실패는 `match_report_attempts`에 기록. 대상은 `MATCH_EXTRAS_LEAGUES`만 |
 
 화이트리스트는 **한 곳**: `lib/match/leagues.ts` (`MATCH_PAGE_LEAGUES` / `MATCH_EXTRAS_LEAGUES`). 복사본을 두면 갈라진다.
 
@@ -74,7 +74,7 @@
 
 ### 5·6. 종료 · 리포트
 - Q5-1 `match-reports` 크론이 `f.status === "completed"` 인 경기만 대상으로 삼는다. 이 `status` 가 betman 것이면 설계(FT 판정은 LFA)와 어긋난다. 어느 status 인가.
-- Q5-2 `confirmScore` 의 둘째 출처가 `betman_games.home_score` 인지 확인하고, 사유 문자열 "와이즈토토 스코어가 아직 없다"가 **오해를 부르는지** 판정하라(wisetoto 는 2026-09-02 폐지).
+- Q5-2 `confirmScore`가 LFA 종료 점수만 받으며 베트맨 결과 미도착·불일치로 리포트를 막는 경로가 없는지 확인하라 (2026-09-06 운영자 지시).
 - Q5-3 `match-extras.ts` 의 `score` 게이트와 `article` 게이트가 순차인가 독립인가. `article` 시도 기록이 있다고 `score` 가 통과했다고 볼 수 있는가.
 - Q5-4 `match-reports` 크론의 `resolve` 기록 조건(`hasRecentReportAttempt(gameId, 10분)`)이 30분 크론 주기와 맞물려 **원문이 없는 경기에 30분마다 "soccerway 매핑 없음"이라는 틀린 라벨을 남기는지** 판정하라. 24시간 창이면 최대 몇 건인가.
 - Q5-5 리포트 대상이 `MATCH_EXTRAS_LEAGUES` 인데 크론은 `isMatchPageLeague` 로 거른다(`match-reports/route.ts:61`). 두 목록의 차이(FA컵·리그컵·UEL 등)가 크론에 들어와 `getMatchExtras` 에서 어떻게 처리되는가 — 헛 호출·헛 기록이 생기는가.

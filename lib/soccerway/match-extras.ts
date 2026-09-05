@@ -857,7 +857,7 @@ async function storeReport(gameId: string, eventId: string, report: MatchReport)
 
 /**
  * 산 피드(LFA)의 그 경기 스코어. 하루치 색인을 쓴다 — 경기별 호출이면 크레딧이 20~30배다.
- * 실패는 null (fail-open) → 교차검증이 성립 안 하므로 리포트가 안 나갈 뿐이다.
+ * 실패는 null (fail-open) → LFA 종료 점수를 확인할 때까지 리포트를 기다린다.
  */
 async function lookupLfaScore(
   leagueCode: string | null,
@@ -907,10 +907,7 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
   }
 
   /**
-   * 확정 스코어 = **LFA 기준 + betman 결과 교차검증**.
-   *
-   * `betman_games` 점수는 VPS betman 결과 수집이 채운다.
-   * 이제 돈 주고 산 피드(LFA)를 기준으로 두고, 둘이 맞을 때만 확정한다.
+   * 확정 스코어 = LFA 종료 결과. 베트맨 결과는 기다리거나 대조하지 않는다.
    *
    * ⚠️ 저장분이 있으면 아예 계산하지 않는다 — 리포트를 다시 만들 일이 없는데
    *    하루치 색인을 부르면 크레딧만 나간다.
@@ -928,7 +925,7 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
      *
      * 매치센터가 경기별 LFA id 로 정확히 매핑해 둔 `match_details_cache`(finished 행)가
      * 이미 있다. 그걸 먼저 보고, 없을 때만 색인(충돌 키는 이제 버려진다)을 쓴다.
-     * 교차검증 규칙(confirmScore) 자체는 그대로다 — 출처만 정확해졌다.
+     * LFA 종료 점수만 사용한다. 베트맨 점수가 없어도 원문 기반 리포트를 작성한다.
      */
     let lfa: (ScoreSide & { finished: boolean }) | null = null
     try {
@@ -949,7 +946,7 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
     }
     if (!lfa) lfa = await lookupLfaScore(resolved.leagueCode, resolved.matchTime)
 
-    const verdict = confirmScore(lfa, { home: resolved.homeScore, away: resolved.awayScore })
+    const verdict = confirmScore(lfa)
     if (verdict.ok) confirmedScore = verdict.score
     else {
       console.warn(`[match-report] 스코어 확정 실패 (${gameId}): ${verdict.reason}`)
