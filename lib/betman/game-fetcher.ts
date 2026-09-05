@@ -53,7 +53,6 @@ interface BetmanGame {
   home_team_name: string
   away_team_name: string
   venue: string | null
-  status: string
   handicap: number | null
   over_under_line: number | null
   home_win_odds: number | null
@@ -213,7 +212,6 @@ export function parseGames(data: BetmanGameData, roundId: string): BetmanGame[] 
       home_team_name: (d[idx.homeName] as string) || "",
       away_team_name: (d[idx.awayName] as string) || "",
       venue: (d[idx.meetStadiumFullName] as string) || null,
-      status: "scheduled",
       // 핸디캡: 홈팀 기준 spread (winHandi 가 음수면 홈 -N, 양수면 홈 +N)
       handicap: gameType === "핸디캡" ? winHandi : null,
       // 언더오버: winHandi == loseHandi == 기준선 (양쪽 동일)

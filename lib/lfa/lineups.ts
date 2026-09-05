@@ -39,13 +39,13 @@ export interface LfaLineupSideOut {
   bench: LfaLineupPerson[]
 }
 
-/** 끝난 경기도 값이 변하지 않는다 — 길게 잡는다 */
+/** 예상·빈 라인업도 들어오므로 짧게 갱신한다. 확정분은 match_lineups에 영구 저장된다. */
 function cachedLineups(matchId: string) {
   return unstable_cache(
     async () => lfaFetch<unknown>("lineups", { match_id: matchId, lang: "en" }),
-    // v2: 벤치를 못 읽던 시절(`substitutes` 오독)의 캐시를 무효화 (2026-08-31)
-    ["lfa-lineups-v2", matchId],
-    { revalidate: 12 * 3600 }
+    // v3: 예상 라인업이 12시간 굳어 있던 캐시를 무효화한다.
+    ["lfa-lineups-v3", matchId],
+    { revalidate: 120 }
   )
 }
 

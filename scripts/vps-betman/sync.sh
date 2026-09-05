@@ -273,7 +273,6 @@ sync_one_gmts() {
     home_team_name: ($d[$idx.homeName] // ""),
     away_team_name: ($d[$idx.awayName] // ""),
     venue: ($d[$idx.meetStadiumFullName] // null),
-    status: "scheduled",
     handicap: (if $gt == "핸디캡" or $gt == "소수핸디캡" then $wh else null end),
     over_under_line: (if $gt == "언더오버" then $wh else null end),
     home_win_odds: (if ($is_3way or $is_2way) and $wa > 0 then $wa else null end),

@@ -10,6 +10,7 @@ import { getLfaLineup, getTeamSquadNames, localizePlayerName } from "@/lib/lfa/l
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getSiblingGameIds } from "@/lib/match/sibling-ids"
 import { pickLineupRow } from "@/lib/match/pick-sibling-row"
+import { getMatchByGameId } from "@/lib/match/get-match"
 
 /**
  * 라인업 단일 진입점 (2026-08-20 운영자: "라인업이 너무 느리고 이름이 다 영어").
@@ -60,6 +61,11 @@ async function loadStored(gameId: string): Promise<StoredRow | null> {
   }
 }
 
+/** 페이지 첫 렌더용: 외부 피드·재한글화·자가 수리를 기다리지 않고 저장분만 읽는다. */
+export async function getStoredMatchLineup(gameId: string): Promise<LineupResponse | null> {
+  return (await loadStored(gameId))?.payload ?? null
+}
+
 /**
  * ready 페이로드의 영문 라벨을 팀 스쿼드 사전으로 다시 한글화한다.
  * 바뀐 것이 하나라도 있으면 true — 호출부가 저장분을 heal 할 근거.
@@ -101,6 +107,33 @@ async function relocalize(payload: LineupResponse): Promise<boolean> {
  * 페이지 서버 렌더가 이걸 불러 initial 로 넘기면 클라이언트 왕복이 사라진다.
  */
 export async function getMatchLineup(gameId: string): Promise<LineupResponse> {
+  const match = await getMatchByGameId(gameId).catch(() => null)
+  if (match?.source === "lfa" && match.lfaMatchId) {
+    const stored = await loadStored(match.gameId)
+    if (
+      stored?.payload.status === "ready" &&
+      !stored.payload.projected &&
+      !benchIsEmpty(stored.payload)
+    ) {
+      await relocalize(stored.payload)
+      return stored.payload
+    }
+    // Same LFA lineup parser + persistence, without a Betman/Soccerway resolution prerequisite.
+    const lu = await getLfaLineup(match.lfaMatchId, match.homeTeam, match.awayTeam).catch(
+      () => null
+    )
+    if (!lu) return stored?.payload ?? { status: "pending", kickoff: match.matchTime }
+    const payload: LineupResponse = {
+      status: "ready",
+      projected: lu.projected,
+      kickoff: match.matchTime,
+      home: { teamLabel: match.homeTeam, ...lu.home },
+      away: { teamLabel: match.awayTeam, ...lu.away },
+      fetchedAt: new Date().toISOString(),
+    }
+    if (!lu.projected) await storeLineupPayload(match.gameId, match.lfaMatchId, payload)
+    return payload
+  }
   // ① 저장분 — 있으면 재한글화하고, 좋아졌으면 되써 둔다(다음 읽기는 공짜)
   const stored = await loadStored(gameId)
   if (stored) {
@@ -194,6 +227,7 @@ async function lfaLineupFallback(
 
   const payload: LineupResponse = {
     status: "ready",
+    projected: lu.projected,
     kickoff: new Date(String(game.match_time)).toISOString(),
     home: { teamLabel: String(game.home_team_name), ...lu.home },
     away: { teamLabel: String(game.away_team_name), ...lu.away },

@@ -39,7 +39,6 @@ function match(
   }
 }
 
-const SEC = 1_000
 const MIN = 60_000
 
 beforeEach(() => vi.useFakeTimers())
@@ -48,7 +47,7 @@ afterEach(() => vi.useRealTimers())
 describe("dayFreshnessMs — 하루치 목록 재구매 주기", () => {
   it("진행 중인 경기가 있으면 5분", () => {
     vi.setSystemTime(at("20:00"))
-    expect(dayFreshnessMs(DATE, [match("19:00", "inGame")])).toBe(45 * SEC)
+    expect(dayFreshnessMs(DATE, [match("19:00", "inGame")])).toBe(5 * MIN)
   })
 
   it("킥오프 45분 전부터 5분으로 당긴다", () => {
@@ -120,7 +119,7 @@ describe("dayFreshnessMs — 하루치 목록 재구매 주기", () => {
     it("우리 리그가 라이브면 남의 리그와 무관하게 라이브 주기", () => {
       vi.setSystemTime(at("10:00"))
       const mixed = [match("09:30", "inGame", EPL), match("09:30", "inGame", OTHER)]
-      expect(dayFreshnessMs(DATE, mixed)).toBe(45 * SEC)
+      expect(dayFreshnessMs(DATE, mixed)).toBe(5 * MIN)
     })
 
     it("우리 리그 경기가 전부 끝났으면 남의 리그가 남아 있어도 얼린다", () => {
@@ -148,7 +147,7 @@ describe("detailsFreshnessMs — 경기 상세 캐시 수명", () => {
   })
 
   it("라이브 플래그가 서 있으면 라이브 주기", () => {
-    expect(detailsFreshnessMs({ finished: false, live: true, matchTime: KO }, at(KO))).toBe(90_000)
+    expect(detailsFreshnessMs({ finished: false, live: true, matchTime: KO }, at(KO))).toBe(120_000)
   })
 
   it("⭐라이브 플래그가 거짓이어도 킥오프 창 안이면 라이브 주기 (자기 자신에게 갇히지 않는다)", () => {
@@ -156,7 +155,7 @@ describe("detailsFreshnessMs — 경기 상세 캐시 수명", () => {
     // 그 값이 스스로 10분 수명을 붙여 매치센터가 0-1 을 못 봤다.
     for (const t of ["2026-08-24T19:05:00Z", "2026-08-24T19:14:00Z", "2026-08-24T20:30:00Z"]) {
       expect(detailsFreshnessMs({ finished: false, live: false, matchTime: KO }, at(t)), t).toBe(
-        90_000
+        120_000
       )
     }
   })
@@ -167,7 +166,7 @@ describe("detailsFreshnessMs — 경기 상세 캐시 수명", () => {
         { finished: false, live: false, matchTime: KO },
         at("2026-08-24T18:55:00Z")
       )
-    ).toBe(90_000)
+    ).toBe(120_000)
     expect(
       detailsFreshnessMs(
         { finished: false, live: false, matchTime: KO },

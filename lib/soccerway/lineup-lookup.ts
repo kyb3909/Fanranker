@@ -64,7 +64,14 @@ interface DisplaySide {
 export type LineupResponse =
   | { status: "none" }
   | { status: "pending"; kickoff: string }
-  | { status: "ready"; kickoff: string; home: DisplaySide; away: DisplaySide; fetchedAt: string }
+  | {
+      status: "ready"
+      kickoff: string
+      home: DisplaySide
+      away: DisplaySide
+      fetchedAt: string
+      projected?: boolean
+    }
 
 /* ── 팀명 정규화 대조 ── */
 
@@ -400,7 +407,7 @@ export async function storeLineupPayload(gameId: string, eventId: string, payloa
 }
 
 async function storeLineup(gameId: string, eventId: string, payload: LineupResponse) {
-  if (payload.status !== "ready") return
+  if (payload.status !== "ready" || payload.projected === true) return
   await createServiceRoleClient()
     .from("match_lineups")
     .upsert(

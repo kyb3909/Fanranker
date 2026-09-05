@@ -5,9 +5,15 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
 import { cachedTeamEn } from "@/lib/lfa/match"
-import { normTeam, pickLfaCounterpart } from "@/lib/match/pair-fixtures"
+import { normTeam, matchLfaCounterpart } from "@/lib/match/pair-fixtures"
 import { isPopularFixture } from "@/lib/match/popular-teams"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
+import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import {
+  syncSupplementalFixtures,
+  supplementalSummary,
+  listSupplementalFixtures,
+} from "@/lib/match/supplemental-fixtures"
 
 /**
  * 일정 페이지 데이터 — **매치데이 하루**의 대상 리그 경기 전부 (2026-08-17 개정).
@@ -32,11 +38,12 @@ export const MATCHDAY_START_HOUR_KST = 6
 export interface FixtureRow {
   matchKey: string
   /**
-   * betman_games.id — **없을 수 있다.** betman 은 베팅 마켓이 열린 경기만 싣기 때문에
-   * 개막 라운드처럼 아직 마켓이 없는 경기는 LFA 에만 존재한다 (2026-08-17).
-   * null 이면 매치 페이지 링크를 걸지 않는다 (라인업·리포트가 betman id 로 걸려 있다).
+   * betman_games.id 또는 lfa_fixtures.id. LFA 전용 등록 실패 시에만 null로 남긴다.
    */
   gameId: string | null
+  source?: "lfa"
+  lfaMatchId?: string
+  betmanGameId?: string | null
   homeTeam: string
   awayTeam: string
   /** LFA 행의 영문 원명 — 짝짓기의 영문 대조용 (lib/match/pair-fixtures.ts TeamSided 참조) */
@@ -45,6 +52,8 @@ export interface FixtureRow {
   leagueCode: string
   matchTime: string
   status: "scheduled" | "in_progress" | "completed" | "cancelled"
+  /** 종료 리포트의 근거. betman 정산 상태로는 이 값을 채우지 않는다. */
+  lfaFinished?: boolean
   homeScore: number | null
   awayScore: number | null
 }
@@ -141,15 +150,10 @@ function slotKey(leagueCode: string, matchTime: string): string {
 
 /**
  * betman 행이 어느 LFA 경기인가 — 같은 슬롯 후보 중에서 고른다.
- * 후보가 하나면 그대로, 여럿이면 팀명 대조로 좁힌다. 못 고르면 null
+ * 같은 슬롯에서 한 팀이 확실하고 상대 팀의 확인된 모순이 없으면 연결한다. 못 고르면 null
  * (병합하지 않고 betman 행을 따로 싣는다 — 엉뚱한 경기와 합치는 것이 최악이다).
  *
- * ⚠️ 대조는 두 축이다 (2026-08-20 실사고 — UCL 예선이 두 줄씩 실렸다):
- *   ① 한글 통짜 접두 겹침 — LFA 행이 이미 한글화된 경우 ("셀틱" ≡ "셀틱")
- *   ② 사전 영문 변환 + 토큰 접두 겹침 — LFA 행이 원문으로 남은 경우
- *      (betman "하포엘 베르셰바" → EN "Hapoel Beer Sheva" → LFA "HB Sheva" 의
- *       "sheva" 토큰이 잡는다). 한글화는 lfa_team_id 매핑이 있는 팀만 되므로
- *       예선 마이너 팀은 ①이 영영 못 잡는다 — 그게 두 줄의 원인이었다.
+ * 확정 근거는 전체 이름 또는 사전에 등록된 별칭이다. 공통 토큰의 접두 겹침은 쓰지 않는다.
  */
 
 /**
@@ -168,15 +172,17 @@ function slotKey(leagueCode: string, matchTime: string): string {
  *
  * **예외 — 인기 팀 경기는 betman 에 없어도 싣는다** (같은 날 운영자: "빅6 와 인기 팀으로 구분한
  * 팀들은 예외. 포칼이나 컵대회에서 하부리그 팀과 만나도 그 팀들이 나왔으면"). 정의와 대조 규칙은
- * lib/match/popular-teams.ts — 팀 게시판 14팀, LFA 표기 정확일치. 이런 행은 gameId 가 없어
- * 매치센터 링크 없이 일정에만 실린다.
+ * lib/match/popular-teams.ts — 팀 게시판 14팀, LFA 표기 정확일치. 이런 행은 lfa_fixtures에
+ * 독립 UUID로 등록해 매치센터·라인업·스탯·불판·MOM에 연결한다. 승부예측 마켓은 만들지 않는다.
  */
 export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   const [betman, lfa] = await Promise.all([
     getBetmanFixturesForDay(dateKst),
     getLfaFixturesForMatchday(dateKst),
   ])
-  if (lfa.length === 0) return betman
+  if (lfa.length === 0) {
+    return restoreRegisteredFixtures(betman, dateKst)
+  }
 
   // ⚠️ 슬롯 = (리그, 킥오프). 같은 라운드 동시 킥오프는 한 슬롯에 여러 후보가 들어가고
   //    pickLfaCounterpart 가 팀명으로 고른다 (2026-08-17 실측: EPL 개막 14:00 UTC 3경기).
@@ -185,6 +191,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
     const row: FixtureRow = {
       matchKey: `lfa_${f.lfaId}`,
       gameId: null,
+      lfaMatchId: f.lfaId,
       homeTeam: f.homeTeam,
       awayTeam: f.awayTeam,
       homeTeamEn: f.homeTeamEn,
@@ -192,6 +199,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       leagueCode: f.leagueCode,
       matchTime: f.matchTime,
       status: f.status,
+      lfaFinished: f.status === "completed",
       homeScore: f.homeScore,
       awayScore: f.awayScore,
     }
@@ -201,7 +209,9 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
 
   const merged: FixtureRow[] = []
   const consumed = new Set<FixtureRow>()
-  // 한글→영문 사전 — 예선 마이너 팀 대조용 (실패 시 빈 맵 → ① 축만으로 동작)
+  const ambiguous = new Set<FixtureRow>()
+  const linked = new Map<string, string>()
+  // 한글→영문 사전 — 확정 별칭과 상대 팀 충돌 확인. 실패하면 직접 전체 이름 일치만 가능.
   const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
   const droppedForLog: {
     betman: string
@@ -209,27 +219,24 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
     candidates: string[]
     homeEn: string | null
     awayEn: string | null
+    reason: string
   }[] = []
   for (const b of betman) {
-    const candidates = (slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []).filter(
-      (c) => !consumed.has(c)
-    )
-    const hit = pickLfaCounterpart(b, candidates, teamEn)
+    // 앞선 행의 소비 때문에 모호한 슬롯이 뒤에서 단일 후보로 둔갑하지 않게 전체를 대조한다.
+    const candidates = slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []
+    const decision = matchLfaCounterpart(b, candidates, teamEn)
+    const hit = decision.candidate && !consumed.has(decision.candidate) ? decision.candidate : null
     if (!hit) {
-      /**
-       * ⚠️ 여기서 버려진 경기는 gameId 를 잃고 매치 링크·불판·예열이 통째로 끊긴다.
-       *    2026-08-30 실사고(EPL 3경기·세리에A 2경기)에서 **읽기만으로는 원인을 못
-       *    좁혔다** — 짝짓기 함수는 단위 시험에서 실제 사전값으로 전부 통과하는데
-       *    프로덕션에서는 같은 슬롯에 2경기 이상이면 전멸했다. 입력이 다르다는 뜻인데
-       *    그게 사전인지 후보 목록인지 알 방법이 없었다. 그래서 **버리는 순간에 증거를
-       *    남긴다** — 조용한 실패가 이 저장소에서 가장 비싼 실패다.
-       */
+      if (decision.status === "ambiguous")
+        for (const candidate of candidates) ambiguous.add(candidate)
+      // 미확정·충돌·다중 후보를 구분해 남긴다. betman 일정과 링크는 보존하고 LFA 보강만 보류한다.
       droppedForLog.push({
         betman: `${b.homeTeam} vs ${b.awayTeam}`,
         league: b.leagueCode,
         candidates: candidates.map((c) => `${c.homeTeam} vs ${c.awayTeam}`),
         homeEn: teamEn.get(b.homeTeam.trim()) ?? null,
         awayEn: teamEn.get(b.awayTeam.trim()) ?? null,
+        reason: decision.candidate ? "already-linked" : decision.status,
       })
       // 짝 못 찾은 betman 행은 **그대로 싣는다** (2026-09-02, betman 정본). 링크·한글명은
       // betman 것이라 잃을 게 없고 라이브 스코어만 없다. 8/20 엔 "두 줄" 을 막으려 버렸는데,
@@ -238,8 +245,9 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       continue
     }
     consumed.add(hit)
-    // betman 이 있으면 그쪽 한글 팀명·gameId 를 쓴다. 상태는 앞선 쪽 우선
-    const status = STATUS_RANK[b.status] > STATUS_RANK[hit.status] ? b.status : hit.status
+    if (hit.lfaMatchId && b.gameId) linked.set(hit.lfaMatchId, b.gameId)
+    // 일정 식별자는 betman, 짝이 확인된 경기의 실황 상태는 LFA가 소유한다.
+    const status = hit.status
     /**
      * ⚠️ 스코어는 **우선순위 모듈에 맡긴다** (2026-08-25 외부 감사 P0-2).
      *    종전엔 여기서 `b.homeScore ?? hit.homeScore` 였는데, 와이즈토토는 라이브 점수를
@@ -268,8 +276,44 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   }
   // LFA 전용 행(betman 미판매)은 인기 팀 경기만 싣는다 — 2026-09-02 운영자 결정 (위 doc 참조)
   for (const rows of slots.values()) {
-    for (const row of rows) if (!consumed.has(row) && isPopularFixture(row)) merged.push(row)
+    for (const row of rows) {
+      if (!consumed.has(row) && !ambiguous.has(row) && isPopularFixture(row)) merged.push(row)
+    }
   }
 
-  return merged.sort((a, b) => a.matchTime.localeCompare(b.matchTime))
+  try {
+    const missing = new Set(
+      merged.filter((f) => !f.gameId && f.lfaMatchId).map((f) => f.lfaMatchId!)
+    )
+    const registered = await syncSupplementalFixtures(lfa, linked, missing)
+    for (let i = 0; i < merged.length; i++) {
+      const row = merged[i]
+      const saved = row.lfaMatchId ? registered.get(row.lfaMatchId) : null
+      if (saved) merged[i] = supplementalSummary(saved)
+    }
+  } catch (error) {
+    // Migration/storage failure must not create dead UUID links or interrupt Betman schedules.
+    console.error("[fixtures] LFA 전용 경기 등록 실패", error)
+  }
+
+  return restoreRegisteredFixtures(merged, dateKst)
+}
+
+/** A partial/failed feed must not remove registered matches or duplicate a later Betman market. */
+async function restoreRegisteredFixtures(
+  rows: FixtureRow[],
+  dateKst: string
+): Promise<FixtureRow[]> {
+  const range = kstDayRange(dateKst)
+  const stored = range ? await listSupplementalFixtures(range.start, range.end).catch(() => []) : []
+  let restored = [...rows]
+  for (const row of stored) {
+    if (restored.some((f) => f.gameId === row.id)) continue
+    const ids = row.betman_game_id
+      ? await getSiblingGameIds(createServiceRoleClient(), row.id)
+      : [row.id]
+    restored = restored.filter((f) => !f.gameId || !ids.includes(f.gameId))
+    restored.push(supplementalSummary(row))
+  }
+  return restored.sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 }

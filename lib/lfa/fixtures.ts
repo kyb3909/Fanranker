@@ -6,6 +6,7 @@ import { type LfaMatch } from "@/lib/lfa/client"
 import { getDayMatches } from "@/lib/lfa/match"
 import { BETMAN_CODE_BY_LFA_ID } from "@/lib/lfa/leagues"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
+import { isLfaFinishedStatus } from "@/lib/lfa/status"
 
 /**
  * 대상 리그 전 경기 (2026-08-17). ⚠️ 2026-09-02 부터 일정의 **정본은 betman** 이고 이 목록은
@@ -117,7 +118,7 @@ function toKorean(
 function toStatus(m: LfaMatch): LfaFixture["status"] {
   const state = m.status?.state ?? ""
   const display = String(m.status?.display ?? "").toUpperCase()
-  if (state === "postGame" || display === "FT" || display === "AET" || display === "PEN") {
+  if (isLfaFinishedStatus(m.status)) {
     return "completed"
   }
   if (m.status?.is_live) return "in_progress"

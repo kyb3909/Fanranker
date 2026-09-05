@@ -159,7 +159,6 @@ interface ParsedGame {
   home_team_name: string
   away_team_name: string
   venue: string | null
-  status: string
   handicap: number | null
   over_under_line: number | null
   home_win_odds: number | null
@@ -250,7 +249,6 @@ function parseGames(
           home_team_name: (d[14] as string) || "",
           away_team_name: (d[15] as string) || "",
           venue: (d[10] as string) || null,
-          status: "scheduled",
           handicap: gameType === "핸디캡" && d[20] ? (d[20] as number) : null,
           over_under_line: isUnderOver && d[20] ? (d[20] as number) : null,
           home_win_odds: isNormalOrHandicap && (d[16] as number) > 0 ? (d[16] as number) : null,

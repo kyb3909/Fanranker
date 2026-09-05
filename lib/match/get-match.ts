@@ -3,6 +3,11 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isMatchPageLeague } from "@/lib/match/leagues"
+import {
+  getSupplementalFixture,
+  findSupplementalForBetmanIds,
+  supplementalSummary,
+} from "@/lib/match/supplemental-fixtures"
 
 /**
  * 매치 페이지 데이터 — betman_games 만으로 조립하는 경기 요약 (2026-08-16, 표시 전용).
@@ -29,6 +34,9 @@ export interface MatchSummary {
   homeScore: number | null
   awayScore: number | null
   venue: string | null
+  source?: "lfa"
+  lfaMatchId?: string
+  betmanGameId?: string | null
 }
 
 async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> {
@@ -39,7 +47,13 @@ async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> 
     .select("id, sport, home_team_name, away_team_name, league_code, match_time, venue")
     .eq("id", gameId)
     .maybeSingle()
-  if (!game || game.sport !== "축구") return null
+  if (!game) {
+    const supplemental = await getSupplementalFixture(gameId).catch(() => null)
+    return supplemental && isMatchPageLeague(supplemental.fixture.leagueCode)
+      ? supplementalSummary(supplemental)
+      : null
+  }
+  if (game.sport !== "축구") return null
   if (!isMatchPageLeague(game.league_code as string)) return null
   // UCL 예선 미확정 대진 — "OO vs 미정" 매치 페이지는 성립하지 않는다 (404)
   if (game.home_team_name === "미정" || game.away_team_name === "미정") return null
@@ -49,10 +63,17 @@ async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> 
   // 결과 크롤이다 — 종전 주석의 wisetoto sync 는 걷어냈다)
   const { data: siblings } = await supabase
     .from("betman_games")
-    .select("status, home_score, away_score")
+    .select("id, status, home_score, away_score")
+    .eq("league_code", game.league_code)
     .eq("home_team_name", game.home_team_name)
     .eq("away_team_name", game.away_team_name)
     .eq("match_time", game.match_time)
+
+  const supplemental = await findSupplementalForBetmanIds([
+    gameId,
+    ...(siblings ?? []).map((s) => String(s.id)),
+  ]).catch(() => null)
+  if (supplemental) return supplementalSummary(supplemental)
 
   let status: MatchSummary["status"] = "scheduled"
   let homeScore: number | null = null

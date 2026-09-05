@@ -16,6 +16,8 @@ import {
 } from "@/lib/motm/options"
 import { lfaDetailRow, pickFtScore, type LfaDetailRow } from "@/lib/motm/ft-evidence"
 import { matchKeyOf } from "@/lib/match/match-key"
+import { listSupplementalFixtures, supplementalSummary } from "@/lib/match/supplemental-fixtures"
+import { getSiblingGameIds } from "@/lib/match/sibling-ids"
 
 // 기존 import 경로를 지킨다 (매치 페이지·투표 API·카드가 여기서 가져간다)
 export { buildMotmOptions, mergeMotmOptions, pickRichestLineup }
@@ -140,6 +142,7 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     matchTime: string
     homeScore: number | null
     awayScore: number | null
+    lfaOnly?: boolean
   }
   const byKey = new Map<string, Cand>()
   for (const g of rows ?? []) {
@@ -171,6 +174,30 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
       awayScore: g.away_score != null ? Number(g.away_score) : null,
     })
   }
+  // Same poll pipeline for registered LFA fixtures, including matches Betman never sells.
+  // Require actual LFA FT evidence; elapsed kickoff time alone never opens voting.
+  const supplemental = await listSupplementalFixtures(
+    new Date(now - SWEEP_FLOOR_MS).toISOString(),
+    new Date(now - FT_AFTER_MS + 1).toISOString()
+  )
+  const supplementalEvidence = new Map<string, LfaDetailRow[]>()
+  for (const row of supplemental) {
+    const match = supplementalSummary(row)
+    if (!isMatchPageLeague(match.leagueCode) || match.status === "cancelled") continue
+    const ids = await getSiblingGameIds(supabase, row.id, { strict: true })
+    // Later Betman markets share the existing LFA poll, not a second name-based poll.
+    for (const [key, c] of byKey) {
+      if (c.gameIds.some((id) => ids.includes(id))) byKey.delete(key)
+    }
+    byKey.set(match.matchKey, {
+      ...match,
+      gameIds: ids,
+      lfaOnly: true,
+    })
+    const info = await getLfaMatchInfo(match).catch(() => null)
+    if (info?.finished)
+      supplementalEvidence.set(row.id, [lfaDetailRow({ finished: true, payload: info })])
+  }
   /**
    * 연기/취소 잔재 가드 — 스코어가 한 번도 안 찍힌 경기는 FT 로 단정하지 않는다.
    *
@@ -180,10 +207,11 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
    *    가드 자체는 그대로다 — 시간만으로 FT 를 단정하는 경로는 생기지 않는다.
    */
   const lfaByGameId = await loadLfaDetails([...byKey.values()].flatMap((c) => c.gameIds))
+  for (const [id, evidence] of supplementalEvidence) lfaByGameId.set(id, evidence)
   const cands: (Cand & { ftSource: "betman" | "lfa" })[] = []
   for (const c of byKey.values()) {
     const ft = pickFtScore(
-      c,
+      c.lfaOnly ? { ...c, homeScore: null, awayScore: null } : c,
       c.gameIds.flatMap((id) => lfaByGameId.get(id) ?? [])
     )
     if (!ft) continue
@@ -240,7 +268,7 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
         const fetched = await getMatchLineup(c.gameIds[0]).catch(() => null)
         if (fetched && fetched.status === "ready") lineup = pickRichestLineup([fetched, lineup])
       }
-      if (!lineup) {
+      if (!lineup || (lineup.status === "ready" && lineup.projected === true)) {
         skipped.push({ matchKey: c.matchKey, reason: "no_lineup" })
         continue
       }

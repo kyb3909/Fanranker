@@ -21,7 +21,7 @@ import { MatchTabs } from "./match-tabs"
 import { MatchLineup } from "@/components/match/match-lineup"
 import { MatchMiniStandings } from "@/components/match/mini-standings"
 import { MatchdayRail } from "@/components/match/matchday-rail"
-import { getMatchLineup } from "@/lib/match/get-lineup"
+import { getMatchLineup, getStoredMatchLineup } from "@/lib/match/get-lineup"
 import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 import { getMotmPollByMatchKey } from "@/lib/motm/poll"
@@ -30,6 +30,7 @@ import { findSeasonSagasForTeams } from "@/lib/saga/season"
 import { isEventLive } from "@/lib/event/gunners-season"
 import { matchTitleScore, pickScore } from "@/lib/match/score-precedence"
 import { readMatchDetails } from "@/lib/lfa/persist"
+import { getSiblingGameIds } from "@/lib/match/sibling-ids"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -42,7 +43,7 @@ import { readMatchDetails } from "@/lib/lfa/persist"
  *
  * 1차 구성: 스코어 헤더 + 선발 라인업. ~~라이브 스코어는 제공하지 않는다~~ →
  * **2026-08-20 폐기**: LFA 피드가 라이브(분·스코어·실시간 스탯)를 준다는 것을 실측
- * 확인, 진행 중엔 라이브 매치센터로 동작한다 (LiveRefresher 60초 갱신). 8/16 결정은
+ * 확인, 진행 중엔 라이브 매치센터로 동작한다 (LiveRefresher 120초 갱신). 8/16 결정은
  * wisetoto 기준이었다. 리포트는 여전히 **FT 후 + MATCH_EXTRAS_LEAGUES 한정**.
  * 과거 아카이브는 실록 단계 3~4(fixtures 영속화)에서 — 여기는 betman_games 읽기
  * 전용이라 24h 지난 경기의 라인업은 비고 스코어만 남는다.
@@ -62,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!m) return { title: "경기" }
   // 제목 스코어는 본문과 같은 우선순위 — betman 발표(FT 후 1~2시간) 전엔 LFA 확정 스코어를 쓴다
   // (2026-09-03 운영자). 여기서는 DB 캐시만 읽는다(readMatchDetails) — 메타데이터 단계에서 LFA 를
-  // 사지 않는다. 본문(getLfaMatchInfo)이 같은 요청에서 이미 산다.
+  // 사지 않는다. 본문도 저장분을 먼저 그리고 필요할 때 응답 후 갱신한다.
   const cached = await readMatchDetails(gameId, m.matchTime).catch(() => null)
   const score = matchTitleScore({
     betmanStatus: m.status,
@@ -92,17 +93,26 @@ export default async function MatchPage({ params }: Props) {
   if (!match) notFound()
 
   // betman 은 종료를 1~1.5시간 늦게 반영한다 (2026-08-16 실측). LFA 가 먼저 주는 FT·스코어를
-  // 함께 보고, 어느 쪽이든 먼저 종료를 알려주면 그때부터 스코어·스탯·리포트를 연다.
-  const lfa = await getLfaMatchInfo({
+  // 사용한다. betman completed는 정산 상태이므로 화면의 FT 판정에는 쓰지 않는다.
+  const lfaKey = {
     gameId: match.gameId,
     homeTeam: match.homeTeam,
     awayTeam: match.awayTeam,
     matchTime: match.matchTime,
     leagueCode: match.leagueCode,
+  }
+  const cachedDetails = await readMatchDetails(match.gameId, match.matchTime)
+  const lfa = cachedDetails?.info ?? null
+  // 화면은 외부 피드를 기다리지 않는다. 응답 후 적재한 값은 다음 refresh가 읽는다.
+  after(async () => {
+    await Promise.all([
+      !cachedDetails || cachedDetails.stale ? getLfaMatchInfo(lfaKey).catch(() => null) : null,
+      getMatchLineup(match.gameId).catch(() => null),
+    ])
   })
-  const finished = match.status === "completed" || lfa?.finished === true
+  const finished = lfa?.finished === true
   // 라이브 (2026-08-20 운영자: "경기 중엔 실시간 스탯과 점수가 보여야 매치센터지") —
-  // LFA 라이브 스코어·분·스탯을 그대로 낸다. 갱신은 LiveRefresher(60초 router.refresh).
+  // LFA 라이브 스코어·분·스탯을 그대로 낸다. 갱신은 LiveRefresher(120초 router.refresh).
   const live = !finished && lfa?.live === true
   // 라이브 중 스코어는 LFA 가 정본 — betman 은 종료 후에나 채워진다.
   // ⚠️ 규칙은 `lib/match/score-precedence.ts` 한 곳에 있다. 여기 있던 규칙을 일정
@@ -119,9 +129,8 @@ export default async function MatchPage({ params }: Props) {
   // "리포트" 탭은 **저장분이 있을 때만** 만든다 (2026-08-19 패널 — 빈 탭 데드엔드).
   // 없으면 탭 대신 응답 후 백그라운드로 생성을 걸어 둔다(after) — 다음 방문자부터 보인다.
   // 예외: LFA 스탯이 없는 경기는 이 섹션이 soccerway 스탯 폴백을 겸하므로 탭을 유지한다.
-  // 라인업 서버 선적재 (2026-08-20 운영자: "라인업이 너무 느리다") — 종전엔 클라이언트가
-  // API 왕복으로만 받아 탭이 몇 초 비었다. 저장분·캐시가 있어 서버에서는 대체로 즉답이다.
-  const lineupRaw = await getMatchLineup(match.gameId).catch(() => null)
+  // 저장 라인업만 선적재한다. 없는 명단·자가 수리는 위 after 및 라인업 API가 채운다.
+  const lineupRaw = await getStoredMatchLineup(match.gameId).catch(() => null)
   // 저장 라인업은 킥오프 스냅샷이라 인시던트가 없다 — LFA 타임라인을 입힌다
   // (2026-08-20 운영자: "교체가 전혀 표기가 안 된다")
   const lineupInitial =
@@ -129,7 +138,7 @@ export default async function MatchPage({ params }: Props) {
       ? enrichLineupWithTimeline(lineupRaw, lfa.timeline)
       : lineupRaw
 
-  const extrasLeague = finished && isMatchExtrasLeague(match.leagueCode)
+  const extrasLeague = finished && match.source !== "lfa" && isMatchExtrasLeague(match.leagueCode)
   const storedReport = extrasLeague ? await hasStoredReport(match.gameId) : false
   if (extrasLeague && !storedReport) {
     after(() => getMatchExtras(match.gameId).catch(() => {}))
@@ -140,13 +149,7 @@ export default async function MatchPage({ params }: Props) {
   //    같은 (팀, 킥오프)의 **모든 행 id** 로 찾는다. 아니면 어느 행으로 들어왔느냐에
   //    따라 배너가 있다 없다 한다 (2026-08-20 실측).
   const admin = createServiceRoleClient()
-  const { data: dupRows } = await admin
-    .from("betman_games")
-    .select("id")
-    .eq("home_team_name", match.homeTeam)
-    .eq("away_team_name", match.awayTeam)
-    .eq("match_time", match.matchTime)
-  const gameIds = [...new Set([match.gameId, ...(dupRows ?? []).map((r) => String(r.id))])]
+  const gameIds = await getSiblingGameIds(admin, match.gameId)
   const { data: threadRows } = await admin
     .from("posts")
     .select("id, comment_count")
@@ -184,7 +187,9 @@ export default async function MatchPage({ params }: Props) {
         thread={thread ? { id: thread.id, commentCount: thread.comment_count ?? 0 } : null}
       />
       {/* 진행 중에만 마운트 — FT 로 다시 그려지면 스스로 빠진다 */}
-      {live && <LiveRefresher />}
+      {!finished &&
+        Date.now() >= Date.parse(match.matchTime) - 90 * 60_000 &&
+        Date.now() <= Date.parse(match.matchTime) + 6 * 3600_000 && <LiveRefresher />}
 
       {/* 데스크톱 2단: 본문 720(현행 그대로) + 우측 레일 (2026-08-20 시안 승인 —
           "좌우가 너무 비어 있다"). 레일은 lg 이상에서만 — 모바일 무변화. */}
@@ -195,7 +200,7 @@ export default async function MatchPage({ params }: Props) {
             (예측이 이벤트 전용이라 규칙·참가가 있는 허브부터 — GNB 와 같은 판단).
             베팅/픽 카드 다크 금지 규칙에 따라 라이트 틴트로. */}
           {/* 이벤트가 닫혀 있으면 픽 도선도 가린다 (2026-08-24 운영자: "승부예측 이벤트 일단 가려줘") */}
-          {!finished && isEventLive() && (
+          {!finished && (match.source !== "lfa" || match.betmanGameId) && isEventLive() && (
             <div className="px-4 pb-4 sm:px-0 lg:hidden">
               <Link
                 href="/season?ref=match"
@@ -278,6 +283,7 @@ export default async function MatchPage({ params }: Props) {
                       const confidence = lineupConfidence({
                         kickoff: lineupInitial.kickoff,
                         fetchedAt: lineupInitial.fetchedAt,
+                        projected: lineupInitial.projected,
                       })
                       const predicted = confidence === "predicted"
                       return (
@@ -372,7 +378,7 @@ export default async function MatchPage({ params }: Props) {
               awayTeam={match.awayTeam}
             />
           </Suspense>
-          {isEventLive() && (
+          {(match.source !== "lfa" || match.betmanGameId) && isEventLive() && (
             <Link
               href="/season?ref=match"
               className="flex items-baseline justify-between rounded-2xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"

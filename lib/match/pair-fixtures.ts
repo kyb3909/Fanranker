@@ -84,6 +84,9 @@ export function teamMatches(lfaName: string, ourEn: string): boolean {
 export interface TeamSided {
   homeTeam: string
   awayTeam: string
+  /** 누락된 일정도 입력으로 받을 수 있지만, 대회/시각이 없으면 자동 매핑하지 않는다. */
+  leagueCode?: string
+  matchTime?: string
   /**
    * 후보(LFA 행)의 영문 원명 — 있으면 영문 대조는 이걸로 한다 (2026-09-02).
    * homeTeam 이 사전을 거쳐 한글이 된 뒤에는 `teamMatches(한글, 영문)` 이 토큰 0개로 항상 실패한다.
@@ -94,45 +97,111 @@ export interface TeamSided {
   awayTeamEn?: string
 }
 
+type TeamEvidence = "match" | "unknown" | "conflict"
+export type CounterpartDecision<T> =
+  | { status: "matched"; candidate: T; anchor: "home" | "away" | "both" }
+  | { status: "missing" | "ambiguous" | "conflict"; candidate: null }
+
+/** 전체 이름/사전 별칭만 확정 근거로 쓴다. 느슨한 teamMatches는 관제용으로만 남긴다. */
+function identityKey(name: string): string {
+  if (/[가-힣]/.test(name)) return normTeam(name)
+  const parts = tokens(name)
+  if (parts.length === 0) return ""
+  // 공통 단어 하나로 Manchester City와 다른 City 구단을 이어 붙이지 않는다.
+  if (parts.every((p) => ["city", "united", "real", "sporting", "athletic"].includes(p))) return ""
+  return parts.join(" ")
+}
+
+/** 공유 도시명은 같아도 City/United가 서로 다르면 별칭 미등록이 아니라 다른 구단 증거다. */
+function conflictingClubQualifier(a: string, b: string): boolean {
+  const qualifier = (value: string) => {
+    const words = value.split(" ")
+    if (words.includes("city")) return "city"
+    if (words.includes("united") || words.includes("utd")) return "united"
+    return null
+  }
+  const x = qualifier(a)
+  const y = qualifier(b)
+  return x != null && y != null && x !== y
+}
+
+function sameSlot(a: TeamSided, b: TeamSided): boolean {
+  if (!a.leagueCode || a.leagueCode !== b.leagueCode) return false
+  const x = Date.parse(a.matchTime ?? "")
+  const y = Date.parse(b.matchTime ?? "")
+  return (
+    Number.isFinite(x) && Number.isFinite(y) && Math.floor(x / 60_000) === Math.floor(y / 60_000)
+  )
+}
+
 /**
- * betman 행이 어느 LFA 경기인가 — 같은 슬롯 후보 중에서 고른다.
- * 후보가 하나면 그대로, 여럿이면 팀명 대조로 좁힌다. 못 고르면 null.
- *
- * ⚠️ `teamEn` (한글 팀명 → 영문) 이 비면 **여럿인 슬롯은 전부 실패한다.** 영문 후보명과
- *    한글 betman 명은 접두가 겹칠 수 없기 때문이다. 그 경우 증상이 "동시 킥오프가 있는
- *    리그만 통째로 링크가 사라짐" 으로 나타난다 — 사전을 의심할 것.
+ * 같은 날짜·대회·킥오프 분 안에서 홈 또는 원정 한 팀이 확실하면 연결한다.
+ * 나머지 팀의 미등록 표기는 허용하지만, 사전상 다른 팀이거나 홈/원정이 뒤집혔으면 보류.
+ * 동일 조건의 후보가 여럿이면 순서/점수로 임의 선택하지 않는다.
  */
+export function matchLfaCounterpart<T extends TeamSided>(
+  betman: TeamSided,
+  candidates: T[],
+  teamEn: Map<string, string>
+): CounterpartDecision<T> {
+  // 별칭을 여러 구단이 공유하면 하나로 덮지 않는다. 모호한 별칭은 확정 근거가 아니다.
+  const identities = new Map<string, Set<string>>()
+  for (const [name, english] of teamEn) {
+    const canonical = identityKey(english)
+    if (!canonical) continue
+    for (const alias of [identityKey(name), canonical]) {
+      if (!alias) continue
+      const ids = identities.get(alias) ?? new Set<string>()
+      ids.add(canonical)
+      identities.set(alias, ids)
+    }
+  }
+  const identity = (name: string): string | null => {
+    const key = identityKey(name)
+    const ids = identities.get(key)
+    return ids?.size === 1 ? [...ids][0] : null
+  }
+  const compare = (ourName: string, candidateName: string, original?: string): TeamEvidence => {
+    const a = identityKey(ourName)
+    const b = identityKey(original || candidateName)
+    if (!a || !b) return "unknown"
+    if ((identities.get(a)?.size ?? 0) > 1 || (identities.get(b)?.size ?? 0) > 1) return "unknown"
+    const ourId = identity(ourName)
+    const otherId = identity(original || candidateName)
+    if (ourId && otherId) return ourId === otherId ? "match" : "conflict"
+    if (conflictingClubQualifier(ourId ?? a, otherId ?? b)) return "conflict"
+    if (a === b || (ourId && ourId === b)) return "match"
+    // 원명이 있는 경우 잘못 한글화된 표시명만 보고 확정하지 않는다.
+    return "unknown"
+  }
+  const hits: Extract<CounterpartDecision<T>, { status: "matched" }>[] = []
+  let conflict = false
+  for (const candidate of candidates.filter((c) => sameSlot(betman, c))) {
+    const home = compare(betman.homeTeam, candidate.homeTeam, candidate.homeTeamEn)
+    const away = compare(betman.awayTeam, candidate.awayTeam, candidate.awayTeamEn)
+    const reversed =
+      compare(betman.homeTeam, candidate.awayTeam, candidate.awayTeamEn) === "match" ||
+      compare(betman.awayTeam, candidate.homeTeam, candidate.homeTeamEn) === "match"
+    if (home === "conflict" || away === "conflict" || reversed) {
+      conflict = true
+      continue
+    }
+    if (home === "match" || away === "match") {
+      hits.push({
+        status: "matched",
+        candidate,
+        anchor: home === "match" ? (away === "match" ? "both" : "home") : "away",
+      })
+    }
+  }
+  if (hits.length > 1) return { status: "ambiguous", candidate: null }
+  return hits[0] ?? { status: conflict ? "conflict" : "missing", candidate: null }
+}
+
 export function pickLfaCounterpart<T extends TeamSided>(
   betman: TeamSided,
   candidates: T[],
   teamEn: Map<string, string>
 ): T | null {
-  const bh = normTeam(betman.homeTeam)
-  const ba = normTeam(betman.awayTeam)
-  const bhEn = teamEn.get(betman.homeTeam.trim())
-  const baEn = teamEn.get(betman.awayTeam.trim())
-  const overlaps = (x: string, y: string) =>
-    x.length >= 2 && y.length >= 2 && (x.startsWith(y) || y.startsWith(x))
-  // 한글 접두 겹침 → 영문 원명 대조 → (원명이 없는 옛 호출부용) 후보명 자체를 영문으로 간주
-  const sideMatch = (
-    candName: string,
-    candEn: string | undefined,
-    korNorm: string,
-    en: string | undefined
-  ) =>
-    overlaps(normTeam(candName), korNorm) ||
-    (!!en && !!candEn && teamMatches(candEn, en)) ||
-    (!!en && teamMatches(candName, en))
-  const agrees = (c: T) =>
-    sideMatch(c.homeTeam, c.homeTeamEn, bh, bhEn) && sideMatch(c.awayTeam, c.awayTeamEn, ba, baEn)
-  if (candidates.length === 1) {
-    const only = candidates[0]
-    // 후보가 하나여도 사전이 양 팀을 알면 이름이 맞아야 한다 (2026-09-02, lib/lfa/match.ts
-    // resolveMatch 와 같은 규칙). 사전이 모르면 종전대로 채택 — 한글 후보명은 toKorean 을
-    // 거친 것이라 표기가 흔들릴 수 있고, 그때 끊는 건 판정이 아니라 손실이다.
-    if (!bhEn || !baEn) return only
-    return agrees(only) ? only : null
-  }
-  const hits = candidates.filter(agrees)
-  return hits.length === 1 ? hits[0] : null
+  return matchLfaCounterpart(betman, candidates, teamEn).candidate
 }

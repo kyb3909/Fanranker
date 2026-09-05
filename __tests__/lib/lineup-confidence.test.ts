@@ -13,6 +13,10 @@ const KO = "2026-08-25T19:00:00.000Z"
 const at = (h: number) => new Date(Date.parse(KO) - h * 3600_000).toISOString()
 
 describe("lineupConfidence", () => {
+  it("피드의 예상 여부가 수집 시각 추정보다 우선한다", () => {
+    expect(lineupConfidence({ kickoff: KO, fetchedAt: at(0), projected: true })).toBe("predicted")
+    expect(lineupConfidence({ kickoff: KO, fetchedAt: at(2), projected: false })).toBe("confirmed")
+  })
   it("⭐실사고 재현: 킥오프 22시간 전 수집 → 예상", () => {
     expect(lineupConfidence({ kickoff: KO, fetchedAt: at(21.99) })).toBe("predicted")
   })

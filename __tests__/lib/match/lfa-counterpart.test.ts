@@ -20,8 +20,15 @@ import { normTeam, pickLfaCounterpart } from "@/lib/match/pair-fixtures"
 interface Row {
   homeTeam: string
   awayTeam: string
+  leagueCode: string
+  matchTime: string
 }
-const row = (homeTeam: string, awayTeam: string): Row => ({ homeTeam, awayTeam })
+const row = (homeTeam: string, awayTeam: string): Row => ({
+  homeTeam,
+  awayTeam,
+  leagueCode: "EPL",
+  matchTime: "2026-08-30T13:00:00Z",
+})
 
 /** 2026-08-30 13:00 UTC EPL 슬롯 — toKorean 변환 후 실측값 */
 const CANDIDATES = [
@@ -74,9 +81,10 @@ describe("pickLfaCounterpart — 동시 킥오프 슬롯", () => {
     expect(hit?.homeTeam).toBe("첼시")
   })
 
-  it("후보가 하나이고 사전이 모르면 이름 대조 없이 채택한다 (실사고를 가려주던 분기)", () => {
+  it("홈이 확실하면 상대 팀의 미등록 표기는 허용한다", () => {
     const only = row("파리FC", "니스")
     expect(pickLfaCounterpart(row("파리FC", "OGC니스"), [only], new Map())).toBe(only)
+    expect(pickLfaCounterpart(row("파리FC", "니스"), [only], new Map())).toBe(only)
   })
 
   // 2026-09-02: 후보가 하나여도 사전이 양 팀을 알면 이름이 맞아야 한다 — 두 일정이 어긋난 날
@@ -106,8 +114,7 @@ describe("pickLfaCounterpart — 동시 킥오프 슬롯", () => {
     ])
     const betman = row("레알 소시에다드", "RC셀타데비고")
     const cand = {
-      homeTeam: "R. Sociedad",
-      awayTeam: "셀타 비고",
+      ...row("R. Sociedad", "셀타 비고"),
       homeTeamEn: "R. Sociedad",
       awayTeamEn: "Celta Vigo",
     }
@@ -122,8 +129,7 @@ describe("pickLfaCounterpart — 동시 킥오프 슬롯", () => {
       ["RC셀타데비고", "Celta Vigo"],
     ])
     const stranger = {
-      homeTeam: "Osasuna",
-      awayTeam: "헤타페",
+      ...row("Osasuna", "헤타페"),
       homeTeamEn: "Osasuna",
       awayTeamEn: "Getafe",
     }

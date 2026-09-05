@@ -117,7 +117,6 @@ for (var i = 0; i < datas.length; i++) {
     away_team_name: awayName,
     league_code: leagueName || null,
     venue: venue || null,
-    status: 'scheduled',
     home_win_odds: home_win_odds,
     away_win_odds: away_win_odds,
     draw_odds: draw_odds,

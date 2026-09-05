@@ -4,6 +4,7 @@ Betman 옛 회차 데이터 backfill — DB 에 없는 라운드를 winrstDetl �
 
 옛 회차는 베팅 윈도우가 끝나서 gameInfoInq (배당) 응답이 없을 수 있고,
 winrstDetl (결과) 응답만 가능. 따라서 odds 컬럼은 모두 NULL 로 들어감.
+기본은 신규 행만 삽입한다. 기존 결과·상태·배당을 덮으려면 --update-existing을 명시한다.
 
 신규 마켓 (HANDI_VAL=21/23/27, 전반전, 승1패 등) 은 SKIP — Track B 에서 별도 처리.
 
@@ -305,7 +306,7 @@ def ensure_round(gm_ts: str, dry_run: bool) -> str:
     return json.loads(body)[0]["id"]
 
 
-def backfill_round(gm_ts: str, dry_run: bool, insert_only: bool = False) -> dict:
+def backfill_round(gm_ts: str, dry_run: bool, insert_only: bool = True) -> dict:
     items = fetch_winrst(gm_ts)
     if not items:
         return {"gm_ts": gm_ts, "skipped": "no_betman_response"}
@@ -405,7 +406,10 @@ def main() -> int:
     ap.add_argument("gm_ts", nargs="*", help="개별 gm_ts list")
     ap.add_argument("--range", help="ex: 260005-260017")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--insert-only", action="store_true", help="이미 있는 row 는 덮어쓰지 않음")
+    writes = ap.add_mutually_exclusive_group()
+    writes.add_argument("--insert-only", dest="insert_only", action="store_true", help="이미 있는 row 는 덮어쓰지 않음 (기본)")
+    writes.add_argument("--update-existing", dest="insert_only", action="store_false", help="주의: 기존 상태·결과·배당도 덮어씀. 운영자 검토 후 사용")
+    ap.set_defaults(insert_only=True)
     ap.add_argument("--sleep", type=float, default=1.0)
     args = ap.parse_args()
 

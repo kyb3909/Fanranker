@@ -225,6 +225,32 @@ async function handler(req: NextRequest) {
   const findings: Finding[] = []
   const checkErrors: string[] = []
 
+  // 최근 48시간, 킥오프 +2시간이 지나도 scheduled인 행. 원인 단정 없이 복구 후보를 알린다.
+  // 매시 :44 표본 검사이므로 :10~:17 사이 복구되는 짧은 리셋까지 탐지한다고 주장하지 않는다.
+  try {
+    const { data, count, error } = await supabase
+      .from("betman_games")
+      .select("id, home_team_name, away_team_name, match_time, home_score, away_score", {
+        count: "exact",
+      })
+      .eq("status", "scheduled")
+      .gte("match_time", new Date(now - 48 * 3600_000).toISOString())
+      .lt("match_time", new Date(now - 2 * 3600_000).toISOString())
+      .order("match_time")
+      .limit(20)
+    if (error) throw new Error(error.message)
+    if ((count ?? 0) > 0) {
+      findings.push({
+        invariant: "betman_status_regression",
+        fingerprint: "betman_status_regression",
+        summary: `킥오프 +2시간 경과 후에도 scheduled ${count}행 — 일정 동기화의 상태 덮어쓰기·결과 수집 지연·경기 연기를 확인할 것`,
+        detail: { count, sample: data ?? [] },
+      })
+    }
+  } catch (e) {
+    checkErrors.push(`betman_status_regression: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
   // ── 1) 사가 제목 한글 불변식 ──
   try {
     const { data: sagas } = await supabase

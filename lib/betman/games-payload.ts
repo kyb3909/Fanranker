@@ -146,7 +146,7 @@ async function fetchLiveFinishedMatches(
       "id, home_team_name, away_team_name, league_code, match_time, status, home_score, away_score"
     )
     .eq("sport", "축구")
-    .in("status", ["in_progress", "completed"])
+    .in("status", ["scheduled", "in_progress", "completed"])
     .gt("match_time", finishedFloor)
     .lte("match_time", new Date(now + 10 * 60_000).toISOString())
     .neq("home_team_name", "미정")
@@ -155,6 +155,7 @@ async function fetchLiveFinishedMatches(
   const byKey = new Map<string, LiveMatchRow>()
   // 경기 키 → 형제 game_id 전부 (LFA 상세 캐시는 형제 행 중 일부에만 있을 수 있다)
   const idsByKey = new Map<string, string[]>()
+  const withLfaState = new Set<string>()
   for (const g of data ?? []) {
     const key = `${g.home_team_name}_${g.away_team_name}_${g.match_time}`
     idsByKey.set(key, [...(idsByKey.get(key) ?? []), String(g.id)])
@@ -175,36 +176,51 @@ async function fetchLiveFinishedMatches(
     })
   }
 
-  // ── LFA 상세 캐시 합치기 (2026-09-02) — 라이브면 LFA 만, 종료면 betman ?? LFA ──
+  // ── LFA 상세 캐시 합치기 — LIVE/FT는 LFA 증거가 있는 경기만 노출한다 ──
   // 매치센터·일정(get-fixtures)이 이미 쓰는 pickScore 규칙을 밴드에도 적용한다. 종전엔 여기만
   // betman 컬럼을 단독으로 읽어, 경기 중엔 점수 없는 LIVE 를 그렸다(wisetoto 가 채운다고 믿었다).
-  // fail-open: 캐시 조회가 실패하면 betman 값 그대로.
+  // 조회 실패 때 betman 정산 상태를 FT로 대신 표시하지 않는다.
   try {
     const allIds = [...idsByKey.values()].flat()
     if (allIds.length > 0) {
       const { data: details } = await supabase
         .from("match_details_cache")
-        .select("game_id, finished, payload")
+        .select("game_id, finished, payload, updated_at")
         .in("game_id", allIds)
-      const lfaByGame = new Map<string, ReturnType<typeof lfaDetailRow>>()
+      type Evidence = ReturnType<typeof lfaDetailRow> & { live: boolean; updatedAt: number }
+      const lfaByGame = new Map<string, Evidence>()
       for (const row of (details ?? []) as {
         game_id: string
         finished: unknown
         payload: unknown
+        updated_at: string
       }[]) {
-        const ev = lfaDetailRow(row as Parameters<typeof lfaDetailRow>[0])
+        const payload = row.payload as { live?: boolean } | null
+        const ev: Evidence = {
+          ...lfaDetailRow(row as Parameters<typeof lfaDetailRow>[0]),
+          live: payload?.live === true,
+          updatedAt: Date.parse(row.updated_at) || 0,
+        }
         const prev = lfaByGame.get(row.game_id)
         // 형제 행 중 finished 인 쪽이 이긴다 (경기 중 스코어로 굳은 행이 남아 있을 수 있다)
         if (!prev || (!prev.finished && ev.finished)) lfaByGame.set(row.game_id, ev)
       }
       for (const [key, m] of byKey) {
         // 이 경기의 형제 행 중 하나라도 LFA 스코어가 있으면 그것
-        let lfa: ReturnType<typeof lfaDetailRow> | undefined
+        let lfa: Evidence | undefined
         for (const id of idsByKey.get(key) ?? []) {
           const ev = lfaByGame.get(id)
-          if (!ev || ev.homeScore == null || ev.awayScore == null) continue
-          if (!lfa || (!lfa.finished && ev.finished)) lfa = ev
+          if (!ev) continue
+          if (
+            !lfa ||
+            (!lfa.finished && ev.finished) ||
+            (lfa.finished === ev.finished && ev.updatedAt > lfa.updatedAt)
+          )
+            lfa = ev
         }
+        if (!lfa || (!lfa.finished && !lfa.live)) continue
+        withLfaState.add(key)
+        m.status = lfa.finished ? "completed" : "in_progress"
         const live = isLiveState(m.status)
         m.homeScore = pickScore(live, lfa?.homeScore, m.homeScore)
         m.awayScore = pickScore(live, lfa?.awayScore, m.awayScore)
@@ -213,7 +229,7 @@ async function fetchLiveFinishedMatches(
   } catch {
     /* fail-open */
   }
-  const all = [...byKey.values()]
+  const all = [...byKey.values()].filter((m) => withLfaState.has(m.matchKey))
   return {
     liveMatches: all
       .filter((m) => m.status === "in_progress" && m.matchTime >= liveFloor)

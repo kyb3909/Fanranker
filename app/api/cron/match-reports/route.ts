@@ -3,10 +3,9 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { getFixturesForDay, todayKst } from "@/lib/match/get-fixtures"
-import { isMatchPageLeague } from "@/lib/match/leagues"
+import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
-import { hasRecentReportAttempt, recordReportAttempt } from "@/lib/soccerway/report-attempts"
 
 /**
  * 매치 리포트 자동 생성 (2026-08-30).
@@ -57,8 +56,8 @@ async function cronGet(request: NextRequest) {
 
     const nowMs = Date.now()
     const targets = fixtures.filter((f) => {
-      if (!f.gameId || f.status !== "completed") return false
-      if (!isMatchPageLeague(f.leagueCode)) return false
+      if (!f.gameId || f.lfaFinished !== true) return false
+      if (!isMatchExtrasLeague(f.leagueCode)) return false
       if (!isReportWorthyMatch(f.homeTeam, f.awayTeam)) return false
       // 창 밖이면 어차피 원문을 못 찾는다 — 부르면 헛돈만 쓴다
       const age = nowMs - new Date(f.matchTime).getTime()
@@ -80,17 +79,8 @@ async function cronGet(request: NextRequest) {
       if (extras?.report) made++
       else {
         failed.push(`${f.homeTeam} vs ${f.awayTeam}`)
-        // 안쪽 게이트(원문·문단·추출·스코어·검증)는 각자 원장에 남긴다. 아무 행도 안 남았다면
-        // 그 전 단계 — soccerway 경기 해석(resolveMatchEvent) — 에서 끊긴 것이다. 그것도 남긴다.
-        // 종전엔 이 failed[] 가 응답 JSON 에만 담기고 어디에도 저장되지 않았다 (2026-09-02).
-        if (!(await hasRecentReportAttempt(gameId, 10 * 60_000))) {
-          recordReportAttempt(
-            gameId,
-            null,
-            "resolve",
-            "soccerway 경기 해석 실패 (창 안, 매핑 없음)"
-          )
-        }
+        // 사유는 실제로 실패한 게이트에서 기록한다. null은 negative cache일 수도
+        // 있으므로 최근 원장 행의 부재만으로 경기 매핑 실패라고 추측하지 않는다.
       }
     }
 

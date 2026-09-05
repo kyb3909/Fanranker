@@ -8,6 +8,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      lfa_fixtures: {
+        Row: {
+          id: string
+          lfa_match_id: string
+          fixture: Json
+          match_time: string
+          betman_game_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          lfa_match_id: string
+          fixture: Json
+          match_time: string
+          betman_game_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lfa_match_id?: string
+          fixture?: Json
+          match_time?: string
+          betman_game_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       adj_titles: {
         Row: {
           board_slug: string | null

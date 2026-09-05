@@ -22,6 +22,7 @@ import {
 } from "@/lib/soccerway/report-article"
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
 import { recordReportAttempt } from "@/lib/soccerway/report-attempts"
+import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import {
@@ -609,12 +610,17 @@ function cachedReport(
       //    fail-closed 는 그대로다. 눈만 단다.
       const article = await findReportArticle(eventId, candidateUrl, kickoffMs)
       if (!article) {
-        recordReportAttempt(gameId, eventId, "article", "전용 리포트 기사 없음 (soccerway 목록)")
+        await recordReportAttempt(
+          gameId,
+          eventId,
+          "article",
+          "전용 리포트 기사 없음 (soccerway 목록)"
+        )
         return null
       }
       const paragraphs = await fetchArticleParagraphs(article.id, article.slug)
       if (!paragraphs) {
-        recordReportAttempt(gameId, eventId, "paragraphs", `문단 부족: ${article.slug}`)
+        await recordReportAttempt(gameId, eventId, "paragraphs", `문단 부족: ${article.slug}`)
         return null
       }
       const body = { title: article.title, paragraphs }
@@ -622,7 +628,7 @@ function cachedReport(
       // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
       const extracted = await extractEvents(body.title, body.paragraphs)
       if (!extracted) {
-        recordReportAttempt(gameId, eventId, "extract", "사건 추출 결과 없음")
+        await recordReportAttempt(gameId, eventId, "extract", "사건 추출 결과 없음")
         return null
       }
       const lineup = await getLineupForGame(gameId).catch(
@@ -650,7 +656,7 @@ function cachedReport(
        */
       if (!finalScore) {
         // 사유는 getMatchExtras 가 확정 단계에서 이미 남겼다 — 여기선 기사까지 있었다는 것만
-        recordReportAttempt(gameId, eventId, "score", "기사는 있으나 확정 스코어 없음")
+        await recordReportAttempt(gameId, eventId, "score", "기사는 있으나 확정 스코어 없음")
         return null
       }
 
@@ -718,7 +724,12 @@ function cachedReport(
           feedback
         )
         if (!ko) {
-          recordReportAttempt(gameId, eventId, "compose", `작성 LLM 빈 응답 (${attempt + 1}차)`)
+          await recordReportAttempt(
+            gameId,
+            eventId,
+            "compose",
+            `작성 LLM 빈 응답 (${attempt + 1}차)`
+          )
           break
         }
         const gate = numbersGate(ko, sources)
@@ -745,14 +756,14 @@ function cachedReport(
         feedback = verdict.problems
       }
       if (feedback.length > 0) {
-        recordReportAttempt(gameId, eventId, "verify", feedback.slice(0, 3).join(" | "))
+        await recordReportAttempt(gameId, eventId, "verify", feedback.slice(0, 3).join(" | "))
       }
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
     // v15: 원문을 **그 경기 전용 리포트**로 판별 (2026-09-01 — 종전엔 목록 맨 앞을
     //      집어 주말 라운드업이 원문이 됐다). ⚠️ 키를 올려야 v14 가 물고 있던 실패·
     //      라운드업 결과가 즉시 무효가 된다.
-    ["match-report-v15", eventId],
+    ["match-report-v16", eventId, gameId, finalScore ?? "unconfirmed"],
     // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
     { revalidate: 1800 }
   )
@@ -868,18 +879,37 @@ async function lookupLfaScore(
 }
 
 export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
+  // 크론뿐 아니라 페이지·사가 호출에도 동일한 대상 제한을 적용한다.
+  const { data: game, error } = await createServiceRoleClient()
+    .from("betman_games")
+    .select("league_code")
+    .eq("id", gameId)
+    .maybeSingle()
+  if (error || !game || !isMatchExtrasLeague(String(game.league_code ?? ""))) {
+    return { stats: null, report: null }
+  }
   // ⚠️ 저장분을 **해석보다 먼저** 본다. soccerway 해석에는 킥오프 +24시간 창이 걸려 있어,
   //    창을 벗어나면 resolveMatchEvent 가 null 이 되고 리포트·스탯이 통째로 사라졌다.
   //    한 번 만든 리포트는 창과 무관하게 계속 보여야 한다 (2026-08-18 운영자 지적).
   const stored = await loadStoredReport(gameId).catch(() => null)
 
   const resolved = await resolveMatchEvent(gameId)
-  if (!resolved) return { stats: null, report: stored }
+  if (!resolved) {
+    if (!stored) {
+      await recordReportAttempt(
+        gameId,
+        null,
+        "resolve",
+        "soccerway 경기 해석 결과 없음 (창·매핑 확인 필요)"
+      )
+    }
+    return { stats: null, report: stored }
+  }
 
   /**
-   * 확정 스코어 = **산 피드 기준 + 와이즈토토 교차검증** (2026-08-25 운영자).
+   * 확정 스코어 = **LFA 기준 + betman 결과 교차검증**.
    *
-   * 종전엔 `betman_games` 값 하나만 썼다(그 칼럼을 채우는 건 와이즈토토 sync 다).
+   * `betman_games` 점수는 VPS betman 결과 수집이 채운다.
    * 이제 돈 주고 산 피드(LFA)를 기준으로 두고, 둘이 맞을 때만 확정한다.
    *
    * ⚠️ 저장분이 있으면 아예 계산하지 않는다 — 리포트를 다시 만들 일이 없는데
@@ -923,7 +953,7 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
     if (verdict.ok) confirmedScore = verdict.score
     else {
       console.warn(`[match-report] 스코어 확정 실패 (${gameId}): ${verdict.reason}`)
-      recordReportAttempt(gameId, resolved.eventId, "score", verdict.reason)
+      await recordReportAttempt(gameId, resolved.eventId, "score", verdict.reason)
     }
   }
 

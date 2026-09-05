@@ -6,11 +6,11 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
 import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lookup"
-import { teamMatches } from "@/lib/match/pair-fixtures"
+import { matchLfaCounterpart } from "@/lib/match/pair-fixtures"
 import { hasHangul, localizeFromSquad, localizeTimelineName } from "@/lib/lfa/scorer-name"
 
 // 종전 공개 API 유지 — 판정 자체는 순수 모듈이 소유한다 (2026-08-30)
-export { teamMatches }
+export { teamMatches } from "@/lib/match/pair-fixtures"
 import {
   readDayMatches,
   readMatchDetails,
@@ -19,7 +19,10 @@ import {
 } from "@/lib/lfa/persist"
 import { withinBuyWindow } from "@/lib/lfa/day-freshness"
 import { mapLfaStats } from "@/lib/lfa/stat-labels"
+import { reportStatCoverageGap } from "@/lib/lfa/stat-coverage-notice"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
+import { getSupplementalFixture } from "@/lib/match/supplemental-fixtures"
+import { isLfaFinishedStatus } from "@/lib/lfa/status"
 
 /**
  * betman 경기 → live-football-api 경기 해석 + 스코어/스탯 (2026-08-17).
@@ -100,7 +103,7 @@ export const cachedTeamEn = unstable_cache(
  * 배로 뛴다: 5분 → 하루 최대 576회, 1분 → 2,880회. 라이브 중계를 하지 않으므로
  * 5분이면 충분하다 (betman 은 90분 걸린다).
  */
-function cachedDayMatches(dateUtc: string, live: boolean) {
+function cachedDayMatches(dateUtc: string) {
   return unstable_cache(
     async () => {
       const data = await lfaFetch<{ matches?: LfaMatch[] }>("matches", {
@@ -113,10 +116,11 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
       //    빈 페이로드 교훈과 같은 병. 성공했는데 정말 경기가 없는 날(matches: [])은
       //    정상 값이라 그대로 캐시한다.
       if (!data) throw new Error("lfa-day-failed")
-      return data.matches ?? []
+      return { matches: data.matches ?? [], updatedAt: Date.now() }
     },
-    ["lfa-day", dateUtc, live ? "live" : "settled"],
-    { revalidate: live ? 300 : 12 * 3600 }
+    ["lfa-day-v2", dateUtc],
+    // 끝난 날짜의 재구매 중단은 DB 신선도 정책이 담당한다. false 호출로 12시간 굳히지 않는다.
+    { revalidate: 300 }
   )
 }
 
@@ -128,9 +132,9 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
  * 그래서 DB 를 정본 창고로 두고, LFA 는 그 창고를 채우는 쪽으로 역할을 바꾼다.
  * LFA 가 느리거나 죽으면 마지막으로 받은 목록을 쓴다 — 빈 화면보다 낫다.
  */
-export const getDayMatches = cache(async (dateUtc: string, live: boolean): Promise<LfaMatch[]> => {
+const getDaySnapshot = cache(async (dateUtc: string, live: boolean) => {
   const cached = await readDayMatches(dateUtc, live)
-  if (cached && !cached.stale) return cached.matches
+  if (cached && !cached.stale) return cached
 
   // ⚠️⚠️ 살 수 있는 날짜에 **울타리**를 친다 (2026-08-25 크레딧 화재).
   //
@@ -139,19 +143,26 @@ export const getDayMatches = cache(async (dateUtc: string, live: boolean): Promi
   //    9,466일이 쌓였고 matches 호출이 2시간에 1,742건(하루 ~21,000크레딧, 평소의 32배).
   //    창 밖 날짜는 **사지 않는다**. 이미 산 게 있으면 그대로 주고, 없으면 빈 목록이다.
   //    (읽기는 위에서 이미 끝났으므로 캐시 히트는 여기 안 온다.)
-  if (!withinBuyWindow(dateUtc)) return cached?.matches ?? []
+  const fallback = cached ?? { matches: [] as LfaMatch[], updatedAt: 0 }
+  if (!withinBuyWindow(dateUtc)) return fallback
 
   try {
-    const fresh = await cachedDayMatches(dateUtc, live)()
-    if (fresh.length > 0 || !cached) {
-      await writeDayMatches(dateUtc, fresh)
+    const fresh = await cachedDayMatches(dateUtc)()
+    if (cached && fresh.updatedAt <= cached.updatedAt) return cached
+    if (fresh.matches.length > 0 || !cached) {
+      await writeDayMatches(dateUtc, fresh.matches, fresh.updatedAt)
       return fresh
     }
-    return cached.matches
+    return cached
   } catch {
-    return cached?.matches ?? []
+    return fallback
   }
 })
+
+export const getDayMatches = cache(
+  async (dateUtc: string, live: boolean): Promise<LfaMatch[]> =>
+    (await getDaySnapshot(dateUtc, live)).matches
+)
 
 function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
   return unstable_cache(
@@ -177,10 +188,11 @@ function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
       if (!live && retryEmpty && d && (d.events?.length ?? 0) === 0) {
         throw new Error("lfa-details-empty")
       }
-      return d
+      if (!d) throw new Error("lfa-details-failed")
+      return { details: d, updatedAt: Date.now() }
     },
-    // v2: 반쪽 페이로드가 이미 박힌 캐시 무효화 (2026-08-20)
-    ["lfa-details-v2", matchId, live ? "live" : "settled"],
+    // v3: 원본 수집 시각을 함께 캐시한다. 재시도 창 여부도 키에 포함한다.
+    ["lfa-details-v3", matchId, live ? "live" : "settled", String(retryEmpty)],
     // 라이브 60→120초 (2026-08-23 절감): LiveRefresher 도 같은 주기라 화면 체감은
     // 그대로고 크레딧은 절반이 된다. betman 이 90분 걸리는 것에 비하면 여전히 실시간.
     { revalidate: live ? 120 : 6 * 3600 }
@@ -221,6 +233,8 @@ export interface LfaTimelineEvent {
 
 export interface LfaMatchInfo {
   matchId: string
+  /** 원본을 실제로 받은 시각. SWR 재조회로 DB 신선도를 연장하지 않는다. */
+  sourceUpdatedAt?: number
   /** LFA 기준 종료 여부 — betman 이 늦어도 이건 즉시 참이 된다 */
   finished: boolean
   live: boolean
@@ -282,7 +296,9 @@ function utcDate(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
 }
 
-async function resolveMatch(game: BetmanGameKey): Promise<LfaMatch | null> {
+async function resolveMatch(
+  game: BetmanGameKey
+): Promise<(LfaMatch & { sourceUpdatedAt: number }) | null> {
   const leagueId = lfaLeagueId(game.leagueCode)
   if (!leagueId) return null
 
@@ -291,53 +307,29 @@ async function resolveMatch(game: BetmanGameKey): Promise<LfaMatch | null> {
   const now = Date.now()
   const live = now >= ko && now <= ko + 3 * 3600_000
 
-  const all = await getDayMatches(utcDate(game.matchTime), live)
+  const snapshot = await getDaySnapshot(utcDate(game.matchTime), live)
+  const all = snapshot.matches.map((m) => ({ ...m, sourceUpdatedAt: snapshot.updatedAt }))
   const inLeague = all.filter((m) => m.league?.id === leagueId)
   if (inLeague.length === 0) return null
 
-  // ① 킥오프 시각(UTC HH:MM)이 가장 강한 신호다 — 팀명 표기 차이를 타지 않는다.
-  //    (2026-08-16 실측: 매치 페이지 대상 리그 10경기 전부 이 단계에서 확정)
-  const hhmm = new Date(game.matchTime).toISOString().slice(11, 16)
-  const sameTime = inLeague.filter((m) => m.kickoff === hhmm)
+  // LFA-only fixtures already have a provider identity. Never re-match their translated names.
+  const supplemental = await getSupplementalFixture(game.gameId).catch(() => null)
+  if (supplemental) return inLeague.find((m) => m.id === supplemental.lfa_match_id) ?? null
 
   const dict = new Map(await cachedTeamEn())
-  const homeEnKnown = dict.get(game.homeTeam.trim())
-  const awayEnKnown = dict.get(game.awayTeam.trim())
-  const homeEn = homeEnKnown ?? game.homeTeam
-  const awayEn = awayEnKnown ?? game.awayTeam
-  const byName = (pool: LfaMatch[]) =>
-    pool.filter(
-      (m) => teamMatches(m.home?.name ?? "", homeEn) && teamMatches(m.away?.name ?? "", awayEn)
-    )
-
-  if (sameTime.length === 1) {
-    const only = sameTime[0]
-    /**
-     * 후보가 하나여도 **사전이 양 팀을 알면 팀명이 맞아야 붙인다** (2026-09-02).
-     *
-     * 종전엔 시각만 맞으면 확정했다. 두 일정이 어긋나는 날 — 연기, 킥오프 변경, betman 이
-     * 그 경기를 안 파는 날 — 같은 시각의 **남의 경기**에 붙고, 종료 전까지 매치센터·
-     * 라인업·MoTM 이 남의 경기를 보여준다. 결과 대조는 FT 뒤에야 안다.
-     * 14일 실측(136경기): 팀명 대조를 걸어도 135 통과, 1건은 LFA 의 터키식 표기
-     * ("Marsilya")였고 그건 tokens() 의 exonym 정규화로 흡수했다.
-     *
-     * 사전이 한쪽이라도 모르면 종전대로 시각을 믿는다 — 한글명 토큰은 영문과 겹칠 수
-     * 없어 대조 자체가 불가능하고, 그 경우 링크를 끊는 건 "모른다"가 아니라 손실이다.
-     */
-    if (!homeEnKnown || !awayEnKnown) return only
-    if (byName([only]).length === 1) return only
-    // 시각은 같은데 팀이 다르다 = 일정이 어긋난 날. 리그 전체를 이름으로 다시 찾고,
-    // 그래도 정확히 하나가 아니면 붙이지 않는다 (남의 경기 스코어가 최악).
-    const moved = byName(inLeague)
-    return moved.length === 1 ? moved[0] : null
-  }
-
-  // ② 같은 시각에 여러 경기(리그 라운드 동시 킥오프)면 팀명으로 좁힌다.
-  //    시각이 아예 안 맞으면(양쪽 일정 편차) 리그 전체를 후보로 둔다.
-  const pool = sameTime.length > 0 ? sameTime : inLeague
-  const hits = byName(pool)
-  // 정확히 1건일 때만 — 애매하면 붙이지 않는다 (남의 경기 스코어가 최악)
-  return hits.length === 1 ? hits[0] : null
+  // 일정 목록과 동일한 결정기를 사용한다. 시간이 바뀐 경기는 자동으로 범위를 넓히지 않는다.
+  const decision = matchLfaCounterpart(
+    game,
+    inLeague.map((m) => ({
+      homeTeam: m.home?.name ?? "",
+      awayTeam: m.away?.name ?? "",
+      leagueCode: game.leagueCode,
+      matchTime: `${utcDate(game.matchTime)}T${m.kickoff}:00Z`,
+      match: m,
+    })),
+    dict
+  )
+  return decision.candidate?.match ?? null
 }
 
 /* ── 일정 페이지용 하루치 색인 ── */
@@ -403,7 +395,7 @@ export async function getLfaDayIndex(dateKst: string): Promise<Map<string, LfaDa
         const key = dayKey(lid, ko)
         seen.set(key, (seen.get(key) ?? 0) + 1)
         index.set(key, {
-          finished: m.status?.state === "postGame" || m.status?.display === "FT",
+          finished: isLfaFinishedStatus(m.status),
           homeScore: toNum(m.home?.score),
           awayScore: toNum(m.away?.score),
         })
@@ -456,9 +448,8 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
     const m = await resolveMatch(game)
     if (!m) return null
 
-    const state = m.status?.state ?? ""
     const live = m.status?.is_live === true
-    const finished = state === "postGame" || m.status?.display === "FT"
+    const finished = isLfaFinishedStatus(m.status)
     const toNum = (v: string | null | undefined) => {
       const n = Number(v)
       return v != null && v !== "" && Number.isFinite(n) ? n : null
@@ -466,6 +457,7 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
 
     const info: LfaMatchInfo = {
       matchId: m.id,
+      sourceUpdatedAt: m.sourceUpdatedAt,
       finished,
       live,
       minute: null,
@@ -477,30 +469,42 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
       timeline: [],
     }
 
-    // 킥오프 전이면 상세를 부르지 않는다 (크레딧 절약)
-    if (!live && !finished) return info
+    // 목록의 live 전환이 늦더라도 킥오프 이후의 상세는 조회한다. 예열 전에는 사지 않는다.
+    const kickoffMs = new Date(game.matchTime).getTime()
+    const inMatchWindow = Date.now() >= kickoffMs && Date.now() <= kickoffMs + 3.5 * 3600_000
+    if (!live && !finished && !inMatchWindow) return info
 
     // 빈 페이로드 throw(위 cachedDetails 주석)를 fail-open 으로 받는다 — 스코어는 이미 있다.
     // 재조회 창 = 킥오프 후 6시간까지 (LFA 가 몇 시간 뒤 채우는 경우를 덮되, 끝내 안 채우는
     // 경기가 크레딧을 무한히 태우는 것은 막는다 — 2026-08-23 소진 사고)
-    const kickoffMs = new Date(game.matchTime).getTime()
     const retryEmpty = Number.isFinite(kickoffMs) && Date.now() - kickoffMs < 6 * 3600_000
-    const d = await cachedDetails(m.id, live, retryEmpty)().catch(() => null)
-    if (!d) return info
+    const detailSnapshot = await cachedDetails(
+      m.id,
+      !finished && (live || inMatchWindow),
+      retryEmpty
+    )().catch(() => null)
+    if (!detailSnapshot) return info
+    const d = detailSnapshot.details
+    info.sourceUpdatedAt = Math.min(m.sourceUpdatedAt, detailSnapshot.updatedAt)
 
-    if (live) {
-      info.minute = d.header?.status?.minute?.trim() || null
-      // ⚠️⚠️ 스코어는 **뒤로 가지 않는다** (2026-08-25 TTL 분리).
-      //    종전엔 상세(60초)가 목록(5분)보다 새로워서 상세 값으로 덮어썼다. 이제
-      //    목록이 45초, 상세가 90초라 **관계가 뒤집혔다** — 그대로 덮으면 상세의 낡은
-      //    스코어가 목록의 새 골을 지운다(1-1 로 봤다가 0-1 로 뒷걸음).
-      //    그래서 **더 큰 값만** 받는다. 축구 스코어는 단조 증가라 이 규칙이 안전하다
-      //    (VAR 취소는 드물고, 다음 갱신에서 목록이 바로잡는다).
+    // 목록/상세 중 실제로 더 최근에 받은 출처를 쓴다. 최대값 병합은 VAR 취소를 복구할 수 없다.
+    // 홈/원정을 한 쌍으로 옮겨 서로 다른 시점의 점수를 합성하지 않는다.
+    if (detailSnapshot.updatedAt >= m.sourceUpdatedAt) {
+      const detailStatus = d.header?.status
+      if (isLfaFinishedStatus(detailStatus)) {
+        info.finished = true
+        info.live = false
+      } else if (!info.finished && detailStatus?.is_live === true) {
+        info.live = true
+      }
       const dh = toNum(d.header?.home?.score)
       const da = toNum(d.header?.away?.score)
-      if (dh != null && (info.homeScore == null || dh > info.homeScore)) info.homeScore = dh
-      if (da != null && (info.awayScore == null || da > info.awayScore)) info.awayScore = da
+      if (dh != null && da != null) {
+        info.homeScore = dh
+        info.awayScore = da
+      }
     }
+    if (info.live) info.minute = d.header?.status?.minute?.trim() || null
 
     const mapped = mapLfaStats(d.stats ?? null)
     info.stats.push(...mapped.rows)
@@ -511,12 +515,7 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
      *    LFA 가 스탯을 넉넉히 줬는데 우리가 거의 못 알아보면 못 알아본 라벨을 남긴다.
      */
     const given = d.stats?.length ?? 0
-    if (given >= 10 && mapped.rows.length <= 2) {
-      console.warn(
-        `[lfa] 스탯 라벨 대조 실패 — LFA ${given}개 중 ${mapped.rows.length}개만 인식. ` +
-          `match_id=${m.id} 미인식 라벨: ${JSON.stringify(mapped.unknown.slice(0, 30))}`
-      )
-    }
+    await reportStatCoverageGap(m.id, given, mapped.rows.length, mapped.unknown).catch(() => {})
 
     // ⚠️ LFA 이벤트 타입은 표기가 섞인다 — 실측: "Goal"(대문자·공백) 과 "red_card"
     //    (소문자·언더스코어)가 같은 응답에 함께 온다. 반드시 정규화하고 비교할 것.

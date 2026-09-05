@@ -24,6 +24,12 @@ export interface InvariantInfo {
 }
 
 export const INVARIANT_CATALOG: Record<string, InvariantInfo> = {
+  betman_status_regression: {
+    label: "킥오프가 지난 경기가 예정 상태",
+    impact: "라이브 표시와 결과 정산이 지연되거나 누락될 수 있다",
+    action: "VPS 일정 payload의 status 제거 여부와 결과 수집 로그를 확인한다. 경기 연기도 확인한다",
+    adminPath: "/admin/matches",
+  },
   saga_title_korean: {
     label: "사가 제목이 한글이 아님",
     impact: "사가 목록·앵커 글에 영문 제목이 그대로 노출된다",

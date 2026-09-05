@@ -90,7 +90,6 @@ function parseGames(datas: unknown[][]): Array<Record<string, unknown>> {
       away_team_name: (d[15] as string) ?? "",
       league_code: (d[7] as string) || null,
       venue: (d[10] as string) || null,
-      status: "scheduled",
       // 핸디캡 스프레드 (핸디캡 게임용)
       handicap: handicapSpread,
       // 언오버 기준선 (언오버 게임용)

@@ -4,6 +4,9 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { sweepMotmPolls } from "@/lib/motm/poll"
 
+// LFA-only fixtures also fetch confirmed lineups/FT evidence through the shared pipeline.
+export const maxDuration = 120
+
 /**
  * MoTM 폴 생성·마감 스윕 (2026-08-22, 15분 간격 — vercel.json 등록).
  *

@@ -17,6 +17,13 @@ const DATA: BetmanGameData = {
 }
 
 describe("parseGames (keys-based)", () => {
+  it("직접 DB에 넣는 일정 파서도 status·결과 컬럼을 보내지 않는다", () => {
+    for (const game of parseGames(DATA, "round-safe")) {
+      for (const key of ["status", "result", "home_score", "away_score"]) {
+        expect(Object.hasOwn(game, key)).toBe(false)
+      }
+    }
+  })
   it("reads a reasonable number of games (fixture has 619 raw rows; ~66 승N패 skipped + all-zero-odds dropped)", () => {
     const games = parseGames(DATA, "round-x")
     expect(games.length).toBeGreaterThan(300)

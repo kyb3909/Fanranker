@@ -1,6 +1,10 @@
 import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+  getSupplementalFixture,
+  findSupplementalForBetmanIds,
+} from "@/lib/match/supplemental-fixtures"
 
 /**
  * 이 경기의 형제 game_id 전부 (2026-09-02).
@@ -18,24 +22,46 @@ import type { SupabaseClient } from "@supabase/supabase-js"
  */
 export async function getSiblingGameIds(
   supabase: SupabaseClient,
-  gameId: string
+  gameId: string,
+  opts: { strict?: boolean } = {}
 ): Promise<string[]> {
   try {
-    const { data: game } = await supabase
+    const { data: game, error: gameError } = await supabase
       .from("betman_games")
-      .select("home_team_name, away_team_name, match_time")
+      .select("home_team_name, away_team_name, match_time, league_code")
       .eq("id", gameId)
       .maybeSingle()
-    if (!game?.match_time) return [gameId]
-    const { data: siblings } = await supabase
+    if (!gameError && !game?.match_time) {
+      const supplemental = await getSupplementalFixture(gameId)
+      if (supplemental) {
+        if (!supplemental.betman_game_id) return [gameId]
+        const linked = await getSiblingGameIds(supabase, supplemental.betman_game_id, opts)
+        return [...new Set([gameId, ...linked])]
+      }
+    }
+    if (gameError || !game?.match_time) {
+      if (opts.strict) throw new Error("sibling-game-lookup-failed")
+      return [gameId]
+    }
+    const { data: siblings, error: siblingError } = await supabase
       .from("betman_games")
       .select("id")
+      .eq("league_code", game.league_code)
       .eq("home_team_name", game.home_team_name)
       .eq("away_team_name", game.away_team_name)
       .eq("match_time", game.match_time)
     const ids = (siblings ?? []).map((s) => String(s.id))
+    if (opts.strict && (siblingError || !ids.includes(gameId))) {
+      throw new Error("sibling-list-lookup-failed")
+    }
+    const supplemental = await findSupplementalForBetmanIds(ids).catch((error) => {
+      if (opts.strict) throw error
+      return null
+    })
+    if (supplemental) return [...new Set([supplemental.id, ...ids])]
     return ids.length > 0 ? ids : [gameId]
-  } catch {
+  } catch (error) {
+    if (opts.strict) throw error
     return [gameId]
   }
 }

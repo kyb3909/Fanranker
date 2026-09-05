@@ -28,6 +28,7 @@ export const LFA_LEAGUE_IDS: ReadonlyMap<string, string> = new Map([
   ["잉슈퍼컵", "dqr4zpn4l9x9br1c5qv1fb6v9"], // England / Community Shield
   ["독일FA컵", "486rhdgz7yc0sygziht7hje65"], // Germany / Cup — DFB 포칼
   ["이탈FA컵", "6694fff47wqxl10lrd9tb91f8"], // Italy / Cup — 코파 이탈리아
+  ["스페FA컵", "apdwh753fupxheygs8seahh7x"], // Spain / King's Cup — 코파 델 레이
   ["프랑FA컵", "3n9mk5b2mxmq831wfmv6pu86i"], // France / Cup — 쿠프 드 프랑스
   ["프슈퍼컵", "1nsu863daf68kns4l7ou69orf"], // France / Super Cup — 트로페 데 샹피옹
   ["네슈퍼컵", "a9z1becy13xwjmcu8d6mhm66s"], // Holland / Super Cup — 요한 크루이프 실드

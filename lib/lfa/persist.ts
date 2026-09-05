@@ -26,7 +26,7 @@ import { pickDetailsRow } from "@/lib/match/pick-sibling-row"
  *
  * 신선도 기준은 화면이 필요로 하는 만큼만:
  *  · 종료 = 값이 굳었다. 영구 (다시 안 부른다 → 크레딧 0)
- *  · 라이브 = 60초 (경기 분·스코어가 움직인다)
+ *  · 라이브 = 120초 (경기 분·스코어가 움직인다)
  *  · 그 외 = 10분
  */
 
@@ -90,6 +90,7 @@ export async function readMatchDetails(
  */
 export interface CachedDayMatches {
   matches: LfaMatch[]
+  updatedAt: number
   stale: boolean
 }
 
@@ -107,7 +108,7 @@ function trimMatch(m: LfaMatch): LfaMatch {
 
 export async function readDayMatches(
   dateUtc: string,
-  live: boolean
+  _live: boolean
 ): Promise<CachedDayMatches | null> {
   try {
     const { data } = await createServiceRoleClient()
@@ -120,15 +121,19 @@ export async function readDayMatches(
     const updatedAt = new Date(String(data.updated_at)).getTime()
     if (!Number.isFinite(updatedAt)) return null
     const matches = data.payload as unknown as LfaMatch[]
-    // 지난 KST 날은 값이 굳었다 — 다시 안 부른다.
-    const limit = live ? dayFreshnessMs(dateUtc, matches) : Infinity
-    return { matches, stale: Date.now() - updatedAt > limit }
+    // 호출자의 live=false는 종료 증거가 아니다. 킥오프 전 저장분도 시계에 따라 갱신한다.
+    const limit = dayFreshnessMs(dateUtc, matches)
+    return { matches, updatedAt, stale: Date.now() - updatedAt > limit }
   } catch {
     return null
   }
 }
 
-export async function writeDayMatches(dateUtc: string, matches: LfaMatch[]): Promise<void> {
+export async function writeDayMatches(
+  dateUtc: string,
+  matches: LfaMatch[],
+  fetchedAt = Date.now()
+): Promise<void> {
   try {
     await createServiceRoleClient()
       .from("lfa_day_cache")
@@ -137,7 +142,7 @@ export async function writeDayMatches(dateUtc: string, matches: LfaMatch[]): Pro
           date_utc: dateUtc,
           payload: matches.map(trimMatch) as unknown as Record<string, unknown>[],
           match_count: matches.length,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(fetchedAt).toISOString(),
         },
         { onConflict: "date_utc" }
       )
@@ -156,7 +161,7 @@ export async function writeMatchDetails(gameId: string, info: LfaMatchInfo): Pro
           lfa_match_id: info.matchId,
           payload: info as unknown as Record<string, unknown>,
           finished: info.finished,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(info.sourceUpdatedAt ?? Date.now()).toISOString(),
         },
         { onConflict: "game_id" }
       )

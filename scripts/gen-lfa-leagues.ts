@@ -39,6 +39,7 @@ const RULES: [string, string, string, string?][] = [
   // 유럽 컵 — 자국 컵은 이름이 그냥 "Cup", 슈퍼컵은 "Super Cup" 이다
   ["독일FA컵", "Germany", "Cup", "DFB 포칼"],
   ["이탈FA컵", "Italy", "Cup", "코파 이탈리아"],
+  ["스페FA컵", "Spain", "King's Cup", "코파 델 레이"],
   ["프랑FA컵", "France", "Cup", "쿠프 드 프랑스"],
   ["프슈퍼컵", "France", "Super Cup", "트로페 데 샹피옹"],
   ["네슈퍼컵", "Holland", "Super Cup", "요한 크루이프 실드"],
