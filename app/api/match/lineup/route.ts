@@ -3,25 +3,22 @@ import { rateLimit } from "@/lib/rate-limit"
 import { getMatchLineup } from "@/lib/match/get-lineup"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 30
+export const maxDuration = 120
 
 /**
  * GET /api/match/lineup?gameId=<uuid> — 경기 라인업 (표시 전용, 2026-08-16).
  *
  * 응답 status:
- *   none    매핑 없음/창 밖/종목 아님 — 클라는 UI 자체를 그리지 않는다 (영구 조용)
- *   pending 킥오프 창 안인데 아직 미발표 — 클라가 5분 간격 재조회
- *   ready   라인업 확정 — 이후 불변
+ *   none    경기 없음/비활성/일시 오류 — 클라는 조회 창 안에서 재시도
+ *   pending 아직 매핑/발표 대기 — 클라가 60초 간격 재조회
+ *   ready   명단 있음 — projected=false일 때만 확정
  *
- * 킬스위치: MATCH_LINEUP=on 일 때만 동작 (미설정 = 항상 none).
- * soccerway persisted query(_hash) 가 저쪽 배포로 깨지는 날, env 하나로 전 화면을 접는다.
- *
- * DB 쓰기 없음 — proposed 매핑 행 읽기 전용 (골든셋 게이트 무관, lineup-lookup.ts 주석 참조).
+ * 명시적인 MATCH_LINEUP=off만 중지한다. 확정 LFA 명단은 공용 저장소에 보관한다.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function GET(request: NextRequest) {
-  if (process.env.MATCH_LINEUP !== "on") {
+  if (process.env.MATCH_LINEUP === "off") {
     return NextResponse.json({ status: "none" }, { headers: { "Cache-Control": "no-store" } })
   }
 
@@ -39,15 +36,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 저장분 재한글화 + soccerway + LFA 폴백이 전부 공용 진입점 안에 있다
+    // LFA-only acquisition. Cache purchases on the server, not predicted responses at the CDN.
     const res = await getMatchLineup(gameId)
     return NextResponse.json(res, {
       headers: {
-        // ready 는 불변에 가깝다 — 길게. pending/none 은 발표 직후 지연을 줄이려 짧게.
-        "Cache-Control":
-          res.status === "ready"
-            ? "public, s-maxage=600, stale-while-revalidate=1800"
-            : "public, s-maxage=120, stale-while-revalidate=300",
+        "Cache-Control": "no-store",
       },
     })
   } catch {

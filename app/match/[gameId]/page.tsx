@@ -9,9 +9,9 @@ import { BridgeRow } from "@/components/bridge-row"
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
-import { lineupConfidence, lineupConfidenceLabel } from "@/lib/match/lineup-confidence"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
-import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
+import { getStoredMatchReport } from "@/lib/match/stored-report"
+import { getMatchExtras } from "@/lib/soccerway/match-extras"
 import { MatchHeader } from "./match-header"
 import { LiveRefresher } from "./live-refresher"
 import { MatchExtrasSection } from "./match-extras-section"
@@ -114,21 +114,20 @@ export default async function MatchPage({ params }: Props) {
   // 라이브 (2026-08-20 운영자: "경기 중엔 실시간 스탯과 점수가 보여야 매치센터지") —
   // LFA 라이브 스코어·분·스탯을 그대로 낸다. 갱신은 LiveRefresher(120초 router.refresh).
   const live = !finished && lfa?.live === true
+  const hasLfaStats = (lfa?.stats.length ?? 0) > 0
   // 라이브 중 스코어는 LFA 가 정본 — betman 은 종료 후에나 채워진다.
   // ⚠️ 규칙은 `lib/match/score-precedence.ts` 한 곳에 있다. 여기 있던 규칙을 일정
   //    페이지(`/matches`)가 안 따라와서 같은 경기를 두 스코어로 말했다 (감사 P0-2).
   const homeScore = pickScore(live, lfa?.homeScore, match.homeScore)
   const awayScore = pickScore(live, lfa?.awayScore, match.awayScore)
-  const hasLfaStats = (lfa?.stats.length ?? 0) > 0
 
-  // 지면 표기는 사전 통칭 — 원문(match.homeTeam)은 LFA·soccerway 해석 키라 그대로 둔다
+  // 지면 표기는 사전 통칭 — 원문(match.homeTeam)은 LFA 해석 키라 그대로 둔다
   const shortNames = await loadTeamShortMap()
   const homeLabel = displayTeamName(match.homeTeam, shortNames)
   const awayLabel = displayTeamName(match.awayTeam, shortNames)
 
   // "리포트" 탭은 **저장분이 있을 때만** 만든다 (2026-08-19 패널 — 빈 탭 데드엔드).
-  // 없으면 탭 대신 응답 후 백그라운드로 생성을 걸어 둔다(after) — 다음 방문자부터 보인다.
-  // 예외: LFA 스탯이 없는 경기는 이 섹션이 soccerway 스탯 폴백을 겸하므로 탭을 유지한다.
+  // 리포트만 Soccerway 원문으로 생성한다. 라인업·실시간 스탯의 공급자는 LFA다.
   // 저장 라인업만 선적재한다. 없는 명단·자가 수리는 위 after 및 라인업 API가 채운다.
   const lineupRaw = await getStoredMatchLineup(match.gameId).catch(() => null)
   // 저장 라인업은 킥오프 스냅샷이라 인시던트가 없다 — LFA 타임라인을 입힌다
@@ -139,9 +138,13 @@ export default async function MatchPage({ params }: Props) {
       : lineupRaw
 
   const extrasLeague = finished && match.source !== "lfa" && isMatchExtrasLeague(match.leagueCode)
-  const storedReport = extrasLeague ? await hasStoredReport(match.gameId) : false
+  const storedReport = extrasLeague
+    ? await getStoredMatchReport(match.gameId).catch(() => null)
+    : null
   if (extrasLeague && !storedReport) {
-    after(() => getMatchExtras(match.gameId).catch(() => {}))
+    after(async () => {
+      await getMatchExtras(match.gameId).catch(() => null)
+    })
   }
 
   // 불판 — 이 경기의 라이브 스레드 게시물 (크론이 라인업 발표 시 생성, lib/match/thread.ts).
@@ -272,37 +275,6 @@ export default async function MatchPage({ params }: Props) {
               }
               lineup={
                 <section>
-                  {/* ⚠️ **예상인지 확정인지 먼저 말한다** (2026-08-25 외부 감사).
-                      종전엔 선발 11명을 아무 단서 없이 보여줬다. 실측으로 발렌시아전
-                      라인업은 킥오프 **22시간 전**에 받아온 것 — 공식 발표(킥오프 1시간
-                      전)보다 한참 이르니 확정일 수가 없는데 화면은 확정처럼 보였다.
-                      축구 팬에게 예상과 확정은 다른 정보다. 구분이 없으면 라인업 자체가
-                      쓸모없어지고, 나아가 데이터 전체를 안 믿게 된다. */}
-                  {lineupInitial?.status === "ready" &&
-                    (() => {
-                      const confidence = lineupConfidence({
-                        kickoff: lineupInitial.kickoff,
-                        fetchedAt: lineupInitial.fetchedAt,
-                        projected: lineupInitial.projected,
-                      })
-                      const predicted = confidence === "predicted"
-                      return (
-                        <p
-                          className="mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold"
-                          style={{
-                            background: predicted
-                              ? "color-mix(in srgb, var(--wc-gold) 18%, transparent)"
-                              : "color-mix(in srgb, var(--wc-burgundy) 8%, transparent)",
-                            color: predicted ? "var(--wc-ink)" : "var(--wc-burgundy)",
-                          }}
-                        >
-                          {lineupConfidenceLabel(confidence)}
-                          <span className="font-medium" style={{ color: "var(--wc-mute)" }}>
-                            {predicted ? "· 공식 발표 전이라 바뀔 수 있어요" : "· 공식 발표"}
-                          </span>
-                        </p>
-                      )
-                    })()}
                   <MatchLineup
                     gameId={match.gameId}
                     matchTime={match.matchTime}
@@ -324,16 +296,10 @@ export default async function MatchPage({ params }: Props) {
                 motmPoll ? <MotmCard pollId={motmPoll.pollId} /> : null
               }
               report={
-                /* 저장 리포트가 있거나, LFA 스탯이 없어 soccerway 스탯 폴백이 필요한 경우만.
-                 그 외에는 탭 자체를 만들지 않는다 — 빈 패널 데드엔드 방지 (2026-08-19). */
-                extrasLeague && (storedReport || !hasLfaStats) ? (
+                /* 저장 리포트만 제공한다. 스탯은 LFA 탭에서만 표시한다. */
+                extrasLeague && storedReport ? (
                   <Suspense fallback={null}>
-                    <MatchExtrasSection
-                      gameId={match.gameId}
-                      homeTeam={homeLabel}
-                      awayTeam={awayLabel}
-                      withStats={!hasLfaStats}
-                    />
+                    <MatchExtrasSection gameId={match.gameId} />
                   </Suspense>
                 ) : null
               }

@@ -14,11 +14,8 @@ export { localizePlayerName, tidyFeedName, type SquadName }
 /**
  * live-football-api 라인업 (2026-08-18 운영자: "라인업도 없고 서비스가 일관성이 없다").
  *
- * ## 왜 필요한가
- * soccerway 경로는 킥오프 −150분 ~ +24시간 창 안에서만 동작한다. 창을 벗어나면
- * 라인업·리포트·스탯이 **한꺼번에** 사라져, 같은 경기 페이지가 열어보는 시각에 따라
- * 다르게 보였다. LFA 는 끝난 경기의 라인업도 계속 준다 (실측: 36시간 지난 경기 OK).
- * 그래서 soccerway 가 침묵할 때 여기서 받아온다.
+ * 경기 라인업의 유일한 외부 공급자. 베트맨 일정도 검증된 LFA match_id로 조회한다.
+ * 예상 명단은 단기 캐시만 쓰며 확정 명단은 공용 저장소에 보존한다.
  *
  * ## 이름
  * LFA 는 "J. Agirrezabala" 식 축약형을 준다. 스쿼드 사전(`team_squads`)의 그 팀 선수와
@@ -28,6 +25,7 @@ export { localizePlayerName, tidyFeedName, type SquadName }
  */
 
 export interface LfaLineupPerson {
+  id?: string
   label: string
   number: number | null
   roman: string | null
@@ -79,6 +77,7 @@ function toPeople(list: LfaRawPlayer[] | undefined, squad: SquadName[]): LfaLine
     if (!name) continue
     const n = Number(p.number)
     out.push({
+      ...(p.id ? { id: p.id } : {}),
       label: localizePlayerName(name, squad),
       number: Number.isFinite(n) && n > 0 ? n : null,
       roman: name,

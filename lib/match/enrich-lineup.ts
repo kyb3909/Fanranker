@@ -1,5 +1,5 @@
 import { foldLatin } from "@/lib/text/fold-latin"
-import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
+import type { LineupResponse } from "@/lib/match/lineup-types"
 import type { LfaTimelineEvent } from "@/lib/lfa/match"
 
 /**
@@ -16,6 +16,7 @@ import type { LfaTimelineEvent } from "@/lib/lfa/match"
  */
 
 interface Player {
+  id?: string
   label: string
   roman?: string | null
   number?: number | null
@@ -38,7 +39,12 @@ function toks(s: string): string[] {
 }
 
 /** 이름 → 선수 1명 (정확 라벨 → roman 토큰). 유일하지 않으면 null */
-function findPlayer(name: string | undefined, pool: Player[]): Player | null {
+function findPlayer(name: string | undefined, pool: Player[], id?: string): Player | null {
+  if (id) {
+    const hits = pool.filter((p) => p.id === id)
+    if (hits.length === 1) return hits[0]
+    if (hits.length > 1 || pool.some((p) => p.id)) return null
+  }
   const n = name?.trim()
   if (!n) return null
   const exact = pool.filter((p) => p.label === n)
@@ -77,8 +83,8 @@ export function enrichLineupWithTimeline(
     const min = `${e.minute}'`
     if (e.kind === "sub") {
       const pool = side(e.side)
-      const out = findPlayer(e.player, pool)
-      const inp = findPlayer(e.inPlayer, pool)
+      const out = findPlayer(e.player, pool, e.playerId)
+      const inp = findPlayer(e.inPlayer, pool, e.inPlayerId)
       if (out) {
         out.subOut = min
         if (inp) out.subPartner = inp.label
@@ -90,7 +96,7 @@ export function enrichLineupWithTimeline(
       continue
     }
     if (e.kind === "goal" || e.kind === "pen") {
-      const p = findPlayer(e.player, side(e.side))
+      const p = findPlayer(e.player, side(e.side), e.playerId)
       if (!p) continue
       p.goals = (p.goals ?? 0) + 1
       p.goalMinutes = [...(p.goalMinutes ?? []), min]
@@ -98,12 +104,12 @@ export function enrichLineupWithTimeline(
     }
     if (e.kind === "og") {
       // 자책골 — 실축자는 득점 인정 팀의 **상대** 로스터에 있다 (getLfaMatchInfo 규약)
-      const p = findPlayer(e.player, side(e.side === "home" ? "away" : "home"))
+      const p = findPlayer(e.player, side(e.side === "home" ? "away" : "home"), e.playerId)
       if (p) p.ownGoals = (p.ownGoals ?? 0) + 1
       continue
     }
     if (e.kind === "red") {
-      const p = findPlayer(e.player, side(e.side))
+      const p = findPlayer(e.player, side(e.side), e.playerId)
       if (p) p.red = true
     }
     // yellow 는 라인업 표기 관행에 없다 (전광판·통계 탭의 일)

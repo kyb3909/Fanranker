@@ -102,6 +102,9 @@ export async function sweepMatchThreads(opts?: {
     const away = displayTeamName(f.awayTeam, shortNames)
     const title = threadTitle(home, away, leagueLabel(f.leagueCode))
 
+    // An existing post must not stop acquisition of the confirmed LFA roster.
+    const lineup = await getMatchLineup(gameId).catch(() => null)
+
     // 어느 형제 행에 만들어졌든 재사용한다. 같은 대진이어도 킥오프가 다르면 새 경기다.
     const { data: existing, error: existingError } = await supabase
       .from("posts")
@@ -113,7 +116,6 @@ export async function sweepMatchThreads(opts?: {
       continue
     }
 
-    const lineup = await getMatchLineup(gameId).catch(() => null)
     if (!lineup || lineup.status !== "ready" || lineup.projected === true) {
       result.skipped.push({ gameId, reason: "lineup-not-ready" })
       continue

@@ -6,7 +6,6 @@ import { isMatchPageLeague } from "@/lib/match/leagues"
 import { getMatchLineup } from "@/lib/match/get-lineup"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
-import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
 // 후보판 계산은 순수 모듈이 소유한다 — env 없이 시험이 그대로 부른다 (2026-08-31)
 import {
   buildMotmOptions,
@@ -254,21 +253,10 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     const prior = priorByKey.get(c.matchKey)
     if (prior && !needsRepair(prior)) continue
     try {
-      // 라인업 — 저장분 우선(형제 행 전체에서), 없으면 단일 진입점(getMatchLineup:
-      // 저장 → soccerway → LFA 폴백, 확보 시 저장까지)으로 한 번 시도
-      const { data: stored } = await supabase
-        .from("match_lineups")
-        .select("payload")
-        .in("game_id", c.gameIds)
-      // ⚠️ 먼저 걸린 행이 아니라 **벤치가 있는 행**을 쓴다 — 형제 행마다 소스가 갈려서
-      //    한쪽은 벤치가 있고 한쪽은 없다 (2026-08-31 첼시전).
-      let lineup = pickRichestLineup((stored ?? []).map((s) => s.payload as LineupResponse | null))
-      if (!lineup || lineup.home.bench.length + lineup.away.bench.length === 0) {
-        // 저장분이 없거나 전부 반쪽이면 단일 진입점으로 — 거기서 자가 수리가 돈다
-        const fetched = await getMatchLineup(c.gameIds[0]).catch(() => null)
-        if (fetched && fetched.status === "ready") lineup = pickRichestLineup([fetched, lineup])
-      }
-      if (!lineup || (lineup.status === "ready" && lineup.projected === true)) {
+      // The shared LFA-only entrypoint rejects legacy Soccerway snapshots.
+      const fetched = await getMatchLineup(c.gameIds[0]).catch(() => null)
+      const lineup = fetched?.status === "ready" ? fetched : null
+      if (!lineup || lineup.projected === true) {
         skipped.push({ matchKey: c.matchKey, reason: "no_lineup" })
         continue
       }

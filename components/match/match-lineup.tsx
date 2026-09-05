@@ -1,21 +1,21 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { FormationPitch, canShowFormation } from "@/components/match/formation-pitch"
 import { EmptyScene } from "@/components/empty-scene"
 import { Button } from "@/components/ui/button"
+import { lineupConfidence, lineupConfidenceLabel } from "@/lib/match/lineup-confidence"
 
 /**
  * 경기 라인업 (표시 전용, 2026-08-16) — /api/match/lineup 소비자.
  *
  * ## 조용함이 계약이다
  * - 킥오프 **150분 전보다 이르면** 호출하지 않는다 (있을 리 없는 것을 묻지 않는다).
- *   뒤로는 상한이 없다 — 지난 경기 라인업은 저장분/LFA 로 계속 나온다.
- * - `ready` 가 아니면 **아무것도 렌더하지 않는다** — 스켈레톤·"라인업 없음" 문구 금지.
- *   라인업은 곁들이 정보라 없음/실패가 화면에 보이는 순간 카드 전체가 고장나 보인다.
- * - `pending` 이면 5분 간격 재조회 (탭이 숨겨져 있으면 스킵, 최대 24회 = 2시간).
- *   `ready` 를 받으면 즉시 정지 — 발표된 라인업은 불변이다.
+ *   자동 조회는 킥오프 +48시간까지. 그 이후에도 서버가 전달한 저장분은 표시한다.
+ * - 곁들이 카드에서는 미발표 UI를 숨기고 매치센터에서는 대기를 안내한다.
+ * - 예상/대기/일시 실패는 60초 간격 재조회하며 숨겨진 탭은 쉰다.
+ *   명시적인 projected=false일 때만 정지하며, 서버 갱신의 인시던트는 계속 반영한다.
  *
  * 표기: 사전에 있으면 한글, 없으면 로마자 (운영자 결정: 혼용 허용).
  */
@@ -108,15 +108,18 @@ interface DisplaySide {
 type LineupResponse =
   | { status: "none" }
   | { status: "pending"; kickoff: string }
-  | { status: "ready"; kickoff: string; home: DisplaySide; away: DisplaySide; fetchedAt: string }
+  | {
+      status: "ready"
+      kickoff: string
+      home: DisplaySide
+      away: DisplaySide
+      fetchedAt: string
+      projected?: boolean
+    }
 
 const WINDOW_BEFORE_MS = 150 * 60 * 1000
-// ⚠️ 종전엔 킥오프 +24시간 상한이 있었다. 서버의 soccerway 창과 짝을 이루던 값인데,
-//    그 창이 화면까지 꺼버려 하루 지난 경기를 열면 라인업 탭이 텅 비었다
-//    (2026-08-18 운영자: "서비스가 너무 일관성이 없다"). 이제 상한이 없다 —
-//    확보한 라인업은 `match_lineups` 에 남고, 없으면 LFA 가 지난 경기도 준다.
-const POLL_MS = 5 * 60 * 1000
-const MAX_POLLS = 24
+// 브라우저 재시도 간격이며 실제 유료 구매는 서버 공용 캐시에서 제한한다.
+const POLL_MS = 60_000
 
 interface MatchLineupProps {
   gameId: string
@@ -149,53 +152,79 @@ export function MatchLineup({
   withPitch = false,
   alwaysOpen = false,
 }: MatchLineupProps) {
-  const [data, setData] = useState<LineupResponse | null>(initial ?? null)
+  const [state, setState] = useState({ gameId, initial, data: initial ?? null })
+  // router.refresh preserves this component. Consume changed server props immediately,
+  // without replacing a confirmed roster with an older pending/projected response.
+  if (gameId !== state.gameId) {
+    setState({ gameId, initial, data: initial ?? null })
+  } else if (initial !== state.initial) {
+    const confirmed = state.data?.status === "ready" && state.data.projected === false
+    const replace = initial?.status === "ready" && (!confirmed || initial.projected === false)
+    setState({ gameId, initial, data: replace ? initial : state.data })
+  }
+  const data = state.data
+  const isConfirmed = data?.status === "ready" && data.projected === false
   const [open, setOpen] = useState(defaultOpen)
   const [view, setView] = useState<"pitch" | "list">("pitch")
   const [activeSide, setActiveSide] = useState(0)
-  const polls = useRef(0)
 
   useEffect(() => {
-    // 서버가 이미 확정 라인업을 넘겼으면 조회할 것이 없다 (발표된 라인업은 불변)
-    if (initial?.status === "ready") return
+    // Only explicit confirmed lineups stop acquisition. Predicted 'ready' is not final.
+    if (isConfirmed) return
     const kickoff = new Date(matchTime).getTime()
     if (!Number.isFinite(kickoff)) return
     const inWindow = () => {
       const now = Date.now()
-      return now >= kickoff - WINDOW_BEFORE_MS
+      return now >= kickoff - WINDOW_BEFORE_MS && now <= kickoff + 48 * 3600_000
     }
-    if (!inWindow()) return
 
     let stopped = false
     let timer: ReturnType<typeof setTimeout> | null = null
+    let loading = false
 
     const load = async () => {
-      if (stopped) return
-      if (document.hidden) {
-        // 백그라운드 탭에서는 부르지 않는다 — 돌아오면 다음 틱이 잡는다
+      if (stopped || loading) return
+      if (timer) clearTimeout(timer)
+      if (Date.now() > kickoff + 48 * 3600_000) return
+      if (document.hidden || !inWindow()) {
         timer = setTimeout(load, POLL_MS)
         return
       }
+      loading = true
+      let confirmed = false
       try {
-        const res = await fetch(`/api/match/lineup?gameId=${gameId}`)
+        const res = await fetch(`/api/match/lineup?gameId=${gameId}&v=lfa`, { cache: "no-store" })
+        if (!res.ok) throw new Error("lineup-request-failed")
         const j = (await res.json()) as LineupResponse
         if (stopped) return
-        setData(j)
-        if (j.status === "pending" && polls.current < MAX_POLLS && inWindow()) {
-          polls.current += 1
-          timer = setTimeout(load, POLL_MS)
+        if (j.status === "ready") {
+          confirmed = j.projected === false
+          setState((previous) => ({
+            ...previous,
+            data:
+              previous.data?.status === "ready" && previous.data.projected === false && !confirmed
+                ? previous.data
+                : j,
+          }))
         }
-        // ready → 불변, 정지. none → 영구 조용.
       } catch {
-        // fail-open — 조용히 포기 (재시도는 pending 응답을 받았을 때만)
+        // Transient failure must not erase an existing roster or permanently stop retries.
+      } finally {
+        loading = false
+        if (!stopped && !confirmed) timer = setTimeout(load, POLL_MS)
       }
     }
+    const onVisible = () => {
+      if (!document.hidden) void load()
+    }
+    document.addEventListener("visibilitychange", onVisible)
     void load()
     return () => {
       stopped = true
       if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", onVisible)
     }
-  }, [gameId, matchTime, initial])
+  }, [gameId, matchTime, isConfirmed])
 
   if (data?.status !== "ready") {
     // 매치 페이지(alwaysOpen)에서는 빈 방을 남기지 않는다 (2026-08-20 폴리시 2-1) —
@@ -238,6 +267,14 @@ export function MatchLineup({
 
   return (
     <div className={compact ? "mt-2" : "mt-2.5"}>
+      {alwaysOpen && (
+        <p className="mb-3 text-[12px] font-semibold" style={{ color: "var(--wc-mute)" }}>
+          {lineupConfidenceLabel(lineupConfidence(data))}
+          {lineupConfidence(data) === "predicted"
+            ? " · 공식 발표 전이라 바뀔 수 있어요"
+            : " · 공식 발표"}
+        </p>
+      )}
       {!alwaysOpen && (
         <Button
           type="button"

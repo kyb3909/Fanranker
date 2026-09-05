@@ -16,6 +16,7 @@ const names = [
 ]
 export const previewLineup = {
   status: "ready" as const,
+  projected: false,
   kickoff: "2026-09-05T14:00:00Z",
   fetchedAt: "2026-09-05T13:10:00Z",
   home: {

@@ -5,7 +5,8 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
-import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lookup"
+import { getLfaLineup } from "@/lib/lfa/lineups"
+import { loadStoredLfaLineup } from "@/lib/match/lineup-store"
 import { matchLfaCounterpart } from "@/lib/match/pair-fixtures"
 import { hasHangul, localizeFromSquad, localizeTimelineName } from "@/lib/lfa/scorer-name"
 
@@ -218,6 +219,8 @@ export interface LfaStatRow {
  * 재방문 1순위가 "완전한 타임라인" — 이제 전부 싣는다. 선수 평점·히트맵 제외 정책과 무관.
  */
 export interface LfaTimelineEvent {
+  playerId?: string
+  inPlayerId?: string
   minute: string
   side: "home" | "away"
   kind: "goal" | "pen" | "og" | "yellow" | "red" | "sub"
@@ -296,7 +299,7 @@ function utcDate(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
 }
 
-async function resolveMatch(
+export async function resolveLfaMatch(
   game: BetmanGameKey
 ): Promise<(LfaMatch & { sourceUpdatedAt: number }) | null> {
   const leagueId = lfaLeagueId(game.leagueCode)
@@ -445,7 +448,7 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
 /** 실제 LFA 조회 — 위 캐시 계층이 미스일 때만 탄다 */
 async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | null> {
   try {
-    const m = await resolveMatch(game)
+    const m = await resolveLfaMatch(game)
     if (!m) return null
 
     const live = m.status?.is_live === true
@@ -542,9 +545,15 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
           x.kind !== null
       )
     // 라인업은 실을 사건이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
-    const lineup: LineupResponse = rawEvents.length
-      ? await getLineupForGame(game.gameId).catch(() => ({ status: "none" }) as LineupResponse)
-      : { status: "none" }
+    const storedLineup = rawEvents.length
+      ? await loadStoredLfaLineup(game.gameId, m.id).catch(() => null)
+      : null
+    const lineup =
+      storedLineup?.status === "ready"
+        ? storedLineup
+        : rawEvents.length
+          ? await getLfaLineup(m.id, game.homeTeam, game.awayTeam).catch(() => null)
+          : null
 
     // 라인업이 없어도(=지난 경기) 스쿼드 사전으로 한글화한다. 사건이 있을 때만 부른다.
     const [homeSquad, awaySquad] = rawEvents.length
@@ -552,15 +561,14 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
       : [[], []]
 
     // 이름 한글화 한 사람분 — 판정은 순수 모듈이 소유한다 (백필 CLI 가 같은 규칙을 쓴다)
-    const roster =
-      lineup.status === "ready"
-        ? [
-            ...lineup.home.starters,
-            ...lineup.home.bench,
-            ...lineup.away.starters,
-            ...lineup.away.bench,
-          ]
-        : []
+    const roster = lineup
+      ? [
+          ...lineup.home.starters,
+          ...lineup.home.bench,
+          ...lineup.away.starters,
+          ...lineup.away.bench,
+        ]
+      : []
     const localizeName = (raw: string | undefined, side: "home" | "away"): string | null =>
       localizeTimelineName(raw, roster, side === "away" ? awaySquad : homeSquad)
 
@@ -576,6 +584,8 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
           side: e.side,
           kind,
           player: out ?? "",
+          ...(e.detail?.out?.id ? { playerId: e.detail.out.id } : {}),
+          ...(e.detail?.in?.id ? { inPlayerId: e.detail.in.id } : {}),
           ...(inp ? { inPlayer: inp } : {}),
         })
         continue
@@ -591,6 +601,7 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
         side: e.side,
         kind,
         player,
+        ...(e.detail?.player?.id ? { playerId: e.detail.player.id } : {}),
         ...(assist ? { assist } : {}),
         ...(kind === "goal" || kind === "pen" || kind === "og"
           ? { score: e.detail?.score ?? "" }

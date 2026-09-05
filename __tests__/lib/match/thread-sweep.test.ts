@@ -92,6 +92,7 @@ describe("불판 생성", () => {
     mocks.existing = [{ id: "old-post" }]
     await sweepMatchThreads()
     expect(mocks.insert).not.toHaveBeenCalled()
+    expect(mocks.lineup).toHaveBeenCalledWith("market-a")
   })
   it("기존 글 조회 실패는 삽입 허가가 아니다", async () => {
     mocks.postError = { message: "unavailable" }
