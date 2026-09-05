@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest"
+import type { ComponentProps } from "react"
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import "@testing-library/jest-dom/vitest"
 import { MatchStatComparison } from "@/components/match/match-stat-comparison"
 import { MatchLineup } from "@/components/match/match-lineup"
-import { canShowFormation, parseFormation } from "@/components/match/formation-pitch"
 import { PRIMARY_MATCH_STATS, splitMatchStats } from "@/lib/match/stat-presentation"
 import { previewLineup, previewStats } from "@/app/dev/match-preview/fixtures"
 
@@ -47,27 +47,28 @@ describe("경기 스탯 표시 정책", () => {
   })
 })
 describe("라인업 보기", () => {
-  const lineup = (initial = previewLineup) => (
-    <MatchLineup
-      gameId="preview"
-      matchTime={initial.kickoff}
-      initial={initial}
-      withPitch
-      alwaysOpen
-    />
-  )
-  it("기본 포메이션과 명단이 중복 노출되지 않고 전환할 수 있다", () => {
+  const lineup = (
+    initial: Extract<
+      ComponentProps<typeof MatchLineup>["initial"],
+      { status: "ready" }
+    > = previewLineup
+  ) => <MatchLineup gameId="preview" matchTime={initial.kickoff} initial={initial} alwaysOpen />
+  it("포메이션과 전환 버튼 없이 선발 명단과 기록을 바로 표시한다", () => {
     render(lineup())
-    expect(screen.getByRole("region", { name: "홈 유나이티드 포메이션" })).toBeInTheDocument()
-    expect(screen.queryByRole("list", { name: "홈 유나이티드 선발 선수" })).toBeNull()
-    fireEvent.click(screen.getByRole("button", { name: "선수 명단" }))
+    expect(screen.queryByRole("group", { name: "라인업 보기 방식" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "포메이션" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "선수 명단" })).toBeNull()
+    expect(screen.queryByText(previewLineup.home.formation!)).toBeNull()
+    expect(screen.queryByText(previewLineup.away.formation!)).toBeNull()
     expect(screen.queryByRole("region", { name: "홈 유나이티드 포메이션" })).toBeNull()
     expect(
       within(screen.getByRole("list", { name: "홈 유나이티드 선발 선수" })).getAllByRole("listitem")
     ).toHaveLength(11)
     expect(screen.getByText("23′")).toBeVisible()
-    fireEvent.click(screen.getByRole("button", { name: "포메이션" }))
-    expect(screen.getByRole("region", { name: "홈 유나이티드 포메이션" })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole("list", { name: "어웨이 시티 선발 선수" })).getAllByRole("listitem")
+    ).toHaveLength(11)
+    expect(screen.getByText(/홈 유나이티드 · 벤치/)).toBeInTheDocument()
   })
   it("팀 선택 상태를 버튼에 표시한다", () => {
     render(lineup())
@@ -79,7 +80,7 @@ describe("라인업 보기", () => {
       "false"
     )
   })
-  it("한 팀의 선발이 11명이 아니면 명단으로 안전하게 대체한다", () => {
+  it("한 팀의 선발이 11명이 아니어도 받은 명단을 표시한다", () => {
     render(
       lineup({
         ...previewLineup,
@@ -89,11 +90,9 @@ describe("라인업 보기", () => {
     expect(screen.queryByRole("button", { name: "포메이션" })).toBeNull()
     expect(screen.getByRole("list", { name: "홈 유나이티드 선발 선수" })).toBeInTheDocument()
   })
-  it("합계가 맞지 않는 포메이션은 배치를 만들어내지 않는다", () => {
-    expect(parseFormation("4-2-3-1")).toEqual([4, 2, 3, 1])
-    expect(parseFormation("4–3–3")).toEqual([4, 3, 3])
-    for (const formation of [null, "", "4-4-3", "0-5-5", "unknown"]) {
-      expect(canShowFormation({ ...previewLineup.home, formation })).toBe(false)
-    }
+  it("포메이션이 없어도 명단만 표시하고 미제공 문구는 노출하지 않는다", () => {
+    render(lineup({ ...previewLineup, home: { ...previewLineup.home, formation: null } }))
+    expect(screen.getByRole("list", { name: "홈 유나이티드 선발 선수" })).toBeInTheDocument()
+    expect(screen.queryByText(/포메이션/)).toBeNull()
   })
 })

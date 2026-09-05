@@ -280,7 +280,6 @@ export default async function MatchPage({ params }: Props) {
                     matchTime={match.matchTime}
                     initial={lineupInitial}
                     alwaysOpen
-                    withPitch
                   />
                 </section>
               }

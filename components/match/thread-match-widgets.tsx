@@ -54,7 +54,7 @@ export async function ThreadMatchWidgets({ gameId }: { gameId: string }) {
         </CollapsibleSection>
       )}
       {lineup?.status === "ready" && (
-        <MatchLineup gameId={match.gameId} matchTime={match.matchTime} initial={lineup} withPitch />
+        <MatchLineup gameId={match.gameId} matchTime={match.matchTime} initial={lineup} />
       )}
     </div>
   )

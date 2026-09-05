@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { FormationPitch, canShowFormation } from "@/components/match/formation-pitch"
 import { EmptyScene } from "@/components/empty-scene"
 import { Button } from "@/components/ui/button"
 import { lineupConfidence, lineupConfidenceLabel } from "@/lib/match/lineup-confidence"
@@ -134,11 +133,6 @@ interface MatchLineupProps {
   compact?: boolean
   /** 매치 페이지처럼 라인업이 주인공인 곳은 접지 않고 바로 펼친다 (2026-08-16) */
   defaultOpen?: boolean
-  /**
-   * 포메이션/명단 보기 전환을 제공한다 (매치 센터 전용).
-   * 포메이션 파싱이 실패하면 명단만 표시한다.
-   */
-  withPitch?: boolean
   /** 토글 없이 항상 펼친 상태로 — 탭 안에서는 접기 버튼이 군더더기다 */
   alwaysOpen?: boolean
 }
@@ -149,7 +143,6 @@ export function MatchLineup({
   initial,
   compact = false,
   defaultOpen = false,
-  withPitch = false,
   alwaysOpen = false,
 }: MatchLineupProps) {
   const [state, setState] = useState({ gameId, initial, data: initial ?? null })
@@ -165,7 +158,6 @@ export function MatchLineup({
   const data = state.data
   const isConfirmed = data?.status === "ready" && data.projected === false
   const [open, setOpen] = useState(defaultOpen)
-  const [view, setView] = useState<"pitch" | "list">("pitch")
   const [activeSide, setActiveSide] = useState(0)
 
   useEffect(() => {
@@ -262,8 +254,6 @@ export function MatchLineup({
     return null
   }
   const shown = alwaysOpen || open
-  const pitchAvailable = withPitch && canShowFormation(data.home) && canShowFormation(data.away)
-  const showPitch = pitchAvailable && view === "pitch"
 
   return (
     <div className={compact ? "mt-2" : "mt-2.5"}>
@@ -289,40 +279,6 @@ export function MatchLineup({
       )}
       {shown && (
         <div className="space-y-4">
-          {withPitch && (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-[16px] font-bold" style={{ color: "var(--wc-ink)" }}>
-                  라인업
-                </h2>
-                <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute)" }}>
-                  {showPitch ? "선발 배치 · 교체 기록은 선수 명단에서" : "선발 선수와 교체 기록"}
-                </p>
-              </div>
-              {pitchAvailable && (
-                <div role="group" aria-label="라인업 보기 방식" className="flex gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={showPitch ? "default" : "ghost"}
-                    aria-pressed={showPitch}
-                    onClick={() => setView("pitch")}
-                  >
-                    포메이션
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={!showPitch ? "default" : "ghost"}
-                    aria-pressed={!showPitch}
-                    onClick={() => setView("list")}
-                  >
-                    선수 명단
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
           <div role="group" aria-label="라인업 팀 선택" className="flex flex-wrap gap-2 sm:hidden">
             {[data.home, data.away].map((side, i) => (
               <Button
@@ -337,9 +293,6 @@ export function MatchLineup({
               </Button>
             ))}
           </div>
-          {showPitch && (
-            <FormationPitch home={data.home} away={data.away} activeSide={activeSide} />
-          )}
           <div className="grid gap-4 sm:grid-cols-2">
             {[data.home, data.away].map((side, i) => (
               <section
@@ -347,22 +300,14 @@ export function MatchLineup({
                 aria-label={side.teamLabel + " 선수 명단"}
                 className={activeSide === i ? "min-w-0" : "hidden min-w-0 sm:block"}
               >
-                {!showPitch && (
-                  <div className="rounded-xl border border-[var(--wc-line)] p-3">
-                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                      <h3 className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
-                        {side.teamLabel}
-                      </h3>
-                      <span
-                        className="gn-num shrink-0 text-[12px]"
-                        style={{ color: "var(--wc-mute)" }}
-                      >
-                        {side.formation ?? "포메이션 미제공"}
-                      </span>
-                    </div>
-                    <PlayerList players={side.starters} label={side.teamLabel + " 선발 선수"} />
+                <div className="rounded-xl border border-[var(--wc-line)] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <h3 className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                      {side.teamLabel}
+                    </h3>
                   </div>
-                )}
+                  <PlayerList players={side.starters} label={side.teamLabel + " 선발 선수"} />
+                </div>
                 {side.bench.length > 0 && (
                   <details
                     className="group mt-3 rounded-xl border border-[var(--wc-line)] px-3"

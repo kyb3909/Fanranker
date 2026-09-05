@@ -15,7 +15,6 @@ export default function MatchPreviewPage() {
         matchTime={previewLineup.kickoff}
         initial={previewLineup}
         alwaysOpen
-        withPitch
       />
       <MatchStatComparison
         stats={previewStats}
