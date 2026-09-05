@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { threadMatchdays } from "@/lib/match/thread-window"
+import vercelConfig from "@/vercel.json"
+
+it("라인업 확인·불판 생성 작업은 중복 등록 없이 2분마다 실행한다", () => {
+  expect(vercelConfig.crons.filter((job) => job.path === "/api/cron/match-threads")).toEqual([
+    { path: "/api/cron/match-threads", schedule: "*/2 * * * *" },
+  ])
+})
 
 describe("불판 후보 매치데이", () => {
   it.each([

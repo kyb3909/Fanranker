@@ -5,9 +5,9 @@ import { apiError } from "@/lib/api-error"
 import { sweepMatchThreads } from "@/lib/match/thread"
 
 /**
- * GET /api/cron/match-threads — 10분마다.
+ * GET /api/cron/match-threads — 2분마다. 확정 명단은 DB에서 재사용한다.
  *
- * 불판 자동 생성 스윕: 킥오프 90분 전~10분 후 창에서 라인업이 발표된(ready)
+ * 불판 자동 생성 스윕: 킥오프 90분 전~120분 후 창에서 라인업이 발표된(ready)
  * 매치센터 화이트리스트 경기에 "중계불판" 게시물을 깐다. 상세는 lib/match/thread.ts.
  *
  * `?gameId=` — 창 판정을 무시하고 그 경기만 시도 (수동 리허설·백필용.

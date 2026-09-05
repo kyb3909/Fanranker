@@ -128,7 +128,7 @@
     },
     {
       "path": "/api/cron/match-threads",
-      "schedule": "*/10 * * * *"
+      "schedule": "*/2 * * * *"
     },
     {
       "path": "/api/cron/match-reports",
