@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs"
 import { expect, it } from "vitest"
 
+it("실황 갱신은 명단을 새로 구매하지 않고 저장분만 읽는다", () => {
+  const code = readFileSync("lib/lfa/match.ts", "utf8")
+  expect(code).not.toContain("getLfaLineup")
+  expect(code).toContain("loadStoredLineup(game.gameId)")
+})
+
 it.each([
   "lib/match/get-lineup.ts",
   "lib/lfa/match.ts",

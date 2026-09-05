@@ -13,19 +13,28 @@ const previewLineup = {
   away: withIds(visualLineup.away),
 }
 
-const m = vi.hoisted(() => ({ read: vi.fn(), upsert: vi.fn() }))
+const m = vi.hoisted(() => ({
+  read: vi.fn(),
+  upsert: vi.fn(),
+  update: vi.fn(),
+  byGame: vi.fn(),
+  byPrediction: vi.fn(),
+}))
 vi.mock("@/lib/match/sibling-ids", () => ({ getSiblingGameIds: async () => ["market", "sibling"] }))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
-    from: () => ({ select: () => ({ in: m.read }), upsert: m.upsert }),
+    from: () => ({ select: () => ({ in: m.read }), upsert: m.upsert, update: m.update }),
   }),
 }))
-import { loadStoredLfaLineup, storeLfaLineup } from "@/lib/match/lineup-store"
+import { loadStoredLineup, loadStoredLfaLineup, storeLfaLineup } from "@/lib/match/lineup-store"
 
 beforeEach(() => {
   vi.clearAllMocks()
   m.read.mockResolvedValue({ data: [], error: null })
   m.upsert.mockResolvedValue({ error: null })
+  m.update.mockReturnValue({ eq: m.byGame })
+  m.byGame.mockReturnValue({ eq: m.byPrediction })
+  m.byPrediction.mockResolvedValue({ error: null })
 })
 const row = (
   eventId: string,
@@ -58,9 +67,16 @@ it("LFA 표시가 있어도 요청한 match ID가 다르면 거절한다", async
   m.read.mockResolvedValue({ data: [row("wrong-id")] })
   expect(await loadStoredLfaLineup("market", "right-id")).toBeNull()
 })
-it("명시적 확정만 출처와 선수 ID를 보존해 저장한다", async () => {
+it("예상 저장은 확정 행을 덮지 않는 조건부 쓰기를 사용한다", async () => {
   await storeLfaLineup("market", "lfa-id", { ...previewLineup, projected: true })
-  expect(m.upsert).not.toHaveBeenCalled()
+  expect(m.upsert).toHaveBeenCalledWith(expect.anything(), {
+    onConflict: "game_id",
+    ignoreDuplicates: true,
+  })
+  expect(m.byGame).toHaveBeenCalledWith("game_id", "market")
+  expect(m.byPrediction).toHaveBeenCalledWith("payload->>projected", "true")
+})
+it("확정 저장은 출처와 선수 ID를 보존한다", async () => {
   await storeLfaLineup("market", "lfa-id", previewLineup)
   expect(m.upsert).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -69,6 +85,36 @@ it("명시적 확정만 출처와 선수 ID를 보존해 저장한다", async ()
     }),
     { onConflict: "game_id" }
   )
+})
+it("과거 Soccerway 저장 명단도 외부 호출 없이 표시하고 출처를 위조하지 않는다", async () => {
+  const archived = {
+    ...previewLineup,
+    projected: undefined,
+    kickoff: "2026-09-05T14:00:00Z",
+    fetchedAt: "2026-09-05T15:15:00Z",
+  }
+  m.read.mockResolvedValue({ data: [row("rLM64qM5", archived)] })
+  expect(await loadStoredLineup("market")).toMatchObject({
+    status: "ready",
+    projected: false,
+    home: archived.home,
+  })
+  expect((await loadStoredLineup("market"))!).not.toHaveProperty("source")
+  expect(m.upsert).not.toHaveBeenCalled()
+})
+it("벤치가 많은 예상 명단이 확정 저장분을 밀어내지 않는다", async () => {
+  m.read.mockResolvedValue({
+    data: [
+      row("confirmed", { ...previewLineup, home: { ...previewLineup.home, bench: [] } }),
+      row("predicted", {
+        ...previewLineup,
+        source: "lfa",
+        projected: true,
+        home: { ...previewLineup.home, bench: Array(20).fill({}) },
+      }),
+    ],
+  })
+  expect(await loadStoredLineup("market")).toMatchObject({ projected: false, home: { bench: [] } })
 })
 it("DB 오류는 빈 결과나 저장 성공으로 숨기지 않는다", async () => {
   m.read.mockResolvedValue({ error: { code: "READ_FAILED" } })

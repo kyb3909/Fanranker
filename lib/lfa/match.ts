@@ -5,8 +5,7 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
-import { getLfaLineup } from "@/lib/lfa/lineups"
-import { loadStoredLfaLineup } from "@/lib/match/lineup-store"
+import { loadStoredLineup } from "@/lib/match/lineup-store"
 import { matchLfaCounterpart } from "@/lib/match/pair-fixtures"
 import { hasHangul, localizeFromSquad, localizeTimelineName } from "@/lib/lfa/scorer-name"
 
@@ -544,16 +543,9 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
         (x): x is { e: (typeof d.events)[number]; kind: LfaTimelineEvent["kind"] } =>
           x.kind !== null
       )
-    // 라인업은 실을 사건이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
-    const storedLineup = rawEvents.length
-      ? await loadStoredLfaLineup(game.gameId, m.id).catch(() => null)
-      : null
-    const lineup =
-      storedLineup?.status === "ready"
-        ? storedLineup
-        : rawEvents.length
-          ? await getLfaLineup(m.id, game.homeTeam, game.awayTeam).catch(() => null)
-          : null
+    // Live events reuse the stored roster; they never buy a lineup on every refresh.
+    // Acquisition/persistence belongs exclusively to getMatchLineup.
+    const lineup = rawEvents.length ? await loadStoredLineup(game.gameId).catch(() => null) : null
 
     // 라인업이 없어도(=지난 경기) 스쿼드 사전으로 한글화한다. 사건이 있을 때만 부른다.
     const [homeSquad, awaySquad] = rawEvents.length
@@ -561,14 +553,15 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
       : [[], []]
 
     // 이름 한글화 한 사람분 — 판정은 순수 모듈이 소유한다 (백필 CLI 가 같은 규칙을 쓴다)
-    const roster = lineup
-      ? [
-          ...lineup.home.starters,
-          ...lineup.home.bench,
-          ...lineup.away.starters,
-          ...lineup.away.bench,
-        ]
-      : []
+    const roster =
+      lineup?.status === "ready"
+        ? [
+            ...lineup.home.starters,
+            ...lineup.home.bench,
+            ...lineup.away.starters,
+            ...lineup.away.bench,
+          ]
+        : []
     const localizeName = (raw: string | undefined, side: "home" | "away"): string | null =>
       localizeTimelineName(raw, roster, side === "away" ? awaySquad : homeSquad)
 
