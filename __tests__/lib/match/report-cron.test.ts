@@ -47,4 +47,13 @@ describe("리포트 크론 대상·실패 판정", () => {
     expect(mocks.extras).toHaveBeenCalledExactlyOnceWith("allowed")
     expect(mocks.record).not.toHaveBeenCalled()
   })
+
+  it("일정 조회 실패를 대상 경기 0건 성공으로 처리하지 않는다", async () => {
+    mocks.fixtures
+      .mockRejectedValueOnce(new Error("fixture DB unavailable"))
+      .mockResolvedValueOnce([])
+    const res = await GET(new NextRequest("http://localhost/api/cron/match-reports"))
+    expect(res.status).toBe(500)
+    expect(mocks.extras).not.toHaveBeenCalled()
+  })
 })

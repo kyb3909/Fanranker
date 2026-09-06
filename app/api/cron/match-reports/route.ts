@@ -48,10 +48,7 @@ async function cronGet(request: NextRequest) {
       .slice(0, 10)
 
     const fixtures = (
-      await Promise.all([
-        getFixturesForDay(today).catch(() => []),
-        getFixturesForDay(yesterday).catch(() => []),
-      ])
+      await Promise.all([getFixturesForDay(today), getFixturesForDay(yesterday)])
     ).flat()
 
     const nowMs = Date.now()
@@ -67,31 +64,39 @@ async function cronGet(request: NextRequest) {
     let made = 0
     let skipped = 0
     const failed: string[] = []
+    const errors: { gameId: string; message: string }[] = []
     for (const f of targets) {
       if (made >= MAX_PER_RUN || Date.now() - start > TIME_BUDGET_MS) break
-      if (await hasStoredReport(f.gameId as string).catch(() => true)) {
-        skipped++
-        continue
-      }
       // 실패해도 다음 경기로 넘어간다 — 한 경기의 원문 부재가 스윕을 멈추면 안 된다
       const gameId = f.gameId as string
-      const extras = await getMatchExtras(gameId).catch(() => null)
-      if (extras?.report) made++
-      else {
-        failed.push(`${f.homeTeam} vs ${f.awayTeam}`)
+      try {
+        if (await hasStoredReport(gameId)) {
+          skipped++
+          continue
+        }
+        const extras = await getMatchExtras(gameId)
+        if (extras?.report) made++
+        else failed.push(`${f.homeTeam} vs ${f.awayTeam}`)
         // 사유는 실제로 실패한 게이트에서 기록한다. null은 negative cache일 수도
         // 있으므로 최근 원장 행의 부재만으로 경기 매핑 실패라고 추측하지 않는다.
+      } catch (error) {
+        errors.push({ gameId, message: error instanceof Error ? error.message : String(error) })
       }
     }
 
-    return NextResponse.json({
-      mode: "match-reports",
-      candidates: targets.length,
-      made,
-      alreadyStored: skipped,
-      failed,
-      duration: `${Date.now() - start}ms`,
-    })
+    return NextResponse.json(
+      {
+        success: errors.length === 0,
+        mode: "match-reports",
+        candidates: targets.length,
+        made,
+        alreadyStored: skipped,
+        failed,
+        errors,
+        duration: `${Date.now() - start}ms`,
+      },
+      { status: errors.length ? 503 : 200 }
+    )
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

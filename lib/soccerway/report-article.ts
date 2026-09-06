@@ -94,6 +94,27 @@ function looksLikeReport(slug: string): boolean {
   return hasSlugToken(slug, "report")
 }
 
+// Soccerway's match directory and news desk use different, known club slugs.
+// Keep these explicit: shortening arbitrary names would mix unrelated clubs.
+const NEWS_TEAM_SLUGS: Record<string, string[]> = {
+  "atl-madrid": ["atletico-madrid", "atleti"],
+  "hull-city": ["hull"],
+  "real-sociedad": ["sociedad"],
+  "bayern-munich": ["bayern"],
+  "vfb-stuttgart": ["stuttgart"],
+  "paris-sg": ["psg", "paris-saint-germain"],
+  "manchester-united": ["man-utd"],
+  "ath-bilbao": ["athletic-bilbao", "athletic-club", "athletic"],
+  "union-berlin": ["union"],
+  "as-roma": ["roma"],
+}
+
+function hasTeamSlug(articleSlug: string, teamSlug: string) {
+  return [teamSlug, ...(NEWS_TEAM_SLUGS[teamSlug] ?? [])].some((slug) =>
+    hasSlugToken(articleSlug, slug)
+  )
+}
+
 /**
  * 이 경기 전용 리포트 기사 고르기. 없으면 null.
  *
@@ -114,8 +135,10 @@ export function pickReportArticle(
       !!art?.slug &&
       Number.isFinite(art.publishedAtMs) &&
       art.publishedAtMs >= kickoffMs &&
-      hasSlugToken(art.slug, a) &&
-      hasSlugToken(art.slug, b)
+      // Participant feeds also contain later fixtures between the same teams.
+      art.publishedAtMs <= kickoffMs + 48 * 3600_000 &&
+      hasTeamSlug(art.slug, a) &&
+      hasTeamSlug(art.slug, b)
   )
   if (candidates.length === 0) return null
 

@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     ".next-avatar-lab/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "public/**", "supabase/functions/**", "tools/oxlint/anti-slop/**"]
+  "exclude": [
+    "node_modules",
+    "output/**",
+    "public/**",
+    "supabase/functions/**",
+    "tools/oxlint/anti-slop/**"
+  ]
 }

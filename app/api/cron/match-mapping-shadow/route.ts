@@ -26,16 +26,16 @@ async function handler(request: NextRequest) {
   }
 
   const supabase = createServiceRoleClient()
-  // 회당 15행은 주말 물량에 질식한다 (2026-08-16 실측: 스캔 창 241행 중 미처리 121행 —
-  // 커뮤니티 실드·라리가 개막 라운드 라인업이 통째로 비었다). 한 경기가 마켓별 4행을
-  // 먹으므로 15행 ≈ 4경기/시간이다. 발견(discover) 예산도 6이면 리그 하나를 못 넘긴다.
+  // Discover the full window; cap external processing at 40 distinct matches.
+  // Persisted attempt times rotate retries, independently of betting-market count.
   const summary = await runMatchMappingShadow(supabase, {
     limit: 40,
     discoverLimit: 15,
     runId: `cron-${new Date().toISOString()}`,
   })
 
-  return NextResponse.json({ success: true, ...summary })
+  const success = summary.errors.length === 0 && summary.fetchError === 0
+  return NextResponse.json({ success, ...summary }, { status: success ? 200 : 503 })
 }
 
 export const GET = withCronLog("match-mapping-shadow", handler)

@@ -27,6 +27,8 @@ export const REPORT_STAGES = {
   verify: "검증 불합격",
   /** 작성 LLM 자체가 빈 결과 */
   compose: "작성 실패",
+  /** 검증된 리포트의 영구 저장 실패 — 생성 성공으로 집계하면 안 된다 */
+  store: "저장 실패",
 } as const
 
 export type ReportStage = keyof typeof REPORT_STAGES

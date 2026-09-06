@@ -21,6 +21,24 @@ const TRACKER: ArticleMeta = {
   publishedAtMs: ms("2026-08-29T05:01:00Z"),
 }
 
+it("accepts known match/news slug differences and rejects a later reverse fixture", () => {
+  const kickoff = ms("2026-08-28T18:30:00Z")
+  const article = {
+    id: "report",
+    title: "Bayern beat Stuttgart",
+    slug: "bayern-stuttgart-bundesliga-report-august-28-2026",
+    publishedAtMs: kickoff + 2 * 3600_000,
+  }
+  expect(pickReportArticle([article], ["bayern-munich", "vfb-stuttgart"], kickoff)).toBe(article)
+  expect(
+    pickReportArticle(
+      [{ ...article, publishedAtMs: kickoff + 7 * 86400_000 }],
+      ["bayern-munich", "vfb-stuttgart"],
+      kickoff
+    )
+  ).toBeNull()
+})
+
 describe("teamSlugsFromMatchUrl", () => {
   it("팀 슬러그 뒤 8자 해시를 떼어낸다", () => {
     expect(

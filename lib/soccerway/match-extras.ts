@@ -4,8 +4,8 @@ import { cache as reactCache } from "react"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
-import { findUniqueRomanizedMatch } from "@/lib/news/notation"
-import { matchByNickname } from "@/lib/soccerway/nickname-match"
+import { createReportNameEditor, reportLatinRemainders } from "@/lib/soccerway/report-names"
+import { getReportNameSources } from "@/lib/soccerway/report-name-sources"
 import { wrongScore } from "@/lib/soccerway/score-gate"
 import {
   collectGoalFacts,
@@ -29,8 +29,6 @@ import {
   getLineupForGame,
   resolveMatchEvent,
   type LineupResponse,
-  cachedPersons,
-  cachedSquadPairs,
 } from "@/lib/soccerway/lineup-lookup"
 import { logUsage, logUsageFailure } from "@/lib/llm/usage-log"
 
@@ -154,7 +152,7 @@ interface MatchReport {
  *    칼리아리-인테르 · 모나코-마르세유 세 경기가 같은 주말 라운드업 하나를 원문으로 받았다.
  *    고르는 일은 `pickReportArticle` 이 한다 (판별 근거·실측은 report-article.ts).
  */
-async function fetchEventArticleRefs(
+export async function fetchEventArticleRefs(
   eventId: string
 ): Promise<{ id: string; sortKeyMs: number }[]> {
   const res = await fetch(
@@ -181,7 +179,7 @@ async function fetchEventArticleRefs(
 }
 
 /** nah → 기사 메타(슬러그·발행시각). 판별 근거라 본문보다 **먼저** 받는다 */
-async function fetchArticleMeta(articleId: string): Promise<ArticleMeta | null> {
+export async function fetchArticleMeta(articleId: string): Promise<ArticleMeta | null> {
   const meta = await fetch(`${GRAPHQL_BASE}?_hash=nah&articleId=${articleId}`, {
     headers: FETCH_HEADERS,
   })
@@ -205,7 +203,7 @@ async function fetchArticleMeta(articleId: string): Promise<ArticleMeta | null> 
 const META_LOOKUP_LIMIT = 8
 
 /** 이 경기 **전용** 리포트 기사. 없으면 null — 라운드업으로 때우지 않는다 */
-async function findReportArticle(
+export async function findReportArticle(
   eventId: string,
   candidateUrl: string,
   kickoffMs: number
@@ -230,7 +228,10 @@ async function findReportArticle(
 }
 
 /** 뉴스 페이지 SSR HTML → 본문 문단 (영문) */
-async function fetchArticleParagraphs(articleId: string, slug: string): Promise<string[] | null> {
+export async function fetchArticleParagraphs(
+  articleId: string,
+  slug: string
+): Promise<string[] | null> {
   const page = await fetch(`https://www.soccerway.com/news/${slug}/${articleId}/`, {
     headers: { ...FETCH_HEADERS, Accept: "text/html" },
   })
@@ -306,7 +307,9 @@ interface MatchEvent {
 /** ① 원문 → 경기 중 사건만 구조화 (영문 그대로 — 번역은 ③의 몫) */
 async function extractEvents(
   title: string,
-  paragraphs: string[]
+  paragraphs: string[],
+  homeTeam: string,
+  awayTeam: string
 ): Promise<{ score: string | null; events: MatchEvent[] } | null> {
   const content = await callLLM(
     `축구 경기 리포트에서 **경기 중에 일어난 사건만** 추출하는 파서다.
@@ -314,12 +317,13 @@ async function extractEvents(
   그리고 **주목 포인트(note)** — 원문이 짚은 경기 속 인상적 사실: 골키퍼 선방, 크로스바·포스트, 파울 누적,
   한 팀의 압도, 선수의 기록(예: "리그 두 번째로 많은 골") 같은 것. 기회(chance)는 불발이어도 결정적이었으면 넣는다.
 - 제외: 다음 경기 전망, 순위 계산, 필자의 평가·감상.
+- home/away는 입력의 homeTeam/awayTeam 기준이다. 기사에서 먼저 언급된 팀을 홈팀으로 추측하지 마라.
 - players 는 원문 표기 그대로(영문). detail 은 **원문의 장면 묘사를 최대한 보존한 영문 1~3문장** —
   득점이면 빌드업·도움·슛 종류(헤더/발리/중거리/침투)·위치·골키퍼 상황까지, 퇴장이면 어떤 파울이었고
   판정이 어떻게 진행됐는지. 원문에 있는 만큼만, 뭉개서 요약하지 마라.
 - minute 은 원문에 있으면 "43'" 형식, 없으면 null. 사건이 없으면 events 는 빈 배열.
 - 출력: {"score": "3-0" 또는 null, "events": [{"minute", "type", "team": "home|away|null", "players": [], "detail"}]} JSON. 사건은 시간 순.`,
-    { title, paragraphs: paragraphs.slice(0, 12) },
+    { title, paragraphs: paragraphs.slice(0, 12), homeTeam, awayTeam },
     1800
   )
   if (!content) return null
@@ -349,8 +353,10 @@ async function extractEvents(
  */
 async function groundPlayerNames(
   events: MatchEvent[],
-  lineup: LineupResponse
-): Promise<{ events: MatchEvent[]; grounded: number; total: number }> {
+  lineup: LineupResponse,
+  names?: Awaited<ReturnType<typeof getReportNameSources>>
+) {
+  const { persons, squads } = names ?? (await getReportNameSources())
   const roster =
     lineup.status === "ready"
       ? [
@@ -358,60 +364,32 @@ async function groundPlayerNames(
           ...lineup.home.bench,
           ...lineup.away.starters,
           ...lineup.away.bench,
-        ]
-          .filter((p) => p.roman)
-          .map((p) => ({ romanized: p.roman, label: p.label }))
+        ].map((p) => ({ roman: p.roman ?? null, label: p.label }))
       : []
-
-  // ②③ 사전 — 라인업이 못 잡은 이름을 받는다. 실패해도 리포트는 계속 간다(fail-open).
-  const persons = await cachedPersons().catch(
-    () => [] as { romanized: string | null; preferred_ko: string }[]
-  )
-  const squadPairs = await cachedSquadPairs().catch(() => [] as [string, string][])
-  // 같은 슬러그가 서로 다른 한글명으로 두 번 나오면(전 소속팀 잔재) 둘 다 버린다
-  const squadKo = new Map<string, string>()
-  const clash = new Set<string>()
-  for (const [slug, ko] of squadPairs) {
-    const prev = squadKo.get(slug)
-    if (prev !== undefined && prev !== ko) clash.add(slug)
-    else squadKo.set(slug, ko)
-  }
-  for (const sl of clash) squadKo.delete(sl)
-  // 스쿼드 사전도 로마자 토큰 매칭에 태운다 — 기사 표기("Levi Colwill")와 슬러그
-  // 표기("colwill levi")는 어순이 다르므로 정확 문자열 비교로는 못 잡는다.
-  const squadEntries = [...squadKo.entries()].map(([slug, ko]) => ({
-    romanized: slug,
-    preferred_ko: ko,
-  }))
-
-  const resolve = (name: string): string | null => {
-    const inLineup = findUniqueRomanizedMatch(roster, name)
-    if (inLineup) return inLineup.label
-    const inNotation = findUniqueRomanizedMatch(persons, name)
-    if (inNotation) return inNotation.preferred_ko
-    const inSquad = findUniqueRomanizedMatch(squadEntries, name)
-    if (inSquad) return inSquad.preferred_ko
-    // ④ 애칭 보정 — 마지막 수단
-    const nick =
-      matchByNickname(roster, name)?.label ??
-      matchByNickname(persons, name)?.preferred_ko ??
-      matchByNickname(squadEntries, name)?.preferred_ko
-    return nick ?? null
-  }
-
+  const editor = createReportNameEditor(persons, roster, squads)
+  const knownNames = [...new Set(events.flatMap((e) => e.players))]
   let grounded = 0
   let total = 0
-  const out = events.map((e) => ({
-    ...e,
-    players: e.players.map((name) => {
-      total++
-      // 동명이인이면 null — 틀린 확정보다 원문 유지가 낫다 (표기 사전과 같은 규율)
-      const hit = resolve(name)
-      if (hit) grounded++
-      return hit ?? name
-    }),
-  }))
-  return { events: out, grounded, total }
+  return {
+    events: events.map((event) => ({
+      ...event,
+      detail: editor.edit(event.detail, knownNames),
+      players: event.players.map((name) => {
+        total++
+        const ko = editor.resolve(name)
+        if (ko) grounded++
+        return ko ?? name
+      }),
+    })),
+    get grounded() {
+      return grounded
+    },
+    get total() {
+      return total
+    },
+    editor,
+    knownNames,
+  }
 }
 
 /** ③ 확정된 사건 목록 → 담백한 한국어 리포트 */
@@ -455,13 +433,14 @@ ${
 }
 - 톤: 사실 기반. 감탄사·과장·클리셰("환상적인", "믿을 수 없는")는 금지지만, 장면이 눈에
   그려지게는 쓴다. 기사체 평서문.
-- 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
+- 선수 이름은 사전으로 확정된 목록의 한글 표기를 그대로 쓴다. detail에 영문 이름이 남아 있어도 같은 인물의 한글 표기를 따른다.
+- 한글 표기를 확인하지 못한 선수는 임의 음차하거나 영문으로 쓰지 않는다. 해당 이름을 생략해 사건을 정확하게 서술하고, 핵심 득점자를 특정할 수 없다면 작성하지 않는다.
 - 팀 이름: 홈팀 "${homeTeam}", 원정팀 "${awayTeam}".
 - ⚠️ **최종 스코어는 ${score ?? "(미확정)"} 이다 — 홈 ${homeTeam} 기준이다.** 이 스코어와
   다른 조합을 제목이나 본문에 절대 쓰지 마라. 사건 목록의 골 수를 세어 다른 값이
   나오더라도 **이 스코어가 정본**이다 (목록에 누락된 골이 있을 수 있다). 승패도 여기서 나온다.
 - 시간 순서대로 2~3문단, 문단당 2~3문장.
-- 제목: 간결하되 사실 왜곡 금지 — 퇴장·수적 열세는 어느 팀 것인지 분명히.
+- 제목은 승패·스코어·핵심 득점자를 중심으로 한 문장으로 간결하게 쓴다. 실제 퇴장 사건이 없으면 수적 우세·열세·균형을 언급하지 않는다.
 - 출력: {"title": "...", "paragraphs": ["...", ...]} JSON.`,
     {
       home: homeTeam,
@@ -503,13 +482,14 @@ ${
  * (뉴스 Terra 검사관과 같은 패턴 — 런타임 멀티에이전트는 이 코드베이스 금기). */
 
 /** ④ 결정론 게이트 — 출력의 모든 숫자가 입력 재료 어딘가에 있어야 한다 (코드, LLM 아님) */
-function numbersGate(
+export function numbersGate(
   report: MatchReport,
   sources: {
     paragraphs: string[]
     events: MatchEvent[]
     stats: MatchStatRow[] | null
     score: string | null
+    teams?: string[]
   }
 ): { ok: boolean; rogue: string[] } {
   const nums = (s: string) => s.match(/\d+(?:\.\d+)?/g) ?? []
@@ -532,6 +512,7 @@ function numbersGate(
     feed(s.label)
   }
   feed(sources.score)
+  for (const team of sources.teams ?? []) feed(team)
   // 스코어 개별 숫자 ("3-0" → 3, 0) 와 흔한 서수(전/후반 45·90)는 기본 허용
   for (const n of ["0", "1", "2", "45", "90"]) allowed.add(n)
 
@@ -591,7 +572,7 @@ async function verifyReport(
  *    걸리던 정체가 이것이다 (2026-08-18 운영자: "넘어가는데 시간이 너무 오래 걸려").
  *    성공분은 `match_reports` 에 영구 저장되므로, 여기 TTL 은 **재시도 간격**일 뿐이다.
  */
-function cachedReport(
+export async function generateMatchReport(
   eventId: string,
   gameId: string,
   homeTeam: string,
@@ -600,171 +581,186 @@ function cachedReport(
   finalScore: string | null,
   /** soccerway 매치 URL — 여기서 팀 슬러그를 뽑아 원문을 판별한다 */
   candidateUrl: string,
+  kickoffMs: number,
+  options: {
+    lineup?: LineupResponse
+    stats?: MatchStatRow[] | null
+    names?: Awaited<ReturnType<typeof getReportNameSources>>
+  } = {}
+): Promise<MatchReport | null> {
+  // 전용 리포트가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다
+  // ⚠️ 게이트마다 실패 원장(match_report_attempts)에 한 줄 남긴다 (2026-09-02).
+  //    7일간 대상 23경기 중 리포트 10개 — 나머지는 어느 문에서 멈췄는지 아무도 몰랐다.
+  //    fail-closed 는 그대로다. 눈만 단다.
+  const article = await findReportArticle(eventId, candidateUrl, kickoffMs)
+  if (!article) {
+    await recordReportAttempt(gameId, eventId, "article", "전용 리포트 기사 없음 (soccerway 목록)")
+    return null
+  }
+  const paragraphs = await fetchArticleParagraphs(article.id, article.slug)
+  if (!paragraphs) {
+    await recordReportAttempt(gameId, eventId, "paragraphs", `문단 부족: ${article.slug}`)
+    return null
+  }
+  const body = { title: article.title, paragraphs }
+
+  // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
+  const extracted = await extractEvents(body.title, body.paragraphs, homeTeam, awayTeam)
+  if (!extracted) {
+    await recordReportAttempt(gameId, eventId, "extract", "사건 추출 결과 없음")
+    return null
+  }
+  const lineup =
+    options.lineup ??
+    (await getLineupForGame(gameId).catch(() => ({ status: "none" }) as LineupResponse))
+  const { events, grounded, total, editor, knownNames } = await groundPlayerNames(
+    extracted.events,
+    lineup,
+    options.names
+  )
+  // ⚠️ 종전엔 grounded/total 을 계산해 놓고 **버렸다**. 이름이 통째로 영문으로
+  //    나가도 아무 신호가 없었다 — 운영자 제보로만 알 수 있었다는 뜻이다.
+  if (total > 0 && grounded < total) {
+    console.warn(
+      `[match-report] 이름 확정 ${grounded}/${total} (event ${eventId}, 라인업 ${lineup.status})`
+    )
+  }
+  /**
+   * ⚠️⚠️ **확정 스코어가 없으면 리포트를 쓰지 않는다** (2026-08-25 2차 실사고).
+   *
+   * 아래 스코어 게이트는 `finalScore` 가 있을 때만 돈다. 없으면 통째로 건너뛰고
+   * LLM 이 기사에서 뽑은 값을 그대로 썼다 — **사고를 냈던 그 경로가 폴백으로
+   * 남아 있었다.** 실제로 그리로 새어나갔다: 오사수나 0-0 레반테 경기에
+   * "3-0 승리…멀티골 활약" 리포트가 저장됐다. 득점 장면 셋을 지어냈고,
+   * 같은 사이트의 MoTM 투표판은 같은 경기를 0-0 이라고 적고 있었다.
+   *
+   * 스코어는 FT 뒤 잠깐 비어 있다가 채워진다. 그때까지 **안 쓰는 게 맞다** —
+   * 위 주석 그대로 "틀린 리포트는 없는 리포트보다 나쁘다". TTL(30분) 뒤 재시도한다.
+   */
+  if (!finalScore) {
+    // 사유는 getMatchExtras 가 확정 단계에서 이미 남겼다 — 여기선 기사까지 있었다는 것만
+    await recordReportAttempt(gameId, eventId, "score", "기사는 있으나 확정 스코어 없음")
+    return null
+  }
+
+  const stats =
+    "stats" in options ? (options.stats ?? null) : await cachedStats(eventId)().catch(() => null)
+  // ⚠️⚠️ 스코어는 **우리 DB 가 정본**이다 (2026-08-25).
+  //    종전엔 LLM 이 기사에서 뽑은 `extracted.score` 를 그대로 썼는데, 같은 경기를
+  //    3회 생성했더니 제목이 "3-2 첼시 승" / "3-2 첼시 승" / "3-3 무승부" 로 갈렸다.
+  //    실제는 풀럼 2-3 첼시 — **승패 자체가 틀린 리포트**가 검증을 통과했다.
+  //    숫자 게이트가 "3" 과 "3" 이 근거에 있는지만 보고 스코어 조합은 안 봤기 때문이다.
+  const score = finalScore
+
+  /**
+   * ⚠️⚠️ **득점 정본을 라인업에서 꺼낸다** (2026-08-29 실사고).
+   *
+   * 종전엔 라인업을 가져다 **이름 한글화에만** 쓰고 득점 사실(득점자·시각·자책골)은
+   * 버렸다. 누가 넣었는지는 영문 기사를 LLM 이 읽어 다시 만들었고, 그 왕복에서
+   * 방향이 뒤집혔다 — 팰리스 1-4 시티에서 **맨시티 GK 돈나룸마의 자책골**(= 팰리스의
+   * 유일한 득점)이 "크리스털 팰리스의 돈나룸마 자책골 → 3-0 시티"로 나갔다.
+   * 시티 골이 하나 늘어 다섯을 나열하고 마지막을 "네 번째"라 적는 모순까지 났다.
+   *
+   * 스코어 게이트가 못 잡은 이유: 그건 최종 스코어 **조합**만 본다. 제목 1-4 는 맞았다.
+   * 틀린 건 거기까지 가는 경로였다.
+   *
+   * 합이 확정 스코어와 맞을 때만 정본으로 쓴다 — 인시던트는 늦게 채워질 수 있고,
+   * 불완전한 정본은 없느니만 못하다.
+   */
+  const lineupPlayers =
+    lineup.status === "ready"
+      ? [
+          ...[...lineup.home.starters, ...lineup.home.bench].map((p) => ({
+            label: editor.resolve(p.roman ?? p.label) ?? editor.edit(p.label),
+            team: "home" as TeamSide,
+          })),
+          ...[...lineup.away.starters, ...lineup.away.bench].map((p) => ({
+            label: editor.resolve(p.roman ?? p.label) ?? editor.edit(p.label),
+            team: "away" as TeamSide,
+          })),
+        ]
+      : []
+  let goalFacts: GoalFact[] | null = null
+  if (lineup.status === "ready") {
+    const facts = collectGoalFacts(lineup)
+    if (goalFactsMatchScore(facts, score)) {
+      goalFacts = facts.goals.map((g) => ({
+        ...g,
+        scorer: editor.resolve(g.scorer) ?? editor.edit(g.scorer, knownNames),
+      }))
+    } else if (facts.goals.length > 0) {
+      console.warn(
+        `[match-report] 득점 정본 불일치 — 라인업 ${facts.home}-${facts.away} vs 확정 ${score} (event ${eventId}). 정본 미사용.`
+      )
+    }
+  }
+
+  const sources = { paragraphs: body.paragraphs, events, stats, score, teams: [homeTeam, awayTeam] }
+
+  // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
+  // 재검증까지 실패하면 미노출(fail-closed) — 틀린 리포트는 없는 리포트보다 나쁘다.
+  let feedback: string[] = []
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let ko = await composeReportKo(homeTeam, awayTeam, score, events, stats, goalFacts, feedback)
+    if (!ko) {
+      await recordReportAttempt(gameId, eventId, "compose", `작성 LLM 빈 응답 (${attempt + 1}차)`)
+      break
+    }
+    ko = {
+      title: editor.edit(ko.title, knownNames),
+      paragraphs: ko.paragraphs.map((p) => editor.edit(p, knownNames)),
+    }
+    const latin = reportLatinRemainders(ko, [homeTeam, awayTeam])
+    if (latin.length) {
+      feedback = [
+        "Unresolved player names or untranslated prose: " +
+          latin.join(", ") +
+          ". Use the supplied dictionary names; omit an unverified personal name instead of inventing a spelling.",
+      ]
+      continue
+    }
+    const gate = numbersGate(ko, sources)
+    // ⚠️ 소속 표기 게이트 — "○○의 <선수>" 에서 팀이 반대면 그 자리에서 떨어뜨린다.
+    //    실사고 문장이 정확히 이 형태였다("크리스털 팰리스의 잔루이지 돈나룸마").
+    const teamProblem = wrongTeamAttribution(ko, lineupPlayers, homeTeam, awayTeam)
+    // ⚠️ 스코어 게이트 — LLM 판단 이전의 **결정론** 검사. 확정 스코어가 있는데
+    //    리포트가 다른 조합을 적으면 그 자리에서 떨어뜨린다. 숫자 게이트는 개별
+    //    숫자만 보므로 "3-3" 같은 **조합 오류**를 못 잡는다 (실사고).
+    const scoreProblem = finalScore ? wrongScore(ko, finalScore) : null
+    const verdict = scoreProblem
+      ? { pass: false, problems: [scoreProblem] }
+      : teamProblem
+        ? { pass: false, problems: [teamProblem] }
+        : gate.ok
+          ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats, goalFacts })
+          : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
+    if (verdict.pass) return ko
+    // 서버 로그만 — 화면은 fail-open 계약대로 침묵. 반복되면 프롬프트 튜닝 신호다.
+    console.warn(
+      `[match-report] 검증 불합격 (${attempt + 1}차, event ${eventId}):`,
+      verdict.problems.slice(0, 5).join(" | ")
+    )
+    feedback = verdict.problems
+  }
+  if (feedback.length > 0) {
+    await recordReportAttempt(gameId, eventId, "verify", feedback.slice(0, 3).join(" | "))
+  }
+  return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
+}
+
+function cachedReport(
+  eventId: string,
+  gameId: string,
+  homeTeam: string,
+  awayTeam: string,
+  finalScore: string | null,
+  candidateUrl: string,
   kickoffMs: number
 ) {
   return unstable_cache(
-    async (): Promise<MatchReport | null> => {
-      // 전용 리포트가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다
-      // ⚠️ 게이트마다 실패 원장(match_report_attempts)에 한 줄 남긴다 (2026-09-02).
-      //    7일간 대상 23경기 중 리포트 10개 — 나머지는 어느 문에서 멈췄는지 아무도 몰랐다.
-      //    fail-closed 는 그대로다. 눈만 단다.
-      const article = await findReportArticle(eventId, candidateUrl, kickoffMs)
-      if (!article) {
-        await recordReportAttempt(
-          gameId,
-          eventId,
-          "article",
-          "전용 리포트 기사 없음 (soccerway 목록)"
-        )
-        return null
-      }
-      const paragraphs = await fetchArticleParagraphs(article.id, article.slug)
-      if (!paragraphs) {
-        await recordReportAttempt(gameId, eventId, "paragraphs", `문단 부족: ${article.slug}`)
-        return null
-      }
-      const body = { title: article.title, paragraphs }
-
-      // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
-      const extracted = await extractEvents(body.title, body.paragraphs)
-      if (!extracted) {
-        await recordReportAttempt(gameId, eventId, "extract", "사건 추출 결과 없음")
-        return null
-      }
-      const lineup = await getLineupForGame(gameId).catch(
-        () => ({ status: "none" }) as LineupResponse
-      )
-      const { events, grounded, total } = await groundPlayerNames(extracted.events, lineup)
-      // ⚠️ 종전엔 grounded/total 을 계산해 놓고 **버렸다**. 이름이 통째로 영문으로
-      //    나가도 아무 신호가 없었다 — 운영자 제보로만 알 수 있었다는 뜻이다.
-      if (total > 0 && grounded < total) {
-        console.warn(
-          `[match-report] 이름 확정 ${grounded}/${total} (event ${eventId}, 라인업 ${lineup.status})`
-        )
-      }
-      /**
-       * ⚠️⚠️ **확정 스코어가 없으면 리포트를 쓰지 않는다** (2026-08-25 2차 실사고).
-       *
-       * 아래 스코어 게이트는 `finalScore` 가 있을 때만 돈다. 없으면 통째로 건너뛰고
-       * LLM 이 기사에서 뽑은 값을 그대로 썼다 — **사고를 냈던 그 경로가 폴백으로
-       * 남아 있었다.** 실제로 그리로 새어나갔다: 오사수나 0-0 레반테 경기에
-       * "3-0 승리…멀티골 활약" 리포트가 저장됐다. 득점 장면 셋을 지어냈고,
-       * 같은 사이트의 MoTM 투표판은 같은 경기를 0-0 이라고 적고 있었다.
-       *
-       * 스코어는 FT 뒤 잠깐 비어 있다가 채워진다. 그때까지 **안 쓰는 게 맞다** —
-       * 위 주석 그대로 "틀린 리포트는 없는 리포트보다 나쁘다". TTL(30분) 뒤 재시도한다.
-       */
-      if (!finalScore) {
-        // 사유는 getMatchExtras 가 확정 단계에서 이미 남겼다 — 여기선 기사까지 있었다는 것만
-        await recordReportAttempt(gameId, eventId, "score", "기사는 있으나 확정 스코어 없음")
-        return null
-      }
-
-      const stats = await cachedStats(eventId)().catch(() => null)
-      // ⚠️⚠️ 스코어는 **우리 DB 가 정본**이다 (2026-08-25).
-      //    종전엔 LLM 이 기사에서 뽑은 `extracted.score` 를 그대로 썼는데, 같은 경기를
-      //    3회 생성했더니 제목이 "3-2 첼시 승" / "3-2 첼시 승" / "3-3 무승부" 로 갈렸다.
-      //    실제는 풀럼 2-3 첼시 — **승패 자체가 틀린 리포트**가 검증을 통과했다.
-      //    숫자 게이트가 "3" 과 "3" 이 근거에 있는지만 보고 스코어 조합은 안 봤기 때문이다.
-      const score = finalScore
-
-      /**
-       * ⚠️⚠️ **득점 정본을 라인업에서 꺼낸다** (2026-08-29 실사고).
-       *
-       * 종전엔 라인업을 가져다 **이름 한글화에만** 쓰고 득점 사실(득점자·시각·자책골)은
-       * 버렸다. 누가 넣었는지는 영문 기사를 LLM 이 읽어 다시 만들었고, 그 왕복에서
-       * 방향이 뒤집혔다 — 팰리스 1-4 시티에서 **맨시티 GK 돈나룸마의 자책골**(= 팰리스의
-       * 유일한 득점)이 "크리스털 팰리스의 돈나룸마 자책골 → 3-0 시티"로 나갔다.
-       * 시티 골이 하나 늘어 다섯을 나열하고 마지막을 "네 번째"라 적는 모순까지 났다.
-       *
-       * 스코어 게이트가 못 잡은 이유: 그건 최종 스코어 **조합**만 본다. 제목 1-4 는 맞았다.
-       * 틀린 건 거기까지 가는 경로였다.
-       *
-       * 합이 확정 스코어와 맞을 때만 정본으로 쓴다 — 인시던트는 늦게 채워질 수 있고,
-       * 불완전한 정본은 없느니만 못하다.
-       */
-      const lineupPlayers =
-        lineup.status === "ready"
-          ? [
-              ...[...lineup.home.starters, ...lineup.home.bench].map((p) => ({
-                label: p.label,
-                team: "home" as TeamSide,
-              })),
-              ...[...lineup.away.starters, ...lineup.away.bench].map((p) => ({
-                label: p.label,
-                team: "away" as TeamSide,
-              })),
-            ]
-          : []
-      let goalFacts: GoalFact[] | null = null
-      if (lineup.status === "ready") {
-        const facts = collectGoalFacts(lineup)
-        if (goalFactsMatchScore(facts, score)) {
-          goalFacts = facts.goals
-        } else if (facts.goals.length > 0) {
-          console.warn(
-            `[match-report] 득점 정본 불일치 — 라인업 ${facts.home}-${facts.away} vs 확정 ${score} (event ${eventId}). 정본 미사용.`
-          )
-        }
-      }
-
-      const sources = { paragraphs: body.paragraphs, events, stats, score }
-
-      // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
-      // 재검증까지 실패하면 미노출(fail-closed) — 틀린 리포트는 없는 리포트보다 나쁘다.
-      let feedback: string[] = []
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const ko = await composeReportKo(
-          homeTeam,
-          awayTeam,
-          score,
-          events,
-          stats,
-          goalFacts,
-          feedback
-        )
-        if (!ko) {
-          await recordReportAttempt(
-            gameId,
-            eventId,
-            "compose",
-            `작성 LLM 빈 응답 (${attempt + 1}차)`
-          )
-          break
-        }
-        const gate = numbersGate(ko, sources)
-        // ⚠️ 소속 표기 게이트 — "○○의 <선수>" 에서 팀이 반대면 그 자리에서 떨어뜨린다.
-        //    실사고 문장이 정확히 이 형태였다("크리스털 팰리스의 잔루이지 돈나룸마").
-        const teamProblem = wrongTeamAttribution(ko, lineupPlayers, homeTeam, awayTeam)
-        // ⚠️ 스코어 게이트 — LLM 판단 이전의 **결정론** 검사. 확정 스코어가 있는데
-        //    리포트가 다른 조합을 적으면 그 자리에서 떨어뜨린다. 숫자 게이트는 개별
-        //    숫자만 보므로 "3-3" 같은 **조합 오류**를 못 잡는다 (실사고).
-        const scoreProblem = finalScore ? wrongScore(ko, finalScore) : null
-        const verdict = scoreProblem
-          ? { pass: false, problems: [scoreProblem] }
-          : teamProblem
-            ? { pass: false, problems: [teamProblem] }
-            : gate.ok
-              ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats, goalFacts })
-              : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
-        if (verdict.pass) return ko
-        // 서버 로그만 — 화면은 fail-open 계약대로 침묵. 반복되면 프롬프트 튜닝 신호다.
-        console.warn(
-          `[match-report] 검증 불합격 (${attempt + 1}차, event ${eventId}):`,
-          verdict.problems.slice(0, 5).join(" | ")
-        )
-        feedback = verdict.problems
-      }
-      if (feedback.length > 0) {
-        await recordReportAttempt(gameId, eventId, "verify", feedback.slice(0, 3).join(" | "))
-      }
-      return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
-    },
-    // v15: 원문을 **그 경기 전용 리포트**로 판별 (2026-09-01 — 종전엔 목록 맨 앞을
-    //      집어 주말 라운드업이 원문이 됐다). ⚠️ 키를 올려야 v14 가 물고 있던 실패·
-    //      라운드업 결과가 즉시 무효가 된다.
-    ["match-report-v16", eventId, gameId, finalScore ?? "unconfirmed"],
-    // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
+    () =>
+      generateMatchReport(eventId, gameId, homeTeam, awayTeam, finalScore, candidateUrl, kickoffMs),
+    ["match-report-v17", eventId, gameId, finalScore ?? "unconfirmed"],
     { revalidate: 1800 }
   )
 }
@@ -782,17 +778,14 @@ interface MatchExtras {
  * 탭이 남아 **빈 패널 데드엔드**가 됐다 (2026-08-19 패널 2중 실측 — fail-open 계약 파공).
  */
 export async function hasStoredReport(gameId: string): Promise<boolean> {
-  try {
-    // ⚠️ 경기 단위로 본다 — 행 단위 확인이 중복 생성의 뿌리였다 (matchSiblingIds 참조)
-    const ids = await matchSiblingIds(gameId)
-    const { count } = await createServiceRoleClient()
-      .from("match_reports")
-      .select("game_id", { count: "exact", head: true })
-      .in("game_id", ids)
-    return (count ?? 0) > 0
-  } catch {
-    return false
-  }
+  // ⚠️ 경기 단위로 본다 — 행 단위 확인이 중복 생성의 뿌리였다 (matchSiblingIds 참조)
+  const ids = await matchSiblingIds(gameId)
+  const { count, error } = await createServiceRoleClient()
+    .from("match_reports")
+    .select("game_id", { count: "exact", head: true })
+    .in("game_id", ids)
+  if (error) throw new Error(`match-report-read:${error.code}`)
+  return (count ?? 0) > 0
 }
 
 /**
@@ -808,31 +801,29 @@ export async function hasStoredReport(gameId: string): Promise<boolean> {
  *    행을 못 찾으면 자기 자신만 돌려준다 — 종전 동작으로 접힌다 (fail-open).
  */
 const matchSiblingIds = reactCache(async (gameId: string): Promise<string[]> => {
-  try {
-    const supabase = createServiceRoleClient()
-    const { data: game } = await supabase
-      .from("betman_games")
-      .select("home_team_name, away_team_name, match_time")
-      .eq("id", gameId)
-      .maybeSingle()
-    if (!game?.match_time) return [gameId]
-    const { data: siblings } = await supabase
-      .from("betman_games")
-      .select("id")
-      .eq("home_team_name", game.home_team_name)
-      .eq("away_team_name", game.away_team_name)
-      .eq("match_time", game.match_time)
-    const ids = (siblings ?? []).map((s) => String(s.id))
-    return ids.length > 0 ? ids : [gameId]
-  } catch {
-    return [gameId]
-  }
+  const supabase = createServiceRoleClient()
+  const { data: game, error: gameError } = await supabase
+    .from("betman_games")
+    .select("home_team_name, away_team_name, match_time")
+    .eq("id", gameId)
+    .maybeSingle()
+  if (gameError) throw new Error(`match-report-game-read:${gameError.code}`)
+  if (!game?.match_time) return [gameId]
+  const { data: siblings, error: siblingError } = await supabase
+    .from("betman_games")
+    .select("id")
+    .eq("home_team_name", game.home_team_name)
+    .eq("away_team_name", game.away_team_name)
+    .eq("match_time", game.match_time)
+  if (siblingError) throw new Error(`match-report-siblings-read:${siblingError.code}`)
+  const ids = (siblings ?? []).map((s) => String(s.id))
+  return ids.length > 0 ? ids : [gameId]
 })
 
 /** 저장해 둔 리포트 — 창 밖이어도, 원본 기사가 내려가도 그대로 보여준다 */
 async function loadStoredReport(gameId: string): Promise<MatchReport | null> {
   const ids = await matchSiblingIds(gameId)
-  const { data } = await createServiceRoleClient()
+  const { data, error } = await createServiceRoleClient()
     .from("match_reports")
     .select("title, paragraphs")
     .in("game_id", ids)
@@ -841,18 +832,20 @@ async function loadStoredReport(gameId: string): Promise<MatchReport | null> {
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
+  if (error) throw new Error(`match-report-read:${error.code}`)
   if (!data?.title) return null
   return { title: String(data.title), paragraphs: (data.paragraphs as string[]) ?? [] }
 }
 
 /** 검증을 통과한 리포트만 보관 — 재생성 비용(LLM)과 원본 소실 양쪽을 막는다 */
 async function storeReport(gameId: string, eventId: string, report: MatchReport) {
-  await createServiceRoleClient()
+  const { error } = await createServiceRoleClient()
     .from("match_reports")
     .upsert(
       { game_id: gameId, event_id: eventId, title: report.title, paragraphs: report.paragraphs },
       { onConflict: "game_id" }
     )
+  if (error) throw new Error(`match-report-write:${error.code}`)
 }
 
 /**
@@ -885,13 +878,14 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
     .select("league_code")
     .eq("id", gameId)
     .maybeSingle()
-  if (error || !game || !isMatchExtrasLeague(String(game.league_code ?? ""))) {
+  if (error) throw new Error(`match-report-game-read:${error.code}`)
+  if (!game || !isMatchExtrasLeague(String(game.league_code ?? ""))) {
     return { stats: null, report: null }
   }
   // ⚠️ 저장분을 **해석보다 먼저** 본다. soccerway 해석에는 킥오프 +24시간 창이 걸려 있어,
   //    창을 벗어나면 resolveMatchEvent 가 null 이 되고 리포트·스탯이 통째로 사라졌다.
   //    한 번 만든 리포트는 창과 무관하게 계속 보여야 한다 (2026-08-18 운영자 지적).
-  const stored = await loadStoredReport(gameId).catch(() => null)
+  const stored = await loadStoredReport(gameId)
 
   const resolved = await resolveMatchEvent(gameId)
   if (!resolved) {
@@ -968,6 +962,13 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
         )().catch(() => null)
       : Promise.resolve(null),
   ])
-  if (fresh) await storeReport(gameId, resolved.eventId, fresh).catch(() => {})
+  if (fresh) {
+    try {
+      await storeReport(gameId, resolved.eventId, fresh)
+    } catch (error) {
+      await recordReportAttempt(gameId, resolved.eventId, "store", "검증된 리포트 DB 저장 실패")
+      throw error
+    }
+  }
   return { stats, report: stored ?? fresh }
 }

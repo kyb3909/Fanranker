@@ -15,6 +15,13 @@
 import { createHash } from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import {
+  groupMappingGames,
+  loadMappingAttempts,
+  loadMappingDictionary,
+  loadMappingGames,
+  type MappingAttemptRow,
+} from "./mapping-candidates"
+import {
   buildMatchUrl,
   fetchMatchPage,
   parseMatchPage,
@@ -51,7 +58,7 @@ export interface TeamDictionaryRow {
   status: string
 }
 
-interface BetmanGameRow {
+export interface BetmanGameRow {
   id: string
   home_team_name: string
   away_team_name: string
@@ -67,7 +74,9 @@ export function resolveTeam(
   const needle = nameKr.trim()
   if (!needle) return null
   for (const row of dictionary) {
-    if (row.status === "rejected") continue
+    // LFA-only dictionary rows carry placeholders, not Soccerway team hashes.
+    // Leave them unresolved so discovery can find and validate the real team.
+    if (row.status === "rejected" || row.soccerway_team_id.startsWith("lfa_")) continue
     if (row.name_kr === needle) return row
     if (row.aliases_kr.includes(needle)) return row
   }
@@ -201,6 +210,10 @@ export function judgeMatchPage(
 }
 
 interface ShadowRunSummary {
+  candidateRows: number
+  candidateMatches: number
+  /** Eligible matches left for the next run, excluding settled judgements. */
+  deferred: number
   scanned: number
   skipped: number
   proposed: number
@@ -341,6 +354,7 @@ export async function discoverTeamsForGame(input: {
 export async function runMatchMappingShadow(
   supabase: SupabaseClient,
   options: {
+    /** External processing budget in matches, not betting-market rows. */
     limit?: number
     runId?: string
     fetcher?: Fetcher
@@ -351,8 +365,10 @@ export async function runMatchMappingShadow(
     proposer?: QueryProposer
     /** 과거 경기 스캔 범위(시간) — 기본 24h. 백필·리허설 시 넓혀 쓴다 */
     lookbackHours?: number
+    timeBudgetMs?: number
   } = {}
 ): Promise<ShadowRunSummary> {
+  const startedAt = Date.now()
   const limit = options.limit ?? 15
   const runId = options.runId ?? `shadow-${Date.now()}`
   const fetcher = options.fetcher ?? fetchMatchPage
@@ -362,6 +378,9 @@ export async function runMatchMappingShadow(
   let discoverBudget = options.discoverLimit ?? 6
 
   const summary: ShadowRunSummary = {
+    candidateRows: 0,
+    candidateMatches: 0,
+    deferred: 0,
     scanned: 0,
     skipped: 0,
     proposed: 0,
@@ -374,46 +393,24 @@ export async function runMatchMappingShadow(
     errors: [],
   }
 
-  // 국가대표(축월드컵 등)는 클럽 사전 범위 밖 — 클럽 축구만 본다.
-  const { data: games, error: gamesError } = await supabase
-    .from("betman_games")
-    .select("id, home_team_name, away_team_name, match_time, league_code")
-    .eq("sport", "축구")
-    .gte(
-      "match_time",
-      new Date(Date.now() - (options.lookbackHours ?? 24) * 3600_000).toISOString()
+  let groups: BetmanGameRow[][]
+  let dictionary: TeamDictionaryRow[]
+  let priorRows: MappingAttemptRow[]
+  try {
+    const games = await loadMappingGames(supabase, startedAt, options.lookbackHours ?? 24)
+    groups = groupMappingGames(games)
+    summary.candidateRows = games.length
+    summary.candidateMatches = groups.length
+    if (!games.length) return summary
+    dictionary = await loadMappingDictionary(supabase)
+    priorRows = await loadMappingAttempts(
+      supabase,
+      games.map((g) => g.id),
+      PREDICATE_VERSION
     )
-    .lte("match_time", new Date(Date.now() + 8 * 24 * 3600_000).toISOString())
-    .order("match_time", { ascending: true })
-    .limit(200)
-
-  if (gamesError) {
-    summary.errors.push(`betman_games 조회 실패: ${gamesError.message}`)
-    return summary
-  }
-
-  const targetGames = (games || []) as BetmanGameRow[]
-  if (targetGames.length === 0) return summary
-
-  const { data: dictRows, error: dictError } = await supabase
-    .from("team_dictionary")
-    .select("soccerway_team_id, slug, name_en, name_kr, aliases_kr, status")
-
-  if (dictError) {
-    summary.errors.push(`team_dictionary 조회 실패: ${dictError.message}`)
-    return summary
-  }
-  const dictionary = (dictRows || []) as TeamDictionaryRow[]
-
-  const gameIds = targetGames.map((g) => g.id)
-  const { data: priorRows, error: priorError } = await supabase
-    .from("match_mapping_attempts")
-    .select("game_id, input_hash, predicate_version, status, attempt, outcome")
-    .in("game_id", gameIds)
-    .eq("predicate_version", PREDICATE_VERSION)
-
-  if (priorError) {
-    summary.errors.push(`attempts 조회 실패: ${priorError.message}`)
+  } catch (error) {
+    // A partial scan is not a complete work list. Retry instead of processing a prefix.
+    summary.errors.push(error instanceof Error ? error.message : String(error))
     return summary
   }
 
@@ -424,6 +421,7 @@ export async function runMatchMappingShadow(
   const settled = new Set<string>()
   const settledUnresolved = new Set<string>()
   const attemptCount = new Map<string, number>()
+  const lastAttempt = new Map<string, number>()
   for (const row of priorRows || []) {
     const key = `${row.game_id}|${row.input_hash}`
     if (row.status === "ok" || row.status === "dead_letter") {
@@ -431,15 +429,40 @@ export async function runMatchMappingShadow(
       else settled.add(key)
     }
     attemptCount.set(key, Math.max(attemptCount.get(key) ?? 0, row.attempt))
+    lastAttempt.set(key, Math.max(lastAttempt.get(key) ?? 0, Date.parse(row.created_at) || 0))
   }
+
+  const candidates = groups
+    .map((games) => {
+      const first = games[0]
+      const hash = mappingInputHash(
+        first,
+        resolveTeam(first.home_team_name, dictionary)?.soccerway_team_id ?? null,
+        resolveTeam(first.away_team_name, dictionary)?.soccerway_team_id ?? null
+      )
+      // Reuse a terminal judgement on ANY market. Consumers already read sibling IDs.
+      const game =
+        games.find((g) => settled.has(`${g.id}|${hash}`)) ??
+        games.find((g) => settledUnresolved.has(`${g.id}|${hash}`)) ??
+        first
+      const last = Math.max(...games.map((g) => lastAttempt.get(`${g.id}|${hash}`) ?? 0))
+      const attempts = Math.max(...games.map((g) => attemptCount.get(`${g.id}|${hash}`) ?? 0))
+      return { game, last, attempts }
+    })
+    .sort(
+      (a, b) =>
+        a.last - b.last ||
+        Date.parse(a.game.match_time) - Date.parse(b.game.match_time) ||
+        a.game.id.localeCompare(b.game.id)
+    )
 
   let processed = 0
   // 같은 경기의 마켓별 행(승부/핸디캡/언더오버…)이 같은 URL 을 반복 fetch 하지 않도록 런 내 메모
   const pageCache = new Map<string, MatchPageFetchResult>()
   // 발견 단계 메모 — 같은 팀명은 런 내 1회만 검색 (LLM·검색 API 보호)
   const candidateMemo = new Map<string, SoccerwayTeamCandidate[]>()
-  for (const game of targetGames) {
-    if (processed >= limit) break
+  for (const candidate of candidates) {
+    const { game } = candidate
 
     const home = resolveTeam(game.home_team_name, dictionary)
     const away = resolveTeam(game.away_team_name, dictionary)
@@ -454,16 +477,21 @@ export async function runMatchMappingShadow(
       summary.skipped++
       continue
     }
-    // unresolved 확정 행: 발견 예산이 남아 있을 때만 재도전, 아니면 skip
+    // Discovery retries wait for available budget, without consuming another match's slot.
     const isUnresolvedRetry = settledUnresolved.has(key)
     if (isUnresolvedRetry && (discoverBudget <= 0 || (home && away))) {
-      summary.skipped++
+      summary.deferred++
+      continue
+    }
+
+    if (processed >= limit || Date.now() - startedAt >= (options.timeBudgetMs ?? 240_000)) {
+      summary.deferred++
       continue
     }
 
     processed++
     summary.scanned++
-    const attempt = (attemptCount.get(key) ?? 0) + 1
+    const attempt = Math.max(attemptCount.get(key) ?? 0, candidate.attempts) + 1
 
     const base = {
       game_id: game.id,
@@ -573,8 +601,19 @@ export async function runMatchMappingShadow(
       }
 
       if (isUnresolvedRetry) {
-        // 재도전 실패 — unresolved 확정 행이 이미 있으므로(부분 유니크) 새 행은 안 쓴다
-        summary.teamUnresolved++
+        // Persist the retry time so this unresolved match yields to others next run.
+        // retry_wait is outside the terminal-judgement unique index.
+        const { error } = await supabase.from("match_mapping_attempts").insert({
+          ...base,
+          outcome: "team_unresolved",
+          status: "retry_wait",
+          unresolved_names: [
+            ...(home ? [] : [game.home_team_name.trim()]),
+            ...(away ? [] : [game.away_team_name.trim()]),
+          ],
+        })
+        if (error) summary.errors.push(`insert 실패(game=${game.id}): ${error.message}`)
+        else summary.teamUnresolved++
         continue
       }
 
@@ -632,7 +671,6 @@ export async function runMatchMappingShadow(
         candidate_url: url,
         latency_ms: latency,
       }
-      summary.noCandidate++
     } else if (fetched.httpStatus !== 200 || !fetched.html) {
       row = {
         ...base,
@@ -670,16 +708,16 @@ export async function runMatchMappingShadow(
           home_away_flip: judgement.homeAwayFlip,
           latency_ms: latency,
         }
-        if (judgement.outcome === "proposed") {
-          summary.proposed++
-          if (judgement.homeAwayFlip === true) summary.flips++
-        } else if (judgement.outcome === "ambiguous") summary.ambiguous++
-        else summary.noCandidate++
       }
     }
 
     const { error } = await supabase.from("match_mapping_attempts").insert(row)
     if (error) summary.errors.push(`insert 실패(game=${game.id}): ${error.message}`)
+    else if (row.outcome === "proposed") {
+      summary.proposed++
+      if (row.home_away_flip === true) summary.flips++
+    } else if (row.outcome === "ambiguous") summary.ambiguous++
+    else if (row.outcome === "no_candidate") summary.noCandidate++
   }
 
   return summary
