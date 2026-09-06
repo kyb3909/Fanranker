@@ -103,20 +103,24 @@ export const cachedTeamEn = unstable_cache(
  * 배로 뛴다: 5분 → 하루 최대 576회, 1분 → 2,880회. 라이브 중계를 하지 않으므로
  * 5분이면 충분하다 (betman 은 90분 걸린다).
  */
+async function fetchDaySnapshot(dateUtc: string) {
+  if (!withinBuyWindow(dateUtc)) throw new Error("lfa-day-outside-buy-window")
+  // 요청 시작 시각: 먼저 시작한 느린 응답을 나중 요청보다 최신으로 취급하지 않는다.
+  const updatedAt = Date.now()
+  const data = await lfaFetch<{ matches?: LfaMatch[] }>("matches", { date: dateUtc, lang: "en" })
+  if (!data || !Array.isArray(data.matches)) throw new Error("lfa-day-failed")
+  return { matches: data.matches, updatedAt }
+}
+
 function cachedDayMatches(dateUtc: string) {
   return unstable_cache(
     async () => {
-      const data = await lfaFetch<{ matches?: LfaMatch[] }>("matches", {
-        date: dateUtc,
-        lang: "en",
-      })
       // ⚠️ API 실패(null)를 빈 배열로 캐시하면 settled 12시간·live 5분 동안 그날
       //    전 경기의 해석이 통째로 죽는다 (2026-08-20 프로덕션 실사고: 라이브 매치가
       //    "진행 중" 라벨만 남았다). throw 로 캐시를 회피한다 — cachedDetails 의
       //    빈 페이로드 교훈과 같은 병. 성공했는데 정말 경기가 없는 날(matches: [])은
       //    정상 값이라 그대로 캐시한다.
-      if (!data) throw new Error("lfa-day-failed")
-      return { matches: data.matches ?? [], updatedAt: Date.now() }
+      return fetchDaySnapshot(dateUtc)
     },
     ["lfa-day-v2", dateUtc],
     // 끝난 날짜의 재구매 중단은 DB 신선도 정책이 담당한다. false 호출로 12시간 굳히지 않는다.
@@ -164,13 +168,17 @@ export const getDayMatches = cache(
     (await getDaySnapshot(dateUtc, live)).matches
 )
 
+async function fetchDetailSnapshot(matchId: string, live: boolean, retryEmpty: boolean) {
+  const updatedAt = Date.now()
+  const d = await lfaFetch<LfaMatchDetails>("live_match_details", { match_id: matchId, lang: "en" })
+  if (!d) throw new Error("lfa-details-failed")
+  if (!live && retryEmpty && (d.events?.length ?? 0) === 0) throw new Error("lfa-details-empty")
+  return { details: d, updatedAt }
+}
+
 function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
   return unstable_cache(
     async () => {
-      const d = await lfaFetch<LfaMatchDetails>("live_match_details", {
-        match_id: matchId,
-        lang: "en",
-      })
       // ⚠️ LFA 는 일부 경기의 이벤트·스탯을 FT 후 **몇 시간 뒤에** 채운다. 빈 응답을
       //    6시간 캐시에 박으면 그동안 득점자·스탯이 통째로 사라진 경기 페이지가 된다
       //    (2026-08-19 실사고: 라싱 2:2 비야레알 — 직접 조회하면 이벤트 21건인데 화면은 0).
@@ -185,11 +193,7 @@ function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
       //    LFA 가 끝내 이벤트를 안 채우는 경기(하부 리그·중단 경기)는 이 throw 가 영원히
       //    캐시를 막아 **방문할 때마다 1크레딧**을 태운다. 재조회는 호출부가 준 창
       //    (retryEmpty) 안에서만 하고, 그 밖에서는 빈 응답도 그대로 캐시한다.
-      if (!live && retryEmpty && d && (d.events?.length ?? 0) === 0) {
-        throw new Error("lfa-details-empty")
-      }
-      if (!d) throw new Error("lfa-details-failed")
-      return { details: d, updatedAt: Date.now() }
+      return fetchDetailSnapshot(matchId, live, retryEmpty)
     },
     // v3: 원본 수집 시각을 함께 캐시한다. 재시도 창 여부도 키에 포함한다.
     ["lfa-details-v3", matchId, live ? "live" : "settled", String(retryEmpty)],
@@ -237,6 +241,9 @@ export interface LfaMatchInfo {
   matchId: string
   /** 원본을 실제로 받은 시각. SWR 재조회로 DB 신선도를 연장하지 않는다. */
   sourceUpdatedAt?: number
+  /** 각 원본의 요청 시각. 목록만 새롭고 상세는 낡은 혼합 응답도 DB에서 거절한다. */
+  dayUpdatedAt?: number
+  detailsUpdatedAt?: number
   /** LFA 기준 종료 여부 — betman 이 늦어도 이건 즉시 참이 된다 */
   finished: boolean
   live: boolean
@@ -299,7 +306,8 @@ function utcDate(iso: string): string {
 }
 
 export async function resolveLfaMatch(
-  game: BetmanGameKey
+  game: BetmanGameKey,
+  daySnapshot = getDaySnapshot
 ): Promise<(LfaMatch & { sourceUpdatedAt: number }) | null> {
   const leagueId = lfaLeagueId(game.leagueCode)
   if (!leagueId) return null
@@ -309,7 +317,7 @@ export async function resolveLfaMatch(
   const now = Date.now()
   const live = now >= ko && now <= ko + 3 * 3600_000
 
-  const snapshot = await getDaySnapshot(utcDate(game.matchTime), live)
+  const snapshot = await daySnapshot(utcDate(game.matchTime), live)
   const all = snapshot.matches.map((m) => ({ ...m, sourceUpdatedAt: snapshot.updatedAt }))
   const inLeague = all.filter((m) => m.league?.id === leagueId)
   if (inLeague.length === 0) return null
@@ -434,8 +442,9 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
   try {
     const fresh = await computeLfaMatchInfo(game)
     if (fresh) {
-      await writeMatchDetails(game.gameId, fresh)
-      return fresh
+      const saved = await writeMatchDetails(game.gameId, fresh)
+      // DB가 동시 요청의 더 최신 값을 선택했다면 화면에도 그 값을 반환한다.
+      return saved?.info ?? cached?.info ?? fresh
     }
     // ② LFA 가 못 줬으면 **낡은 값이라도** 내준다 — 빈 화면보다 낫다
     return cached?.info ?? null
@@ -445,9 +454,15 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
 }
 
 /** 실제 LFA 조회 — 위 캐시 계층이 미스일 때만 탄다 */
-async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | null> {
+async function computeLfaMatchInfo(
+  game: BetmanGameKey,
+  daySnapshot = getDaySnapshot,
+  detailSnapshotProvider = (id: string, live: boolean, retry: boolean) =>
+    cachedDetails(id, live, retry)(),
+  strict = false
+): Promise<LfaMatchInfo | null> {
   try {
-    const m = await resolveLfaMatch(game)
+    const m = await resolveLfaMatch(game, daySnapshot)
     if (!m) return null
 
     const live = m.status?.is_live === true
@@ -460,6 +475,7 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
     const info: LfaMatchInfo = {
       matchId: m.id,
       sourceUpdatedAt: m.sourceUpdatedAt,
+      dayUpdatedAt: m.sourceUpdatedAt,
       finished,
       live,
       minute: null,
@@ -480,14 +496,18 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
     // 재조회 창 = 킥오프 후 6시간까지 (LFA 가 몇 시간 뒤 채우는 경우를 덮되, 끝내 안 채우는
     // 경기가 크레딧을 무한히 태우는 것은 막는다 — 2026-08-23 소진 사고)
     const retryEmpty = Number.isFinite(kickoffMs) && Date.now() - kickoffMs < 6 * 3600_000
-    const detailSnapshot = await cachedDetails(
+    const detailSnapshot = await detailSnapshotProvider(
       m.id,
       !finished && (live || inMatchWindow),
       retryEmpty
-    )().catch(() => null)
+    ).catch((error) => {
+      if (strict) throw error
+      return null
+    })
     if (!detailSnapshot) return info
     const d = detailSnapshot.details
     info.sourceUpdatedAt = Math.min(m.sourceUpdatedAt, detailSnapshot.updatedAt)
+    info.detailsUpdatedAt = detailSnapshot.updatedAt
 
     // 목록/상세 중 실제로 더 최근에 받은 출처를 쓴다. 최대값 병합은 VAR 취소를 복구할 수 없다.
     // 홈/원정을 한 쌍으로 옮겨 서로 다른 시점의 점수를 합성하지 않는다.
@@ -603,7 +623,47 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
     }
 
     return info
-  } catch {
+  } catch (error) {
+    if (strict) throw error
     return null
+  }
+}
+
+/** 크론 실행 하나의 수집 세션. SWR/React/DB 신선도 캐시를 우회하고 날짜당 한 번만 구매한다. */
+export function createLfaRefreshSession() {
+  const days = new Map<string, ReturnType<typeof fetchDaySnapshot>>()
+  const details = new Map<string, ReturnType<typeof fetchDetailSnapshot>>()
+  const daySnapshot = (date: string) => {
+    let pending = days.get(date)
+    if (!pending) {
+      pending = fetchDaySnapshot(date).then(async (snapshot) => {
+        await writeDayMatches(date, snapshot.matches, snapshot.updatedAt, { strict: true })
+        return snapshot
+      })
+      days.set(date, pending)
+    }
+    return pending
+  }
+  const detailSnapshot = (id: string, live: boolean, retry: boolean) => {
+    let pending = details.get(id)
+    if (!pending) {
+      pending = fetchDetailSnapshot(id, live, retry)
+      details.set(id, pending)
+    }
+    return pending
+  }
+  return async (game: BetmanGameKey) => {
+    // 종료된 완전한 저장분은 재구매하지 않는다. 빈 종료 상세는 기존 재시도 창을 따른다.
+    const stored = await readMatchDetails(game.gameId, game.matchTime)
+    if (stored?.info.finished && !stored.stale)
+      return { status: "settled" as const, info: stored.info }
+    const fresh = await computeLfaMatchInfo(game, daySnapshot, detailSnapshot, true)
+    if (!fresh) throw new Error("lfa-match-unresolved")
+    const saved = await writeMatchDetails(game.gameId, fresh, { strict: true })
+    if (!saved) throw new Error("lfa-details-persist-failed")
+    return {
+      status: saved.written ? ("updated" as const) : ("superseded" as const),
+      info: saved.info,
+    }
   }
 }

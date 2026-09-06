@@ -132,40 +132,47 @@ export async function readDayMatches(
 export async function writeDayMatches(
   dateUtc: string,
   matches: LfaMatch[],
-  fetchedAt = Date.now()
+  fetchedAt = Date.now(),
+  opts: { strict?: boolean } = {}
 ): Promise<void> {
   try {
-    await createServiceRoleClient()
-      .from("lfa_day_cache")
-      .upsert(
-        {
-          date_utc: dateUtc,
-          payload: matches.map(trimMatch) as unknown as Record<string, unknown>[],
-          match_count: matches.length,
-          updated_at: new Date(fetchedAt).toISOString(),
-        },
-        { onConflict: "date_utc" }
-      )
-  } catch {
-    /* 적재 실패가 화면을 깨면 안 된다 */
+    const { error } = await createServiceRoleClient().rpc("write_lfa_day_snapshot", {
+      p_date: dateUtc,
+      p_payload: matches.map(trimMatch),
+      p_updated_at: new Date(fetchedAt).toISOString(),
+    })
+    if (error) throw new Error("lfa-day-persist-failed")
+  } catch (error) {
+    if (opts.strict) throw error
+    console.warn("[lfa-persist] day write failed", dateUtc)
   }
 }
 
-export async function writeMatchDetails(gameId: string, info: LfaMatchInfo): Promise<void> {
+export interface MatchDetailsWriteResult {
+  written: boolean
+  info: LfaMatchInfo
+}
+
+export async function writeMatchDetails(
+  gameId: string,
+  info: LfaMatchInfo,
+  opts: { strict?: boolean } = {}
+): Promise<MatchDetailsWriteResult | null> {
   try {
-    await createServiceRoleClient()
-      .from("match_details_cache")
-      .upsert(
-        {
-          game_id: gameId,
-          lfa_match_id: info.matchId,
-          payload: info as unknown as Record<string, unknown>,
-          finished: info.finished,
-          updated_at: new Date(info.sourceUpdatedAt ?? Date.now()).toISOString(),
-        },
-        { onConflict: "game_id" }
-      )
-  } catch {
-    // 적재 실패가 화면을 깨면 안 된다
+    if (!Number.isFinite(info.sourceUpdatedAt)) throw new Error("lfa-source-time-missing")
+    const db = createServiceRoleClient()
+    const ids = await getSiblingGameIds(db, gameId, { strict: true })
+    const { data, error } = await db.rpc("write_lfa_match_snapshot", {
+      p_game_ids: ids,
+      p_match_id: info.matchId,
+      p_payload: info,
+      p_updated_at: new Date(info.sourceUpdatedAt!).toISOString(),
+    })
+    if (error || !data?.payload) throw new Error("lfa-details-persist-failed")
+    return { written: data.written === true, info: data.payload as LfaMatchInfo }
+  } catch (error) {
+    if (opts.strict) throw error
+    console.warn("[lfa-persist] details write failed", gameId)
+    return null
   }
 }

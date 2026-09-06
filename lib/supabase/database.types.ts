@@ -7653,6 +7653,14 @@ export type Database = {
       }
     }
     Functions: {
+      write_lfa_day_snapshot: {
+        Args: { p_date: string; p_payload: Json; p_updated_at: string }
+        Returns: boolean
+      }
+      write_lfa_match_snapshot: {
+        Args: { p_game_ids: string[]; p_match_id: string; p_payload: Json; p_updated_at: string }
+        Returns: Json
+      }
       admin_adjust_gold: {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: Json

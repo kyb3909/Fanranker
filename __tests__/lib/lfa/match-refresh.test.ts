@@ -38,7 +38,7 @@ vi.mock("@/lib/soccerway/lineup-lookup", () => ({
 }))
 vi.mock("@/lib/match/resolve-team-id", () => ({ resolveTeamId: async () => null }))
 vi.mock("@/lib/match/supplemental-fixtures", () => ({ getSupplementalFixture: mocks.supplemental }))
-import { getDayMatches, getLfaMatchInfo } from "@/lib/lfa/match"
+import { createLfaRefreshSession, getDayMatches, getLfaMatchInfo } from "@/lib/lfa/match"
 
 const now = Date.parse("2026-09-04T20:00:00Z")
 const game = {
@@ -81,6 +81,8 @@ describe("LFA 실제 수집 시각과 실황 갱신", () => {
     mocks.supplemental.mockResolvedValue(null)
     mocks.readDay.mockResolvedValue({ matches: [match()], updatedAt: now - 30_000, stale: false })
     mocks.fetch.mockResolvedValue(detail())
+    mocks.writeDay.mockResolvedValue(undefined)
+    mocks.writeDetails.mockImplementation(async (_id, info) => ({ written: true, info }))
   })
   afterEach(() => vi.restoreAllMocks())
 
@@ -165,5 +167,71 @@ describe("LFA 실제 수집 시각과 실황 갱신", () => {
     mocks.cacheEntries.set("lfa-day-v2|2026-09-04", { matches: [match()], updatedAt: now - 30_000 })
     await getDayMatches("2026-09-04", true)
     expect(mocks.writeDay).toHaveBeenCalledWith("2026-09-04", [match()], now - 30_000)
+  })
+
+  it("크론은 신선한 DB와 오래된 SWR 히트 모두 우회한다", async () => {
+    const old = { matches: [match()], updatedAt: now - 900_000 }
+    mocks.cacheEntries.set("lfa-day-v2|2026-09-04", old)
+    mocks.cacheEntries.set("lfa-details-v3|lfa-1|live|true", {
+      details: detail("0", "0"),
+      updatedAt: now - 900_000,
+    })
+    mocks.readDetails.mockResolvedValue({ info: { finished: false, minute: "30" }, stale: false })
+    mocks.fetch.mockImplementation(async (endpoint) =>
+      endpoint === "matches" ? { matches: [match()] } : detail("3", "1")
+    )
+    const result = await createLfaRefreshSession()(game)
+    expect(result).toMatchObject({
+      status: "updated",
+      info: { minute: "60", homeScore: 3, sourceUpdatedAt: now },
+    })
+    expect(mocks.fetch).toHaveBeenCalledTimes(2)
+    expect(mocks.writeDay).toHaveBeenCalledWith("2026-09-04", [match()], now, { strict: true })
+  })
+
+  it("동시 형제 요청은 실행당 목록과 상세를 각각 한 번만 구매한다", async () => {
+    mocks.fetch.mockImplementation(async (endpoint) =>
+      endpoint === "matches" ? { matches: [match()] } : detail()
+    )
+    const refresh = createLfaRefreshSession()
+    await Promise.all([refresh(game), refresh({ ...game, gameId: "sibling" })])
+    expect(mocks.fetch).toHaveBeenCalledTimes(2)
+    await createLfaRefreshSession()(game)
+    expect(mocks.fetch).toHaveBeenCalledTimes(4)
+  })
+
+  it("상세 실패를 목록만 있는 빈 상세로 덮어쓰지 않는다", async () => {
+    mocks.fetch.mockImplementation(async (endpoint) =>
+      endpoint === "matches" ? { matches: [match()] } : null
+    )
+    await expect(createLfaRefreshSession()(game)).rejects.toThrow("lfa-details-failed")
+    expect(mocks.writeDetails).not.toHaveBeenCalled()
+  })
+
+  it("목록 실패 때 오래된 목록으로 갱신 성공을 주장하지 않는다", async () => {
+    mocks.fetch.mockResolvedValue(null)
+    await expect(createLfaRefreshSession()(game)).rejects.toThrow("lfa-day-failed")
+    expect(mocks.writeDetails).not.toHaveBeenCalled()
+  })
+
+  it("DB 저장 오류는 크론으로 전파한다", async () => {
+    mocks.fetch.mockImplementation(async (endpoint) =>
+      endpoint === "matches" ? { matches: [match()] } : detail()
+    )
+    mocks.writeDetails.mockRejectedValue(new Error("lfa-details-persist-failed"))
+    await expect(createLfaRefreshSession()(game)).rejects.toThrow("lfa-details-persist-failed")
+  })
+
+  it("원자 저장이 거절한 오래된 요청은 DB 승자의 데이터를 반환한다", async () => {
+    const winner = { finished: true, homeScore: 4, awayScore: 2 }
+    mocks.writeDetails.mockResolvedValue({ written: false, info: winner })
+    expect(await getLfaMatchInfo(game)).toEqual(winner)
+  })
+
+  it("완전한 종료 저장분은 크론도 재구매하지 않는다", async () => {
+    mocks.readDetails.mockResolvedValue({ info: { finished: true }, stale: false })
+    expect(await createLfaRefreshSession()(game)).toMatchObject({ status: "settled" })
+    expect(mocks.fetch).not.toHaveBeenCalled()
+    expect(mocks.writeDetails).not.toHaveBeenCalled()
   })
 })

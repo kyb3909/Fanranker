@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
-import { getLfaDayIndex, getLfaMatchInfo } from "@/lib/lfa/match"
+import { getLfaDayIndex, createLfaRefreshSession } from "@/lib/lfa/match"
 import { getFixturesForDay, todayKst } from "@/lib/match/get-fixtures"
 import { isMatchPageLeague } from "@/lib/match/leagues"
 
@@ -40,57 +40,43 @@ async function cronGet(request: NextRequest) {
       results.push({ date: d, entries: index.size, ms: Date.now() - t0 })
     }
 
-    // 경기 상세(스탯·타임라인)도 데운다 — day 목록만 살아나도 여기서 막히면 통계 탭이
-    // 빈다 (2026-08-24 실측: details 도 캐시 미스면 120초). 오늘 매치센터 대상 리그의
-    // **시작된 경기**만, 동시 6개씩. 종료분은 6시간 캐시라 하루 몇 번이면 충분하다.
-    //
-    // 슬롯 24 / 동시 6 은 **시간 예산**에서 나온 값이다 (2026-08-25). details 는
-    // lfaFetch 기본 타임아웃 12초라 청크 하나가 최악 12초, 4청크 = 48초. 위의 day 목록
-    // 2건(데워져 있으면 각 0.5초)을 더해도 maxDuration 120초 안에 넉넉히 든다.
-    // ⚠️ 더 늘리려면 (슬롯 ÷ 동시) × 12초가 아래 90초 가드를 넘지 않는지 먼저 계산할 것.
+    // 실황은 lfa-live가 소유한다. 여기서는 킥오프 +4h 이후 미완성 상세만 보충한다.
+    // 한 실행 24경기/동시 6개/90초 시작 제한. 완전한 종료 저장분은 재구매하지 않는다.
     const fixtures = await getFixturesForDay(today).catch(() => [])
-    // ⚠️ 매치데이는 KST 06:00 에 넘어간다 (lib/match/get-fixtures MATCHDAY_START_HOUR_KST). 03:45·04:00
-    //    킥오프 경기는 06:00 직전이 FT 인데, 넘어간 뒤 회차는 "오늘" 목록에 그 경기가 없어 FT·스탯을
-    //    영영 못 받았다 (2026-09-03 챔피언십 밀월·번리 — 05:45 회차의 86'·68' 에서 굳음, MoTM 폴 미생성).
-    //    전날 매치데이 경기 중 킥오프 4시간 안쪽(경기 창 3.5h + 여유)은 함께 데운다.
+    // 매치데이 06:00 경계 뒤에도 이전 경기의 빈 상세 재시도 창(+6h)을 유지한다.
     const yesterday = new Date(new Date(`${today}T12:00:00+09:00`).getTime() - 24 * 3600_000)
       .toISOString()
       .slice(0, 10)
     const tail = (await getFixturesForDay(yesterday).catch(() => [])).filter(
-      (f) => Date.now() - new Date(f.matchTime).getTime() <= 4 * 3600_000
+      (f) => Date.now() - new Date(f.matchTime).getTime() <= 6 * 3600_000
     )
-    // ⚠️ 슬롯 24개는 **진행 중일 법한 경기 먼저** (2026-08-25 실측 수정).
-    //    종전엔 "시작된 경기" 를 시간순 앞에서 12개 잘랐다 — 바쁜 매치데이엔 그게
-    //    몇 시간 전에 끝난 경기들이라, 정작 지금 뛰는 경기가 슬롯 밖으로 밀렸다.
-    //    킥오프가 경기 창(3.5h) 안인 경기를 앞세우고, 나머지(종료분 스탯 대기)는 뒤에.
-    // ⚠️ 12 → 24 로 올린 이유는 비용이 아니라 **대기 시간**이다 (2026-08-25 추산):
-    //    5대리그가 겹치는 주말엔 동시 진행이 20경기를 넘어 슬롯 밖 경기가 생기고,
-    //    그 경기의 첫 방문자가 캐시 미스를 정면으로 맞는다. 추가 비용은 주당 1,000
-    //    크레딧(월 $0.7) 수준이라 무시할 만하다.
     const nowMs = Date.now()
-    const inWindow = (f: (typeof fixtures)[number]) => {
-      const ko = new Date(f.matchTime).getTime()
-      return nowMs - ko <= 3.5 * 3600_000
-    }
     const targets = [...fixtures, ...tail]
       .filter((f) => f.gameId && isMatchPageLeague(f.leagueCode))
       .filter((f) => new Date(f.matchTime).getTime() <= nowMs)
-      .sort((a, b) => Number(inWindow(b)) - Number(inWindow(a)))
+      // 킥오프~+4h 실황은 lfa-live(3분)가 소유한다. warm은 이후의 미완성 상세를 보충한다.
+      .filter((f) => nowMs - new Date(f.matchTime).getTime() > 4 * 3600_000)
+      .sort((a, b) => new Date(b.matchTime).getTime() - new Date(a.matchTime).getTime())
       .slice(0, 24)
     let warmed = 0
+    const errors: string[] = []
+    const refresh = createLfaRefreshSession()
     for (let i = 0; i < targets.length; i += 6) {
       const chunk = targets.slice(i, i + 6)
       const done = await Promise.all(
         chunk.map((f) =>
-          getLfaMatchInfo({
+          refresh({
             gameId: f.gameId as string,
             homeTeam: f.homeTeam,
             awayTeam: f.awayTeam,
             matchTime: f.matchTime,
             leagueCode: f.leagueCode,
           })
-            .then((info) => (info?.stats.length ?? 0) > 0)
-            .catch(() => false)
+            .then(({ info }) => info.stats.length > 0)
+            .catch(() => {
+              errors.push(f.gameId as string)
+              return false
+            })
         )
       )
       warmed += done.filter(Boolean).length
@@ -98,18 +84,19 @@ async function cronGet(request: NextRequest) {
       if (Date.now() - start > 90_000) break
     }
 
-    return NextResponse.json({
-      mode: "lfa-warm",
-      results,
-      details: { targets: targets.length, warmed },
-      duration: `${Date.now() - start}ms`,
-    })
+    return NextResponse.json(
+      {
+        mode: "lfa-warm",
+        results,
+        details: { targets: targets.length, warmed, errors },
+        duration: `${Date.now() - start}ms`,
+      },
+      { status: errors.length ? 503 : 200 }
+    )
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
 export const GET = withCronLog("lfa-warm", cronGet)
-export async function POST(request: NextRequest) {
-  return cronGet(request)
-}
+export const POST = GET
