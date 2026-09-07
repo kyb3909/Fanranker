@@ -875,13 +875,20 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
   // 크론뿐 아니라 페이지·사가 호출에도 동일한 대상 제한을 적용한다.
   const { data: game, error } = await createServiceRoleClient()
     .from("betman_games")
-    .select("league_code")
+    .select("league_code, home_team_name, away_team_name")
     .eq("id", gameId)
     .maybeSingle()
   if (error) throw new Error(`match-report-game-read:${error.code}`)
   if (!game || !isMatchExtrasLeague(String(game.league_code ?? ""))) {
     return { stats: null, report: null }
   }
+  /**
+   * 리포트 대상 구단인가 — **원장 기록보다 먼저** 판정한다 (2026-09-07).
+   * 종전엔 해석 실패를 먼저 기록해서, 22구단 밖 경기(말라가–레반테 등)를 방문할 때마다
+   * `resolve` 행이 쌓였다 — 7일간 99경기 389행의 상당수가 "고칠 것"이 아니라 "원래 안 만드는 것"
+   * 이었고, 관제 카드가 둘을 합산했다. 스탯은 대상 구단과 무관하게 계속 해석한다.
+   */
+  const worthy = isReportWorthyMatch(String(game.home_team_name), String(game.away_team_name))
   // ⚠️ 저장분을 **해석보다 먼저** 본다. soccerway 해석에는 킥오프 +24시간 창이 걸려 있어,
   //    창을 벗어나면 resolveMatchEvent 가 null 이 되고 리포트·스탯이 통째로 사라졌다.
   //    한 번 만든 리포트는 창과 무관하게 계속 보여야 한다 (2026-08-18 운영자 지적).
@@ -889,7 +896,7 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
 
   const resolved = await resolveMatchEvent(gameId)
   if (!resolved) {
-    if (!stored) {
+    if (!stored && worthy) {
       await recordReportAttempt(
         gameId,
         null,
@@ -907,7 +914,7 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
    *    하루치 색인을 부르면 크레딧만 나간다.
    * ⚠️ 대상 구단이 아니면 그것도 먼저 끊는다 (같은 이유).
    */
-  const needReport = !stored && isReportWorthyMatch(resolved.homeTeam, resolved.awayTeam)
+  const needReport = !stored && worthy
   let confirmedScore: string | null = null
   if (needReport) {
     /**

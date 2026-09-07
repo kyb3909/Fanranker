@@ -18,14 +18,21 @@ import type { ReportStage } from "./report-gaps"
 /**
  * 최근 N ms 안에 이 경기의 원장 행이 있나. 기록 부재만으로 실패 단계를 추론하면 안 된다.
  * ⚠️ 조회 실패면 true — "있다고 치고" 아무것도 안 남기는 쪽이 가짜 사유를 남기는 쪽보다 낫다.
+ * ⚠️ 형제 행 id 배열을 받는다 (2026-09-07) — 원장은 요청받은 행 id 로 쌓이므로 다른 마켓
+ *    행으로 들어온 방문이 같은 경기의 시도를 못 보면 방문마다 Soccerway 해석을 다시 돌린다.
  */
-export async function hasRecentReportAttempt(gameId: string, withinMs: number): Promise<boolean> {
+export async function hasRecentReportAttempt(
+  gameIds: string | string[],
+  withinMs: number
+): Promise<boolean> {
+  const ids = Array.isArray(gameIds) ? gameIds : [gameIds]
+  if (ids.length === 0) return true
   try {
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const { count, error } = await createServiceRoleClient()
       .from("match_report_attempts")
       .select("id", { count: "exact", head: true })
-      .eq("game_id", gameId)
+      .in("game_id", ids)
       .gte("attempted_at", new Date(Date.now() - withinMs).toISOString())
     return error ? true : (count ?? 0) > 0
   } catch {

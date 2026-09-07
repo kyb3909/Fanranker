@@ -12,6 +12,7 @@ import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getStoredMatchReport } from "@/lib/match/stored-report"
 import { getMatchExtras } from "@/lib/soccerway/match-extras"
+import { hasRecentReportAttempt } from "@/lib/soccerway/report-attempts"
 import { MatchHeader } from "./match-header"
 import { LiveRefresher } from "./live-refresher"
 import { MatchExtrasSection } from "./match-extras-section"
@@ -141,11 +142,6 @@ export default async function MatchPage({ params }: Props) {
   const storedReport = extrasLeague
     ? await getStoredMatchReport(match.gameId).catch(() => null)
     : null
-  if (extrasLeague && !storedReport) {
-    after(async () => {
-      await getMatchExtras(match.gameId).catch(() => null)
-    })
-  }
 
   // 불판 — 이 경기의 라이브 스레드 게시물 (크론이 라인업 발표 시 생성, lib/match/thread.ts).
   // ⚠️ betman 은 같은 경기를 마켓별 중복 행으로 갖는다 — 불판은 그중 한 행에 걸리므로
@@ -153,6 +149,17 @@ export default async function MatchPage({ params }: Props) {
   //    따라 배너가 있다 없다 한다 (2026-08-20 실측).
   const admin = createServiceRoleClient()
   const gameIds = await getSiblingGameIds(admin, match.gameId)
+
+  // 리포트가 아직 없으면 응답 뒤에 생성 체인을 건다 — 단, **방문마다는 아니다** (2026-09-07).
+  // 해석(resolve) 단계엔 부정 캐시가 없어 매핑이 안 된 경기는 방문할 때마다 Soccerway 페이지
+  // 721KB + 라인업 API 를 다시 불렀고 원장에 `resolve` 행이 쌓였다(7일 389행 중 36% 가 방문 발).
+  // 30분 안에 어느 형제 행으로든 시도한 기록이 있으면 30분 크론에 맡긴다.
+  if (extrasLeague && !storedReport) {
+    after(async () => {
+      if (await hasRecentReportAttempt(gameIds, 30 * 60_000)) return
+      await getMatchExtras(match.gameId).catch(() => null)
+    })
+  }
   const { data: threadRows } = await admin
     .from("posts")
     .select("id, comment_count")
