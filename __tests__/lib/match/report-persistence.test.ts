@@ -35,7 +35,11 @@ vi.mock("next/cache", () => ({
 vi.mock("@/lib/news/notation", () => ({ findUniqueRomanizedMatch: vi.fn() }))
 vi.mock("@/lib/llm/usage-log", () => ({ logUsage: vi.fn(), logUsageFailure: vi.fn() }))
 vi.mock("@/lib/lfa/match", () => ({ getLfaDayIndex: vi.fn(), lookupLfaDayEntry: vi.fn() }))
-vi.mock("@/lib/soccerway/report-attempts", () => ({ recordReportAttempt: mocks.record }))
+vi.mock("@/lib/soccerway/report-attempts", () => ({
+  recordReportAttempt: mocks.record,
+  // 검증 불합격 이력 없음 — 보류 상한(3회)에 걸리지 않는다
+  listRecentReportAttempts: async () => [],
+}))
 vi.mock("@/lib/soccerway/lineup-lookup", () => ({
   getLineupForGame: vi.fn(),
   cachedPersons: vi.fn(),

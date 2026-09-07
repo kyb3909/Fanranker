@@ -40,6 +40,35 @@ export async function hasRecentReportAttempt(
   }
 }
 
+/**
+ * 최근 N ms 안의 원장 행(단계·시각) — 최신순. 같은 실패를 몇 번 되풀이했는지 세는 재료다 (2026-09-07).
+ * ⚠️ 조회 실패면 null — 호출부는 "모른다"로 받아 이번 회차엔 비싼 체인을 돌리지 않는다.
+ */
+export async function listRecentReportAttempts(
+  gameIds: string[],
+  stages: ReportStage[],
+  withinMs: number
+): Promise<{ stage: string; attempted_at: string }[] | null> {
+  if (gameIds.length === 0 || stages.length === 0) return []
+  try {
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    const { data, error } = await createServiceRoleClient()
+      .from("match_report_attempts")
+      .select("stage, attempted_at")
+      .in("game_id", gameIds)
+      .in("stage", stages)
+      .gte("attempted_at", new Date(Date.now() - withinMs).toISOString())
+      .order("attempted_at", { ascending: false })
+    if (error) return null
+    return (data ?? []).map((r) => ({
+      stage: String(r.stage),
+      attempted_at: String(r.attempted_at),
+    }))
+  } catch {
+    return null
+  }
+}
+
 export async function recordReportAttempt(
   gameId: string,
   eventId: string | null,

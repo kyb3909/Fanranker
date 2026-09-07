@@ -10,28 +10,64 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   record: vi.fn(),
+  list: vi.fn(),
   resolve: vi.fn(),
+  generate: vi.fn(),
   game: { league_code: "EPL", home_team_name: "아스널", away_team_name: "첼시" },
 }))
 vi.mock("@/lib/supabase/server", () => ({ createServiceRoleClient: () => ({ from: mocks.from }) }))
-vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }))
+// 리포트 체인(match-report-*)은 스파이로, 스탯은 빈 값으로 — 둘 다 바깥에 나가지 않는다
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: unknown, keys: string[]) =>
+    keys[0].startsWith("match-report")
+      ? mocks.generate
+      : keys[0] === "match-stats"
+        ? async () => null
+        : fn,
+}))
 vi.mock("@/lib/news/notation", () => ({ findUniqueRomanizedMatch: vi.fn() }))
 vi.mock("@/lib/llm/usage-log", () => ({ logUsage: vi.fn(), logUsageFailure: vi.fn() }))
 vi.mock("@/lib/lfa/match", () => ({ getLfaDayIndex: vi.fn(), lookupLfaDayEntry: vi.fn() }))
-vi.mock("@/lib/soccerway/report-attempts", () => ({ recordReportAttempt: mocks.record }))
+vi.mock("@/lib/soccerway/report-attempts", () => ({
+  recordReportAttempt: mocks.record,
+  listRecentReportAttempts: mocks.list,
+}))
 vi.mock("@/lib/soccerway/lineup-lookup", () => ({
   getLineupForGame: vi.fn(),
   cachedPersons: vi.fn(),
   cachedSquadPairs: vi.fn(),
   resolveMatchEvent: mocks.resolve,
 }))
-vi.mock("@/lib/motm/ft-evidence", () => ({ lfaDetailRow: () => ({ finished: false }) }))
+vi.mock("@/lib/motm/ft-evidence", () => ({
+  lfaDetailRow: (row: {
+    finished?: boolean
+    payload?: { homeScore?: number; awayScore?: number }
+  }) => ({
+    finished: row.finished === true,
+    homeScore: row.payload?.homeScore ?? null,
+    awayScore: row.payload?.awayScore ?? null,
+  }),
+}))
 
 import { getMatchExtras } from "@/lib/soccerway/match-extras"
+
+const resolved = {
+  eventId: "event",
+  homeTeam: "아스널",
+  awayTeam: "첼시",
+  homeScore: null,
+  awayScore: null,
+  leagueCode: "EPL",
+  matchTime: "2026-09-06T18:00:00Z",
+  candidateUrl: "https://example.com/",
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.resolve.mockResolvedValue(null)
+  mocks.list.mockResolvedValue([])
+  mocks.generate.mockResolvedValue(null)
+  mocks.game = { league_code: "EPL", home_team_name: "아스널", away_team_name: "첼시" }
   mocks.from.mockImplementation((table: string) => {
     let columns = ""
     const query: any = {
@@ -46,6 +82,13 @@ beforeEach(() => {
       maybeSingle: () => query,
       then: (resolve: (value: unknown) => unknown) => {
         if (table === "match_reports") return Promise.resolve(resolve({ data: null, error: null }))
+        if (table === "match_details_cache")
+          return Promise.resolve(
+            resolve({
+              data: [{ finished: true, payload: { homeScore: 2, awayScore: 1 } }],
+              error: null,
+            })
+          )
         if (table === "betman_games" && columns === "id")
           return Promise.resolve(resolve({ data: [{ id: "game" }], error: null }))
         if (table === "betman_games")
@@ -56,6 +99,65 @@ beforeEach(() => {
       },
     }
     return query
+  })
+})
+
+describe("getMatchExtras — 같은 검증 실패를 되풀이하지 않는다", () => {
+  const verify = (at: string) => ({ stage: "verify", attempted_at: at })
+
+  it("24시간 안 검증 불합격 3회면 체인을 부르지 않고 held 를 한 번 남긴다", async () => {
+    mocks.resolve.mockResolvedValue(resolved)
+    mocks.list.mockResolvedValue([verify("03:00"), verify("02:00"), verify("01:00")])
+    expect(await getMatchExtras("game")).toEqual({ stats: null, report: null })
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.record).toHaveBeenCalledExactlyOnceWith(
+      "game",
+      "event",
+      "held",
+      expect.stringContaining("3회")
+    )
+  })
+
+  it("마지막 행이 이미 held 면 다시 기록하지 않는다", async () => {
+    mocks.resolve.mockResolvedValue(resolved)
+    mocks.list.mockResolvedValue([
+      { stage: "held", attempted_at: "04:00" },
+      verify("03:00"),
+      verify("02:00"),
+      verify("01:00"),
+    ])
+    await getMatchExtras("game")
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.record).not.toHaveBeenCalled()
+  })
+
+  it("2회까지는 계속 시도한다", async () => {
+    mocks.resolve.mockResolvedValue(resolved)
+    mocks.list.mockResolvedValue([verify("02:00"), verify("01:00")])
+    await getMatchExtras("game")
+    expect(mocks.generate).toHaveBeenCalledTimes(1)
+    expect(mocks.record).not.toHaveBeenCalledWith("game", "event", "held", expect.anything())
+  })
+
+  it("원장을 못 읽으면 이번 회차엔 체인을 돌리지 않는다 (비용 쪽으로 보수적)", async () => {
+    mocks.resolve.mockResolvedValue(resolved)
+    mocks.list.mockResolvedValue(null)
+    const quiet = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      await getMatchExtras("game")
+    } finally {
+      quiet.mockRestore()
+    }
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.record).not.toHaveBeenCalled()
+  })
+
+  it("대상 구단이 아니면 원장을 읽지도 않는다", async () => {
+    mocks.game = { league_code: "라리가", home_team_name: "말라가", away_team_name: "레반테" }
+    mocks.resolve.mockResolvedValue(resolved)
+    await getMatchExtras("game")
+    expect(mocks.list).not.toHaveBeenCalled()
+    expect(mocks.generate).not.toHaveBeenCalled()
   })
 })
 

@@ -21,7 +21,7 @@ import {
   type ArticleMeta,
 } from "@/lib/soccerway/report-article"
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
-import { recordReportAttempt } from "@/lib/soccerway/report-attempts"
+import { listRecentReportAttempts, recordReportAttempt } from "@/lib/soccerway/report-attempts"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
@@ -265,6 +265,15 @@ const MODEL = "gpt-5.1"
 /** 검증자는 뉴스 검사관과 같은 모델 — 4o-mini 는 검증 역할에서 오탐이 많았다 (실측:
  *  "맞지만 잘못된 것으로 보일 수 있다"류 자기모순 지적으로 정상 리포트를 죽였다) */
 const VERIFIER_MODEL = "gpt-5.6-terra"
+/**
+ * 같은 경기의 검증 불합격이 이 창 안에서 이 횟수에 닿으면 체인을 멈춘다 (2026-09-07).
+ * 종전엔 30분 부정 캐시만 있어 24시간 창 동안 최대 48회 체인(작성 gpt-5.1 + 검증 terra ×3)을
+ * 다시 돌렸다 — 제노아–코모 67회, 베르더–라이프치히 58회, 호펜하임–도르트문트 56회. 사유가
+ * 사전 누락("Unresolved player names: Karl Hein")이면 사람이 고치기 전엔 같은 결과다.
+ * 원장 행 하나 = 회차 하나(안에서 이미 3회 재작성)이므로 3행이면 9번 써 본 것이다.
+ */
+const REPORT_VERIFY_CAP = 3
+const REPORT_HOLD_WINDOW_MS = 24 * 3600_000
 
 async function callLLM(
   system: string,
@@ -955,9 +964,41 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
     }
   }
 
+  /**
+   * 같은 실패를 되풀이하지 않는다 — 검증 불합격이 창 안에서 상한에 닿으면 보류(held).
+   * 원장에 `held` 를 **한 번만** 남긴다(마지막 행이 이미 held 면 침묵). 원문 없음(article)·
+   * 스코어 대기(score)는 정상 대기라 세지 않는다. 원장을 못 읽으면 "모른다"로 받아 이번 회차엔
+   * 체인을 돌리지 않는다 — 다음 회차가 다시 본다.
+   */
+  let held = false
+  if (needReport) {
+    const recent = await listRecentReportAttempts(
+      await matchSiblingIds(gameId),
+      ["verify", "held"],
+      REPORT_HOLD_WINDOW_MS
+    )
+    if (recent === null) {
+      console.warn(`[match-report] 실패 원장 조회 실패 (${gameId}) — 이번 회차는 작성하지 않는다`)
+      held = true
+    } else {
+      const verifies = recent.filter((r) => r.stage === "verify").length
+      if (verifies >= REPORT_VERIFY_CAP) {
+        held = true
+        if (recent[0]?.stage !== "held") {
+          await recordReportAttempt(
+            gameId,
+            resolved.eventId,
+            "held",
+            `검증 불합격 ${verifies}회 — 사전·원문을 확인한 뒤 수동 재개`
+          )
+        }
+      }
+    }
+  }
+
   const [stats, fresh] = await Promise.all([
     cachedStats(resolved.eventId)().catch(() => null),
-    needReport
+    needReport && !held
       ? cachedReport(
           resolved.eventId,
           gameId,

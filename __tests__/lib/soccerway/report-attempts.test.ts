@@ -2,18 +2,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({ insert: vi.fn(), query: vi.fn(), inIds: vi.fn() }))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
-    from: () => ({
-      insert: mocks.insert,
-      select: () => ({
-        in: (_col: string, ids: string[]) => {
-          mocks.inIds(ids)
-          return { gte: mocks.query }
+    from: () => {
+      // 체인 어디서 await 하든 mocks.query() 가 답한다 — 조회 함수마다 체인 길이가 다르다
+      const q: any = {
+        insert: mocks.insert,
+        select: () => q,
+        in: (col: string, ids: string[]) => {
+          if (col === "game_id") mocks.inIds(ids)
+          return q
         },
-      }),
-    }),
+        gte: () => q,
+        order: () => q,
+        then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+          Promise.resolve()
+            .then(() => mocks.query())
+            .then(resolve, reject),
+      }
+      return q
+    },
   }),
 }))
-import { hasRecentReportAttempt, recordReportAttempt } from "@/lib/soccerway/report-attempts"
+import {
+  hasRecentReportAttempt,
+  listRecentReportAttempts,
+  recordReportAttempt,
+} from "@/lib/soccerway/report-attempts"
 
 describe("리포트 실패 원장", () => {
   beforeEach(() => {
@@ -55,5 +68,17 @@ describe("리포트 실패 원장", () => {
     expect(await hasRecentReportAttempt(["a", "b"], 600_000)).toBe(true)
     expect(mocks.inIds).toHaveBeenCalledWith(["a", "b"])
     expect(await hasRecentReportAttempt([], 600_000)).toBe(true) // 빈 목록은 "모른다" = 시도 안 함
+  })
+  it("최근 원장 행은 단계·시각만 돌려주고, 조회 실패는 null 이다", async () => {
+    mocks.query.mockResolvedValueOnce({
+      data: [{ stage: "verify", attempted_at: "2026-09-07T01:00:00Z", reason: "x" }],
+      error: null,
+    })
+    expect(await listRecentReportAttempts(["a"], ["verify", "held"], 3600_000)).toEqual([
+      { stage: "verify", attempted_at: "2026-09-07T01:00:00Z" },
+    ])
+    mocks.query.mockResolvedValueOnce({ data: null, error: { code: "503" } })
+    expect(await listRecentReportAttempts(["a"], ["verify"], 3600_000)).toBeNull()
+    expect(await listRecentReportAttempts([], ["verify"], 3600_000)).toEqual([])
   })
 })

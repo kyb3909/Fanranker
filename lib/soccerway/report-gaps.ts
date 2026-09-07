@@ -29,6 +29,12 @@ export const REPORT_STAGES = {
   compose: "작성 실패",
   /** 검증된 리포트의 영구 저장 실패 — 생성 성공으로 집계하면 안 된다 */
   store: "저장 실패",
+  /**
+   * 같은 실패가 반복돼 이번 창에서는 더 시도하지 않음 (2026-09-07). 검증 불합격이 24시간 안에
+   * 3회면 LLM 체인을 멈춘다 — 사유가 사전 누락이면 사람이 고치기 전엔 같은 결과라서다.
+   * 원문 없음·스코어 대기는 정상 대기라 여기 오지 않는다.
+   */
+  held: "보류 (같은 사유 반복)",
 } as const
 
 export type ReportStage = keyof typeof REPORT_STAGES
