@@ -8,6 +8,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_board_cards: {
+        Row: {
+          id: string
+          title: string
+          detail: string
+          tag: string | null
+          effort: string | null
+          status: string
+          position: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          detail?: string
+          tag?: string | null
+          effort?: string | null
+          status?: string
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          detail?: string
+          tag?: string | null
+          effort?: string | null
+          status?: string
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lfa_fixtures: {
         Row: {
           id: string

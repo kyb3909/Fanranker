@@ -7,6 +7,7 @@ import { fetcher } from "@/lib/swr"
 import {
   BarChart3,
   LayoutDashboard,
+  SquareKanban,
   MonitorCheck,
   Users,
   FileText,
@@ -90,7 +91,11 @@ interface NavGroup {
 const navGroups: NavGroup[] = [
   {
     label: "홈",
-    items: [{ title: "대시보드", href: "/admin", icon: LayoutDashboard }],
+    items: [
+      { title: "대시보드", href: "/admin", icon: LayoutDashboard },
+      // 운영 할 일 칸반 (2026-09-08) — 점검에서 나온 일감을 열 사이로 옮기며 관리
+      { title: "할 일 보드", href: "/admin/board", icon: SquareKanban },
+    ],
   },
   {
     // 매일 도는 파이프라인 — 항상 펼침
