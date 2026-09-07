@@ -105,43 +105,71 @@ async function lfaLive(t: Target): Promise<string | undefined> {
     .maybeSingle()
   const eventId = (det?.lfa_match_id as string | null) ?? null
 
-  // id 가 아직 없을 때만 이름으로 — 그때도 사전에서 이 경기의 영문명을 가져온다
-  let teamEn = process.env.MATCH_TEAM_EN ?? ""
-  if (!eventId && !teamEn) {
-    const { data: dict } = await db
-      .from("team_dictionary")
-      .select("name_en")
-      .in("name_kr", [t.homeKr, t.awayKr])
-      .not("name_en", "is", null)
-      .limit(1)
-      .maybeSingle()
-    teamEn = String(dict?.name_en ?? "")
-  }
-  if (!eventId && !teamEn) return "⚠️매치 id 도 영문 팀명도 없어 실황을 못 고름"
+  /**
+   * id 가 아직 없을 때의 대비책 — **두 팀을 모두** 맞춘다.
+   * 한 팀만 보면 그 팀의 다른 경기(컵·전날 경기)를 물어온다. 이름이 하나뿐이면
+   * 킥오프 시각까지 겹칠 때만 받아들인다.
+   */
+  const names = [process.env.MATCH_TEAM_EN, ...(await teamNamesEn(t))].filter(
+    (v): v is string => !!v && v.length > 1
+  )
+  if (!eventId && names.length === 0) return "⚠️매치 id 도 영문 팀명도 없어 실황을 못 고름"
 
   const today = new Date().toISOString().slice(0, 10)
   const yday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10)
   const { data } = await db.from("lfa_day_cache").select("date_utc, payload").in("date_utc", [yday, today])
   type Ev = {
     id: string
+    kickoff?: string | null
     home: { name: string; score: string | null }
     away: { name: string; score: string | null }
     status: { status: string; display: string; is_live: boolean }
   }
+  const has = (side: string | undefined, en: string) =>
+    !!side && side.toLowerCase().includes(en.toLowerCase())
+  /** 이 경기 킥오프와 90분 안이면 같은 경기로 본다 (LFA 시각 표기가 조금씩 흔들린다) */
+  const nearKickoff = (e: Ev) => {
+    if (!e.kickoff) return false
+    const d = Math.abs(new Date(e.kickoff).getTime() - t.kickoff.getTime())
+    return Number.isFinite(d) && d <= 90 * 60_000
+  }
+
   for (const row of data ?? []) {
     const evs = (row.payload as Ev[]) ?? []
-    const hit = eventId
-      ? evs.find((e) => e.id === eventId)
-      : evs.find(
-          (e) =>
-            e.home?.name?.toLowerCase().includes(teamEn.toLowerCase()) ||
-            e.away?.name?.toLowerCase().includes(teamEn.toLowerCase())
+    let hit: Ev | undefined
+    if (eventId) {
+      hit = evs.find((e) => e.id === eventId)
+    } else {
+      // ① 두 팀이 다 맞는 경기 (양쪽 방향 모두 허용)
+      hit = evs.find((e) =>
+        names.some(
+          (a) =>
+            names.some(
+              (b) => a !== b && ((has(e.home?.name, a) && has(e.away?.name, b)) || (has(e.home?.name, b) && has(e.away?.name, a)))
+            )
         )
+      )
+      // ② 이름이 하나뿐이면 킥오프까지 겹쳐야 받는다
+      if (!hit) {
+        hit = evs.find((e) => names.some((a) => has(e.home?.name, a) || has(e.away?.name, a)) && nearKickoff(e))
+      }
+    }
     if (hit) {
-      return `${hit.home.name} ${hit.home.score ?? "-"}:${hit.away.score ?? "-"} ${hit.away.name} [${hit.status.display}/${hit.status.status}] event=${hit.id}`
+      const how = eventId ? "" : " (id 없음 — 이름·킥오프로 추정)"
+      return `${hit.home.name} ${hit.home.score ?? "-"}:${hit.away.score ?? "-"} ${hit.away.name} [${hit.status.display}/${hit.status.status}] event=${hit.id}${how}`
     }
   }
   return undefined
+}
+
+/** 이 경기 두 팀의 영문명 (사전) — 한쪽만 등재돼 있어도 그것만 돌려준다 */
+async function teamNamesEn(t: Target): Promise<string[]> {
+  const { data } = await db
+    .from("team_dictionary")
+    .select("name_kr, name_en")
+    .in("name_kr", [t.homeKr, t.awayKr])
+    .not("name_en", "is", null)
+  return (data ?? []).map((r) => String(r.name_en))
 }
 
 async function snapshot(t: Target, startIso: string, heavy: boolean): Promise<Snap> {
