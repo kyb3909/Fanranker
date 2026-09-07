@@ -89,6 +89,11 @@ export interface MotmSweepResult {
   skipped: { matchKey: string; reason: string }[]
   /** 후보가 빠져 있던 기존 폴을 되살린 건수 */
   repaired: { pollId: string; added: number }[]
+  /**
+   * 스윕을 멈추지 않고 넘어간 **우리 쪽** 장애 (LFA 전용 목록·형제 조회 실패 등).
+   * 라우트가 이걸 보고 503 을 낸다 — 200 심박이 부분 장애를 가리지 않게 (2026-09-07).
+   */
+  errors: { scope: string; message: string }[]
 }
 
 /**
@@ -175,15 +180,30 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
   }
   // Same poll pipeline for registered LFA fixtures, including matches Betman never sells.
   // Require actual LFA FT evidence; elapsed kickoff time alone never opens voting.
+  //
+  // ⚠️ LFA 전용 경기 경로의 장애가 베트맨 경기 폴까지 막으면 안 된다 (2026-09-06 01:00~01:30
+  //    실사고: lfa_fixtures 테이블이 앱보다 늦게 만들어져 이 조회가 throw → 스윕 전체가 500 →
+  //    23:00 킥오프 12경기 MoTM 이 46분 늦었다). 실패는 errors 에 실어 라우트가 503 으로 알린다.
+  const errors: MotmSweepResult["errors"] = []
+  const describe = (e: unknown) => (e instanceof Error ? e.message : String(e))
   const supplemental = await listSupplementalFixtures(
     new Date(now - SWEEP_FLOOR_MS).toISOString(),
     new Date(now - FT_AFTER_MS + 1).toISOString()
-  )
+  ).catch((e: unknown) => {
+    errors.push({ scope: "lfa_fixtures", message: describe(e) })
+    return [] as Awaited<ReturnType<typeof listSupplementalFixtures>>
+  })
   const supplementalEvidence = new Map<string, LfaDetailRow[]>()
   for (const row of supplemental) {
     const match = supplementalSummary(row)
     if (!isMatchPageLeague(match.leagueCode) || match.status === "cancelled") continue
-    const ids = await getSiblingGameIds(supabase, row.id, { strict: true })
+    let ids: string[]
+    try {
+      ids = await getSiblingGameIds(supabase, row.id, { strict: true })
+    } catch (e) {
+      errors.push({ scope: `lfa_fixtures:${row.id}`, message: describe(e) })
+      continue
+    }
     // Later Betman markets share the existing LFA poll, not a second name-based poll.
     for (const [key, c] of byKey) {
       if (c.gameIds.some((id) => ids.includes(id))) byKey.delete(key)
@@ -222,7 +242,7 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
   const created: MotmSweepResult["created"] = []
   const skipped: MotmSweepResult["skipped"] = []
   const repaired: MotmSweepResult["repaired"] = []
-  if (cands.length === 0) return { finalized, created, skipped, repaired }
+  if (cands.length === 0) return { finalized, created, skipped, repaired, errors }
 
   // 3) 이미 폴이 있는 경기 — 보통은 건너뛰지만, **교체 후보가 통째로 빠진** 폴은
   //    라인업이 뒤늦게 고쳐졌을 수 있으므로 다시 짜 본다 (열려 있는 동안만).
@@ -335,7 +355,7 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     }
   }
 
-  return { finalized, created, skipped, repaired }
+  return { finalized, created, skipped, repaired, errors }
 }
 
 function refFromRow(row: {

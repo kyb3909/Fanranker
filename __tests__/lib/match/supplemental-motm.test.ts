@@ -137,6 +137,29 @@ describe("LFA 컵경기 종료 → MOM 투표", () => {
     })
     expect((await sweepMotmPolls()).created).toHaveLength(0)
   })
+  it("LFA 전용 목록 조회가 실패해도 베트맨 경기 폴은 만들고 장애를 결과에 싣는다", async () => {
+    // 2026-09-06 01:00~01:30 실사고: lfa_fixtures 테이블 부재 → 스윕 전체 500 → 12경기 MoTM 46분 지연
+    m.list.mockRejectedValue(new Error("lfa-fixture-list:42P01"))
+    m.markets = [
+      {
+        id: "betman-market",
+        home_team_name: "첼시",
+        away_team_name: "리버풀",
+        league_code: "EPL",
+        match_time: new Date(Date.now() - 3 * 3600_000).toISOString(),
+        status: "completed",
+        home_score: 2,
+        away_score: 1,
+      },
+    ]
+    const result = await sweepMotmPolls()
+    expect(result.created).toHaveLength(1)
+    expect(result.created[0]).toMatchObject({ ftSource: "betman" })
+    expect(result.errors).toEqual([{ scope: "lfa_fixtures", message: "lfa-fixture-list:42P01" }])
+  })
+  it("장애가 없으면 errors 는 빈 배열이다", async () => {
+    expect((await sweepMotmPolls()).errors).toEqual([])
+  })
   it("재실행과 나중의 Betman 판매에도 기존 투표를 재사용한다", async () => {
     await sweepMotmPolls()
     m.markets = [

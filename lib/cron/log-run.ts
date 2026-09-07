@@ -12,6 +12,22 @@ import { verifyCronSecret } from "@/lib/cron-auth"
  *
  * 적용: `export const GET = withCronLog("job-name", handler)`
  */
+
+/**
+ * 4xx/5xx 응답의 본문 앞부분 — "HTTP 500" 만 남기면 무엇이 죽었는지 아무도 모른다
+ * (2026-09-06 motm-sync 500 ×3: 테이블 부재였는데 원인이 로그 어디에도 없었다).
+ * 503 을 내는 크론은 본문에 경기별 오류 목록을 싣는다 — 그 앞 300자면 원인이 보인다.
+ * 본문을 못 읽으면 종전처럼 상태 코드만 남긴다.
+ */
+async function bodyExcerpt(res: Response): Promise<string> {
+  try {
+    const text = (await res.clone().text()).replace(/\s+/g, " ").trim()
+    return text ? `: ${text.slice(0, 300)}` : ""
+  } catch {
+    return ""
+  }
+}
+
 export function withCronLog<T extends Request>(
   jobName: string,
   handler: (req: T) => Promise<Response>
@@ -28,7 +44,7 @@ export function withCronLog<T extends Request>(
       httpStatus = res.status
       if (res.status >= 400) {
         status = "error"
-        errorMessage = `HTTP ${res.status}`
+        errorMessage = `HTTP ${res.status}${await bodyExcerpt(res)}`
       }
       return res
     } catch (e) {
