@@ -69,15 +69,22 @@ export function MetaverseReportQueue({
   const [total, setTotal] = useState(initialTotal)
   const [loading, setLoading] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState("open")
+  const [loadError, setLoadError] = useState<string | null>(null)
 
+  /**
+   * 조회 실패를 빈 목록으로 만들지 않는다.
+   * 종전에는 `res.ok` 검사가 없어 권한·서버 오류가 "신고가 없습니다"로 보였다.
+   */
   const fetchReports = async (status: string) => {
     try {
       const res = await fetch(`/api/admin/content/metaverse-reports?status=${status}`)
       const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? "조회 실패")
       setReports(data.reports ?? [])
       setTotal(data.total ?? 0)
-    } catch {
-      // ignore
+      setLoadError(null)
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "조회 실패")
     }
   }
 
@@ -110,6 +117,15 @@ export function MetaverseReportQueue({
 
   return (
     <div className="space-y-4">
+      {loadError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
+          목록을 갱신하지 못했습니다({loadError}). 아래는 마지막으로 정상 조회된 결과입니다 — 신고가
+          없다는 뜻이 아닙니다.
+        </div>
+      )}
       <div className="flex items-center gap-2">
         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
           <Button
@@ -228,7 +244,7 @@ export function MetaverseReportQueue({
                           className="h-7 w-7 text-green-600"
                           onClick={() => handleAction(report.id, "actioned")}
                           disabled={loading === report.id}
-                          title="조치 완료"
+                          title="조치함으로 기록 (제재는 실행되지 않습니다)"
                         >
                           {loading === report.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />

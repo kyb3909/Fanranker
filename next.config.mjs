@@ -43,14 +43,14 @@ const ENFORCED_CSP = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${CSP_SCRIPT_HOSTS}`,
   ...CSP_SHARED_DIRECTIVES,
-].join('; ')
+].join("; ")
 
 const STRICT_CSP_REPORT_ONLY = [
   "default-src 'self'",
   `script-src 'self' ${CSP_SCRIPT_HOSTS}`,
   ...CSP_SHARED_DIRECTIVES,
   "report-uri /api/security/csp-report",
-].join('; ')
+].join("; ")
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -89,21 +89,24 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           {
-            key: 'Content-Security-Policy',
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Content-Security-Policy",
             value: ENFORCED_CSP,
           },
           // 관측용 strict 정책 — 차단하지 않고 위반만 report-uri로 수집.
           // 운영에서 1~2주 clean하면 위 Content-Security-Policy도 동일 내용으로 교체.
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: "Content-Security-Policy-Report-Only",
             value: STRICT_CSP_REPORT_ONLY,
           },
         ],
@@ -112,20 +115,20 @@ const nextConfig = {
         // Babylon/Webpack의 개발 빌드는 생성된 셰이더 코드를 eval로 평가한다.
         // 이를 모두 CSP 위반으로 전송하면 로컬 보고 API가 폭주해 초기화가 수분간 멈춘다.
         // 실제 적용 정책은 유지하고, 격리된 랩에서만 관측용 정책을 동일하게 맞춘다.
-        source: '/avatar-lab',
+        source: "/avatar-lab",
         headers: [
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: "Content-Security-Policy-Report-Only",
             value: ENFORCED_CSP,
           },
         ],
       },
       {
         // 랩 하위 경로(경기장 워크 데모 등)도 같은 Babylon eval 특성을 가진다.
-        source: '/avatar-lab/:path*',
+        source: "/avatar-lab/:path*",
         headers: [
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: "Content-Security-Policy-Report-Only",
             value: ENFORCED_CSP,
           },
         ],
@@ -134,44 +137,40 @@ const nextConfig = {
         // 미니게임(public/games/*.html) 을 /games/* 래퍼 페이지 iframe 으로 띄우기 위한 예외.
         // 전역 DENY 를 SAMEORIGIN 으로 완화 (같은 도메인 framing 만 허용 — 클릭재킹 방어 유지).
         // 글로벌 '/(.*)' 항목보다 뒤에 있어야 같은 키를 override 함.
-        source: '/games/:path*',
-        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
+        source: "/games/:path*",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
       },
       {
         // 서비스워커는 항상 최신으로 — 캐시 금지. 자기소멸(청소) 워커가 다음 접속 즉시
         // 전파되어, 구버전 화면을 붙들고 있는 옛 SW/캐시를 모든 PC에서 빠르게 정리하게 함.
-        source: '/sw.js',
-        headers: [
-          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
-        ],
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
       },
       {
         // Cache read-only API responses (posts, profiles, communities)
-        source: '/api/(posts|communities|profiles)/:path*',
+        source: "/api/(posts|communities|profiles)/:path*",
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=30, stale-while-revalidate=120' },
+          { key: "Cache-Control", value: "public, s-maxage=30, stale-while-revalidate=120" },
         ],
       },
       {
         // Cache feed/prediction APIs (short TTL, stale-while-revalidate)
-        source: '/api/feed/:path*',
+        source: "/api/feed/:path*",
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=15, stale-while-revalidate=60' },
+          { key: "Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
         ],
       },
       {
         // Cache standings/ranking APIs
-        source: '/api/(standings|ranking|betman/games)/:path*',
+        source: "/api/(standings|ranking|betman/games)/:path*",
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
         ],
       },
       {
         // No cache for mutation/auth APIs
-        source: '/api/(upload|payments|tokens|admin|cron|auth)/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'no-store' },
-        ],
+        source: "/api/(upload|payments|tokens|admin|cron|auth)/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
       {
         /**
@@ -189,19 +188,17 @@ const nextConfig = {
          *    실재하지 않는 경로다(헛도는 중). 이를 "오타 수정" 하면 캐시 범위가
          *    넓어지므로 손대지 말 것.
          */
-        source: '/api/(feed/predictions|feed/snack|posts/my)',
-        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+        source: "/api/(feed/predictions|feed/snack|posts/my)",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
-        source: '/api/posts/:id/(bookmark|vote)',
-        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+        source: "/api/posts/:id/(bookmark|vote)",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
         // CSP 위반 보고: 캐시 금지
-        source: '/api/security/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'no-store' },
-        ],
+        source: "/api/security/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
     ]
   },
@@ -209,36 +206,36 @@ const nextConfig = {
     // 이미지 최적화 활성화 (unoptimized: true 제거)
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '*.ytimg.com', // YouTube 썸네일 (i.ytimg.com + i1~i9 CDN 미러)
+        protocol: "https",
+        hostname: "*.ytimg.com", // YouTube 썸네일 (i.ytimg.com + i1~i9 CDN 미러)
       },
       {
-        protocol: 'https',
-        hostname: 'img.youtube.com', // YouTube 썸네일 (hqdefault)
+        protocol: "https",
+        hostname: "img.youtube.com", // YouTube 썸네일 (hqdefault)
       },
       {
-        protocol: 'https',
-        hostname: '*.ggpht.com', // YouTube 커뮤니티 게시물 이미지 (yt3.ggpht.com 등)
+        protocol: "https",
+        hostname: "*.ggpht.com", // YouTube 커뮤니티 게시물 이미지 (yt3.ggpht.com 등)
       },
       {
-        protocol: 'https',
-        hostname: '*.cdninstagram.com', // Instagram
+        protocol: "https",
+        hostname: "*.cdninstagram.com", // Instagram
       },
       {
-        protocol: 'https',
-        hostname: 'pbs.twimg.com', // Twitter/X
+        protocol: "https",
+        hostname: "pbs.twimg.com", // Twitter/X
       },
       {
-        protocol: 'https',
-        hostname: '*.supabase.co', // Supabase Storage
+        protocol: "https",
+        hostname: "*.supabase.co", // Supabase Storage
       },
       {
-        protocol: 'https',
-        hostname: 'img.clerk.com', // Clerk avatars
+        protocol: "https",
+        hostname: "img.clerk.com", // Clerk avatars
       },
     ],
     // 모던 이미지 포맷 사용
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
     // 디바이스 사이즈 최적화
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
@@ -249,14 +246,27 @@ const nextConfig = {
   // layout 쪽 redirect 는 이중 안전망으로 유지.
   async redirects() {
     return [
+      // ── /admin2 → /admin 통합 (2026-09-08) ────────────────────────────────
+      // 관리자 홈이 둘이라 운영자가 매번 어느 쪽을 믿을지 골라야 했다. 이제 /admin 하나다.
+      // ⚠️ 화면마다 대응 경로가 다르므로 **일괄 리다이렉트를 쓰지 않는다** — 검수를 보다가
+      //    관제 센터로 튕기면 하던 일을 잃는다. Next.js 는 쿼리스트링을 자동으로 보존하므로
+      //    북마크에 남은 필터(?status=…)도 그대로 따라간다.
+      { source: "/admin2/news", destination: "/admin/news-review", permanent: false },
+      { source: "/admin2/agg", destination: "/admin/agg-review", permanent: false },
+      { source: "/admin2/reports", destination: "/admin/content/reports", permanent: false },
+      // 사가 검수는 통합 전에도 이미 뉴스 검수로 보내고 있었다 — 같은 목적지를 유지한다
+      { source: "/admin2/saga", destination: "/admin/news-review", permanent: false },
+      { source: "/admin2", destination: "/admin", permanent: false },
+      // 위에서 못 잡은 옛 하위 경로만 마지막에 홈으로 (대응 화면이 없는 주소들)
+      { source: "/admin2/:path*", destination: "/admin", permanent: false },
       {
-        source: '/worldcup/:path*',
-        destination: '/prediction',
+        source: "/worldcup/:path*",
+        destination: "/prediction",
         permanent: false,
       },
       {
-        source: '/worldcup',
-        destination: '/prediction',
+        source: "/worldcup",
+        destination: "/prediction",
         permanent: false,
       },
       // 시즌 개막·코그 이벤트 페이지 폐쇄 (2026-09-02 운영자: "승부예측 이벤트 페이지도 모두
@@ -268,23 +278,23 @@ const nextConfig = {
       // 사이트 전역에서 쓰인다. 하위 라우트 세 개만 명시한다.
       // 재개 시 이 네 항목을 지우고 두 layout 의 redirect 도 함께 제거 (gunners-season.ts 주석).
       {
-        source: '/season/:sub(join|big4|results)',
-        destination: '/prediction',
+        source: "/season/:sub(join|big4|results)",
+        destination: "/prediction",
         permanent: false,
       },
       {
-        source: '/season',
-        destination: '/prediction',
+        source: "/season",
+        destination: "/prediction",
         permanent: false,
       },
       {
-        source: '/cog-event',
-        destination: '/prediction',
+        source: "/cog-event",
+        destination: "/prediction",
         permanent: false,
       },
       {
-        source: '/event/gunners-season',
-        destination: '/prediction',
+        source: "/event/gunners-season",
+        destination: "/prediction",
         permanent: false,
       },
     ]
@@ -293,15 +303,15 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/storage/:path*',
+        source: "/storage/:path*",
         destination: `https://ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/:path*`,
       },
       {
         // 크롤링 출처 은닉: 클라이언트는 /api/sports/ 만 노출
         // (/api/live-scores → /api/wisetoto 별칭은 2026-09-02 에 걷어냈다 — wisetoto 가 문을
         //  닫아 7일간 0건이었고, 라이브·FT 점수는 LFA 상세 캐시가 공급한다)
-        source: '/api/sports/:path*',
-        destination: '/api/betman/:path*',
+        source: "/api/sports/:path*",
+        destination: "/api/betman/:path*",
       },
     ]
   },
@@ -328,32 +338,32 @@ const nextConfig = {
   // 실험적 기능: 패키지 최적화
   experimental: {
     optimizePackageImports: [
-      'lucide-react',
-      '@clerk/nextjs',
-      '@radix-ui/react-alert-dialog',
-      '@radix-ui/react-avatar',
-      '@radix-ui/react-collapsible',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-label',
-      '@radix-ui/react-select',
-      '@radix-ui/react-separator',
-      '@radix-ui/react-slot',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-toast',
-      '@radix-ui/react-toggle',
-      '@radix-ui/react-tooltip',
-      'date-fns',
-      'swr',
-      'recharts',
-      '@tiptap/core',
-      '@tiptap/react',
-      '@tiptap/starter-kit',
-      '@tiptap/pm',
-      '@tiptap/extension-image',
-      '@tiptap/extension-placeholder',
-      '@tiptap/extension-text-align',
-      '@next/third-parties',
+      "lucide-react",
+      "@clerk/nextjs",
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-collapsible",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-label",
+      "@radix-ui/react-select",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-toast",
+      "@radix-ui/react-toggle",
+      "@radix-ui/react-tooltip",
+      "date-fns",
+      "swr",
+      "recharts",
+      "@tiptap/core",
+      "@tiptap/react",
+      "@tiptap/starter-kit",
+      "@tiptap/pm",
+      "@tiptap/extension-image",
+      "@tiptap/extension-placeholder",
+      "@tiptap/extension-text-align",
+      "@next/third-parties",
     ],
   },
 }

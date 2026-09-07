@@ -119,47 +119,6 @@ export function Widget({
   )
 }
 
-/** 미리보기 행 목록 — 신고·표기 후보 공용. 액션은 해당 관리 페이지 링크 */
-export function PreviewList({
-  rows,
-  empty,
-  action,
-  actionHref,
-}: {
-  rows: { primary: string; secondary?: string; actionLabel?: string; href?: string }[]
-  empty: string
-  action?: string
-  actionHref?: string
-}) {
-  if (rows.length === 0) {
-    return <p className="text-muted-foreground py-4 text-center text-xs">{empty}</p>
-  }
-  return (
-    <ul className="divide-y">
-      {rows.map((r, i) => {
-        const label = r.actionLabel ?? action
-        const href = r.href ?? actionHref
-        return (
-          <li key={i} className="flex items-center gap-2 py-2 text-xs">
-            <span className="min-w-0 flex-1 truncate">{r.primary}</span>
-            {r.secondary && (
-              <span className="text-muted-foreground shrink-0 text-[11px]">{r.secondary}</span>
-            )}
-            {label && href && (
-              <Link
-                href={href}
-                className="shrink-0 rounded border px-2 py-0.5 text-[11px] font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800"
-              >
-                {label}
-              </Link>
-            )}
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
 /**
  * 스쿼드 검수 행 — **입력칸이 곧 편집기다** (운영자: "내가 바꾸고 싶을 때는?").
  * 초안이 입력칸에 들어 있고, 틀렸으면 그 자리에서 고친 뒤 승인. Enter = 승인.
@@ -407,6 +366,15 @@ export function MiniNewsDeck({ items: initial }: { items: MiniNewsItem[] }) {
     >()
   )
   const mountedRef = useRef(true)
+  /**
+   * 결정 단축키(P/R)를 이 영역에 있을 때만 켠다.
+   *
+   * 종전에는 window 전역이라 관제 센터 위쪽을 읽다가 `p` 를 누르면 초안이 발행됐다.
+   * 홈 첫 화면에 관측 상태·업무 큐가 들어오면서 그 위험이 더 커졌다. 이동(←/→)과
+   * 회수(Z)는 안전하므로 계속 전역으로 둔다 — 되돌릴 길을 막으면 안 된다.
+   */
+  const deckRef = useRef<HTMLDivElement>(null)
+  const [armed, setArmed] = useState(false)
   const item = items[Math.min(cursor, Math.max(0, items.length - 1))]
 
   /** 좌우가 곧 스킵이다 (운영자: "스킵하는 건 좌우로 움직이면서 관리") — 순환 */
@@ -526,20 +494,24 @@ export function MiniNewsDeck({ items: initial }: { items: MiniNewsItem[] }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 한글 조합 중에는 어떤 단축키도 실행하지 않는다 (조합 확정 키가 결정으로 새는 것을 막는다)
+      if (e.isComposing) return
       const t = e.target as HTMLElement
       if (["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.isContentEditable) return
       const k = e.key.toLowerCase()
       if (e.key === "ArrowRight" || k === "s" || k === "j") next()
       if (e.key === "ArrowLeft" || k === "k") prev()
-      if (k === "p") decide("publish")
-      if (k === "r") decide("reject")
+      // 발행·반려는 이 영역에 있을 때만 — 다른 곳을 보다가 눌러서 나가는 사고를 막는다
+      const inDeck = armed || !!deckRef.current?.contains(document.activeElement)
+      if (inDeck && k === "p") decide("publish")
+      if (inDeck && k === "r") decide("reject")
       if (k === "z") undoLast()
-      if (k === "e") setModal(true)
+      if (inDeck && k === "e") setModal(true)
       if (e.key === "Escape") setModal(false)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [next, prev, decide, undoLast])
+  }, [next, prev, decide, undoLast, armed])
 
   const breaking = items.filter((i) => i.breaking).length
   const urgent = items.filter((i) => hoursLeftOf(i, now) < 6).length
@@ -550,7 +522,9 @@ export function MiniNewsDeck({ items: initial }: { items: MiniNewsItem[] }) {
         <p className="text-muted-foreground py-6 text-center text-sm">
           검수 대기 0건 — 오늘 {done}건 처리 🎉
         </p>
-        {undoBar && <UndoStrip kind={undoBar.kind} onUndo={undoLast} />}
+        {undoBar && (
+          <UndoStrip kind={undoBar.kind} onUndo={undoLast} pending={pendingRef.current.size} />
+        )}
       </div>
     )
   }
@@ -558,7 +532,13 @@ export function MiniNewsDeck({ items: initial }: { items: MiniNewsItem[] }) {
   const hl = hoursLeftOf(item, now)
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      ref={deckRef}
+      onMouseEnter={() => setArmed(true)}
+      onMouseLeave={() => setArmed(false)}
+      onFocus={() => setArmed(true)}
+      className="flex min-h-0 flex-1 flex-col"
+    >
       {/* 헤더 한 줄 — 남은 개수·속보·만료 + 좌우 이동(=스킵) */}
       <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[11px]">
         <b className="text-foreground tabular-nums">
@@ -662,7 +642,9 @@ export function MiniNewsDeck({ items: initial }: { items: MiniNewsItem[] }) {
         </div>
       </div>
 
-      {undoBar && <UndoStrip kind={undoBar.kind} onUndo={undoLast} />}
+      {undoBar && (
+        <UndoStrip kind={undoBar.kind} onUndo={undoLast} pending={pendingRef.current.size} />
+      )}
 
       {/* 다음 예고 한 줄 */}
       {items.length > 1 && (
@@ -734,83 +716,35 @@ export function MiniNewsDeck({ items: initial }: { items: MiniNewsItem[] }) {
   )
 }
 
-/** 유예 커밋 안내 줄 — 5초 안에 Z 나 클릭으로 회수 가능 */
-function UndoStrip({ kind, onUndo }: { kind: "publish" | "reject"; onUndo: () => void }) {
+/**
+ * 유예 안내 줄 — **아직 실행되지 않은 예약**을 취소할 수 있다는 뜻이다.
+ *
+ * 발행 뒤 되돌리는 기능이 아니다. 그리고 5초를 다 기다리지 않고 화면을 떠나면 그 자리에서
+ * 전송된다 — 약속한 유예의 예외이므로 문구로 밝힌다(종전에는 "5초 뒤 실행"만 적혀 있었다).
+ */
+function UndoStrip({
+  kind,
+  onUndo,
+  pending = 1,
+}: {
+  kind: "publish" | "reject"
+  onUndo: () => void
+  pending?: number
+}) {
   return (
-    <div className="mt-1.5 flex items-center gap-2 rounded border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-      <span>{kind === "publish" ? "발행" : "반려"} 예약됨 — 5초 뒤 실행</span>
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+      <span>
+        {kind === "publish" ? "발행" : "반려"} 예약됨 — 5초 뒤 실행
+        {pending > 1 && ` · 예약 ${pending}건 중 마지막 1건만 취소됩니다`}
+      </span>
+      <span className="opacity-80">아직 전송 전이며, 이 화면을 떠나면 바로 전송됩니다.</span>
       <button
         onClick={onUndo}
         className="ml-auto rounded border border-amber-400 px-2 py-0.5 font-bold"
       >
-        되돌리기 (Z)
+        예약 취소 (Z)
       </button>
     </div>
-  )
-}
-
-/**
- * 운영 전황판 — **전 항목 항상 표시** (2026-08-30 운영자 확정: "오류 있는지 없는지"
- * 자체가 정보). 정상 = 초록 체크 + 흐린 한 줄, 이상 = 빨간 굵은 줄 + 이동 링크.
- */
-export interface StatusRow {
-  label: string
-  /** 표시값 — "0건"·"정상 (32분 전)"·"381건" */
-  value: string
-  ok: boolean
-  /** 이상일 때만 노출되는 액션 라벨 */
-  action?: string
-  /** 액션이 데려가는 관리 페이지 */
-  href?: string
-  /** ok 여도 주의 표시 (앰버) — 예: 접수 경로 미배선 */
-  note?: string
-  /** 이상일 때 줄 아래 펼치는 실물 목록 — "숫자만으론 뭔지 모른다" (운영자) */
-  detail?: string[]
-}
-
-export function StatusBoard({ rows }: { rows: StatusRow[] }) {
-  return (
-    <Widget title="운영 전황" tone={rows.some((r) => !r.ok) ? "danger" : "default"}>
-      <ul className="divide-y">
-        {rows.map((r) => (
-          <li key={r.label} className="py-1.5 text-xs">
-            <div className="flex items-center gap-2">
-              <span aria-hidden>{r.ok ? "✅" : "🔴"}</span>
-              <span className={cn(r.ok ? "text-muted-foreground" : "font-bold text-red-700")}>
-                {r.label}
-              </span>
-              {r.note && <span className="text-[10px] text-amber-600">{r.note}</span>}
-              <span
-                className={cn(
-                  "ml-auto tabular-nums",
-                  r.ok ? "text-muted-foreground" : "font-bold text-red-700"
-                )}
-              >
-                {r.value}
-              </span>
-              {!r.ok && r.action && r.href && (
-                <Link
-                  href={r.href}
-                  className="rounded bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-white"
-                >
-                  {r.action}
-                </Link>
-              )}
-            </div>
-            {/* 이상 항목은 실물을 줄 밑에 펼친다 — 숫자만 던지지 않는다 */}
-            {!r.ok && r.detail && r.detail.length > 0 && (
-              <ul className="text-muted-foreground mt-1 space-y-0.5 pl-6 text-[11px]">
-                {r.detail.map((line) => (
-                  <li key={line} className="truncate">
-                    · {line}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
-    </Widget>
   )
 }
 

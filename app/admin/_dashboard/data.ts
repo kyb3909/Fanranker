@@ -2,13 +2,18 @@ import "server-only"
 
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isBreakingNewsItem } from "@/lib/news/breaking"
-import { summarizeReportGaps } from "@/lib/soccerway/report-gaps"
 
 /**
- * 관제실(관리자 홈) 데이터 로더 — 읽기 전용.
+ * 관리자 홈의 **인라인 작업 위젯** 데이터 로더 — 읽기 전용.
  *
- * 시안(app/design-demo/admin-home)에서 2026-08-30 이식. 숫자 정의를 바꿀 때는
- * 여기 주석의 "왜"부터 읽을 것 — 대부분 운영자 피드백으로 굳은 정의다.
+ * ## 범위 (2026-09-08 관제 센터 통합에서 좁혔다)
+ * 종전에는 이 로더가 전황판 13행의 집계까지 전부 만들었다. 그 집계는 이제
+ * `/api/admin/control-center` 가 소유한다 — **조회 실패와 0건을 구별해야 하는데
+ * 여기서는 전 항목이 `count ?? 0` 이라 둘이 같은 초록색이었기 때문이다.**
+ * 여기 남은 것은 홈에서 바로 처리하는 작업 위젯의 재료뿐이다:
+ * 뉴스 검수 덱, 이름 등재 대기, 스쿼드 검수, 티커 삭제, 참여도.
+ *
+ * 숫자 정의를 바꿀 때는 주석의 "왜"부터 읽을 것 — 대부분 운영자 피드백으로 굳은 정의다.
  */
 
 export interface MiniNewsItem {
@@ -36,28 +41,11 @@ export interface SquadPreviewRow {
 export interface DashboardData {
   news: MiniNewsItem[]
   newsTotal: number
-  reportsPending: number
-  sagaPending: number
+  /** 표기 등재 대기 슬립 수 */
   dictCandidates: number
-  betman: {
-    lastCheckedAt: string | null
-    status: "ok" | "stale" | "error"
-    /** 결과 대기 — **경기 수** (행 수 아님. 한 경기 = 마켓별 여러 행) */
-    unsettled: number
-    /** 결과 대기 경기 목록 ("홈 vs 원정") — 숫자만으론 뭔지 모른다 (운영자) */
-    unsettledMatches: string[]
-    /** 그 경기들에 걸려 있는 유저 예측 수 — 이게 진짜 심각도다 */
-    waitingPredictions: number
-    refundsPending: number
-  }
-  /** 문의 — ⚠️ inquiries 테이블은 존재하나 접수 경로가 미배선 (2026-08-30 실측: 코드 참조 0) */
-  inquiriesOpen: number
-  newsErrorReports: number
-  metaverseReports: number
   squadBacklog: number
   /** 미리보기 — 숫자만으론 판단이 안 선다 (운영자: "미리보기 같은 것들이 필요해") */
   squadPreview: SquadPreviewRow[]
-  reportsPreview: { reason: string; targetType: string; createdAt: string }[]
   /**
    * 표기 등재 대기 — 선수별 집계 + 원클릭 등재 재료 (2026-08-30 운영자 "진행해줘").
    * 행동 단위는 슬립이 아니라 **선수**다. 영문 이름으로 묶고, LLM 의 한글 표기는
@@ -74,21 +62,11 @@ export interface DashboardData {
   }[]
   /** 이름 추출 자체가 실패해 등재로는 안 풀리는 잔여물 (영문 이름조차 없는 행) */
   blockedUnparsed: number
-  today: { signups: number; posts: number; predictions: number }
   /** 참여도 — 오늘 vs 어제 (운영자: "사람들 참여도, 메뉴들 어떻게 활용했는지") */
   participation: { label: string; today: number; yesterday: number }[]
-  crawlerFailsToday: number
-  ticker: { lastAt: string | null; count24h: number; recent: { id: string; title: string }[] }
+  ticker: { recent: { id: string; title: string }[] }
   activeGames: number
   dailyRound: { roundNum: number | null; closeAt: string | null }
-  /** 결과 교차검증(베트맨×LFA) 불일치 — 표시·알림 전용, 정산과 무관 (2026-09-02 역할 변경) */
-  resultMismatches: number
-  /**
-   * 경기 리포트 미생성 (2026-09-02 신설). 최근 48h 킥오프 · 대상 경기인데 저장 리포트가 없고
-   * 실패 원장(match_report_attempts)에 사유가 남은 경기 수 + 사유별 분포.
-   * 운영자: 7일간 대상 23경기 중 10개만 리포트 — 나머지 13개는 이유가 어디에도 안 남았었다.
-   */
-  reportGaps: { games: number; reasons: { stage: string; n: number }[] }
 }
 
 const EXPIRE_HOURS = 24
@@ -136,22 +114,13 @@ export async function loadDashboardData(): Promise<DashboardData> {
 
   const [
     newsRes,
-    reportsRes,
-    sagaRes,
     dictRes,
-    syncRes,
     squadRes,
-    suRes,
-    poRes,
-    prRes,
-    unsettledRes,
-    refundsRes,
-    inqRes,
-    nerRes,
-    mvRes,
     squadPrevRes,
-    reportsPrevRes,
     dictPrevRes,
+    tickerRecentRes,
+    activeGamesRes,
+    roundRes,
   ] = await Promise.all([
     supabase
       .from("news_reservoir")
@@ -161,68 +130,15 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .order("created_at", { ascending: true })
       .limit(100),
     supabase
-      .from("content_reports")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending"),
-    supabase
-      .from("saga_reservoir")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending"),
-    supabase
       .from("saga_reservoir")
       .select("*", { count: "exact", head: true })
       .eq("status", "queued")
       .eq("error", "auto_hold:unknown_player"),
     supabase
-      .from("betman_sync_state")
-      .select("last_checked_at")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
       .from("team_squads")
       .select("*", { count: "exact", head: true })
       .not("name_kr_draft", "is", null)
       .neq("status", "confirmed"),
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", todayStart),
-    supabase
-      .from("posts")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", todayStart),
-    supabase
-      .from("betman_predictions")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", todayStart),
-    /**
-     * 결과 대기 — ⚠️ "킥오프 지남 & result null" 그대로 쓰면 주말 저녁마다 거짓 경보
-     * (2026-08-30 실측: 122건 전부 최근 2일 in_progress — 그냥 지금 뛰는 경기들).
-     * 경기 ~2h + VPS 동기화 주기 2h + 여유 = **킥오프 5시간 경과**부터만 센다.
-     * 늑대소리 내는 위젯은 3주 안에 무시를 학습시킨다.
-     */
-    /**
-     * ⚠️ 행 수가 아니라 **경기 수**로 세야 한다 (운영자: "미정산이 뭔지 모르겠어" →
-     * 까보니 행 25 = 실제 경기 5). betman 은 한 경기가 마켓별 여러 행이다.
-     */
-    supabase
-      .from("betman_games")
-      .select("id, home_team_name, away_team_name, match_time")
-      .lt("match_time", new Date(Date.now() - 5 * 3600_000).toISOString())
-      .is("result", null)
-      .limit(500),
-    supabase
-      .from("pending_refunds")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending"),
-    supabase.from("inquiries").select("*", { count: "exact", head: true }),
-    supabase.from("news_error_reports").select("*", { count: "exact", head: true }),
-    supabase
-      .from("metaverse_user_reports")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "open"),
-    // 미리보기 3종
     supabase
       .from("team_squads")
       .select("name_en, name_kr_draft, soccerway_team_id, player_slug")
@@ -230,12 +146,6 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .neq("status", "confirmed")
       .order("updated_at", { ascending: false })
       .limit(8),
-    supabase
-      .from("content_reports")
-      .select("reason, target_type, created_at")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(5),
     // 표기 등재 대기 — 선수별 집계 + 근거 제목 (JS 에서 접는다)
     supabase
       .from("saga_reservoir")
@@ -244,6 +154,23 @@ export async function loadDashboardData(): Promise<DashboardData> {
       .eq("error", "auto_hold:unknown_player")
       .order("occurred_at", { ascending: false })
       .limit(500),
+    // 티커 즉시 삭제 패널용 최근 6건
+    supabase
+      .from("news_ticker_items")
+      .select("id, headline_kr, original_title")
+      .order("created_at", { ascending: false })
+      .limit(6),
+    supabase
+      .from("betman_games")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["scheduled", "in_progress"]),
+    supabase
+      .from("betman_daily_rounds")
+      .select("daily_id, bet_close_at")
+      .eq("status", "open")
+      .order("bet_close_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   /**
@@ -275,72 +202,6 @@ export async function loadDashboardData(): Promise<DashboardData> {
     today: participationCounts[i * 2].count ?? 0,
     yesterday: participationCounts[i * 2 + 1].count ?? 0,
   }))
-
-  const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString()
-  const [crawlerFailRes, tickerLastRes, ticker24Res, tickerRecentRes, activeGamesRes, roundRes] =
-    await Promise.all([
-      // 크롤러 실패 — operations/dashboard 와 같은 정의 (오늘, status=error)
-      supabase
-        .from("crawler_run_log")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "error")
-        .gte("started_at", todayStart),
-      supabase
-        .from("news_ticker_items")
-        .select("created_at")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("news_ticker_items")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", dayAgo),
-      // 티커 즉시 삭제 패널용 최근 6건
-      supabase
-        .from("news_ticker_items")
-        .select("id, headline_kr, original_title")
-        .order("created_at", { ascending: false })
-        .limit(6),
-      supabase
-        .from("betman_games")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["scheduled", "in_progress"]),
-      supabase
-        .from("betman_daily_rounds")
-        .select("daily_id, bet_close_at")
-        .eq("status", "open")
-        .order("bet_close_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
-
-  const since48h = new Date(Date.now() - 48 * 3600_000).toISOString()
-
-  // 결과 교차검증 불일치 — 표시·알림 전용 (2026-09-02). 정산은 이 verdict 를 보지 않는다.
-  // 창은 교차검증의 재검사 창(result-crosscheck.ts LOOKBACK_HOURS=48)과 같은 48h — 창을 벗어난
-  // 행은 다시 검사되지 않아 checked_at 이 멈추므로, 창 없이 세면 옛 오판이 영원히 빨간불로
-  // 남는다 (2026-09-02 실측: 8/29~31 슬롯 충돌·핸디캡 오독 시절 43건이 수리 후에도 그대로).
-  const { count: resultMismatches } = await supabase
-    .from("betman_result_checks")
-    .select("*", { count: "exact", head: true })
-    .eq("verdict", "mismatch")
-    .gte("checked_at", since48h)
-
-  // 경기 리포트 미생성 — 실패 원장(최근 48h)에서 경기별 **마지막** 사유만 센다.
-  // 저장 리포트가 생긴 경기는 뺀다(나중에 성공한 건 실패가 아니다).
-  const [attemptsRes, reportedRes] = await Promise.all([
-    supabase
-      .from("match_report_attempts")
-      .select("game_id, stage, attempted_at")
-      .gte("attempted_at", since48h)
-      .order("attempted_at", { ascending: false })
-      .limit(2000),
-    supabase.from("match_reports").select("game_id").gte("created_at", since48h),
-  ])
-  const reportGaps = summarizeReportGaps(
-    (attemptsRes.data ?? []) as { game_id: string; stage: string; attempted_at: string }[],
-    ((reportedRes.data ?? []) as { game_id: string }[]).map((r) => r.game_id)
-  )
 
   // 클럽명 매핑 — team_dictionary (name_kr ↔ soccerway_team_id)
   const { data: teamDictRows } = await supabase
@@ -393,54 +254,10 @@ export async function loadDashboardData(): Promise<DashboardData> {
     a.breaking !== b.breaking ? (a.breaking ? -1 : 1) : a.expiresAt.localeCompare(b.expiresAt)
   )
 
-  // 결과 대기 — 행을 경기 단위로 접고, 걸린 유저 예측 수를 센다 (진짜 심각도)
-  const unsettledRows =
-    (unsettledRes.data as {
-      id: string
-      home_team_name: string
-      away_team_name: string
-      match_time: string
-    }[]) ?? []
-  const matchKeys = new Map<string, string>()
-  for (const g of unsettledRows) {
-    const key = `${g.home_team_name}|${g.away_team_name}|${g.match_time}`
-    if (!matchKeys.has(key)) matchKeys.set(key, `${g.home_team_name} vs ${g.away_team_name}`)
-  }
-  const { count: waitingPredictions } =
-    unsettledRows.length > 0
-      ? await supabase
-          .from("betman_predictions")
-          .select("*", { count: "exact", head: true })
-          .in(
-            "game_id",
-            unsettledRows.map((g) => g.id)
-          )
-      : { count: 0 }
-
-  let betmanStatus: "ok" | "stale" | "error" = "error"
-  const lastChecked = syncRes.data?.last_checked_at ?? null
-  if (lastChecked) {
-    const h = (Date.now() - new Date(lastChecked).getTime()) / 3600_000
-    betmanStatus = h < 3 ? "ok" : h < 6 ? "stale" : "error"
-  }
-
   return {
     news,
     newsTotal: news.length,
-    reportsPending: reportsRes.count ?? 0,
-    sagaPending: sagaRes.count ?? 0,
     dictCandidates: dictRes.count ?? 0,
-    betman: {
-      lastCheckedAt: lastChecked,
-      status: betmanStatus,
-      unsettled: matchKeys.size,
-      unsettledMatches: [...matchKeys.values()].slice(0, 6),
-      waitingPredictions: waitingPredictions ?? 0,
-      refundsPending: refundsRes.count ?? 0,
-    },
-    inquiriesOpen: inqRes.count ?? 0,
-    newsErrorReports: nerRes.count ?? 0,
-    metaverseReports: mvRes.count ?? 0,
     squadBacklog: squadRes.count ?? 0,
     squadPreview: (
       (squadPrevRes.data as {
@@ -457,9 +274,6 @@ export async function loadDashboardData(): Promise<DashboardData> {
       teamId: r.soccerway_team_id ?? "",
       playerSlug: r.player_slug,
     })),
-    reportsPreview: (
-      (reportsPrevRes.data as { reason: string; target_type: string; created_at: string }[]) ?? []
-    ).map((r) => ({ reason: r.reason, targetType: r.target_type, createdAt: r.created_at })),
     ...(() => {
       // 선수별 집계 — **영문 이름**으로 묶는다 (한글 표기는 LLM 후보라 흔들린다).
       // 영문조차 없는 행만 "추출 실패" — 등재로 못 푸는 진짜 잔여물이다.
@@ -497,16 +311,8 @@ export async function loadDashboardData(): Promise<DashboardData> {
         blockedUnparsed: unparsed,
       }
     })(),
-    today: {
-      signups: suRes.count ?? 0,
-      posts: poRes.count ?? 0,
-      predictions: prRes.count ?? 0,
-    },
     participation,
-    crawlerFailsToday: crawlerFailRes.count ?? 0,
     ticker: {
-      lastAt: tickerLastRes.data?.created_at ?? null,
-      count24h: ticker24Res.count ?? 0,
       recent: (
         (tickerRecentRes.data as {
           id: string
@@ -516,8 +322,6 @@ export async function loadDashboardData(): Promise<DashboardData> {
       ).map((t) => ({ id: t.id, title: t.headline_kr ?? t.original_title ?? "(제목 없음)" })),
     },
     activeGames: activeGamesRes.count ?? 0,
-    resultMismatches: resultMismatches ?? 0,
-    reportGaps,
     dailyRound: {
       roundNum: roundRes.data?.daily_id
         ? parseInt(String(roundRes.data.daily_id).replace(/\D/g, ""), 10) || null

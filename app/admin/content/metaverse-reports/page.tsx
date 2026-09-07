@@ -41,8 +41,11 @@ export default async function AdminMetaverseReportsPage() {
     <main id="main-content" tabIndex={-1} className="p-6">
       <div className="mb-6">
         <h1 className="text-foreground text-2xl font-bold">메타버스 신고 관리</h1>
-        <p className="text-muted-foreground text-sm">
-          메타버스 내 유저 신고를 검토하고 처리합니다. (open → reviewed/dismissed/actioned)
+        <p className="text-muted-foreground text-sm">메타버스 안에서 들어온 유저 신고입니다.</p>
+        {/* 일반 신고의 "인정"과 같은 완료로 읽히면 안 된다 — 여기 버튼은 상태만 기록한다 */}
+        <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          이 화면의 조치는 <b>상태를 기록할 뿐</b> 계정 정지·차단·음소거를 실행하지 않습니다. 카드
+          발급이나 제재가 필요하면 일반 신고 화면에서 따로 처리해야 합니다.
         </p>
       </div>
       <MetaverseReportQueue initialReports={enriched} total={count ?? 0} />

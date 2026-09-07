@@ -499,6 +499,8 @@ export function FastReview({
   // ── 키보드 ────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 한글 조합 중에는 어떤 단축키도 실행하지 않는다 — 조합 확정 키가 결정으로 새면 안 된다
+      if (e.isComposing) return
       // 입력·에디터·셀렉트 안에서는 단축키를 먹지 않는다.
       // ③ SELECT 포함 — 사가 셀렉트에 포커스 둔 채 R 이 반려가 되던 실사고 구멍
       const el = e.target as HTMLElement | null
@@ -1023,17 +1025,21 @@ export function FastReview({
         </button>
       )}
 
-      {/* ③ 되돌리기 바 — P/R 후 5초. Z 또는 클릭으로 회수 */}
+      {/* ③ 예약 취소 바 — P/R 후 5초. 아직 전송 전이며, 화면을 떠나면 그 자리에서 전송된다.
+             "발행 후 복구"가 아니라 "실행 전 예약 취소"다 — 문구를 동작에 맞춘다. */}
       {undoBar && (
-        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-neutral-900 px-4 py-2.5 text-xs font-medium text-white shadow-lg">
+        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-2xl bg-neutral-900 px-4 py-2.5 text-xs font-medium text-white shadow-lg">
           <span className="max-w-[300px] truncate">
             {undoBar.kind === "publish" ? "발행" : "반려"} 예약 — {undoBar.title}
+          </span>
+          <span className="text-[11px] opacity-75">
+            아직 전송 전 · 이 화면을 떠나면 바로 전송됩니다
           </span>
           <button
             onClick={undoLast}
             className="rounded-full bg-red-700 px-2.5 py-1 text-[11px] font-bold"
           >
-            되돌리기 (Z)
+            예약 취소 (Z)
           </button>
         </div>
       )}

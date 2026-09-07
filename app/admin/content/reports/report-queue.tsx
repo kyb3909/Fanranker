@@ -1,6 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import useSWR from "swr"
 import {
   Table,
   TableBody,
@@ -13,7 +16,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, Eye, Loader2, ExternalLink } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import Link from "next/link"
+import { fetcher } from "@/lib/swr"
+import { cn } from "@/lib/utils"
+import { REASON_LABEL, type Effect } from "@/lib/admin/report-actions"
 
 interface Report {
   id: string
@@ -35,6 +40,24 @@ interface Report {
   reporter_dismissed_rate: number
 }
 
+interface ListResponse {
+  reports: Report[]
+  total: number
+  page: number
+  limit: number
+  sort: "newest" | "oldest"
+}
+
+interface EffectResponse {
+  reportId: string
+  status: string
+  terminal: boolean
+  authorId: string | null
+  resolve: Effect
+  dismiss: string[]
+  reviewing: string[]
+}
+
 /** 신고 접수 후 경과 시간 — label + 시간(소수) */
 function elapsedSince(createdAt: string): { label: string; hours: number } {
   const ms = Date.now() - new Date(createdAt).getTime()
@@ -45,29 +68,25 @@ function elapsedSince(createdAt: string): { label: string; hours: number } {
   return { label: h > 0 ? `${h}시간 ${m}분` : `${m}분`, hours }
 }
 
-/** 신고자 신뢰도 배지 — 누적 5건 미만은 표본 부족 */
+/**
+ * 신고자 기각률 — **판단 근거가 아니라 참고 정보다.**
+ * 분모가 전체 기간의 신고 수(미처리 포함)라 진실성 지표가 아니다. 이 값만으로 기각하지 않는다.
+ */
 function reporterTrust(total: number, rate: number): { label: string; className: string } {
   if (total < 5) return { label: "표본 적음", className: "text-muted-foreground" }
-  const pct = Math.round(rate * 100)
-  if (rate >= 0.5) return { label: `기각 ${pct}%`, className: "border-primary text-primary" }
-  if (rate >= 0.2)
-    return {
-      label: `기각 ${pct}%`,
-      className: "border-yellow-500 text-yellow-700 dark:text-yellow-400",
-    }
-  return {
-    label: `기각 ${pct}%`,
-    className: "border-green-600 text-green-700 dark:text-green-400",
-  }
+  return { label: `기각률 ${Math.round(rate * 100)}%`, className: "text-muted-foreground" }
 }
 
-const REPORT_REASONS: Record<string, { label: string; card: "red" | "yellow" }> = {
-  discrimination: { label: "차별적 표현", card: "red" },
-  advertising: { label: "광고/스팸", card: "red" },
-  profanity: { label: "욕설/비하", card: "yellow" },
-  abuse: { label: "어뷰징", card: "yellow" },
-  political: { label: "정치글", card: "yellow" },
-}
+/** 레드카드 사유 — 화면 강조용. 실제 카드 종류 판정은 서버가 한다 */
+const RED_REASONS = new Set(["discrimination", "advertising"])
+
+const STATUS_TABS: { key: string; label: string }[] = [
+  { key: "pending", label: "대기" },
+  { key: "reviewing", label: "검토 중" },
+  { key: "resolved", label: "인정됨" },
+  { key: "dismissed", label: "기각" },
+  { key: "all", label: "전체" },
+]
 
 const statusConfig: Record<
   string,
@@ -75,129 +94,189 @@ const statusConfig: Record<
 > = {
   pending: { label: "대기", variant: "destructive" },
   reviewing: { label: "검토 중", variant: "default" },
-  resolved: { label: "처리됨", variant: "secondary" },
+  resolved: { label: "인정됨", variant: "secondary" },
   dismissed: { label: "기각", variant: "outline" },
 }
 
 export function ReportQueue({
-  initialReports,
-  total: initialTotal,
+  initialStatus,
+  initialSort,
+  initialPage,
 }: {
-  initialReports: Report[]
-  total: number
+  initialStatus: string
+  initialSort: "newest" | "oldest"
+  initialPage: number
 }) {
-  const [reports, setReports] = useState<Report[]>(initialReports)
-  const [total, setTotal] = useState(initialTotal)
-  const [loading, setLoading] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState("pending")
+  const router = useRouter()
+  const pathname = usePathname()
+  const [status, setStatus] = useState(initialStatus)
+  const [sort, setSort] = useState<"newest" | "oldest">(initialSort)
+  const [page, setPage] = useState(initialPage)
+  const [busy, setBusy] = useState<string | null>(null)
+  /** 인정 직전 효과 미리보기를 여는 신고 */
+  const [confirming, setConfirming] = useState<Report | null>(null)
 
-  const fetchReports = async (status: string) => {
-    try {
-      const res = await fetch(`/api/admin/content/reports?status=${status}`)
-      const data = await res.json()
-      setReports(data.reports ?? [])
-      setTotal(data.total ?? 0)
-    } catch {
-      // ignore
-    }
-  }
+  const key = `/api/admin/content/reports?status=${encodeURIComponent(status)}&sort=${sort}&page=${page}`
+  // keepPreviousData — 갱신 실패 시 마지막 정상 목록을 지우지 않는다
+  const { data, error, isLoading, isValidating, mutate } = useSWR<ListResponse>(key, fetcher, {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+  })
 
-  const handleAction = async (reportId: string, action: string) => {
-    setLoading(reportId)
-    try {
-      const res = await fetch("/api/admin/content/reports", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportId, action }),
-      })
-      const body = (await res.json()) as {
-        error?: string
-        cardIssued?: boolean
-        userSuspended?: boolean
-      }
-      if (!res.ok) throw new Error(body.error ?? "오류 발생")
+  // 화면 상태를 URL 에 남긴다 — 원문·회원 상세를 보고 돌아와도 같은 목록이 열린다
+  useEffect(() => {
+    const params = new URLSearchParams()
+    params.set("status", status)
+    if (sort === "oldest") params.set("sort", "oldest")
+    if (page > 1) params.set("page", String(page))
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [status, sort, page, pathname, router])
 
-      if (action === "resolve") {
-        if (body.userSuspended) {
+  const reports = data?.reports ?? []
+  const total = data?.total ?? 0
+  const limit = data?.limit ?? 30
+  const lastPage = Math.max(1, Math.ceil(total / limit))
+  const from = total === 0 ? 0 : (page - 1) * limit + 1
+  const to = Math.min(page * limit, total)
+
+  const run = useCallback(
+    async (reportId: string, action: "resolve" | "dismiss" | "reviewing") => {
+      setBusy(reportId)
+      try {
+        const res = await fetch("/api/admin/content/reports", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportId, action }),
+        })
+        const body = (await res.json()) as {
+          error?: string
+          alreadyHandled?: boolean
+          currentStatus?: string
+          verdict?: "applied" | "partial" | "failed"
+          message?: string
+        }
+        if (res.status === 409 && body.alreadyHandled) {
+          // 응답 유실 후 재실행·동시 처리 — 서버가 막았다. 같은 효과를 또 실행하지 않는다.
           toast({
-            variant: "destructive",
-            title: "자동 정지 발효",
-            description: "옐로카드 누적으로 작성자가 정지되었습니다.",
+            title: "이미 처리된 신고입니다",
+            description: `다시 실행하지 않았습니다. 현재 상태: ${
+              statusConfig[body.currentStatus ?? ""]?.label ?? body.currentStatus
+            }`,
           })
-        } else if (body.cardIssued) {
+          await mutate()
+          return
+        }
+        if (!res.ok) throw new Error(body.error ?? "오류 발생")
+
+        if (body.message) {
           toast({
-            title: "카드 발급",
-            description: "신고 사유에 따라 카드가 발급되었습니다.",
+            // 부분 성공을 성공으로 칠하지 않는다
+            variant: body.verdict === "applied" ? "default" : "destructive",
+            title:
+              body.verdict === "applied"
+                ? "적용 완료"
+                : body.verdict === "partial"
+                  ? "부분 성공"
+                  : "실패",
+            description: body.message,
           })
         }
+        await mutate()
+      } catch (e) {
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: e instanceof Error ? e.message : "오류 발생",
+        })
+      } finally {
+        setBusy(null)
+        setConfirming(null)
       }
-
-      await fetchReports(statusFilter)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: error instanceof Error ? error.message : "오류 발생",
-      })
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status)
-    fetchReports(status)
-  }
+    },
+    [mutate]
+  )
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        {Object.entries(statusConfig).map(([key, cfg]) => (
+      {/* 필터 · 정렬 · 총계 */}
+      <div className="flex flex-wrap items-center gap-2">
+        {STATUS_TABS.map((tab) => (
           <Button
-            key={key}
-            variant={statusFilter === key ? "default" : "outline"}
+            key={tab.key}
+            variant={status === tab.key ? "default" : "outline"}
             size="sm"
-            onClick={() => handleStatusFilter(key)}
+            onClick={() => {
+              setStatus(tab.key)
+              setPage(1)
+            }}
           >
-            {cfg.label}
+            {tab.label}
           </Button>
         ))}
         <Button
-          variant={statusFilter === "all" ? "default" : "outline"}
+          variant={sort === "oldest" ? "default" : "outline"}
           size="sm"
-          onClick={() => handleStatusFilter("all")}
+          onClick={() => {
+            setSort((s) => (s === "oldest" ? "newest" : "oldest"))
+            setPage(1)
+          }}
+          title="가장 오래 방치된 신고부터 봅니다"
         >
-          전체
+          {sort === "oldest" ? "오래된 순" : "최신 순"}
         </Button>
-        <span className="text-muted-foreground ml-auto text-sm">총 {total}건</span>
+        <span className="text-muted-foreground ml-auto text-sm tabular-nums">
+          {total === 0 ? "0건" : `${from}–${to} / 총 ${total}건`}
+        </span>
       </div>
 
-      <div className="rounded-lg border">
+      {/* 조회 실패를 빈 목록으로 보여주지 않는다 */}
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
+          목록을 갱신하지 못했습니다. 아래 목록은 마지막으로 정상 조회된 결과이며, 지금 실제 건수와
+          다를 수 있습니다.
+          <Button size="sm" variant="outline" className="ml-2" onClick={() => mutate()}>
+            다시 시도
+          </Button>
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>유형</TableHead>
+              <TableHead>대상</TableHead>
               <TableHead>작성자</TableHead>
               <TableHead>사유</TableHead>
-              <TableHead>설명</TableHead>
+              <TableHead>신고 설명</TableHead>
               <TableHead>신고자</TableHead>
               <TableHead>상태</TableHead>
               <TableHead>경과</TableHead>
-              <TableHead className="text-right">관리</TableHead>
+              <TableHead className="text-right">판정</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {reports.length === 0 ? (
+            {isLoading && !data ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-muted-foreground h-24 text-center">
-                  신고가 없습니다.
+                  불러오는 중…
+                </TableCell>
+              </TableRow>
+            ) : reports.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-muted-foreground h-24 text-center">
+                  {error
+                    ? "조회에 실패해 목록을 표시할 수 없습니다."
+                    : "이 조건에 해당하는 신고가 없습니다."}
                 </TableCell>
               </TableRow>
             ) : (
               reports.map((report) => {
-                const reasonInfo = REPORT_REASONS[report.reason]
-                const isRed = reasonInfo?.card === "red"
+                const isRed = RED_REASONS.has(report.reason)
                 const elapsed = elapsedSince(report.created_at)
+                // ⚠️ 이 1시간/24시간은 화면 관행이지 운영자가 승인한 SLA 로 확인된 값이 아니다
                 const slaHours = isRed ? 1 : 24
                 const slaBreached =
                   (report.status === "pending" || report.status === "reviewing") &&
@@ -206,6 +285,7 @@ export function ReportQueue({
                   report.reporter_total_reports,
                   report.reporter_dismissed_rate
                 )
+                const actionable = report.status === "pending" || report.status === "reviewing"
                 return (
                   <TableRow key={report.id} className={isRed ? "bg-destructive/5" : ""}>
                     <TableCell>
@@ -215,17 +295,18 @@ export function ReportQueue({
                           target="_blank"
                           className="text-primary inline-flex items-center gap-1 hover:underline"
                         >
-                          <Badge
-                            variant="outline"
-                            className="hover:bg-primary/10 cursor-pointer text-xs"
-                          >
-                            {report.target_type === "post" ? "게시글" : "댓글"}
+                          <Badge variant="outline" className="cursor-pointer text-xs">
+                            {report.target_type === "post"
+                              ? "게시글"
+                              : report.target_type === "comment"
+                                ? "댓글"
+                                : report.target_type}
                           </Badge>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ) : (
                         <Badge variant="outline" className="text-xs">
-                          {report.target_type === "post" ? "게시글" : "댓글"}
+                          {report.target_type}
                         </Badge>
                       )}
                       {report.post_title && (
@@ -243,30 +324,30 @@ export function ReportQueue({
                         >
                           <span className="text-muted-foreground">상세</span>
                           {report.author_yellow_count > 0 && (
-                            <Badge
-                              variant="outline"
-                              className="h-4 border-yellow-500 px-1 text-[10px] text-yellow-700 dark:text-yellow-400"
-                            >
+                            <Badge variant="outline" className="h-4 px-1 text-[10px]">
                               옐로 {report.author_yellow_count}
                             </Badge>
                           )}
                         </Link>
                       ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
+                        <span className="text-muted-foreground text-xs">작성자 미상</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
-                        <span
-                          className={`inline-block h-2 w-2 rounded-full ${isRed ? "bg-primary" : "bg-yellow-500"}`}
-                        />
                         <Badge variant="secondary" className="text-xs">
-                          {reasonInfo?.label ?? report.reason}
+                          {REASON_LABEL[report.reason] ?? report.reason}
                         </Badge>
+                        {/* 색 점만으로 구분하지 않는다 */}
+                        <span className="text-muted-foreground text-[10px]">
+                          {isRed ? "레드" : "옐로"}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm">
-                      {report.description || "-"}
+                    <TableCell className="max-w-[220px] text-sm">
+                      <span title={report.description ?? undefined} className="line-clamp-2">
+                        {report.description || "-"}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
@@ -277,12 +358,7 @@ export function ReportQueue({
                         >
                           {report.reporter_id.slice(0, 10)}…
                         </Link>
-                        <Badge
-                          variant="outline"
-                          className={`h-4 w-fit px-1 text-[10px] ${trust.className}`}
-                        >
-                          {trust.label}
-                        </Badge>
+                        <span className={cn("text-[10px]", trust.className)}>{trust.label}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -295,9 +371,9 @@ export function ReportQueue({
                     </TableCell>
                     <TableCell className="text-xs">
                       <span
-                        className={
+                        className={cn(
                           slaBreached ? "text-primary font-semibold" : "text-muted-foreground"
-                        }
+                        )}
                         title={new Date(report.created_at).toLocaleString("ko-KR")}
                       >
                         {elapsed.label}
@@ -305,65 +381,47 @@ export function ReportQueue({
                       {slaBreached && <span className="text-primary ml-1 text-[10px]">초과</span>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {report.status === "pending" && (
+                      {actionable && (
                         <div className="flex items-center justify-end gap-1">
+                          {report.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => run(report.id, "reviewing")}
+                              disabled={busy === report.id}
+                              title="검토 중으로 표시 (제재 없음)"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleAction(report.id, "reviewing")}
-                            disabled={loading === report.id}
-                            title="검토 시작"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-green-700"
+                            onClick={() => setConfirming(report)}
+                            disabled={busy === report.id}
+                            title="위반 인정 — 카드가 발급됩니다"
                           >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-green-600"
-                            onClick={() => handleAction(report.id, "resolve")}
-                            disabled={loading === report.id}
-                            title="처리"
-                          >
-                            {loading === report.id ? (
+                            {busy === report.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
-                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <>
+                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                인정
+                              </>
                             )}
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="text-destructive h-7 w-7"
-                            onClick={() => handleAction(report.id, "dismiss")}
-                            disabled={loading === report.id}
-                            title="기각"
+                            size="sm"
+                            className="text-destructive h-7 px-2 text-xs"
+                            onClick={() => run(report.id, "dismiss")}
+                            disabled={busy === report.id}
+                            title="위반 아님으로 종결 (제재 없음)"
                           >
-                            <XCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      )}
-                      {report.status === "reviewing" && (
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-green-600"
-                            onClick={() => handleAction(report.id, "resolve")}
-                            disabled={loading === report.id}
-                            title="처리"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive h-7 w-7"
-                            onClick={() => handleAction(report.id, "dismiss")}
-                            disabled={loading === report.id}
-                            title="기각"
-                          >
-                            <XCircle className="h-3.5 w-3.5" />
+                            <XCircle className="mr-1 h-3.5 w-3.5" />
+                            기각
                           </Button>
                         </div>
                       )}
@@ -374,6 +432,162 @@ export function ReportQueue({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* 페이지 이동 — 종전에는 최신 30건 뒤로 갈 방법이 없었다 */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {page} / {lastPage} 쪽{isValidating && " · 갱신 중"}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(1)}
+            title="첫 쪽"
+          >
+            처음
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            이전
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= lastPage}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            다음
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= lastPage}
+            onClick={() => setPage(lastPage)}
+            title="가장 마지막 쪽"
+          >
+            마지막
+          </Button>
+        </div>
+      </div>
+
+      {confirming && (
+        <ResolveConfirm
+          report={confirming}
+          busy={busy === confirming.id}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => run(confirming.id, "resolve")}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * 인정 실행 전 효과 확인.
+ *
+ * 종전에는 체크 아이콘 한 번에 카드가 발급되고 누적이 차면 정지까지 걸렸는데, 그 사실이
+ * 실행 전 화면 어디에도 없었다. 여기서는 **서버가 지금 상태로 계산한 효과**를 읽고 나서
+ * 실행한다. 기각·검토 표시처럼 제재가 없는 행동에는 이 단계를 두지 않는다.
+ */
+function ResolveConfirm({
+  report,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  report: Report
+  busy: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const { data, error, isLoading } = useSWR<EffectResponse>(
+    `/api/admin/content/reports/effect?reportId=${report.id}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+  const [ack, setAck] = useState(false)
+  const effect = data?.resolve
+  const needsAck = !!effect?.needsExtraConfirm
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="위반 인정 실행 확인"
+      className="bg-background/80 fixed inset-0 z-50 flex items-end justify-center p-4 backdrop-blur-sm sm:items-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !busy) onCancel()
+      }}
+    >
+      <div className="bg-background w-full max-w-lg rounded-xl border p-4 shadow-lg">
+        <h2 className="text-base font-bold">이 신고를 인정하면</h2>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          {REASON_LABEL[report.reason] ?? report.reason} · 신고 접수{" "}
+          {new Date(report.created_at).toLocaleString("ko-KR")}
+        </p>
+
+        <div className="mt-3 min-h-[5rem] text-sm">
+          {isLoading && <p className="text-muted-foreground">효과를 계산하는 중…</p>}
+          {error && (
+            <p role="alert" className="text-red-700 dark:text-red-400">
+              효과를 확인하지 못했습니다. 무슨 일이 생길지 모르는 채로 실행하지 마세요.
+            </p>
+          )}
+          {data?.terminal && (
+            <p role="alert" className="text-amber-700 dark:text-amber-400">
+              이미 처리된 신고입니다. 실행해도 아무 일도 일어나지 않습니다.
+            </p>
+          )}
+          {effect && !data?.terminal && (
+            <ul className="list-disc space-y-1 pl-4">
+              {effect.lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {needsAck && (
+          <label className="mt-3 flex items-start gap-2 rounded border border-red-300 bg-red-50 p-2 text-xs text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+            <input
+              type="checkbox"
+              checked={ack}
+              onChange={(e) => setAck(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              이 실행으로 계정이 <b>종료일 없이</b> 정지된다는 것을 확인했습니다.
+            </span>
+          </label>
+        )}
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+            취소
+          </Button>
+          <Button
+            size="sm"
+            onClick={onConfirm}
+            disabled={busy || isLoading || !!error || !!data?.terminal || (needsAck && !ack)}
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : effect?.willSuspend ? (
+              "카드 발급하고 계정 정지"
+            ) : effect ? (
+              `${effect.cardType === "red" ? "레드" : "옐로"}카드 발급하고 인정`
+            ) : (
+              "인정"
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )
