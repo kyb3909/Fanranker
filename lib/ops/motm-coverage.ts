@@ -33,6 +33,11 @@ export interface MotmCandidate {
   hasLineup: boolean
   /** FT 증거가 있는가 (pickFtScore 결과) — 없으면 연기·취소 잔재일 수 있다 */
   hasFtEvidence: boolean
+  /**
+   * 같은 경기를 가리키는 다른 키 (2026-09-07). LFA 전용으로 등록됐다가 베트맨이 연결된 경기는
+   * 폴이 `lfa_<id>` 키 아래 있다 — 베트맨 키로만 찾으면 있는 폴을 결번으로 센다 (유벤투스–AC밀란).
+   */
+  altKeys?: string[]
 }
 
 export interface MotmCoverage {
@@ -69,8 +74,10 @@ export function assessMotmCoverage(
       Number.isFinite(c.ftAtMs) &&
       nowMs >= c.ftAtMs + graceMs
   )
+  const present = (c: MotmCandidate) =>
+    existingKeys.has(c.matchKey) || (c.altKeys ?? []).some((k) => existingKeys.has(k))
   const missing = eligibleList
-    .filter((c) => !existingKeys.has(c.matchKey))
+    .filter((c) => !present(c))
     .map((c) => ({ matchKey: c.matchKey, label: c.label }))
 
   const eligible = eligibleList.length

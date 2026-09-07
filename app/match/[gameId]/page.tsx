@@ -13,6 +13,7 @@ import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getStoredMatchReport } from "@/lib/match/stored-report"
 import { getMatchExtras } from "@/lib/soccerway/match-extras"
 import { hasRecentReportAttempt } from "@/lib/soccerway/report-attempts"
+import { reportGameIdOf } from "@/lib/match/report-target"
 import { MatchHeader } from "./match-header"
 import { LiveRefresher } from "./live-refresher"
 import { MatchExtrasSection } from "./match-extras-section"
@@ -138,10 +139,13 @@ export default async function MatchPage({ params }: Props) {
       ? enrichLineupWithTimeline(lineupRaw, lfa.timeline)
       : lineupRaw
 
-  const extrasLeague = finished && match.source !== "lfa" && isMatchExtrasLeague(match.leagueCode)
-  const storedReport = extrasLeague
-    ? await getStoredMatchReport(match.gameId).catch(() => null)
-    : null
+  // 리포트는 베트맨 행 id 아래 있다. LFA 전용 경기는 베트맨이 연결됐을 때만 리포트 대상이다
+  // (lib/match/report-target.ts — 리포트 크론과 같은 판정. 유벤투스–AC밀란 9/7: 이중 등록 뒤
+  // 크론이 만든 리포트를 페이지가 source=lfa 라는 이유로 숨겼다).
+  const reportGameId = reportGameIdOf(match)
+  const extrasLeague = finished && reportGameId !== null && isMatchExtrasLeague(match.leagueCode)
+  const storedReport =
+    extrasLeague && reportGameId ? await getStoredMatchReport(reportGameId).catch(() => null) : null
 
   // 불판 — 이 경기의 라이브 스레드 게시물 (크론이 라인업 발표 시 생성, lib/match/thread.ts).
   // ⚠️ betman 은 같은 경기를 마켓별 중복 행으로 갖는다 — 불판은 그중 한 행에 걸리므로
@@ -154,10 +158,10 @@ export default async function MatchPage({ params }: Props) {
   // 해석(resolve) 단계엔 부정 캐시가 없어 매핑이 안 된 경기는 방문할 때마다 Soccerway 페이지
   // 721KB + 라인업 API 를 다시 불렀고 원장에 `resolve` 행이 쌓였다(7일 389행 중 36% 가 방문 발).
   // 30분 안에 어느 형제 행으로든 시도한 기록이 있으면 30분 크론에 맡긴다.
-  if (extrasLeague && !storedReport) {
+  if (extrasLeague && reportGameId && !storedReport) {
     after(async () => {
       if (await hasRecentReportAttempt(gameIds, 30 * 60_000)) return
-      await getMatchExtras(match.gameId).catch(() => null)
+      await getMatchExtras(reportGameId).catch(() => null)
     })
   }
   const { data: threadRows } = await admin
@@ -170,7 +174,10 @@ export default async function MatchPage({ params }: Props) {
 
   // MoTM 폴 (2026-08-22 저니맵 v2) — matchKey 조회라 어느 마켓 행으로 들어와도 같은 폴.
   // 종료 경기 한정: 마감 후에도 결과가 경기 기록으로 영속한다 (expandAll = 전체 분포)
-  const motmPoll = finished ? await getMotmPollByMatchKey(match.matchKey).catch(() => null) : null
+  // LFA 전용 등록 전에 베트맨 키로 만들어진 폴도 찾는다 (betmanMatchKey — 2026-09-07)
+  const motmPoll = finished
+    ? await getMotmPollByMatchKey(match.matchKey, match.betmanMatchKey).catch(() => null)
+    : null
 
   // 시즌 실록 도선 (2026-08-22 3자 토의 판결 E — saga-entry-FINAL) — FT 직후가
   // "방금 경기가 벌써 적힌 문서"를 열어볼 유일한 교집합 시간. 위키 있는 팀만, 종단 배치

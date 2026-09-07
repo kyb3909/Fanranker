@@ -70,12 +70,16 @@ beforeEach(() => {
   mocks.game = { league_code: "EPL", home_team_name: "아스널", away_team_name: "첼시" }
   mocks.from.mockImplementation((table: string) => {
     let columns = ""
+    let eqValue: unknown
     const query: any = {
       select: (value: string) => {
         columns = value
         return query
       },
-      eq: () => query,
+      eq: (_k: string, v: unknown) => {
+        eqValue = v
+        return query
+      },
       in: () => query,
       order: () => query,
       limit: () => query,
@@ -89,16 +93,53 @@ beforeEach(() => {
               error: null,
             })
           )
+        // LFA 전용 등록 경기: "lfa-linked" 는 베트맨 "game" 에 연결, "lfa-only" 는 미연결
+        if (table === "lfa_fixtures")
+          return Promise.resolve(
+            resolve({
+              data:
+                eqValue === "lfa-linked"
+                  ? { id: "lfa-linked", betman_game_id: "game", lfa_match_id: "x" }
+                  : eqValue === "lfa-only"
+                    ? { id: "lfa-only", betman_game_id: null, lfa_match_id: "y" }
+                    : null,
+              error: null,
+            })
+          )
         if (table === "betman_games" && columns === "id")
           return Promise.resolve(resolve({ data: [{ id: "game" }], error: null }))
         if (table === "betman_games")
           return Promise.resolve(
-            resolve({ data: { ...mocks.game, match_time: "2026-09-06T18:00:00Z" }, error: null })
+            resolve({
+              // 베트맨 행은 "game" 뿐 — LFA uuid 로 물으면 없다
+              data:
+                eqValue === "game" ? { ...mocks.game, match_time: "2026-09-06T18:00:00Z" } : null,
+              error: null,
+            })
           )
         return Promise.resolve(resolve({ data: [], error: null }))
       },
     }
     return query
+  })
+})
+
+describe("getMatchExtras — LFA 전용 uuid 로 들어온 경우", () => {
+  it("베트맨이 연결된 등록 경기는 연결된 베트맨 id 로 체인을 돈다 (원장도 그 id 아래)", async () => {
+    await getMatchExtras("lfa-linked")
+    expect(mocks.resolve).toHaveBeenCalledWith("game")
+    expect(mocks.record).toHaveBeenCalledExactlyOnceWith(
+      "game",
+      null,
+      "resolve",
+      expect.any(String)
+    )
+  })
+
+  it("연결되지 않은 LFA 전용 경기는 대상이 아니다", async () => {
+    expect(await getMatchExtras("lfa-only")).toEqual({ stats: null, report: null })
+    expect(mocks.resolve).not.toHaveBeenCalled()
+    expect(mocks.record).not.toHaveBeenCalled()
   })
 })
 

@@ -370,20 +370,29 @@ function refFromRow(row: {
   }
 }
 
-/** 매치센터용 — 단일 경기 폴 참조. 30초 캐시(매치 요약과 동일 리듬) */
-export function getMotmPollByMatchKey(matchKey: string): Promise<MotmPollRef | null> {
+/**
+ * 매치센터용 — 단일 경기 폴 참조. 30초 캐시(매치 요약과 동일 리듬).
+ * `altKey` = LFA 전용 등록 뒤 베트맨이 연결된 경기의 베트맨 키 (2026-09-07). 등록 전에 그 키로
+ * 만들어진 폴을 잃지 않는다. 둘 다 있으면 대표 키(matchKey)의 폴이 이긴다.
+ */
+export function getMotmPollByMatchKey(
+  matchKey: string,
+  altKey?: string | null
+): Promise<MotmPollRef | null> {
+  const keys = altKey && altKey !== matchKey ? [matchKey, altKey] : [matchKey]
   return unstable_cache(
-    async (key: string) => {
+    async (list: string[]) => {
       const supabase = createServiceRoleClient()
       const { data } = await supabase
         .from("polls")
-        .select("id, is_active, closes_at")
+        .select("id, is_active, closes_at, match_key")
         .eq("kind", "motm")
-        .eq("match_key", key)
-        .maybeSingle()
-      return data ? refFromRow(data) : null
+        .in("match_key", list)
+      const rows = data ?? []
+      const row = rows.find((r) => r.match_key === list[0]) ?? rows[0]
+      return row ? refFromRow(row) : null
     },
-    ["motm-poll-by-match"],
+    ["motm-poll-by-match-v2"],
     { revalidate: 30 }
-  )(matchKey)
+  )(keys)
 }

@@ -5,6 +5,7 @@ import { apiError } from "@/lib/api-error"
 import { getFixturesForDay, todayKst } from "@/lib/match/get-fixtures"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
+import { reportGameIdOf } from "@/lib/match/report-target"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
 
 /**
@@ -52,13 +53,16 @@ async function cronGet(request: NextRequest) {
     ).flat()
 
     const nowMs = Date.now()
-    const targets = fixtures.filter((f) => {
-      if (!f.gameId || f.lfaFinished !== true) return false
-      if (!isMatchExtrasLeague(f.leagueCode)) return false
-      if (!isReportWorthyMatch(f.homeTeam, f.awayTeam)) return false
+    // 리포트는 베트맨 행 id 아래 만든다. LFA 전용 경기는 베트맨이 연결됐을 때만 대상이다
+    // (lib/match/report-target.ts — 매치 페이지와 같은 판정).
+    const targets = fixtures.flatMap((f) => {
+      const gameId = reportGameIdOf(f)
+      if (!gameId || f.lfaFinished !== true) return []
+      if (!isMatchExtrasLeague(f.leagueCode)) return []
+      if (!isReportWorthyMatch(f.homeTeam, f.awayTeam)) return []
       // 창 밖이면 어차피 원문을 못 찾는다 — 부르면 헛돈만 쓴다
       const age = nowMs - new Date(f.matchTime).getTime()
-      return age > 0 && age < 24 * 3600_000
+      return age > 0 && age < 24 * 3600_000 ? [{ ...f, gameId }] : []
     })
 
     let made = 0
@@ -68,7 +72,7 @@ async function cronGet(request: NextRequest) {
     for (const f of targets) {
       if (made >= MAX_PER_RUN || Date.now() - start > TIME_BUDGET_MS) break
       // 실패해도 다음 경기로 넘어간다 — 한 경기의 원문 부재가 스윕을 멈추면 안 된다
-      const gameId = f.gameId as string
+      const gameId = f.gameId
       try {
         if (await hasStoredReport(gameId)) {
           skipped++

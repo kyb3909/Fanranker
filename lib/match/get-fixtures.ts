@@ -209,7 +209,16 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
 
   const merged: FixtureRow[] = []
   const consumed = new Set<FixtureRow>()
-  const ambiguous = new Set<FixtureRow>()
+  /**
+   * 전용 경기로 싣지 않을 LFA 행 (2026-09-07 확장). 종전엔 `ambiguous` 판정의 후보만 보류했는데,
+   * `missing`·`conflict` 로 짝을 못 찾은 슬롯의 LFA 행은 그대로 인기팀 전용 경기로 등록됐다.
+   * 짝을 못 찾았다는 것은 "베트맨에 없는 경기"가 아니라 "베트맨에 있는데 못 알아본 경기"일
+   * 가능성이 크다 — 유벤투스–AC밀란(9/7 03:45, 베트맨 4행)이 킥오프 45분 뒤 한 번의 짝짓기 실패로
+   * LFA 전용 경기로 이중 등록됐고, 이후 MoTM 키·리포트 대상이 갈렸다. 같은 슬롯에 짝 못 찾은
+   * 베트맨 행이 있으면 그 슬롯의 LFA 행은 전부 보류한다. 사전이 채워져 다음 호출에서 짝이 맞으면
+   * 그때 베트맨 행에 붙는다 (fail-closed — 엉뚱한 경기와 합치거나 둘로 가르는 것이 최악이다).
+   */
+  const withheld = new Set<FixtureRow>()
   const linked = new Map<string, string>()
   // 한글→영문 사전 — 확정 별칭과 상대 팀 충돌 확인. 실패하면 직접 전체 이름 일치만 가능.
   const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
@@ -227,8 +236,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
     const decision = matchLfaCounterpart(b, candidates, teamEn)
     const hit = decision.candidate && !consumed.has(decision.candidate) ? decision.candidate : null
     if (!hit) {
-      if (decision.status === "ambiguous")
-        for (const candidate of candidates) ambiguous.add(candidate)
+      for (const candidate of candidates) withheld.add(candidate)
       // 미확정·충돌·다중 후보를 구분해 남긴다. betman 일정과 링크는 보존하고 LFA 보강만 보류한다.
       droppedForLog.push({
         betman: `${b.homeTeam} vs ${b.awayTeam}`,
@@ -277,7 +285,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   // LFA 전용 행(betman 미판매)은 인기 팀 경기만 싣는다 — 2026-09-02 운영자 결정 (위 doc 참조)
   for (const rows of slots.values()) {
     for (const row of rows) {
-      if (!consumed.has(row) && !ambiguous.has(row) && isPopularFixture(row)) merged.push(row)
+      if (!consumed.has(row) && !withheld.has(row) && isPopularFixture(row)) merged.push(row)
     }
   }
 

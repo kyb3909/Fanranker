@@ -48,6 +48,28 @@ describe("리포트 크론 대상·실패 판정", () => {
     expect(mocks.record).not.toHaveBeenCalled()
   })
 
+  it("LFA 전용 경기는 베트맨이 연결됐을 때만, 연결된 베트맨 id 로 부른다", async () => {
+    // 유벤투스–AC밀란(2026-09-07): 이중 등록 뒤 일정이 source=lfa 로 바뀌어 리포트 대상에서 탈락했다
+    const base = {
+      homeTeam: "유벤투스",
+      awayTeam: "AC밀란",
+      leagueCode: "세리에A",
+      matchTime: new Date(Date.now() - 3 * 3600_000).toISOString(),
+      status: "completed",
+      lfaFinished: true,
+    }
+    mocks.fixtures
+      .mockResolvedValueOnce([
+        { ...base, gameId: "lfa-uuid-linked", source: "lfa", betmanGameId: "betman-row" },
+        { ...base, gameId: "lfa-uuid-only", source: "lfa", betmanGameId: null },
+      ])
+      .mockResolvedValueOnce([])
+    const res = await GET(new NextRequest("http://localhost/api/cron/match-reports"))
+    expect(res.status).toBe(200)
+    expect(mocks.stored).toHaveBeenCalledExactlyOnceWith("betman-row")
+    expect(mocks.extras).toHaveBeenCalledExactlyOnceWith("betman-row")
+  })
+
   it("일정 조회 실패를 대상 경기 0건 성공으로 처리하지 않는다", async () => {
     mocks.fixtures
       .mockRejectedValueOnce(new Error("fixture DB unavailable"))

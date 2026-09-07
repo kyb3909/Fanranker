@@ -37,6 +37,11 @@ export interface MatchSummary {
   source?: "lfa"
   lfaMatchId?: string
   betmanGameId?: string | null
+  /**
+   * LFA 전용 등록 뒤에 베트맨이 연결된 경기의 **베트맨 키** (2026-09-07). 등록 전에 베트맨 키로
+   * 만들어진 MoTM 폴을 잃지 않기 위한 보조 조회 키다. 신원은 여전히 `matchKey`(`lfa_…`)다.
+   */
+  betmanMatchKey?: string
 }
 
 async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> {
@@ -73,7 +78,12 @@ async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> 
     gameId,
     ...(siblings ?? []).map((s) => String(s.id)),
   ]).catch(() => null)
-  if (supplemental) return supplementalSummary(supplemental)
+  if (supplemental) {
+    return {
+      ...supplementalSummary(supplemental),
+      betmanMatchKey: `${game.home_team_name}_${game.away_team_name}_${game.match_time}`,
+    }
+  }
 
   let status: MatchSummary["status"] = "scheduled"
   let homeScore: number | null = null

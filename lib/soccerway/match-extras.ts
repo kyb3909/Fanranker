@@ -23,6 +23,7 @@ import {
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
 import { listRecentReportAttempts, recordReportAttempt } from "@/lib/soccerway/report-attempts"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
+import { getSupplementalFixture } from "@/lib/match/supplemental-fixtures"
 import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import {
@@ -888,7 +889,13 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
     .eq("id", gameId)
     .maybeSingle()
   if (error) throw new Error(`match-report-game-read:${error.code}`)
-  if (!game || !isMatchExtrasLeague(String(game.league_code ?? ""))) {
+  if (!game) {
+    // LFA 전용 uuid 로 들어왔지만 베트맨 행이 연결된 경기 — 리포트는 그 행 아래 만든다 (2026-09-07)
+    const registered = await getSupplementalFixture(gameId).catch(() => null)
+    if (registered?.betman_game_id) return getMatchExtras(registered.betman_game_id)
+    return { stats: null, report: null }
+  }
+  if (!isMatchExtrasLeague(String(game.league_code ?? ""))) {
     return { stats: null, report: null }
   }
   /**

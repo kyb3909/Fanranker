@@ -177,6 +177,18 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     )
     expect(state.writes).toHaveLength(0)
   })
+  it("같은 슬롯에 짝 못 찾은 베트맨 행이 있으면 LFA 행을 전용 경기로 등록하지 않는다", async () => {
+    // 유벤투스–AC밀란(2026-09-07) 재현: 사전 별칭이 없어 짝짓기가 missing — 베트맨이 파는 경기를
+    // 못 알아본 것이지 없는 경기가 아니다. 인기팀이라도 이 슬롯의 LFA 행은 보류한다.
+    state.dictionary.mockResolvedValue([])
+    state.tables.betman_games = [{ ...market("market-a"), away_team_name: "하부리그" }]
+    const rows = await getFixturesForDay("2026-09-05")
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ gameId: "market-a", awayTeam: "하부리그" })
+    expect(rows[0].source).toBeUndefined()
+    expect(state.writes).toHaveLength(0)
+    expect(state.tables.lfa_fixtures ?? []).toHaveLength(0)
+  })
   it("등록 실패 시 존재하지 않는 매치센터 링크를 만들지 않는다", async () => {
     state.fail = "lfa_fixtures"
     const quiet = vi.spyOn(console, "error").mockImplementation(() => {})

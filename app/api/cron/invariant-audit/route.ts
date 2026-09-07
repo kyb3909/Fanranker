@@ -186,6 +186,30 @@ async function loadReadyLineupIds(
   return out
 }
 
+/**
+ * 베트맨 gameId → 연결된 LFA 전용 등록 경기의 폴 키(`lfa_<id>`) (2026-09-07).
+ * 등록 뒤 베트맨이 붙은 경기는 MoTM 폴이 그 키 아래 생긴다 (lib/motm/poll.ts).
+ */
+async function loadLfaAltKeys(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  gameIds: string[]
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>()
+  const ids = [...new Set(gameIds)]
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from("lfa_fixtures")
+      .select("betman_game_id, lfa_match_id")
+      .in("betman_game_id", ids.slice(i, i + IN_CHUNK))
+    for (const row of data ?? []) {
+      if (!row.betman_game_id || !row.lfa_match_id) continue
+      const key = String(row.betman_game_id)
+      out.set(key, [...(out.get(key) ?? []), `lfa_${String(row.lfa_match_id)}`])
+    }
+  }
+  return out
+}
+
 /** gameId → 대조 로스터 (선발+벤치 양 팀) */
 async function loadRosters(
   supabase: ReturnType<typeof createServiceRoleClient>,
@@ -633,9 +657,10 @@ async function handler(req: NextRequest) {
 
     if (byKey.size > 0) {
       const allIds = [...byKey.values()].flatMap((m) => m.ids)
-      const [detailsByGame, lineupGameIds] = await Promise.all([
+      const [detailsByGame, lineupGameIds, altKeyByBetmanId] = await Promise.all([
         loadDetailRows(supabase, allIds),
         loadReadyLineupIds(supabase, allIds),
+        loadLfaAltKeys(supabase, allIds),
       ])
       const candidates = [...byKey.values()].map((m) => ({
         matchKey: m.key,
@@ -646,12 +671,15 @@ async function handler(req: NextRequest) {
           m.score,
           m.ids.flatMap((id) => detailsByGame.get(id) ?? [])
         ),
+        // LFA 전용 등록 뒤 베트맨이 연결된 경기는 폴이 `lfa_<id>` 키 아래 있다 (2026-09-07)
+        altKeys: [...new Set(m.ids.flatMap((id) => altKeyByBetmanId.get(id) ?? []))],
       }))
+      const lookupKeys = [...new Set([...byKey.keys(), ...candidates.flatMap((c) => c.altKeys)])]
       const { data: pollRows } = await supabase
         .from("polls")
         .select("match_key")
         .eq("kind", "motm")
-        .in("match_key", [...byKey.keys()])
+        .in("match_key", lookupKeys)
       const have = new Set((pollRows ?? []).map((p) => String(p.match_key)))
 
       const cov = assessMotmCoverage(candidates, have, now)
