@@ -41,19 +41,45 @@ interface DiscordOpsNotice {
   where?: string
   impact?: string
   action?: string
+  /**
+   * 처리 화면 바로가기 (2026-09-08 운영자: "관리자 페이지 거기로 이동하게끔").
+   *
+   * 임베드 제목 링크는 하나뿐이라 알림에 여러 종류가 섞이면 어디로 가야 할지 못 고른다.
+   * 여기 넣은 것은 `🔗 바로 가기` 필드에 각각 눌리는 링크로 붙는다. 상대경로면 절대화한다.
+   * 같은 곳을 가리키는 항목은 접는다 — 같은 링크가 다섯 번 찍히면 아무도 안 누른다.
+   */
+  links?: { label: string; path: string }[]
   fields?: { name: string; value: string; inline?: boolean }[]
   /** @everyone / <@&roleId> 등 멘션 (긴급 알림에만 권장) */
   mention?: string
 }
 
+/** 바로가기 목록 → 마크다운 링크 한 줄. 중복 경로는 접고, 디스코드 필드 상한을 넘지 않게 자른다 */
+export function buildOpsLinks(links: DiscordOpsNotice["links"]): string | null {
+  if (!links || links.length === 0) return null
+  const seen = new Set<string>()
+  const parts: string[] = []
+  for (const l of links) {
+    const href = opsUrl(l.path)
+    if (!href || seen.has(href)) continue
+    seen.add(href)
+    parts.push(`[${l.label.replace(/[[\]]/g, "").slice(0, 40)}](${href})`)
+    if (parts.length >= 6) break
+  }
+  return parts.length > 0 ? parts.join(" · ") : null
+}
+
 /** 임베드 필드 목록 — 구조화 필드(어디·영향·조치)가 먼저, 발신처 필드가 뒤. 디스코드 상한 10개 */
 export function buildOpsFields(
-  notice: Pick<DiscordOpsNotice, "where" | "impact" | "action" | "fields">
+  notice: Pick<DiscordOpsNotice, "where" | "impact" | "action" | "links" | "fields">
 ): { name: string; value: string; inline: boolean }[] {
   const lead: { name: string; value: string; inline: boolean }[] = []
   if (notice.where) lead.push({ name: "📍 어디서", value: notice.where, inline: false })
   if (notice.impact) lead.push({ name: "💥 영향", value: notice.impact, inline: false })
   if (notice.action) lead.push({ name: "🔧 지금 할 일", value: notice.action, inline: false })
+  // 조치 바로 아래가 바로가기 — 읽고 나서 누를 자리다
+  const links = buildOpsLinks(notice.links)
+  if (links) lead.push({ name: "🔗 바로 가기", value: links, inline: false })
   const rest = (notice.fields ?? []).map((f) => ({
     name: f.name,
     value: f.value,

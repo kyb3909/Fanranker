@@ -4,6 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { isMatchPageLeague } from "@/lib/match/leagues"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { notifyDiscordOps } from "@/lib/discord-notify"
+import { screensForIssues } from "@/lib/ops/alert-links"
 import { isBreakingNewsItem } from "@/lib/news/breaking"
 
 export const dynamic = "force-dynamic"
@@ -461,11 +462,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (issues.length > 0) {
+    // 항목마다 실제 일하는 자리로 보낸다 — 종전엔 전부 운영 모니터링 한 곳이라
+    // 거기서 환불·사전·정산 화면으로 또 찾아 들어가야 했다 (2026-09-08)
+    const screens = screensForIssues(issues.map((i) => i.name))
     await notifyDiscordOps({
       level: "alert",
       title: "⚠️ 운영 점검 필요",
       description: "자동 점검에서 이상이 감지됐어요. (30분마다 재확인)",
-      url: `${SITE}/admin/operations`,
+      url: screens.length === 1 ? `${SITE}${screens[0].path}` : `${SITE}/admin`,
+      links: screens,
       fields: issues,
     })
   }

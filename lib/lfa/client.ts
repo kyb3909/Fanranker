@@ -67,7 +67,15 @@ async function recordUsage(endpoint: string, creditsRemaining: number | null) {
 async function alertOps(title: string, description: string) {
   try {
     const { notifyDiscordOps } = await import("@/lib/discord-notify")
-    await notifyDiscordOps({ title, description, level: "alert" })
+    const { OPS_SCREENS } = await import("@/lib/ops/alert-links")
+    // 종전엔 링크가 없어 알림만 받고 어디로 갈지 스스로 찾아야 했다 (2026-09-08)
+    await notifyDiscordOps({
+      title,
+      description,
+      level: "alert",
+      url: OPS_SCREENS.operations.path,
+      links: [OPS_SCREENS.operations, OPS_SCREENS.controlCenter],
+    })
   } catch {
     /* 알림 실패가 본 작업을 깨면 안 된다 */
   }

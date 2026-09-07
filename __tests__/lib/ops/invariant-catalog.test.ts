@@ -52,7 +52,8 @@ describe("formatFindingField — 근거 → 영향 → 조치 → 링크", () =>
     expect(f.name).toBe("발행 제목이 옛/오 표기를 씀 (notation_alt_in_title)")
     expect(f.value).toContain("래시퍼드")
     expect(f.value).toContain("🔧")
-    expect(f.value).toContain("[관제실](https://gongnori.fan/admin/news-review)")
+    // 링크 글자는 목적지 이름이다 — 종전엔 전부 "관제실"이라 여러 줄이 와도 구별이 안 됐다 (2026-09-08)
+    expect(f.value).toContain("[뉴스 검수로 가기](https://gongnori.fan/admin/news-review)")
   })
 
   it("summary 는 180자가 아니라 700자까지 — 조치 문장이 잘리지 않는다", () => {

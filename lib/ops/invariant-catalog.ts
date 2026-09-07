@@ -137,10 +137,55 @@ export function describeInvariant(id: string): InvariantInfo {
     INVARIANT_CATALOG[id] ?? {
       label: id,
       impact: "(카탈로그에 없는 불변식 — lib/ops/invariant-catalog.ts 에 추가할 것)",
-      action: "관제실에서 상세를 본다",
+      action: "관제 센터에서 상세를 본다",
       adminPath: "/admin/operations",
     }
   )
+}
+
+/**
+ * 관리자 경로 → 사람이 읽는 화면 이름 (2026-09-08).
+ *
+ * 디스코드 알림의 링크가 전부 `관제실` 이라는 같은 글자였다 — 다섯 줄이 와도 어디로 가는지
+ * 구별이 안 됐다. 누르기 전에 목적지를 알 수 있어야 한다.
+ */
+const ADMIN_SCREEN_LABEL: Record<string, string> = {
+  "/admin": "관제 센터",
+  "/admin/operations": "운영 모니터링",
+  "/admin/system": "시스템 상태",
+  "/admin/matches": "경기 관리",
+  "/admin/settlements": "정산 처리",
+  "/admin/refunds": "환불 큐",
+  "/admin/news-review": "뉴스 검수",
+  "/admin/saga-review": "사가 검수",
+  "/admin/team-dictionary": "팀 사전",
+  "/admin/team-squads": "선수단 사전",
+  "/admin/content/reports": "신고 처리",
+  "/admin/content/metaverse-reports": "메타버스 신고",
+}
+
+/** 경로가 가리키는 화면 이름. 쿼리스트링이 붙어 있어도 앞부분으로 찾는다 */
+export function adminScreenLabel(path: string): string {
+  const base = path.split("?")[0]
+  return ADMIN_SCREEN_LABEL[base] ?? "관리자"
+}
+
+/**
+ * 로/으로 — 받침이 없거나 ㄹ 받침이면 "로".
+ * "팀 사전로 가기"처럼 읽히면 사람이 쓴 문장으로 안 보인다.
+ */
+export function toParticle(word: string): "로" | "으로" {
+  const last = word.trim().slice(-1)
+  const code = last.charCodeAt(0)
+  if (Number.isNaN(code) || code < 0xac00 || code > 0xd7a3) return "로"
+  const jong = (code - 0xac00) % 28
+  return jong === 0 || jong === 8 ? "로" : "으로"
+}
+
+/** 이 불변식을 처리하는 화면 — 알림의 바로가기에 그대로 쓴다 */
+export function adminScreenOf(invariant: string): { label: string; path: string } {
+  const path = describeInvariant(invariant).adminPath
+  return { label: adminScreenLabel(path), path }
 }
 
 /**
@@ -152,10 +197,12 @@ export function formatFindingField(
   siteUrl: string
 ): { name: string; value: string } {
   const info = describeInvariant(finding.invariant)
+  const screen = adminScreenLabel(info.adminPath)
   const summary =
     finding.summary.length > 700 ? `${finding.summary.slice(0, 697)}…` : finding.summary
   return {
     name: `${info.label} (${finding.invariant})`,
-    value: `${summary}\n💥 ${info.impact}\n🔧 ${info.action} · [관제실](${siteUrl}${info.adminPath})`,
+    // 링크 글자를 목적지 이름으로 — 여러 줄이 와도 어디로 가는 링크인지 구별된다
+    value: `${summary}\n💥 ${info.impact}\n🔧 ${info.action} · [${screen}${toParticle(screen)} 가기](${siteUrl}${info.adminPath})`,
   }
 }

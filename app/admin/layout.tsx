@@ -19,6 +19,12 @@ import { Separator } from "@/components/ui/separator"
  * 기본은 거부다. 경로를 알 수 없으면(미들웨어 헤더 유실) 통과시키지 않는다.
  * 각 API 는 이것과 별개로 자기 권한을 다시 검사한다.
  */
+/**
+ * 관리자 전 구간은 동적이다 — 레이아웃이 매 요청의 역할과 경로를 읽는다.
+ * 명시하지 않으면 Next 가 하위 페이지를 정적 렌더해보다 실패하고 빌드 로그를 채운다.
+ */
+export const dynamic = "force-dynamic"
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const role = await getStaffRole()
   if (!role) redirect("/")

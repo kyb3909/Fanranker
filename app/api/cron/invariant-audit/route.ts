@@ -30,7 +30,7 @@ import { findDuplicateReports, type GameRow } from "@/lib/ops/match-report-dup"
 import { assessMotmCoverage, MOTM_GRACE_MS } from "@/lib/ops/motm-coverage"
 import { auditLfaLinks, type LfaNamedMatch, type LinkedGame } from "@/lib/ops/lfa-link-audit"
 import { cachedTeamEn } from "@/lib/lfa/match"
-import { describeInvariant, formatFindingField } from "@/lib/ops/invariant-catalog"
+import { adminScreenOf, describeInvariant, formatFindingField } from "@/lib/ops/invariant-catalog"
 import {
   assessTimelineLatin,
   findFixableTimelineNames,
@@ -1084,13 +1084,17 @@ async function handler(req: NextRequest) {
     const headline = kinds
       .map(([id, list]) => `${describeInvariant(id).label} ${list.length}건`)
       .join(" · ")
+    // 제목 링크는 하나뿐이다 — 한 종류면 그 처리 화면으로 곧장, 섞였으면 관제 센터로 보내고
+    // 종류별 화면은 아래 바로가기에 각각 붙인다 (2026-09-08 "관리자 페이지 거기로 이동하게끔")
+    const screens = kinds.map(([id]) => adminScreenOf(id))
     await notifyDiscordOps({
       level: "warn",
       title: `🧿 불변식 위반 ${fresh.length}건 — ${headline}`.slice(0, 240),
       description:
         `매시 44분 감사에서 새로 잡힌 것만 보냅니다. 같은 건은 다시 알리지 않고, 사라지면 자동으로 닫힙니다.\n` +
-        `전체 목록과 이력은 관제실 → 운영.`,
-      url: "/admin/operations",
+        `전체 목록과 이력은 관제 센터 → 운영 모니터링.`,
+      url: kinds.length === 1 ? screens[0].path : "/admin",
+      links: [...screens, { label: "운영 모니터링", path: "/admin/operations" }],
       fields: kinds.slice(0, 10).map(([id, list]) => {
         const first = formatFindingField(list[0], SITE)
         const more =

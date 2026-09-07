@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { notifyDiscordOps } from "@/lib/discord-notify"
+import { OPS_SCREENS } from "@/lib/ops/alert-links"
 import { z } from "zod"
 
 const VALID_REASONS = ["discrimination", "advertising", "profanity", "abuse", "political"] as const
@@ -77,7 +78,10 @@ export async function POST(request: NextRequest) {
       level: "warn",
       title: "🚨 새 신고 접수",
       description: `사유: ${REASON_LABELS[reason] ?? reason} · 대상: ${targetType === "post" ? "게시글" : "댓글"}`,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://gongnori.fan"}/admin/content/reports`,
+      // 알림을 받고 바로 처리할 수 있게 미처리·오래된 순으로 연다 (2026-09-08)
+      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://gongnori.fan"}${OPS_SCREENS.reportsOldest.path}`,
+      action: "증거를 열고 판정합니다. 인정하면 카드가 발급되고 누적 시 계정이 정지됩니다.",
+      links: [OPS_SCREENS.reportsOldest, OPS_SCREENS.controlCenter],
       fields: [
         { name: "대상 ID", value: targetId, inline: true },
         ...(description ? [{ name: "내용", value: description }] : []),

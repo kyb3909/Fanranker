@@ -221,6 +221,12 @@ export async function alertServerError(
       title: "🔥 서버 에러",
       description: message.slice(0, 500),
       level: "alert",
+      // 링크가 없어 알림만 오고 어디를 봐야 하는지는 각자 찾아야 했다 (2026-09-08)
+      url: "/admin/operations",
+      links: [
+        { label: "운영 모니터링", path: "/admin/operations" },
+        { label: "관제 센터", path: "/admin" },
+      ],
       fields: [
         ...(diagnosis
           ? [
