@@ -28,9 +28,14 @@ async function handler(request: NextRequest) {
   const supabase = createServiceRoleClient()
   // Discover the full window; cap external processing at 40 distinct matches.
   // Persisted attempt times rotate retries, independently of betting-market count.
+  //
+  // 과거 창 72시간 (2026-09-07, 종전 24시간). 봉인이 풀린 경기(사전 수정·lfa_ 가드)가 24시간
+  // 안에 재판정되지 못하면 자동으로는 영영 안 돌아왔다 — 9/5 분데스리가 4경기가 그렇게 남았다.
+  // 이미 판정된 경기는 DB 만 보고 넘어가므로(settled skip) 외부 호출·크레딧은 늘지 않는다.
   const summary = await runMatchMappingShadow(supabase, {
     limit: 40,
     discoverLimit: 15,
+    lookbackHours: 72,
     runId: `cron-${new Date().toISOString()}`,
   })
 

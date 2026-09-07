@@ -16,7 +16,9 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
 import { findIdentityMismatches } from "@/lib/saga/identity-audit"
-import { isMatchPageLeague } from "@/lib/match/leagues"
+import { isMatchExtrasLeague, isMatchPageLeague } from "@/lib/match/leagues"
+import { findSealedMappings, type MappingAttemptRow } from "@/lib/ops/mapping-seal"
+import { PREDICATE_VERSION } from "@/lib/soccerway/mapping-version"
 import { matchKeyOf, matchLabelOf } from "@/lib/match/match-key"
 import {
   lfaDetailRow,
@@ -79,6 +81,9 @@ export const maxDuration = 60
  *  13. match_thread_missing — 라인업이 확정된 끝난 경기엔 불판이 있다 (2026-08-27~30 실사고:
  *                            일정 짝짓기가 동시 킥오프를 놓쳐 24경기가 라인업·MoTM 은 있는데
  *                            불판만 없었다. 불판 크론은 창 안 후보만 보므로 스스로 모른다)
+ *  14. sw_mapping_sealed   — 리포트 대상 경기의 Soccerway 매핑은 봉인돼 있지 않다 (2026-09-07:
+ *                            사전 백필의 lfa_ 자리표시가 팀 해시로 쓰여 404 → no_candidate 로
+ *                            봉인 → 분데스리가 6경기 리포트가 일주일간 막혔는데 화면엔 없었다)
  *
  * ⚠️ 8~10 은 셋 다 **저장분이 스스로 낫지 않는** 자리를 본다. 우는 시점에 이미 굳어
  *    있으므로, 코드 수리와 별개로 백필이 필요한지 늘 함께 판단할 것.
@@ -936,6 +941,77 @@ async function handler(req: NextRequest) {
     }
   } catch (e) {
     checkErrors.push(`lfa_link: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── 14. sw_mapping_sealed — 리포트 대상 경기의 Soccerway 매핑이 봉인됐다 ──
+  //
+  // 2026-08-30~09-07 실사고: 팀 사전 백필이 넣은 `lfa_` 자리표시 행이 Soccerway 팀 해시로 쓰여
+  // 구성 URL 이 404 → `no_candidate` 로 봉인 → 분데스리가 6경기 리포트가 일주일간 막혔는데
+  // 어느 화면에도 안 나왔다(리포트 원장엔 매시 `resolve` 만). 원인 코드는 고쳤지만 "봉인된
+  // 판정을 본다"는 눈이 없었다. 판정은 순수 모듈(lib/ops/mapping-seal.ts) — 어느 형제에도
+  // proposed 가 없고 마지막 판정이 no_candidate·ambiguous(ok) 또는 dead_letter 면 봉인이다.
+  // 창 = 킥오프 -24h ~ +72h(매핑 크론의 조회 창과 같다), 리포트 리그(MATCH_EXTRAS_LEAGUES)만.
+  try {
+    const { data: games, error: gamesError } = await supabase
+      .from("betman_games")
+      .select("id, home_team_name, away_team_name, match_time, league_code")
+      .eq("sport", "축구")
+      .gte("match_time", new Date(now - 24 * H).toISOString())
+      .lte("match_time", new Date(now + 72 * H).toISOString())
+      .neq("home_team_name", "미정")
+      .neq("away_team_name", "미정")
+    if (gamesError) throw new Error(gamesError.message)
+    const rows = (games ?? [])
+      .filter((g) => isMatchExtrasLeague(String(g.league_code ?? "")))
+      .map((g) => ({
+        id: String(g.id),
+        homeTeam: String(g.home_team_name),
+        awayTeam: String(g.away_team_name),
+        matchTime: String(g.match_time),
+        leagueCode: g.league_code ? String(g.league_code) : null,
+      }))
+    const attempts: MappingAttemptRow[] = []
+    const ids = rows.map((g) => g.id)
+    for (let i = 0; i < ids.length; i += IN_CHUNK) {
+      const { data, error } = await supabase
+        .from("match_mapping_attempts")
+        .select("game_id, outcome, status, created_at, candidate_url, error")
+        .eq("predicate_version", PREDICATE_VERSION)
+        .in("game_id", ids.slice(i, i + IN_CHUNK))
+      if (error) throw new Error(error.message)
+      for (const a of data ?? []) {
+        attempts.push({
+          gameId: String(a.game_id),
+          outcome: String(a.outcome),
+          status: String(a.status),
+          createdAt: String(a.created_at),
+          candidateUrl: a.candidate_url ? String(a.candidate_url) : null,
+          error: a.error ? String(a.error) : null,
+        })
+      }
+    }
+    for (const s of findSealedMappings(rows, attempts)) {
+      findings.push({
+        invariant: "sw_mapping_sealed",
+        fingerprint: `sw_mapping_sealed:${s.key}`,
+        summary:
+          `매핑 봉인 — ${s.label} (${s.leagueCode ?? "?"}) 의 마지막 판정이 ${s.outcome}/${s.status}` +
+          (s.candidateUrl ? ` · ${s.candidateUrl}` : "") +
+          (s.error ? ` · ${s.error}` : "") +
+          `. 사전의 두 팀 Soccerway 해시를 확인할 것 — 고치면 입력 해시가 바뀌어 다음 :41 에 다시 판정한다`,
+        detail: {
+          game_ids: s.gameIds,
+          outcome: s.outcome,
+          status: s.status,
+          candidate_url: s.candidateUrl,
+          error: s.error,
+          sealed_at: s.sealedAt,
+          match_time: s.matchTime,
+        },
+      })
+    }
+  } catch (e) {
+    checkErrors.push(`sw_mapping_sealed: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // ⚠️ 시간 예산 초과는 **반드시 checkErrors 에 넣는다.** 아래 resolve 는 checkErrors 가

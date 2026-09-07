@@ -114,6 +114,14 @@ export const INVARIANT_CATALOG: Record<string, InvariantInfo> = {
     action: "사전에 빠진 팀(팀명 가드가 끊음)·LFA 표기 변경·lfa-warm 결번 순으로 본다",
     adminPath: "/admin/matches",
   },
+  sw_mapping_sealed: {
+    label: "리포트 대상 경기의 Soccerway 매핑이 봉인됨",
+    impact:
+      "그 경기는 원문을 못 찾아 경기 리포트가 자동으로 생기지 않는다 — 리포트 원장엔 매시 '경기 해석 실패'만 쌓인다",
+    action:
+      "매핑 원장의 마지막 판정(404·모호·dead_letter)과 사전의 두 팀 Soccerway 해시를 확인한다. 사전을 고치면 입력 해시가 바뀌어 다음 :41 실행에서 다시 판정한다",
+    adminPath: "/admin/team-dictionary",
+  },
   match_thread_missing: {
     label: "라인업은 확정됐는데 불판이 없음",
     impact: "경기 중 가장 참여가 몰리는 자리(불판)가 그 경기엔 없다 — 댓글·응원이 갈 곳이 없다",

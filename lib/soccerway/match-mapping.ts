@@ -36,12 +36,8 @@ import {
   type SoccerwayTeamCandidate,
 } from "./team-search"
 
-/**
- * 술어/파서 버전 — 규칙이 바뀌면 올린다. 버전이 오르면 전 경기 재평가가 열린다.
- * .2 (2026-08-07): 2연전 목록 템플릿(B) 지원 — .1 은 단일 템플릿만 알아서
- * UCL 예선 쌍 페이지가 전부 parse_failed(dead_letter)로 남았다 (원장 실측).
- */
-const PREDICATE_VERSION = "match-mapping@2026-08-07.2"
+// 술어/파서 버전 — 값과 이력은 ./mapping-version.ts (감사관도 같은 값을 읽는다)
+import { PREDICATE_VERSION } from "./mapping-version"
 
 /** fetch_error 재시도 상한 — 초과 시 dead_letter (assignment desk 관례) */
 const MAX_FETCH_ATTEMPTS = 2
