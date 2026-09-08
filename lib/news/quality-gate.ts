@@ -149,6 +149,11 @@ export async function inspectDraft(
   const body = extractTextFromTipTapJSON(content as TipTapNode).slice(0, 4000)
   if (!body || body.length < 50) return fail("본문이 너무 짧음")
 
+  // 원문(재료)을 검사관에 함께 넘긴다 — INSPECT_PROMPT 의 check #0("원문에 없는 내용")은
+  // 이 원문이 있어야만 도는 유일한 지어내기 탐지다(프롬프트 L75: "(원문 없음)"이면 건너뜀).
+  // 종전엔 sourceText 인자를 받고도 요청 본문에 넣지 않아 이 게이트가 통째로 죽어 있었다.
+  const src = typeof sourceText === "string" ? sourceText.slice(0, 4000).trim() : ""
+
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -161,7 +166,11 @@ export async function inspectDraft(
           { role: "system", content: INSPECT_PROMPT },
           {
             role: "user",
-            content: `제목: ${title}
+            content: `원문:
+${src || "(원문 없음)"}
+
+---
+제목: ${title}
 
 본문:
 ${body}`,
