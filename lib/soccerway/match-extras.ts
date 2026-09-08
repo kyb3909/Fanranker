@@ -771,7 +771,11 @@ function cachedReport(
     () =>
       generateMatchReport(eventId, gameId, homeTeam, awayTeam, finalScore, candidateUrl, kickoffMs),
     ["match-report-v17", eventId, gameId, finalScore ?? "unconfirmed"],
-    { revalidate: 1800 }
+    // ⚠️ 크론 주기(vercel.json `/api/cron/match-reports`)와 **같이** 움직여야 한다.
+    //    이 TTL 이 크론보다 길면 크론이 깨어나도 캐시된 실패를 그대로 받아 재시도가 없다 —
+    //    실측(2026-09-09): 06:00 회차가 원문 부재로 실패했고, 기사는 06:01 에 붙었는데
+    //    07:00 회차는 시도 기록조차 남기지 못했다(30분 TTL 이 06:37~07:07 을 덮었다).
+    { revalidate: 900 }
   )
 }
 
