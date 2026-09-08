@@ -23,7 +23,12 @@ import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
  * ## 24시간 창 — 이 크론의 존재 이유이자 제약
  * soccerway 해석(`resolveMatchEvent`)에 **킥오프 +24시간** 창이 걸려 있다. 창을 넘기면
  * 원문을 못 찾아 리포트를 영영 못 만든다. 그래서 "언젠가 돌면 된다"가 아니라 **끝난 당일에
- * 쓸어담아야** 한다. 30분 주기는 거기서 나온 값이다.
+ * 쓸어담아야** 한다. 15분 주기는 거기서 나온 값이다.
+ *
+ * ⚠️ 주기를 바꿀 땐 `cachedReport` 의 `revalidate`(lib/soccerway/match-extras.ts)도 같이
+ *    바꿔야 한다. 그 TTL 이 주기보다 길면 크론이 깨어나도 캐시된 실패를 그대로 받는다 —
+ *    실측(2026-09-09): 레알–인테르 원문이 06:01 에 붙었는데 06:00 회차가 놓쳤고,
+ *    30분 TTL 탓에 07:00 회차는 시도조차 하지 못했다.
  *
  * ## 비용·시간
  * 리포트 1건 = soccerway 본문 1회 + LLM(작성 gpt-5.1 + 검증 terra). LFA 크레딧은

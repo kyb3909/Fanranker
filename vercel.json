@@ -132,7 +132,7 @@
     },
     {
       "path": "/api/cron/match-reports",
-      "schedule": "*/30 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/motm-sync",
