@@ -111,9 +111,10 @@ const NEWS_TEAM_SLUGS: Record<string, string[]> = {
   psg: ["paris-sg", "paris-saint-germain"],
   "bayer-leverkusen": ["leverkusen"],
   "rb-leipzig": ["leipzig"],
-  // ⚠️ `ac-milan` 은 여기 넣지 않는다. 별칭 `milan` 은 `…-inter-milan-…` 에도
-  //    하이픈 경계로 걸려 인테르 기사를 AC밀란 경기로 물어온다. 실제 뉴스 슬러그를
-  //    확인한 뒤에 넣을 것 (scripts/_sw-pick.ts).
+  // ⚠️ `ac-milan` 은 별칭이 **필요 없다** — 뉴스 데스크도 같은 슬러그를 쓴다
+  //    (2026-09-09 실측: `serie-a-juventus-ac-milan-report-2026-09-06`).
+  //    `milan` 을 별칭으로 넣고 싶어지면 참을 것. 그 토큰은 `…-inter-milan-…` 에도
+  //    하이픈 경계로 걸려서, 인테르 경기 리포트를 AC밀란 경기가 가져간다.
   "manchester-united": ["man-utd"],
   "ath-bilbao": ["athletic-bilbao", "athletic-club", "athletic"],
   "union-berlin": ["union"],
