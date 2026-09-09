@@ -106,6 +106,14 @@ const NEWS_TEAM_SLUGS: Record<string, string[]> = {
   "bayern-munich": ["bayern"],
   "vfb-stuttgart": ["stuttgart"],
   "paris-sg": ["psg", "paris-saint-germain"],
+  // 경기 디렉토리가 `paris-sg` 에서 `psg` 로 바뀌었다 (2026-09-09 실측: psg-CjhkPw0k).
+  // 위 항목만 두면 오늘 이후 경기에서는 아무것도 안 걸린다 — 양방향으로 적는다.
+  psg: ["paris-sg", "paris-saint-germain"],
+  "bayer-leverkusen": ["leverkusen"],
+  "rb-leipzig": ["leipzig"],
+  // ⚠️ `ac-milan` 은 여기 넣지 않는다. 별칭 `milan` 은 `…-inter-milan-…` 에도
+  //    하이픈 경계로 걸려 인테르 기사를 AC밀란 경기로 물어온다. 실제 뉴스 슬러그를
+  //    확인한 뒤에 넣을 것 (scripts/_sw-pick.ts).
   "manchester-united": ["man-utd"],
   "ath-bilbao": ["athletic-bilbao", "athletic-club", "athletic"],
   "union-berlin": ["union"],
