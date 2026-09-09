@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { BetmanGameRow, TeamDictionaryRow } from "./match-mapping"
+import { matchPageLeaguesAt } from "@/lib/match/leagues"
 
 const PAGE_SIZE = 200
 const ID_BATCH_SIZE = 100
@@ -14,15 +15,28 @@ export interface MappingAttemptRow {
   created_at: string
 }
 
+/** "미정 vs 미정" 자리표시 대진 — 팀이 정해지기 전엔 매핑할 것이 없다 (일정 페이지와 같은 규칙) */
+function isPlaceholderTeam(name: unknown): boolean {
+  const s = String(name ?? "").trim()
+  return !s || s === "미정"
+}
+
 // Keyset pagination: the limit bounds each DB response, never the candidate universe.
+//
+// 리그는 매치 센터 대상(`matchPageLeaguesAt`, 18개)으로 거른다 (2026-09-10 운영자 결정).
+// 종전엔 축구 전체를 훑어 7일 782회 중 547회가 MLS·K리그·J리그 등 대상 밖이었고, 사전에 없는
+// MLS 3팀이 `team_unresolved` 로 매시 재시도(168회)하며 발견 예산(회당 15건)을 잠식했다.
+// 이 매핑의 소비자는 리포트(7개 리그)뿐이지만, 실록 파이프라인이 컵대회까지 쓸 여지를 남긴다.
 export async function loadMappingGames(db: SupabaseClient, now: number, lookbackHours: number) {
   const rows: BetmanGameRow[] = []
+  const leagues = [...matchPageLeaguesAt(now)]
   let after: string | undefined
   for (;;) {
     let query = db
       .from("betman_games")
       .select("id, home_team_name, away_team_name, match_time, league_code")
       .eq("sport", "축구")
+      .in("league_code", leagues)
       .gte("match_time", new Date(now - lookbackHours * 3600_000).toISOString())
       .lte("match_time", new Date(now + 8 * 86400_000).toISOString())
       .order("id")
@@ -30,7 +44,12 @@ export async function loadMappingGames(db: SupabaseClient, now: number, lookback
     if (after) query = query.gt("id", after)
     const { data, error } = await query
     if (error) throw new Error(`betman_games 조회 실패: ${error.message}`)
-    rows.push(...(data ?? []))
+    // 자리표시 대진은 페이지 크기 판정(아래) 뒤가 아니라 여기서 걸러도 안전하다 — 커서는 원본 마지막 행이다.
+    rows.push(
+      ...(data ?? []).filter(
+        (g) => !isPlaceholderTeam(g.home_team_name) && !isPlaceholderTeam(g.away_team_name)
+      )
+    )
     if (!data?.length || data.length < PAGE_SIZE) return rows
     after = data[data.length - 1].id
   }

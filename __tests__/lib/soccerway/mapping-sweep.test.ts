@@ -184,6 +184,21 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("mapping sweep coverage and continuation", () => {
+  it("scans only match-center leagues and skips placeholder fixtures (2026-09-10)", async () => {
+    // 7일 실측: 782회 중 547회가 MLS·K리그·J리그 등 대상 밖, "미정 vs 미정" 49회. 리포트는 이 리그를
+    // 만들지 않으므로 훑을 이유가 없고, 원장과 발견 예산만 잠식했다.
+    const d = database([
+      game(0),
+      { ...game(1), league_code: "MLS" },
+      { ...game(2), league_code: "K리그1" },
+      { ...game(3), home_team_name: "미정", away_team_name: "미정" },
+      { ...game(4), away_team_name: "미정" },
+    ])
+    const result = await runMatchMappingShadow(d.db, { ...options, limit: 10 })
+    expect(result).toMatchObject({ candidateRows: 1, candidateMatches: 1, scanned: 1 })
+    expect(d.tables.match_mapping_attempts.map((r) => r.game_id)).toEqual([game(0).id])
+  })
+
   it("reaches a match after 200 settled market rows with a one-match budget", async () => {
     const games = Array.from({ length: 51 }, (_, i) =>
       Array.from({ length: 4 }, (_, m) => game(i, m))
