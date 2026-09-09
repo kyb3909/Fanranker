@@ -6,7 +6,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
 import { loadStoredLineup } from "@/lib/match/lineup-store"
-import { matchLfaCounterpart } from "@/lib/match/pair-fixtures"
+import { matchLfaCounterpart, teamIdIndex } from "@/lib/match/pair-fixtures"
 import { hasHangul, localizeFromSquad, localizeTimelineName } from "@/lib/lfa/scorer-name"
 
 // 종전 공개 API 유지 — 판정 자체는 순수 모듈이 소유한다 (2026-08-30)
@@ -83,6 +83,43 @@ export const cachedTeamEn = unstable_cache(
     return out
   },
   ["lfa-team-en-v2"],
+  { revalidate: 3600 }
+)
+
+/**
+ * 한글 팀명(+별칭) → LFA 팀 고유번호 (2026-09-10). `team_dictionary.lfa_team_id` 가 정본,
+ * `lfa_team_names.lfa_team_id` 가 보조. 색인 접기(중복·충돌 제거)는 순수 함수 `teamIdIndex` 가 한다.
+ *
+ * 왜: 사전 327팀 중 324팀에 번호가 있는데 짝짓기는 영문 글자 정확일치만 봐서
+ * "Man. United"(LFA) ≠ "Manchester United"(사전) 로 맨유–사바 UCL 링크가 비었다.
+ */
+export const cachedTeamLfaIds = unstable_cache(
+  async (): Promise<[string, string][]> => {
+    const supabase = createServiceRoleClient()
+    const [{ data }, { data: lfaNames }] = await Promise.all([
+      supabase
+        .from("team_dictionary")
+        .select("name_kr, aliases_kr, lfa_team_id")
+        .neq("status", "rejected")
+        .not("lfa_team_id", "is", null),
+      supabase.from("lfa_team_names").select("name_kr, lfa_team_id"),
+    ])
+    const out: [string, string][] = []
+    for (const r of data ?? []) {
+      const id = String(r.lfa_team_id ?? "").trim()
+      if (!id) continue
+      if (r.name_kr) out.push([String(r.name_kr).trim(), id])
+      for (const a of (r.aliases_kr as string[] | null) ?? []) {
+        if (a) out.push([String(a).trim(), id])
+      }
+    }
+    for (const r of lfaNames ?? []) {
+      const id = String(r.lfa_team_id ?? "").trim()
+      if (id && r.name_kr) out.push([String(r.name_kr).trim(), id])
+    }
+    return out
+  },
+  ["lfa-team-ids-v1"],
   { revalidate: 3600 }
 )
 
@@ -327,17 +364,21 @@ export async function resolveLfaMatch(
   if (supplemental) return inLeague.find((m) => m.id === supplemental.lfa_match_id) ?? null
 
   const dict = new Map(await cachedTeamEn())
+  const teamIds = teamIdIndex(await cachedTeamLfaIds().catch(() => [] as [string, string][]))
   // 일정 목록과 동일한 결정기를 사용한다. 시간이 바뀐 경기는 자동으로 범위를 넓히지 않는다.
   const decision = matchLfaCounterpart(
     game,
     inLeague.map((m) => ({
       homeTeam: m.home?.name ?? "",
       awayTeam: m.away?.name ?? "",
+      homeTeamId: m.home?.id || undefined,
+      awayTeamId: m.away?.id || undefined,
       leagueCode: game.leagueCode,
       matchTime: `${utcDate(game.matchTime)}T${m.kickoff}:00Z`,
       match: m,
     })),
-    dict
+    dict,
+    teamIds
   )
   return decision.candidate?.match ?? null
 }

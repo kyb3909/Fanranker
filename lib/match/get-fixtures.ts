@@ -4,10 +4,10 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
-import { cachedTeamEn } from "@/lib/lfa/match"
+import { cachedTeamEn, cachedTeamLfaIds } from "@/lib/lfa/match"
 import { getBetmanLeagueMembers } from "@/lib/lfa/league-members"
 import { predictBetmanListing } from "@/lib/match/betman-coverage"
-import { normTeam, matchLfaCounterpart } from "@/lib/match/pair-fixtures"
+import { normTeam, matchLfaCounterpart, teamIdIndex } from "@/lib/match/pair-fixtures"
 import { isPopularFixture } from "@/lib/match/popular-teams"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
 import { getSiblingGameIds } from "@/lib/match/sibling-ids"
@@ -51,6 +51,9 @@ export interface FixtureRow {
   /** LFA 행의 영문 원명 — 짝짓기의 영문 대조용 (lib/match/pair-fixtures.ts TeamSided 참조) */
   homeTeamEn?: string
   awayTeamEn?: string
+  /** LFA 행의 팀 고유번호 — 짝짓기의 첫 근거 (2026-09-10, pair-fixtures.ts TeamSided 참조) */
+  homeTeamId?: string
+  awayTeamId?: string
   leagueCode: string
   matchTime: string
   status: "scheduled" | "in_progress" | "completed" | "cancelled"
@@ -200,6 +203,8 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       awayTeam: f.awayTeam,
       homeTeamEn: f.homeTeamEn,
       awayTeamEn: f.awayTeamEn,
+      homeTeamId: f.homeTeamId,
+      awayTeamId: f.awayTeamId,
       leagueCode: f.leagueCode,
       matchTime: f.matchTime,
       status: f.status,
@@ -226,6 +231,8 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   const linked = new Map<string, string>()
   // 한글→영문 사전 — 확정 별칭과 상대 팀 충돌 확인. 실패하면 직접 전체 이름 일치만 가능.
   const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
+  // 한글→LFA 팀 고유번호 — 표기가 달라도 번호가 같으면 같은 팀 (2026-09-10). 실패하면 이름 대조만.
+  const teamIds = teamIdIndex(await cachedTeamLfaIds().catch(() => [] as [string, string][]))
   const droppedForLog: {
     betman: string
     league: string
@@ -237,7 +244,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   for (const b of betman) {
     // 앞선 행의 소비 때문에 모호한 슬롯이 뒤에서 단일 후보로 둔갑하지 않게 전체를 대조한다.
     const candidates = slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []
-    const decision = matchLfaCounterpart(b, candidates, teamEn)
+    const decision = matchLfaCounterpart(b, candidates, teamEn, teamIds)
     const hit = decision.candidate && !consumed.has(decision.candidate) ? decision.candidate : null
     if (!hit) {
       for (const candidate of candidates) withheld.add(candidate)

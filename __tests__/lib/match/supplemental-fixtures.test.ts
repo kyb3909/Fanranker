@@ -15,7 +15,11 @@ vi.mock("next/cache", () => ({
     keys?.[0] === "fixtures-day" && state.cachedBetman !== null ? state.cachedBetman : fn(),
 }))
 vi.mock("@/lib/lfa/fixtures", () => ({ getLfaFixturesForMatchday: state.fixtures }))
-vi.mock("@/lib/lfa/match", () => ({ cachedTeamEn: state.dictionary }))
+vi.mock("@/lib/lfa/match", () => ({
+  cachedTeamEn: state.dictionary,
+  // 팀 번호 색인은 이 시험의 관심사가 아니다 — 비워 두면 이름 대조만 돈다 (종전 동작)
+  cachedTeamLfaIds: async () => [] as [string, string][],
+}))
 vi.mock("@/lib/lfa/league-members", () => ({ getBetmanLeagueMembers: state.members }))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({

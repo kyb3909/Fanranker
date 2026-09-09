@@ -41,6 +41,12 @@ export interface LfaFixture {
    */
   homeTeamEn: string
   awayTeamEn: string
+  /**
+   * LFA 팀 고유번호 (2026-09-10). 짝짓기가 사전 `lfa_team_id` 와 대조하는 첫 근거 —
+   * 표기 변형("Man. United" vs "Manchester United")을 타지 않는다. toKorean 이 이미 쓰던 값이다.
+   */
+  homeTeamId?: string
+  awayTeamId?: string
   /** UTC ISO — betman match_time 과 같은 축 */
   matchTime: string
   status: "scheduled" | "in_progress" | "completed" | "cancelled"
@@ -185,6 +191,8 @@ export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFix
           awayTeam: toKorean(m.away, index),
           homeTeamEn: String(m.home?.name ?? ""),
           awayTeamEn: String(m.away?.name ?? ""),
+          homeTeamId: String(m.home?.id ?? "") || undefined,
+          awayTeamId: String(m.away?.id ?? "") || undefined,
           matchTime: iso,
           status: toStatus(m),
           homeScore: toNum(m.home?.score),

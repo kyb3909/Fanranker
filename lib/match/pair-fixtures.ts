@@ -95,6 +95,13 @@ export interface TeamSided {
    */
   homeTeamEn?: string
   awayTeamEn?: string
+  /**
+   * 후보(LFA 행)의 팀 고유번호 (2026-09-10). 있으면 이름보다 먼저 본다 — 사전의 `lfa_team_id` 와
+   * 같으면 표기가 어떻게 다르든 같은 팀이다. "Man. United"(LFA) 와 "Manchester United"(사전)가
+   * 글자로는 안 맞아 맨유–사바 UCL 링크가 비었는데, 화면 표기는 같은 번호로 이미 잘 잇고 있었다.
+   */
+  homeTeamId?: string
+  awayTeamId?: string
 }
 
 type TeamEvidence = "match" | "unknown" | "conflict"
@@ -135,14 +142,39 @@ function sameSlot(a: TeamSided, b: TeamSided): boolean {
 }
 
 /**
+ * 한글 팀명 → LFA 팀 고유번호 색인 — **순수**. 키는 `normTeam` 으로 접는다.
+ * 같은 이름이 서로 다른 번호를 가리키면 그 이름은 뺀다 — 공유 별칭은 확정 근거가 아니다
+ * (아래 `identities` 와 같은 규율). 번호는 추측이 없는 값이라 이름 대조보다 앞에 둔다.
+ */
+export function teamIdIndex(pairs: Iterable<readonly [string, string]>): Map<string, string> {
+  const out = new Map<string, string>()
+  const conflicted = new Set<string>()
+  for (const [name, id] of pairs) {
+    const key = normTeam(String(name ?? ""))
+    const lfaId = String(id ?? "").trim()
+    if (!key || !lfaId) continue
+    const prev = out.get(key)
+    if (prev && prev !== lfaId) conflicted.add(key)
+    else out.set(key, lfaId)
+  }
+  for (const key of conflicted) out.delete(key)
+  return out
+}
+
+/**
  * 같은 날짜·대회·킥오프 분 안에서 홈 또는 원정 한 팀이 확실하면 연결한다.
  * 나머지 팀의 미등록 표기는 허용하지만, 사전상 다른 팀이거나 홈/원정이 뒤집혔으면 보류.
  * 동일 조건의 후보가 여럿이면 순서/점수로 임의 선택하지 않는다.
+ *
+ * `teamIds`(한글 → LFA 팀 고유번호, `teamIdIndex`)가 있으면 번호 일치를 첫 근거로 쓴다.
+ * 번호 **불일치**만으로는 거절하지 않고 이름 대조로 내려간다 — 사전의 번호가 틀렸던 사례가
+ * 있어서(2026-09-03 오매핑 4팀 수리) 번호는 잇는 쪽으로만 쓴다.
  */
 export function matchLfaCounterpart<T extends TeamSided>(
   betman: TeamSided,
   candidates: T[],
-  teamEn: Map<string, string>
+  teamEn: Map<string, string>,
+  teamIds?: ReadonlyMap<string, string>
 ): CounterpartDecision<T> {
   // 별칭을 여러 구단이 공유하면 하나로 덮지 않는다. 모호한 별칭은 확정 근거가 아니다.
   const identities = new Map<string, Set<string>>()
@@ -161,7 +193,13 @@ export function matchLfaCounterpart<T extends TeamSided>(
     const ids = identities.get(key)
     return ids?.size === 1 ? [...ids][0] : null
   }
-  const compare = (ourName: string, candidateName: string, original?: string): TeamEvidence => {
+  const lfaIdOf = (name: string): string | null => teamIds?.get(normTeam(name)) ?? null
+  type Side = { name: string; original?: string; id?: string }
+  const compare = (ourName: string, side: Side): TeamEvidence => {
+    const ourLfaId = lfaIdOf(ourName)
+    if (ourLfaId && side.id && ourLfaId === side.id) return "match"
+    const candidateName = side.name
+    const original = side.original
     const a = identityKey(ourName)
     const b = identityKey(original || candidateName)
     if (!a || !b) return "unknown"
@@ -177,11 +215,21 @@ export function matchLfaCounterpart<T extends TeamSided>(
   const hits: Extract<CounterpartDecision<T>, { status: "matched" }>[] = []
   let conflict = false
   for (const candidate of candidates.filter((c) => sameSlot(betman, c))) {
-    const home = compare(betman.homeTeam, candidate.homeTeam, candidate.homeTeamEn)
-    const away = compare(betman.awayTeam, candidate.awayTeam, candidate.awayTeamEn)
+    const homeSide: Side = {
+      name: candidate.homeTeam,
+      original: candidate.homeTeamEn,
+      id: candidate.homeTeamId,
+    }
+    const awaySide: Side = {
+      name: candidate.awayTeam,
+      original: candidate.awayTeamEn,
+      id: candidate.awayTeamId,
+    }
+    const home = compare(betman.homeTeam, homeSide)
+    const away = compare(betman.awayTeam, awaySide)
     const reversed =
-      compare(betman.homeTeam, candidate.awayTeam, candidate.awayTeamEn) === "match" ||
-      compare(betman.awayTeam, candidate.homeTeam, candidate.homeTeamEn) === "match"
+      compare(betman.homeTeam, awaySide) === "match" ||
+      compare(betman.awayTeam, homeSide) === "match"
     if (home === "conflict" || away === "conflict" || reversed) {
       conflict = true
       continue
