@@ -30,4 +30,6 @@ export type LineupResponse =
       projected?: boolean
       source?: "lfa"
       matchId?: string
+      /** 실제 공급자 요청과 DB 저장을 연결하는 운영 증거. 캐시 조회 시 새로 만들지 않는다. */
+      observation?: { id: string; requestedAt: string; fingerprint: string | null }
     }

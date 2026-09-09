@@ -103,7 +103,19 @@ export async function sweepMatchThreads(opts?: {
     const title = threadTitle(home, away, leagueLabel(f.leagueCode))
 
     // An existing post must not stop acquisition of the confirmed LFA roster.
-    const lineup = await getMatchLineup(gameId).catch(() => null)
+    // 크론은 SWR의 이전 응답을 DB에 재저장하지 않고 새 응답을 같은 실행에서 반영한다.
+    const lineup = await getMatchLineup(gameId, { refresh: true }).catch(() => null)
+    console.info(
+      "[match-thread-lineup]",
+      JSON.stringify({
+        gameId,
+        checkedAt: new Date().toISOString(),
+        status: lineup?.status ?? "error",
+        projected: lineup?.status === "ready" ? lineup.projected : null,
+        fetchedAt: lineup?.status === "ready" ? lineup.fetchedAt : null,
+        observationId: lineup?.status === "ready" ? (lineup.observation?.id ?? null) : null,
+      })
+    )
 
     // 어느 형제 행에 만들어졌든 재사용한다. 같은 대진이어도 킥오프가 다르면 새 경기다.
     const { data: existing, error: existingError } = await supabase
@@ -164,6 +176,10 @@ export async function sweepMatchThreads(opts?: {
       continue
     }
     result.created.push({ gameId, postId: inserted.id, title })
+    console.info(
+      "[match-thread-created]",
+      JSON.stringify({ gameId, postId: inserted.id, createdAt: new Date().toISOString() })
+    )
   }
 
   return result

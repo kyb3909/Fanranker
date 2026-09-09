@@ -63,6 +63,7 @@ describe("LFA 전용 경기 라인업", () => {
       matchTime: "2026-09-05T18:00:00Z",
     })
     m.lineup.mockResolvedValue({
+      fetchedAt: new Date().toISOString(),
       projected: false,
       home: { starters: Array(11).fill({}), bench: [] },
       away: { starters: Array(11).fill({}), bench: [] },
@@ -74,7 +75,7 @@ describe("LFA 전용 경기 라인업", () => {
       status: "ready",
       projected: false,
     })
-    expect(m.lineup).toHaveBeenCalledWith("lfa-cup", "맨시티", "하부리그")
+    expect(m.lineup).toHaveBeenCalledWith("lfa-cup", "맨시티", "하부리그", {})
     expect(m.store).toHaveBeenCalledWith(
       "fixture-uuid",
       "lfa-cup",
@@ -84,6 +85,7 @@ describe("LFA 전용 경기 라인업", () => {
   })
   it("예상 라인업도 저장하되 예상 플래그를 유지한다", async () => {
     m.lineup.mockResolvedValue({
+      fetchedAt: new Date().toISOString(),
       projected: true,
       home: { starters: Array(11).fill({}), bench: [] },
       away: { starters: Array(11).fill({}), bench: [] },
@@ -115,7 +117,7 @@ describe("LFA 전용 경기 라인업", () => {
       matchId: "lfa-betman",
     })
     expect(m.resolve).toHaveBeenCalled()
-    expect(m.lineup).toHaveBeenCalledWith("lfa-betman", "Roma", "Atalanta")
+    expect(m.lineup).toHaveBeenCalledWith("lfa-betman", "Roma", "Atalanta", {})
     expect(m.soccerway).not.toHaveBeenCalled()
     m.resolve.mockResolvedValue(null)
     expect(await getMatchLineup("market")).toMatchObject({ status: "pending" })
@@ -133,6 +135,24 @@ describe("LFA 전용 경기 라인업", () => {
     expect(m.lineup).not.toHaveBeenCalled()
     expect(m.summary).not.toHaveBeenCalled()
     expect(m.resolve).not.toHaveBeenCalled()
+  })
+  it("정기 수집은 갱신이 필요한 명단을 직접 요청하고 확정 저장 뒤에는 재구매하지 않는다", async () => {
+    m.stored = {
+      status: "ready",
+      projected: true,
+      fetchedAt: new Date(Date.now() - 180_000).toISOString(),
+    }
+    m.store.mockImplementation(async (_gameId, _matchId, payload) => {
+      m.stored = payload
+    })
+    expect(await getMatchLineup("fixture-uuid", { refresh: true })).toMatchObject({
+      projected: false,
+    })
+    expect(m.lineup).toHaveBeenCalledWith("lfa-cup", "맨시티", "하부리그", { refresh: true })
+    expect(await getMatchLineup("fixture-uuid", { refresh: true })).toMatchObject({
+      projected: false,
+    })
+    expect(m.lineup).toHaveBeenCalledTimes(1)
   })
   it("벤치가 비어 있는 확정 명단도 재방문 때 재구매하지 않는다", async () => {
     m.store.mockImplementation(async (_gameId, _matchId, payload) => {
@@ -162,6 +182,7 @@ describe("LFA 전용 경기 라인업", () => {
       m.stored = payload
     })
     m.lineup.mockResolvedValueOnce({
+      fetchedAt: new Date().toISOString(),
       projected: true,
       home: { starters: Array(11).fill({}), bench: [] },
       away: { starters: Array(11).fill({}), bench: [] },
@@ -183,6 +204,24 @@ describe("LFA 전용 경기 라인업", () => {
     }
     m.lineup.mockResolvedValue(null)
     expect(await getMatchLineup("fixture-uuid")).toBe(m.stored)
+  })
+  it("SWR의 오래된 예상 응답은 수집 시각을 갱신하지 않아 다음 요청의 확정 수집을 막지 않는다", async () => {
+    const fetchedAt = new Date(Date.now() - 180_000).toISOString()
+    const predicted = {
+      fetchedAt,
+      projected: true,
+      home: { starters: Array(11).fill({}), bench: [] },
+      away: { starters: Array(11).fill({}), bench: [] },
+    }
+    m.stored = { status: "ready", ...predicted }
+    m.store.mockImplementation(async (_gameId, _matchId, payload) => {
+      m.stored = payload
+    })
+    m.lineup.mockResolvedValueOnce(predicted)
+    expect(await getMatchLineup("fixture-uuid")).toMatchObject({ projected: true, fetchedAt })
+    // 같은 시각의 후속 요청에서도 DB의 120초 fresh 판정에 갇히지 않는다.
+    expect(await getMatchLineup("fixture-uuid")).toMatchObject({ projected: false })
+    expect(m.lineup).toHaveBeenCalledTimes(2)
   })
   it("한쪽 선발이 빠진 명단은 ready로 표시하거나 저장하지 않는다", async () => {
     m.lineup.mockResolvedValue({

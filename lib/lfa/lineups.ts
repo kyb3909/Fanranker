@@ -1,4 +1,5 @@
 import "server-only"
+import { createHash, randomUUID } from "node:crypto"
 
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
@@ -37,12 +38,43 @@ export interface LfaLineupSideOut {
   bench: LfaLineupPerson[]
 }
 
-/** 예상·빈 라인업도 들어오므로 짧게 갱신한다. 확정분은 match_lineups에 영구 저장된다. */
+async function fetchLineupSnapshot(matchId: string) {
+  const observationId = randomUUID()
+  const requestedAt = new Date().toISOString()
+  const raw = await lfaFetch<unknown>("lineups", { match_id: matchId, lang: "en" })
+  const fetchedAt = new Date().toISOString()
+  const lineup = normalizeLfaLineups(raw)
+  const rawProjected =
+    raw && typeof raw === "object" && "is_projected" in raw ? raw.is_projected : null
+  const fingerprint = lineup
+    ? createHash("sha256").update(JSON.stringify(lineup)).digest("hex")
+    : null
+  // 실제 공급자 호출 안에서만 기록한다. 캐시 조회/DB 저장 시각과 구분한다.
+  console.info(
+    "[lfa-lineup-response]",
+    JSON.stringify({
+      matchId,
+      observationId,
+      requestedAt,
+      fetchedAt,
+      rawProjected: typeof rawProjected === "boolean" ? rawProjected : null,
+      rawProjectedType: rawProjected === null ? "missing" : typeof rawProjected,
+      fingerprint,
+      projected: lineup?.projected ?? null,
+      starters: lineup ? [lineup.home.starting.length, lineup.away.starting.length] : [],
+      benches: lineup ? [lineup.home.subs.length, lineup.away.subs.length] : [],
+    })
+  )
+  if (raw == null) throw new Error("lfa-lineup-unavailable")
+  return { raw, fetchedAt, observation: { id: observationId, requestedAt, fingerprint } }
+}
+
+/** 방문자 요청만 SWR 캐시 사용. 자동 수집은 fresh 응답을 기다려 같은 실행에서 저장한다. */
 function cachedLineups(matchId: string) {
   return unstable_cache(
-    async () => lfaFetch<unknown>("lineups", { match_id: matchId, lang: "en" }),
-    // v3: 예상 라인업이 12시간 굳어 있던 캐시를 무효화한다.
-    ["lfa-lineups-v3", matchId],
+    () => fetchLineupSnapshot(matchId),
+    // v4: SWR로 받은 예상 명단에 현재 시각을 찍어 DB TTL을 다시 연장하지 않는다.
+    ["lfa-lineups-v4", matchId],
     { revalidate: 120 }
   )
 }
@@ -93,10 +125,20 @@ function toPeople(list: LfaRawPlayer[] | undefined, squad: SquadName[]): LfaLine
 export async function getLfaLineup(
   matchId: string,
   homeTeamKr: string,
-  awayTeamKr: string
-): Promise<{ home: LfaLineupSideOut; away: LfaLineupSideOut; projected: boolean } | null> {
-  const raw = await cachedLineups(matchId)().catch(() => null)
-  const data = normalizeLfaLineups(raw)
+  awayTeamKr: string,
+  opts: { refresh?: boolean } = {}
+): Promise<{
+  home: LfaLineupSideOut
+  away: LfaLineupSideOut
+  projected: boolean
+  fetchedAt: string
+  observation: { id: string; requestedAt: string; fingerprint: string | null }
+} | null> {
+  const snapshot = await (
+    opts.refresh ? fetchLineupSnapshot(matchId) : cachedLineups(matchId)()
+  ).catch(() => null)
+  if (!snapshot) return null
+  const data = normalizeLfaLineups(snapshot.raw)
   if (!data) return null
 
   const [homeSquad, awaySquad] = await Promise.all([
@@ -114,5 +156,11 @@ export async function getLfaLineup(
   const away = side(data.away, awaySquad)
   // 선발이 비면 라인업이라 부를 수 없다 — 빈 껍데기를 그리지 않는다
   if (home.starters.length === 0 || away.starters.length === 0) return null
-  return { home, away, projected: data.projected }
+  return {
+    home,
+    away,
+    projected: data.projected,
+    fetchedAt: snapshot.fetchedAt,
+    observation: snapshot.observation,
+  }
 }

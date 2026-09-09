@@ -11,7 +11,10 @@ export async function getStoredMatchLineup(gameId: string): Promise<LineupRespon
 }
 
 /** All matches use paid LFA; never depend on Soccerway mapping/availability. */
-export async function getMatchLineup(gameId: string): Promise<LineupResponse> {
+export async function getMatchLineup(
+  gameId: string,
+  opts: { refresh?: boolean } = {}
+): Promise<LineupResponse> {
   const stored = await getStoredMatchLineup(gameId)
   // Once confirmed, the roster is the record. No remapping, squad or lineup purchase
   // on revisits, even when a historical roster has no bench or its schedule vanished.
@@ -31,7 +34,7 @@ export async function getMatchLineup(gameId: string): Promise<LineupResponse> {
       ? match.lfaMatchId
       : (await resolveLfaMatch({ ...match, gameId: match.gameId }).catch(() => null))?.id
   if (!matchId) return stored ?? pending
-  const lu = await getLfaLineup(matchId, match.homeTeam, match.awayTeam).catch(() => null)
+  const lu = await getLfaLineup(matchId, match.homeTeam, match.awayTeam, opts).catch(() => null)
   if (!lu) return stored ?? pending
   if (lu.home.starters.length !== 11 || lu.away.starters.length !== 11) return stored ?? pending
   const payload: LineupResponse = {
@@ -40,10 +43,29 @@ export async function getMatchLineup(gameId: string): Promise<LineupResponse> {
     matchId,
     projected: lu.projected,
     kickoff: match.matchTime,
-    fetchedAt: new Date().toISOString(),
+    // LFA 캐시가 오래된 값을 반환해도 실제 수신 시각을 보존한다.
+    fetchedAt: lu.fetchedAt,
+    ...(lu.observation ? { observation: lu.observation } : {}),
     home: { teamLabel: match.homeTeam, ...lu.home },
     away: { teamLabel: match.awayTeam, ...lu.away },
   }
-  await storeLfaLineup(gameId, matchId, payload).catch(() => {})
+  let storeResult: "success" | "failed" = "success"
+  await storeLfaLineup(gameId, matchId, payload).catch(() => {
+    storeResult = "failed"
+  })
+  console.info(
+    "[match-lineup-store]",
+    JSON.stringify({
+      gameId,
+      matchId,
+      trigger: opts.refresh ? "cron" : "request",
+      observationId: lu.observation?.id ?? null,
+      fingerprint: lu.observation?.fingerprint ?? null,
+      fetchedAt: lu.fetchedAt,
+      storedAt: new Date().toISOString(),
+      projected: lu.projected,
+      storeResult,
+    })
+  )
   return payload
 }

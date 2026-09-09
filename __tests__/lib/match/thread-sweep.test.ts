@@ -86,13 +86,13 @@ describe("불판 생성", () => {
     expect(mocks.insert).toHaveBeenCalledWith(
       expect.objectContaining({ match_game_id: "lfa-uuid" })
     )
-    expect(mocks.lineup).toHaveBeenCalledWith("lfa-uuid")
+    expect(mocks.lineup).toHaveBeenCalledWith("lfa-uuid", { refresh: true })
   })
   it("형제에 기존 글이 있으면 중복 생성하지 않는다", async () => {
     mocks.existing = [{ id: "old-post" }]
     await sweepMatchThreads()
     expect(mocks.insert).not.toHaveBeenCalled()
-    expect(mocks.lineup).toHaveBeenCalledWith("market-a")
+    expect(mocks.lineup).toHaveBeenCalledWith("market-a", { refresh: true })
   })
   it("기존 글 조회 실패는 삽입 허가가 아니다", async () => {
     mocks.postError = { message: "unavailable" }
