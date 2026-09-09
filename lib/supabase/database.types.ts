@@ -4,76 +4,10 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      admin_board_cards: {
-        Row: {
-          id: string
-          title: string
-          detail: string
-          tag: string | null
-          effort: string | null
-          status: string
-          position: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          detail?: string
-          tag?: string | null
-          effort?: string | null
-          status?: string
-          position?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          title?: string
-          detail?: string
-          tag?: string | null
-          effort?: string | null
-          status?: string
-          position?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      lfa_fixtures: {
-        Row: {
-          id: string
-          lfa_match_id: string
-          fixture: Json
-          match_time: string
-          betman_game_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          lfa_match_id: string
-          fixture: Json
-          match_time: string
-          betman_game_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          lfa_match_id?: string
-          fixture?: Json
-          match_time?: string
-          betman_game_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       adj_titles: {
         Row: {
           board_slug: string | null
@@ -175,6 +109,42 @@ export type Database = {
           ip_address?: string | null
           target_id?: string | null
           target_type?: string
+        }
+        Relationships: []
+      }
+      admin_board_cards: {
+        Row: {
+          created_at: string
+          detail: string
+          effort: string | null
+          id: string
+          position: number
+          status: string
+          tag: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string
+          effort?: string | null
+          id?: string
+          position?: number
+          status?: string
+          tag?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          effort?: string | null
+          id?: string
+          position?: number
+          status?: string
+          tag?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -593,6 +563,33 @@ export type Database = {
           },
         ]
       }
+      avatar_kits: {
+        Row: {
+          created_at: string
+          is_active: boolean
+          kit_key: string
+          name: string
+          price_points: number
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_active?: boolean
+          kit_key: string
+          name: string
+          price_points?: number
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          is_active?: boolean
+          kit_key?: string
+          name?: string
+          price_points?: number
+          team_id?: string
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           click_count: number | null
@@ -901,10 +898,10 @@ export type Database = {
           status: string
           under_odds: number | null
           updated_at: string | null
+          venue: string | null
           wisetoto_at: string | null
           wisetoto_away_score: number | null
           wisetoto_home_score: number | null
-          venue: string | null
         }
         Insert: {
           away_score?: number | null
@@ -936,10 +933,10 @@ export type Database = {
           status?: string
           under_odds?: number | null
           updated_at?: string | null
+          venue?: string | null
           wisetoto_at?: string | null
           wisetoto_away_score?: number | null
           wisetoto_home_score?: number | null
-          venue?: string | null
         }
         Update: {
           away_score?: number | null
@@ -971,10 +968,10 @@ export type Database = {
           status?: string
           under_odds?: number | null
           updated_at?: string | null
+          venue?: string | null
           wisetoto_at?: string | null
           wisetoto_away_score?: number | null
           wisetoto_home_score?: number | null
-          venue?: string | null
         }
         Relationships: [
           {
@@ -1107,39 +1104,6 @@ export type Database = {
           },
         ]
       }
-      betman_rounds: {
-        Row: {
-          created_at: string | null
-          deadline: string | null
-          gm_ts: string | null
-          id: string
-          round: number
-          status: string
-          updated_at: string | null
-          year: number
-        }
-        Insert: {
-          created_at?: string | null
-          deadline?: string | null
-          gm_ts?: string | null
-          id?: string
-          round: number
-          status?: string
-          updated_at?: string | null
-          year: number
-        }
-        Update: {
-          created_at?: string | null
-          deadline?: string | null
-          gm_ts?: string | null
-          id?: string
-          round?: number
-          status?: string
-          updated_at?: string | null
-          year?: number
-        }
-        Relationships: []
-      }
       betman_result_checks: {
         Row: {
           alerted_at: string | null
@@ -1180,6 +1144,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      betman_rounds: {
+        Row: {
+          created_at: string | null
+          deadline: string | null
+          gm_ts: string | null
+          id: string
+          round: number
+          status: string
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          deadline?: string | null
+          gm_ts?: string | null
+          id?: string
+          round: number
+          status?: string
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          deadline?: string | null
+          gm_ts?: string | null
+          id?: string
+          round?: number
+          status?: string
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: []
       }
       betman_sync_state: {
         Row: {
@@ -3094,6 +3091,36 @@ export type Database = {
         }
         Relationships: []
       }
+      lfa_fixtures: {
+        Row: {
+          betman_game_id: string | null
+          created_at: string
+          fixture: Json
+          id: string
+          lfa_match_id: string
+          match_time: string
+          updated_at: string
+        }
+        Insert: {
+          betman_game_id?: string | null
+          created_at?: string
+          fixture: Json
+          id?: string
+          lfa_match_id: string
+          match_time: string
+          updated_at?: string
+        }
+        Update: {
+          betman_game_id?: string | null
+          created_at?: string
+          fixture?: Json
+          id?: string
+          lfa_match_id?: string
+          match_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lfa_team_names: {
         Row: {
           created_at: string
@@ -3541,27 +3568,102 @@ export type Database = {
       match_report_attempts: {
         Row: {
           attempted_at: string
+          compose_called: boolean | null
+          compose_index: number | null
+          draft: Json | null
           event_id: string | null
           game_id: string
           id: number
+          input_version: string | null
+          missing_names: string[] | null
           reason: string | null
+          reserved_until: string | null
+          resolved_at: string | null
           stage: string
+          verify_called: boolean | null
+          verify_passed: boolean | null
         }
         Insert: {
           attempted_at?: string
+          compose_called?: boolean | null
+          compose_index?: number | null
+          draft?: Json | null
           event_id?: string | null
           game_id: string
           id?: never
+          input_version?: string | null
+          missing_names?: string[] | null
           reason?: string | null
+          reserved_until?: string | null
+          resolved_at?: string | null
           stage: string
+          verify_called?: boolean | null
+          verify_passed?: boolean | null
         }
         Update: {
           attempted_at?: string
+          compose_called?: boolean | null
+          compose_index?: number | null
+          draft?: Json | null
           event_id?: string | null
           game_id?: string
           id?: never
+          input_version?: string | null
+          missing_names?: string[] | null
           reason?: string | null
+          reserved_until?: string | null
+          resolved_at?: string | null
           stage?: string
+          verify_called?: boolean | null
+          verify_passed?: boolean | null
+        }
+        Relationships: []
+      }
+      match_report_work: {
+        Row: {
+          context: Json | null
+          event_id: string | null
+          finished_at: string | null
+          game_id: string
+          held_at: string | null
+          input_version: string | null
+          lease_token: string | null
+          lease_until: string | null
+          manual_resume: boolean
+          missing_names: string[] | null
+          reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          context?: Json | null
+          event_id?: string | null
+          finished_at?: string | null
+          game_id: string
+          held_at?: string | null
+          input_version?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          manual_resume?: boolean
+          missing_names?: string[] | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          context?: Json | null
+          event_id?: string | null
+          finished_at?: string | null
+          game_id?: string
+          held_at?: string | null
+          input_version?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          manual_resume?: boolean
+          missing_names?: string[] | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -5269,6 +5371,7 @@ export type Database = {
       profiles: {
         Row: {
           artist_bio: string | null
+          avatar_character: string | null
           avatar_url: string | null
           bio: string | null
           comment_count: number | null
@@ -5276,6 +5379,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           display_title_id: string | null
+          equipped_kit_key: string | null
           equipped_pixel_art_id: string | null
           expert_certified_at: string | null
           favorite_player: string | null
@@ -5299,6 +5403,7 @@ export type Database = {
         }
         Insert: {
           artist_bio?: string | null
+          avatar_character?: string | null
           avatar_url?: string | null
           bio?: string | null
           comment_count?: number | null
@@ -5306,6 +5411,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           display_title_id?: string | null
+          equipped_kit_key?: string | null
           equipped_pixel_art_id?: string | null
           expert_certified_at?: string | null
           favorite_player?: string | null
@@ -5329,6 +5435,7 @@ export type Database = {
         }
         Update: {
           artist_bio?: string | null
+          avatar_character?: string | null
           avatar_url?: string | null
           bio?: string | null
           comment_count?: number | null
@@ -5336,6 +5443,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           display_title_id?: string | null
+          equipped_kit_key?: string | null
           equipped_pixel_art_id?: string | null
           expert_certified_at?: string | null
           favorite_player?: string | null
@@ -6820,6 +6928,35 @@ export type Database = {
           },
         ]
       }
+      user_avatar_kits: {
+        Row: {
+          acquired_at: string
+          kit_key: string
+          points_spent: number
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          kit_key: string
+          points_spent?: number
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          kit_key?: string
+          points_spent?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_avatar_kits_kit_key_fkey"
+            columns: ["kit_key"]
+            isOneToOne: false
+            referencedRelation: "avatar_kits"
+            referencedColumns: ["kit_key"]
+          },
+        ]
+      }
       user_blocks: {
         Row: {
           blocked_id: string
@@ -7680,6 +7817,27 @@ export type Database = {
           },
         ]
       }
+      match_report_work_status: {
+        Row: {
+          budget: number | null
+          context: Json | null
+          event_id: string | null
+          finished_at: string | null
+          game_id: string | null
+          held_at: string | null
+          input_version: string | null
+          lease_token: string | null
+          lease_until: string | null
+          manual_resume: boolean | null
+          missing_names: string[] | null
+          reason: string | null
+          status: string | null
+          unresolved: number | null
+          updated_at: string | null
+          used: number | null
+        }
+        Relationships: []
+      }
       news_reservoir_queue_lengths: {
         Row: {
           count: number | null
@@ -7689,14 +7847,6 @@ export type Database = {
       }
     }
     Functions: {
-      write_lfa_day_snapshot: {
-        Args: { p_date: string; p_payload: Json; p_updated_at: string }
-        Returns: boolean
-      }
-      write_lfa_match_snapshot: {
-        Args: { p_game_ids: string[]; p_match_id: string; p_payload: Json; p_updated_at: string }
-        Returns: Json
-      }
       admin_adjust_gold: {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: Json
@@ -7730,6 +7880,10 @@ export type Database = {
         Args: { new_gm_ts: string }
         Returns: undefined
       }
+      buy_avatar_kit: {
+        Args: { p_flair_id: string; p_kit_key: string; p_user_id: string }
+        Returns: Json
+      }
       buy_stadium_bricks: {
         Args: { p_brick_count: number; p_flair_id: string; p_user_id: string }
         Returns: Json
@@ -7752,6 +7906,7 @@ export type Database = {
       }
       can_post_comment: { Args: { user_id_param: string }; Returns: boolean }
       check_achievements: { Args: { p_user_id: string }; Returns: Json }
+      claim_match_report: { Args: { p_game_id: string }; Returns: Json }
       cleanup_expired_ticker_comments: { Args: never; Returns: number }
       cleanup_old_ticker_items: { Args: never; Returns: number }
       cleanup_temperature_queue: {
@@ -7795,6 +7950,18 @@ export type Database = {
           expired_count: number
           refunded_count: number
         }[]
+      }
+      finish_report_compose: {
+        Args: {
+          p_attempt_id: number
+          p_draft?: Json
+          p_game_id: string
+          p_reason: string
+          p_stage: string
+          p_token: string
+          p_verify_passed: boolean
+        }
+        Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
       get_league_id_by_alias: {
@@ -7957,11 +8124,24 @@ export type Database = {
           success: boolean
         }[]
       }
+      reserve_report_compose: {
+        Args: { p_game_id: string; p_token: string; p_version: string }
+        Returns: Json
+      }
       reset_expired_temperatures:
         | { Args: never; Returns: number }
         | { Args: { days_old?: number }; Returns: number }
       reset_user_daily_tokens: {
         Args: { target_user_id: string }
+        Returns: undefined
+      }
+      resume_match_report: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_reason: string
+          p_version: string
+        }
         Returns: undefined
       }
       reward_gold: {
@@ -8056,6 +8236,19 @@ export type Database = {
       }
       vote_sticker: {
         Args: { p_sticker_id: string; p_user_id: string }
+        Returns: Json
+      }
+      write_lfa_day_snapshot: {
+        Args: { p_date: string; p_payload: Json; p_updated_at: string }
+        Returns: boolean
+      }
+      write_lfa_match_snapshot: {
+        Args: {
+          p_game_ids: string[]
+          p_match_id: string
+          p_payload: Json
+          p_updated_at: string
+        }
         Returns: Json
       }
     }
