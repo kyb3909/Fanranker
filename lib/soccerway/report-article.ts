@@ -98,6 +98,9 @@ function looksLikeReport(slug: string): boolean {
 // Keep these explicit: shortening arbitrary names would mix unrelated clubs.
 const NEWS_TEAM_SLUGS: Record<string, string[]> = {
   "atl-madrid": ["atletico-madrid", "atleti"],
+  // 2026-09-09 실측: 경기 URL 은 `fc-porto-S2NmScGp`, 기사는
+  // `soccer-uefa-champions-league-porto-manchester-city-report-2026-09-08`.
+  "fc-porto": ["porto"],
   "hull-city": ["hull"],
   "real-sociedad": ["sociedad"],
   "bayern-munich": ["bayern"],

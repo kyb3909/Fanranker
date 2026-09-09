@@ -23,7 +23,10 @@ import {
 import { confirmScore, type ScoreSide } from "@/lib/soccerway/confirmed-score"
 import { listRecentReportAttempts, recordReportAttempt } from "@/lib/soccerway/report-attempts"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
-import { getSupplementalFixture } from "@/lib/match/supplemental-fixtures"
+import {
+  findSupplementalForBetmanIds,
+  getSupplementalFixture,
+} from "@/lib/match/supplemental-fixtures"
 import { lfaDetailRow } from "@/lib/motm/ft-evidence"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import {
@@ -813,8 +816,19 @@ export async function hasStoredReport(gameId: string): Promise<boolean> {
  *    형제 확장 자체는 resolveEventCore ②와 같은 걸음이다.
  *
  *    행을 못 찾으면 자기 자신만 돌려준다 — 종전 동작으로 접힌다 (fail-open).
+ *
+ * ⚠️⚠️ **LFA 전용 행(`lfa_fixtures`)도 형제다** (2026-09-09 실측). 베트맨 행만 모으면
+ *    같은 경기의 결과가 파이프라인 눈 밖에 앉는다. `match_details_cache` 는 방문한
+ *    game_id 단위로 쌓이므로, 그 경기를 LFA 전용 id 로 먼저 만진 회차가 있으면 FT 가
+ *    그쪽 행에만 들어간다.
+ *
+ *    포르투 0-2 맨시티(9/8): 베트맨 행 캐시는 전반 30분의 `0-0 · 미종료` 로 굳었고
+ *    FT 는 LFA 전용 행에만 있었다. 확정 스코어를 못 구해 리포트가 막혔는데, 같은 슬롯의
+ *    챔스 4경기가 킥오프 시각이 같아 하루치 색인 폴백도 (리그, HH:MM) 키 충돌로
+ *    버려졌다(9/2 규율 — 모호하면 null). 레알·도르트문트는 베트맨 행에 FT 가 있어서
+ *    통과했다. 두 경로가 동시에 비는 것은 이렇게 드물게만 겹친다.
  */
-const matchSiblingIds = reactCache(async (gameId: string): Promise<string[]> => {
+async function betmanSiblingIds(gameId: string): Promise<string[] | null> {
   const supabase = createServiceRoleClient()
   const { data: game, error: gameError } = await supabase
     .from("betman_games")
@@ -822,7 +836,7 @@ const matchSiblingIds = reactCache(async (gameId: string): Promise<string[]> => 
     .eq("id", gameId)
     .maybeSingle()
   if (gameError) throw new Error(`match-report-game-read:${gameError.code}`)
-  if (!game?.match_time) return [gameId]
+  if (!game?.match_time) return null
   const { data: siblings, error: siblingError } = await supabase
     .from("betman_games")
     .select("id")
@@ -832,6 +846,21 @@ const matchSiblingIds = reactCache(async (gameId: string): Promise<string[]> => 
   if (siblingError) throw new Error(`match-report-siblings-read:${siblingError.code}`)
   const ids = (siblings ?? []).map((s) => String(s.id))
   return ids.length > 0 ? ids : [gameId]
+}
+
+const matchSiblingIds = reactCache(async (gameId: string): Promise<string[]> => {
+  const betman = await betmanSiblingIds(gameId)
+  // 넘어온 것이 LFA 전용 행이면 연결된 베트맨 경기의 형제까지 합친다 (반대 방향도 같은 경기다)
+  if (!betman) {
+    const supplemental = await getSupplementalFixture(gameId).catch(() => null)
+    const linked = supplemental?.betman_game_id
+      ? await betmanSiblingIds(supplemental.betman_game_id).catch(() => null)
+      : null
+    return [...new Set([gameId, ...(linked ?? [])])]
+  }
+  // 연결 조회 실패는 삼킨다 — 형제를 못 넓히는 것이 아예 못 읽는 것보다 낫다 (fail-open)
+  const supplemental = await findSupplementalForBetmanIds(betman).catch(() => null)
+  return supplemental ? [...new Set([...betman, supplemental.id])] : betman
 })
 
 /** 저장해 둔 리포트 — 창 밖이어도, 원본 기사가 내려가도 그대로 보여준다 */
