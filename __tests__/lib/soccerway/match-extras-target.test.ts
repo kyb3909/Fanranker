@@ -11,11 +11,18 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   record: vi.fn(),
   list: vi.fn(),
+  claim: vi.fn(),
   resolve: vi.fn(),
   generate: vi.fn(),
   game: { league_code: "EPL", home_team_name: "아스널", away_team_name: "첼시" },
 }))
 vi.mock("@/lib/supabase/server", () => ({ createServiceRoleClient: () => ({ from: mocks.from }) }))
+vi.mock("@/lib/soccerway/report-work", () => ({
+  claimReportWork: mocks.claim,
+  releaseReportWork: vi.fn(),
+  saveReportWork: vi.fn(),
+  loadReportDraft: async () => null,
+}))
 // 리포트 체인(match-report-*)은 스파이로, 스탯은 빈 값으로 — 둘 다 바깥에 나가지 않는다
 vi.mock("next/cache", () => ({
   unstable_cache: (fn: unknown, keys: string[]) =>
@@ -66,6 +73,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.resolve.mockResolvedValue(null)
   mocks.list.mockResolvedValue([])
+  mocks.claim.mockResolvedValue({ token: "token", work: { context: null, finished_at: null } })
   mocks.generate.mockResolvedValue(null)
   mocks.game = { league_code: "EPL", home_team_name: "아스널", away_team_name: "첼시" }
   mocks.from.mockImplementation((table: string) => {
@@ -143,61 +151,30 @@ describe("getMatchExtras — LFA 전용 uuid 로 들어온 경우", () => {
   })
 })
 
-describe("getMatchExtras — 같은 검증 실패를 되풀이하지 않는다", () => {
-  const verify = (at: string) => ({ stage: "verify", attempted_at: at })
-
-  it("24시간 안 검증 불합격 3회면 체인을 부르지 않고 held 를 한 번 남긴다", async () => {
-    mocks.resolve.mockResolvedValue(resolved)
-    mocks.list.mockResolvedValue([verify("03:00"), verify("02:00"), verify("01:00")])
+describe("getMatchExtras — 예약을 공유한다", () => {
+  it("다른 실행이 예약 중이면 해석/작성 없이 건너뛴다", async () => {
+    mocks.claim.mockResolvedValue(null)
     expect(await getMatchExtras("game")).toEqual({ stats: null, report: null })
+    expect(mocks.resolve).not.toHaveBeenCalled()
     expect(mocks.generate).not.toHaveBeenCalled()
-    expect(mocks.record).toHaveBeenCalledExactlyOnceWith(
-      "game",
-      "event",
-      "held",
-      expect.stringContaining("3회")
-    )
   })
-
-  it("마지막 행이 이미 held 면 다시 기록하지 않는다", async () => {
+  it("예약 원장 조회가 실패하면 작성하지 않는다", async () => {
+    mocks.claim.mockRejectedValue(new Error("claim_match_report:08006"))
+    await expect(getMatchExtras("game")).rejects.toThrow("claim_match_report:08006")
+    expect(mocks.generate).not.toHaveBeenCalled()
+  })
+  it("과거 실행 단위 verify 행 수는 새 예산으로 세지 않는다", async () => {
     mocks.resolve.mockResolvedValue(resolved)
-    mocks.list.mockResolvedValue([
-      { stage: "held", attempted_at: "04:00" },
-      verify("03:00"),
-      verify("02:00"),
-      verify("01:00"),
-    ])
+    mocks.list.mockResolvedValue([{ stage: "verify" }, { stage: "verify" }, { stage: "verify" }])
     await getMatchExtras("game")
-    expect(mocks.generate).not.toHaveBeenCalled()
-    expect(mocks.record).not.toHaveBeenCalled()
+    expect(mocks.list).not.toHaveBeenCalled()
+    expect(mocks.generate).toHaveBeenCalledOnce()
   })
-
-  it("2회까지는 계속 시도한다", async () => {
-    mocks.resolve.mockResolvedValue(resolved)
-    mocks.list.mockResolvedValue([verify("02:00"), verify("01:00")])
-    await getMatchExtras("game")
-    expect(mocks.generate).toHaveBeenCalledTimes(1)
-    expect(mocks.record).not.toHaveBeenCalledWith("game", "event", "held", expect.anything())
-  })
-
-  it("원장을 못 읽으면 이번 회차엔 체인을 돌리지 않는다 (비용 쪽으로 보수적)", async () => {
-    mocks.resolve.mockResolvedValue(resolved)
-    mocks.list.mockResolvedValue(null)
-    const quiet = vi.spyOn(console, "warn").mockImplementation(() => {})
-    try {
-      await getMatchExtras("game")
-    } finally {
-      quiet.mockRestore()
-    }
-    expect(mocks.generate).not.toHaveBeenCalled()
-    expect(mocks.record).not.toHaveBeenCalled()
-  })
-
-  it("대상 구단이 아니면 원장을 읽지도 않는다", async () => {
+  it("대상 구단이 아니면 예약을 잡지 않는다", async () => {
     mocks.game = { league_code: "라리가", home_team_name: "말라가", away_team_name: "레반테" }
     mocks.resolve.mockResolvedValue(resolved)
     await getMatchExtras("game")
-    expect(mocks.list).not.toHaveBeenCalled()
+    expect(mocks.claim).not.toHaveBeenCalled()
     expect(mocks.generate).not.toHaveBeenCalled()
   })
 })

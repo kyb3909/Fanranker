@@ -18,6 +18,9 @@ vi.mock("@/lib/soccerway/match-extras", () => ({
   hasStoredReport: mocks.stored,
 }))
 vi.mock("@/lib/soccerway/report-attempts", () => ({ recordReportAttempt: mocks.record }))
+// 보류·원고 재시도 대상은 DB 원장에서 오는데, 이 시험은 신규 대상(일정 기반)만 본다.
+// report-work 는 lib/supabase/server → lib/env 를 최상위에서 끌어와 시험 환경에서 죽는다.
+vi.mock("@/lib/soccerway/report-work", () => ({ listReportRetryTargets: async () => [] }))
 import { GET } from "@/app/api/cron/match-reports/route"
 
 describe("리포트 크론 대상·실패 판정", () => {

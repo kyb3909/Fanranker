@@ -3,6 +3,7 @@ import Link from "next/link"
 import { getStaffRole } from "@/lib/admin/roles"
 import { loadDashboardData } from "./_dashboard/data"
 import { ControlCenter } from "./_control-center/control-center"
+import { ReportBudgetCard } from "./_dashboard/report-budget-card"
 import {
   MiniNewsDeck,
   Widget,
@@ -116,6 +117,7 @@ export default async function AdminControlCenterPage() {
         </div>
 
         {/* ── ③ 티커 정리 + 참여도 — 급한 일이 아니라 아래에 둔다 ── */}
+        <ReportBudgetCard canManage={role === "admin"} />
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
           <div className="xl:col-span-5">
             <TickerModPanel items={d.ticker.recent} />

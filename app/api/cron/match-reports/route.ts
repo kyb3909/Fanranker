@@ -7,6 +7,7 @@ import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { isReportWorthyMatch } from "@/lib/soccerway/report-clubs"
 import { reportGameIdOf } from "@/lib/match/report-target"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
+import { listReportRetryTargets } from "@/lib/soccerway/report-work"
 
 /**
  * 매치 리포트 자동 생성 (2026-08-30).
@@ -60,7 +61,7 @@ async function cronGet(request: NextRequest) {
     const nowMs = Date.now()
     // 리포트는 베트맨 행 id 아래 만든다. LFA 전용 경기는 베트맨이 연결됐을 때만 대상이다
     // (lib/match/report-target.ts — 매치 페이지와 같은 판정).
-    const targets = fixtures.flatMap((f) => {
+    const freshTargets = fixtures.flatMap((f) => {
       const gameId = reportGameIdOf(f)
       if (!gameId || f.lfaFinished !== true) return []
       if (!isMatchExtrasLeague(f.leagueCode)) return []
@@ -69,6 +70,12 @@ async function cronGet(request: NextRequest) {
       const age = nowMs - new Date(f.matchTime).getTime()
       return age > 0 && age < 24 * 3600_000 ? [{ ...f, gameId }] : []
     })
+    // Old holds and durable drafts already have their evidence in DB. No resolver or
+    // article fetch is needed to check them, including holds older than 24 hours.
+    const retryTargets = await listReportRetryTargets()
+    const targets = [
+      ...new Map([...retryTargets, ...freshTargets].map((f) => [f.gameId, f])).values(),
+    ]
 
     let made = 0
     let skipped = 0
