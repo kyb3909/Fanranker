@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { LfaFixture } from "@/lib/lfa/fixtures"
 
 const state = vi.hoisted(() => ({
@@ -7,10 +7,16 @@ const state = vi.hoisted(() => ({
   writes: [] as string[],
   fixtures: vi.fn(),
   dictionary: vi.fn(),
+  members: vi.fn(),
+  cachedBetman: null as unknown[] | null,
 }))
-vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }))
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: () => unknown, keys: string[]) => () =>
+    keys?.[0] === "fixtures-day" && state.cachedBetman !== null ? state.cachedBetman : fn(),
+}))
 vi.mock("@/lib/lfa/fixtures", () => ({ getLfaFixturesForMatchday: state.fixtures }))
 vi.mock("@/lib/lfa/match", () => ({ cachedTeamEn: state.dictionary }))
+vi.mock("@/lib/lfa/league-members", () => ({ getBetmanLeagueMembers: state.members }))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
     from: (table: string) => {
@@ -18,8 +24,11 @@ vi.mock("@/lib/supabase/server", () => ({
       const filters: ((r: Row) => boolean)[] = []
       let pending: Row[] | undefined
       let single = false
+      let limit = Infinity
       const run = () => {
-        if (state.fail === table) return { data: null, error: { code: "unavailable" } }
+        if (state.fail === table) {
+          return { data: null, error: { code: "unavailable", message: "connection failed" } }
+        }
         const rows = (state.tables[table] ??= [])
         if (pending) {
           state.writes.push(table)
@@ -37,7 +46,7 @@ vi.mock("@/lib/supabase/server", () => ({
           })
           return { data: saved, error: null }
         }
-        const found = rows.filter((r) => filters.every((f) => f(r)))
+        const found = rows.filter((r) => filters.every((f) => f(r))).slice(0, limit)
         return { data: single ? (found[0] ?? null) : found, error: null }
       }
       const q = {
@@ -68,6 +77,10 @@ vi.mock("@/lib/supabase/server", () => ({
         },
         maybeSingle: () => {
           single = true
+          return q
+        },
+        limit: (count: number) => {
+          limit = count
           return q
         },
         upsert: (rows: Row[]) => {
@@ -116,8 +129,20 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     state.tables = {}
     state.fail = ""
     state.writes = []
+    state.cachedBetman = null
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-09-04T18:00:00.000Z"))
+    state.members.mockResolvedValue(
+      new Map([
+        ["EPL", new Set(["Manchester City", "Chelsea", "Liverpool"])],
+        ["EFL챔", new Set(["Leicester City"])],
+      ])
+    )
     state.fixtures.mockResolvedValue([fixture()])
     state.dictionary.mockResolvedValue([["맨체스터 시티", "Manchester City"]])
+  })
+  afterEach(() => {
+    vi.useRealTimers()
   })
   it("인기팀 컵경기를 독립 UUID로 등록하고 매치센터에서 읽는다", async () => {
     const [f] = await getFixturesForDay("2026-09-05")
@@ -177,6 +202,57 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     )
     expect(state.writes).toHaveLength(0)
   })
+  it("베트맨 일별 조회 오류는 빈 목록으로 처리하지 않고 등록 전에 전파한다", async () => {
+    state.fail = "betman_games"
+    await expect(getFixturesForDay("2026-09-05")).rejects.toThrow(
+      "betman-fixtures-day:2026-09-05:unavailable:connection failed"
+    )
+    expect(state.writes).toHaveLength(0)
+    state.fail = ""
+    expect((await getFixturesForDay("2026-09-05"))[0].gameId).not.toBeNull()
+  })
+  it("캐시가 비어 있어도 DB에 같은 리그·킥오프 분의 베트맨 행이 있으면 등록하지 않는다", async () => {
+    state.cachedBetman = []
+    state.tables.betman_games = [
+      {
+        ...market("market-a"),
+        home_team_name: "다른 표기",
+        away_team_name: "미정",
+        match_time: "2026-09-05T18:00:41.000Z",
+      },
+    ]
+    const quiet = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const rows = await getFixturesForDay("2026-09-05")
+      expect(rows.every((row) => row.gameId === null)).toBe(true)
+      expect(state.writes).toHaveLength(0)
+      expect(state.tables.lfa_fixtures).toHaveLength(0)
+      expect(quiet).toHaveBeenCalledWith(
+        expect.stringContaining("LFA 신규 등록 보류"),
+        expect.objectContaining({ lfaId: fixture().lfaId })
+      )
+    } finally {
+      quiet.mockRestore()
+    }
+  })
+  it("등록 직전 베트맨 재조회가 실패해도 신규 UUID를 만들지 않는다", async () => {
+    state.fail = "betman_games"
+    await expect(
+      syncSupplementalFixtures([fixture()], new Map(), new Set([fixture().lfaId]))
+    ).rejects.toThrow("lfa-fixture-betman-check:cup-city-minnow:unavailable:connection failed")
+    expect(state.writes).toHaveLength(0)
+  })
+  it.each([
+    { league_code: "UCL" },
+    { match_time: "2026-09-05T17:59:59.000Z" },
+    { match_time: "2026-09-05T18:01:00.000Z" },
+    { sport: "농구" },
+  ])("다른 슬롯·종목의 베트맨 행은 인기팀 미판매 경기 등록을 막지 않는다: %j", async (other) => {
+    state.tables.betman_games = [{ ...market("market-a"), ...other }]
+    const saved = await syncSupplementalFixtures([fixture()], new Map(), new Set([fixture().lfaId]))
+    expect(saved.get(fixture().lfaId)?.id).toMatch(/^[a-f0-9-]{36}$/)
+    expect(state.writes).toEqual(["lfa_fixtures"])
+  })
   it("같은 슬롯에 짝 못 찾은 베트맨 행이 있으면 LFA 행을 전용 경기로 등록하지 않는다", async () => {
     // 유벤투스–AC밀란(2026-09-07) 재현: 사전 별칭이 없어 짝짓기가 missing — 베트맨이 파는 경기를
     // 못 알아본 것이지 없는 경기가 아니다. 인기팀이라도 이 슬롯의 LFA 행은 보류한다.
@@ -215,5 +291,79 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     const rows = await getFixturesForDay("2026-09-05")
     expect(rows).toHaveLength(1)
     expect(rows[0].gameId).toBe(first.gameId)
+  })
+  it.each(["EPL", "UCL"])(
+    "%s 인기팀은 킥오프가 지나도 일정에만 싣고 베트맨 발매 후 매핑한다",
+    async (leagueCode) => {
+      state.fixtures.mockResolvedValue([fixture({ leagueCode })])
+      const [waiting] = await getFixturesForDay("2026-09-05")
+      expect(waiting).toMatchObject({ gameId: null, lfaMatchId: fixture().lfaId })
+      expect(state.writes).toHaveLength(0)
+      for (const time of ["16:00:00", "16:30:00", "18:00:00", "18:30:00"]) {
+        vi.setSystemTime(new Date(`2026-09-05T${time}.000Z`))
+        const rows = await getFixturesForDay("2026-09-05")
+        expect(rows).toHaveLength(1)
+        expect(rows[0]).toMatchObject({ gameId: null, lfaMatchId: fixture().lfaId })
+        expect(state.writes).toHaveLength(0)
+      }
+      state.tables.betman_games = [{ ...market("market-a"), league_code: leagueCode }]
+      const mapped = await getFixturesForDay("2026-09-05")
+      expect(mapped).toHaveLength(1)
+      expect(mapped[0]).toMatchObject({ gameId: "market-a", lfaMatchId: fixture().lfaId })
+      expect(mapped[0].source).toBeUndefined()
+      expect(state.tables.lfa_fixtures).toHaveLength(0)
+      expect(state.writes).toHaveLength(0)
+    }
+  )
+  it("발매 예상 컵경기는 킥오프까지 매핑을 기다리고 미판매 컵경기는 즉시 등록한다", async () => {
+    state.fixtures.mockResolvedValue([fixture({ awayTeam: "Chelsea", awayTeamEn: "Chelsea" })])
+    vi.setSystemTime(new Date("2026-09-05T15:59:59.999Z"))
+    expect((await getFixturesForDay("2026-09-05"))[0].gameId).toBeNull()
+    vi.setSystemTime(new Date("2026-09-05T16:00:00.000Z"))
+    expect((await getFixturesForDay("2026-09-05"))[0].gameId).toBeNull()
+    vi.setSystemTime(new Date("2026-09-05T18:00:00.000Z"))
+    expect((await getFixturesForDay("2026-09-05"))[0].gameId).toBeNull()
+    expect(state.writes).toHaveLength(0)
+    state.fixtures.mockResolvedValue([
+      fixture({ lfaId: "never", matchTime: "2026-09-06T18:00:00.000Z" }),
+    ])
+    expect((await getFixturesForDay("2026-09-06"))[0].gameId).not.toBeNull()
+  })
+  it.each([false, true])(
+    "멤버가 없거나 조회 실패면 unknown으로 경고하고 시간과 무관하게 매핑을 기다린다: %s",
+    async (fails) => {
+      if (fails) state.members.mockRejectedValue(new Error("members unavailable"))
+      else state.members.mockResolvedValue(new Map())
+      const quiet = vi.spyOn(console, "warn").mockImplementation(() => {})
+      try {
+        expect((await getFixturesForDay("2026-09-05"))[0].gameId).toBeNull()
+        expect(state.writes).toHaveLength(0)
+        expect(quiet).toHaveBeenCalledWith(expect.stringContaining("발매 범위 unknown"))
+        for (const time of ["16:30:00", "18:00:00", "18:30:00"]) {
+          vi.setSystemTime(new Date(`2026-09-05T${time}.000Z`))
+          expect((await getFixturesForDay("2026-09-05"))[0].gameId).toBeNull()
+          expect(state.writes).toHaveLength(0)
+        }
+        state.tables.betman_games = [market("market-a")]
+        const rows = await getFixturesForDay("2026-09-05")
+        expect(rows).toHaveLength(1)
+        expect(rows[0]).toMatchObject({ gameId: "market-a", lfaMatchId: fixture().lfaId })
+        expect(state.tables.lfa_fixtures).toHaveLength(0)
+      } finally {
+        quiet.mockRestore()
+      }
+    }
+  )
+  it("새 정책상 대기 대상이어도 기존 등록 행의 UUID·갱신·연결을 유지한다", async () => {
+    const f = fixture({ leagueCode: "UCL" })
+    const saved = await syncSupplementalFixtures([f], new Map(), new Set([f.lfaId]))
+    const id = saved.get(f.lfaId)!.id
+    state.fixtures.mockResolvedValue([{ ...f, homeScore: 1 }])
+    expect((await getFixturesForDay("2026-09-05"))[0]).toMatchObject({ gameId: id, homeScore: 1 })
+    state.tables.betman_games = [{ ...market("market-a"), league_code: "UCL" }]
+    expect((await getFixturesForDay("2026-09-05"))[0]).toMatchObject({
+      gameId: id,
+      betmanGameId: "market-a",
+    })
   })
 })

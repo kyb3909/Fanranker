@@ -72,20 +72,47 @@ export async function syncSupplementalFixtures(
     )
   if (error) throw new Error(`lfa-fixture-list:${error.code}`)
   const existing = new Map(((data as SupplementalFixture[]) ?? []).map((r) => [r.lfa_match_id, r]))
-  const rows = fixtures
-    .filter(
-      (f) =>
-        existing.has(f.lfaId) ||
-        (missingIds.has(f.lfaId) && isPopularFixture(f) && isMatchPageLeague(f.leagueCode))
-    )
-    .map((f) => ({
-      lfa_match_id: f.lfaId,
-      fixture: f,
-      match_time: f.matchTime,
-      // Omit absent links: a concurrent/unmatched scan must not erase an established association.
-      ...(linked.has(f.lfaId) ? { betman_game_id: linked.get(f.lfaId) } : {}),
-      updated_at: new Date().toISOString(),
-    }))
+  const eligible: LfaFixture[] = []
+  for (const f of fixtures) {
+    if (!existing.has(f.lfaId)) {
+      if (!missingIds.has(f.lfaId) || !isPopularFixture(f) || !isMatchPageLeague(f.leagueCode)) {
+        continue
+      }
+      // Recheck the DB outside the day cache before creating a new identity.
+      // Match slotKey's minute precision; team aliases must not bypass this guard.
+      const start = Math.floor(new Date(f.matchTime).getTime() / 60_000) * 60_000
+      const { data: betman, error: betmanError } = await db
+        .from("betman_games")
+        .select("id")
+        .eq("sport", "축구")
+        .eq("league_code", f.leagueCode)
+        .gte("match_time", new Date(start).toISOString())
+        .lt("match_time", new Date(start + 60_000).toISOString())
+        .limit(1)
+      if (betmanError) {
+        throw new Error(
+          `lfa-fixture-betman-check:${f.lfaId}:${betmanError.code}:${betmanError.message}`
+        )
+      }
+      if (betman?.length) {
+        console.warn("[fixtures] LFA 신규 등록 보류: DB에 베트맨 슬롯 존재", {
+          lfaId: f.lfaId,
+          leagueCode: f.leagueCode,
+          matchTime: f.matchTime,
+        })
+        continue
+      }
+    }
+    eligible.push(f)
+  }
+  const rows = eligible.map((f) => ({
+    lfa_match_id: f.lfaId,
+    fixture: f,
+    match_time: f.matchTime,
+    // Omit absent links: a concurrent/unmatched scan must not erase an established association.
+    ...(linked.has(f.lfaId) ? { betman_game_id: linked.get(f.lfaId) } : {}),
+    updated_at: new Date().toISOString(),
+  }))
   // Separate payload shapes so PostgREST does not fill omitted link columns with NULL.
   for (const hasLink of [false, true]) {
     const batch = rows.filter((r) => (r.betman_game_id !== undefined) === hasLink)

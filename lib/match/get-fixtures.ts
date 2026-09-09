@@ -5,6 +5,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
 import { cachedTeamEn } from "@/lib/lfa/match"
+import { getBetmanLeagueMembers } from "@/lib/lfa/league-members"
+import { predictBetmanListing } from "@/lib/match/betman-coverage"
 import { normTeam, matchLfaCounterpart } from "@/lib/match/pair-fixtures"
 import { isPopularFixture } from "@/lib/match/popular-teams"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
@@ -92,7 +94,7 @@ async function fetchFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   if (!range) return []
   const supabase = createServiceRoleClient()
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("betman_games")
     .select(
       "id, home_team_name, away_team_name, league_code, match_time, status, home_score, away_score"
@@ -105,6 +107,8 @@ async function fetchFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
     .neq("home_team_name", "미정")
     .neq("away_team_name", "미정")
     .not("home_team_name", "is", null)
+
+  if (error) throw new Error(`betman-fixtures-day:${dateKst}:${error.code}:${error.message}`)
 
   const byKey = new Map<string, FixtureRow>()
   for (const g of data ?? []) {
@@ -290,9 +294,28 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   }
 
   try {
-    const missing = new Set(
-      merged.filter((f) => !f.gameId && f.lfaMatchId).map((f) => f.lfaMatchId!)
-    )
+    const candidates = merged.filter((f) => !f.gameId && f.lfaMatchId)
+    const empty = new Set<string>()
+    let members: ReadonlyMap<string, ReadonlySet<string>> = new Map()
+    if (candidates.some((f) => predictBetmanListing(f, () => empty) === "unknown")) {
+      try {
+        members = await getBetmanLeagueMembers()
+      } catch (error) {
+        console.warn("[fixtures] 베트맨 발매 범위 멤버 조회 실패", error)
+      }
+    }
+    const missing = new Set<string>()
+    for (const f of candidates) {
+      const listing = predictBetmanListing(f, (code) => members.get(code) ?? empty)
+      if (listing === "unknown") {
+        console.warn(`[fixtures] 베트맨 발매 범위 unknown: ${f.lfaMatchId} (${f.leagueCode})`)
+      }
+      // 일정은 먼저 보여주되, 발매 대상/불확실 경기는 시각과 무관하게 베트맨 매핑을 기다린다.
+      // 미판매 경기만 독립 UUID를 만든다 (2026-09-10 운영자: 2시간 안전망 제거).
+      if (listing === "never") {
+        missing.add(f.lfaMatchId!)
+      }
+    }
     const registered = await syncSupplementalFixtures(lfa, linked, missing)
     for (let i = 0; i < merged.length; i++) {
       const row = merged[i]
