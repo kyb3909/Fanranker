@@ -9,6 +9,7 @@ import {
   getGameBetDeadline,
 } from "@/lib/betman/daily-round"
 import { dedupeMarketRows } from "@/lib/betman/market-dedup"
+import { getExcludedMarketIds } from "@/lib/betman/market-scope"
 // 국가대표 표기 정리 (`괌_남자` → `괌`). ⚠️ 라벨 전용 — matchKey·대조는 원문으로 돈다.
 import { stripNationalSuffix } from "@/lib/match/team-display"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
@@ -328,23 +329,24 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
     query = query.or(`league_code.is.null,league_code.not.in.(${excludeCodes.join(",")})`)
   }
 
-  // 오늘 경기는 scheduled만, 과거 날짜는 전체 상태 반환
-  if (isToday) {
-    query = query.eq("status", "scheduled")
-  }
-
   if (sportFilter !== "all") {
     query = query.eq("sport", sportFilter)
   }
-  if (gameTypeFilter !== "all") {
-    query = query.or(`game_type.eq.${gameTypeFilter},game_type.eq.S${gameTypeFilter}`)
-  }
 
-  const { data: games, error: gamesError } = await query
+  const { data: games, error: gamesError } = await query.order("id").range(0, 499)
 
   if (gamesError) {
     console.error("Failed to fetch betman games:", gamesError)
     throw new BetmanGamesError("경기 목록을 가져오는 중 오류가 발생했습니다.")
+  }
+  if (games) {
+    for (let offset = 500; games.length === offset; offset += 500) {
+      const { data: page, error: pageError } = await query.range(offset, offset + 499)
+      if (pageError || !page)
+        throw new BetmanGamesError("경기 목록을 가져오는 중 오류가 발생했습니다.")
+      games.push(...page)
+      if (page.length < 500) break
+    }
   }
 
   // Betting window status (프로토 발매 시간 08:00~23:00 KST)
@@ -352,7 +354,15 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
   // 경기별 마감 = min(킥오프, 표시 라운드의 23:00) — 프로토 발매 마감 규정
   const roundCloseAt = new Date(getBetCloseAt(dailyId))
 
-  const gamesWithOdds = (games || []).map((game) => {
+  // Classify before status/type filters: otherwise the SUM boundary can disappear.
+  const excludedMarkets = getExcludedMarketIds(games ?? [])
+  const eligibleGames = (games ?? []).filter(
+    (game) =>
+      !excludedMarkets.has(game.id) &&
+      (!isToday || game.status === "scheduled") &&
+      (gameTypeFilter === "all" || game.game_type === gameTypeFilter)
+  )
+  const gamesWithOdds = eligibleGames.map((game) => {
     const rawGameType = (game.game_type as string) || ""
     const gameType = rawGameType === "SUM" ? "SUM" : rawGameType.replace(/^S/, "")
     let home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds
@@ -427,63 +437,18 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
     groupedGames[matchKey].games.push(game)
   })
 
-  // VPS sync.sh 가 betman 풀타임/전반전 마켓을 동일 game_type 으로 저장하는 한계
-  // 보정 — 두 휴리스틱 OR 로 매치 그룹 내에서 전반전 row 를 추정해 마킹.
-  //
-  // [휴리스틱 1] 같은 (game_type, handicap, over_under_line) row 가 2개 이상이면
-  //   game_no asc 정렬 후 첫 번째 = 풀타임, 두 번째 이상 = 전반.
-  //   K리그(축구): 3526 일반 풀 / 3531 일반 전반 — 키 동일 → 두번째 잡힘.
-  //
-  // [휴리스틱 2] 매치 안에서 SUM 마켓 row 이후의 모든 row = 전반.
-  //   KBO(야구): 풀타임은 승패2way/승1패/소수핸디캡, 전반은 일반/소수핸디캡(라인
-  //   다름)/언더오버(라인 다름) → 키가 다 달라 휴리스틱 1 안 걸림. 하지만 SUM
-  //   (3562) 이후 row(3563~3565) 가 모두 전반이라 휴리스틱 2 가 잡음.
-  //
-  // 라인 값이 다른 row(예: 언오버 2.5 vs 1.5) 는 휴리스틱 1 키가 달라 자연 분리.
-  // 단독 row 는 풀/전반 식별 불가 — 그대로 풀타임 표기 (사용자 인지 영향 최소).
-  // 정공법은 sync.sh 가 betman 응답의 풀/전반 디스크리미네이터를 prefix("S") 로
-  // 박는 것 — Vultr 수정 후속 작업으로.
+  // Period exclusion has already used the complete group. Display dedup stays separate.
   for (const group of Object.values(groupedGames)) {
     group.games.sort((a, b) => Number(a.game_no ?? 0) - Number(b.game_no ?? 0))
-    // 라운드 교차 완전 중복 마켓 제거 (같은 경기 다중 라운드 등록 시 ×N 노출 방지).
-    // 배당까지 포함한 시그니처라 진짜 전반전 row(배당 다름)는 보존 → 아래 휴리스틱 무손상.
     group.games = dedupeMarketRows(group.games)
-    const sumIndex = group.games.findIndex((g) => g.game_type === "SUM")
-    const seenCount = new Map<string, number>()
-    for (let i = 0; i < group.games.length; i++) {
-      const g = group.games[i]
-      const key = `${g.game_type}|${g.handicap ?? "x"}|${g.over_under_line ?? "x"}`
-      const count = seenCount.get(key) ?? 0
-      const isAfterSum = sumIndex >= 0 && i > sumIndex
-      if (count >= 1 || isAfterSum) {
-        ;(g as typeof g & { is_half_time?: boolean }).is_half_time = true
-      }
-      seenCount.set(key, count + 1)
-    }
   }
-
-  // ===== SUM(홀짝/합계) + 전반전(반쪽) 마켓 노출 제거 =====
-  // SUM(2026-06-11): 홀짝·합계는 분석력과 무관한 운 게임.
-  // 전반전(2026-06-14, 사용자 요청): is_half_time 휴리스틱 마킹 또는 S 접두사(S일반/S핸디캡/S언더오버).
-  //   풀타임 마켓만 표시/베팅. DB 유입(POST)은 유지(SUM row 가 전반전 휴리스틱 디스크리미네이터라
-  //   쿼리가 아닌 응답 단계에서만 제외). 베팅 차단은 prediction 라우트(SUM=enum, 전반전=S접두사 가드).
-  const isSumType = (t: unknown) => t === "SUM" || t === "SSUM"
-  const isHidden = (g: { game_type?: unknown; is_half_time?: boolean }) =>
-    isSumType(g.game_type) ||
-    g.is_half_time === true ||
-    (typeof g.game_type === "string" && g.game_type.startsWith("S") && !isSumType(g.game_type))
   // 그룹 dedup 에서 살아남은 row 만 flat 목록에도 반영 (total/bettable 카운트 일관성)
   const keptIds = new Set<unknown>()
   for (const group of Object.values(groupedGames)) {
     for (const g of group.games) keptIds.add(g.id)
   }
-  const visibleGames = gamesWithOdds.filter((g) => !isHidden(g) && keptIds.has(g.id))
-  const visibleGroups = Object.values(groupedGames)
-    .map((group) => ({
-      ...group,
-      games: group.games.filter((g) => !isHidden(g)),
-    }))
-    .filter((group) => group.games.length > 0)
+  const visibleGames = gamesWithOdds.filter((g) => keptIds.has(g.id))
+  const visibleGroups = Object.values(groupedGames).filter((group) => group.games.length > 0)
 
   // 내 예측은 **로그인 유저에게만** — 비로그인은 이 왕복을 통째로 건너뛴다.
   // (종전에는 `currentUser()` 로 Clerk API 를 매번 때리고, 비로그인이어도 그 왕복을 냈다.)

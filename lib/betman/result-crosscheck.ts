@@ -12,6 +12,7 @@ import {
   type LfaEvidence,
 } from "./crosscheck-verdict"
 import { deriveResultFromScore } from "./result-mapper"
+import { getExcludedMarketIds, loadMarketScopeRows } from "./market-scope"
 
 /**
  * 축구 결과 교차검증 러너 — **표시·알림 전용** (2026-09-02 운영자 확정).
@@ -42,6 +43,9 @@ const LOOKBACK_HOURS = 48
 
 interface FootballGameRow {
   id: string
+  round_id: string
+  game_no: number
+  sport: string
   home_team_name: string
   away_team_name: string
   home_score: number | null
@@ -98,7 +102,7 @@ export async function crosscheckFootballResults(
   const { data: games, error } = await supabase
     .from("betman_games")
     .select(
-      "id, home_team_name, away_team_name, home_score, away_score, league_code, match_time, game_type, handicap, over_under_line, result, wisetoto_home_score, wisetoto_away_score, wisetoto_at"
+      "id, round_id, game_no, sport, home_team_name, away_team_name, home_score, away_score, league_code, match_time, game_type, handicap, over_under_line, result, wisetoto_home_score, wisetoto_away_score, wisetoto_at"
     )
     .eq("sport", "축구")
     .eq("status", "completed")
@@ -107,7 +111,19 @@ export async function crosscheckFootballResults(
     .limit(1000)
   if (error || !games || games.length === 0) return summary
 
-  const rows = games as FootballGameRow[]
+  const candidates = games as FootballGameRow[]
+  const excluded = getExcludedMarketIds(await loadMarketScopeRows(supabase, candidates))
+  const excludedIds = candidates.filter((g) => excluded.has(g.id)).map((g) => g.id)
+  if (excludedIds.length) {
+    // Remove obsolete checks only; never alter official results, predictions or payouts.
+    const { error: cleanupError } = await supabase
+      .from("betman_result_checks")
+      .delete()
+      .in("game_id", excludedIds)
+    if (cleanupError) throw new Error("Failed to remove excluded market checks")
+  }
+  const rows = candidates.filter((g) => !excluded.has(g.id))
+  if (!rows.length) return summary
   const ids = rows.map((g) => g.id)
   const { data: existing } = await supabase
     .from("betman_result_checks")

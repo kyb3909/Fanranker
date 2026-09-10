@@ -52,6 +52,8 @@ vi.mock("@/lib/supabase/server", () => ({
 /* ────────── Supabase 목 ────────── */
 
 interface Opts {
+  scopeGames?: Record<string, unknown>[]
+  scopeFails?: boolean
   /** betman_games 가 돌려줄 경기들 */
   games?: Record<string, unknown>[]
   /** spend_tokens 결과 */
@@ -65,6 +67,7 @@ interface Opts {
 const baseGame = (over: Record<string, unknown> = {}) => ({
   id: "game-1",
   round_id: "round-1",
+  game_no: 1,
   daily_round_id: "dr-1",
   sport: "축구",
   game_type: "win_lose",
@@ -102,7 +105,23 @@ function makeSupabase(o: Opts = {}) {
     }),
     from: vi.fn((table: string) => {
       if (table === "betman_games") {
-        return { select: () => ({ in: async () => ({ data: games, error: null }) }) }
+        return {
+          select: () => ({
+            in: (column: string) => {
+              if (column === "id") return Promise.resolve({ data: games, error: null })
+              const query = {
+                gte: () => query,
+                lte: () => query,
+                order: () => query,
+                range: async (from: number, to: number) => ({
+                  data: (o.scopeGames ?? games).slice(from, to + 1),
+                  error: o.scopeFails ? { message: "offline" } : null,
+                }),
+              }
+              return query
+            },
+          }),
+        }
       }
       if (table === "betman_daily_rounds") {
         return {
@@ -209,6 +228,32 @@ beforeEach(() => {
 })
 
 describe("POST /api/betman/prediction — 볼 차감 계약", () => {
+  it("S 접두사 없는 전반 언더오버 ID 직접 제출도 차감 전에 거부한다", async () => {
+    const half = baseGame({ game_no: 598, game_type: "언더오버", over_under_line: 1.5 })
+    supabaseMock = makeSupabase({
+      games: [half],
+      scopeGames: [
+        { ...half, id: "full", game_no: 594, over_under_line: 2.5 },
+        { ...half, id: "sum", game_no: 595, game_type: "SUM" },
+        half,
+      ],
+    })
+    const res = await (
+      await loadRoute()
+    )(req({ predictions: [{ game_id: "game-1", prediction: "under" }] }) as never)
+    expect(res.status).toBe(400)
+    expect(spendCalls()).toHaveLength(0)
+    expect(supabaseMock.calls.predInserts).toHaveLength(0)
+  })
+
+  it("마켓 문맥 조회 실패 시 볼을 차감하지 않는다", async () => {
+    supabaseMock = makeSupabase({ scopeFails: true })
+    const res = await (
+      await loadRoute()
+    )(req({ predictions: [{ game_id: "game-1", prediction: "home" }] }) as never)
+    expect(res.status).toBe(500)
+    expect(spendCalls()).toHaveLength(0)
+  })
   it("정상 흐름: 볼을 차감하고 슬립과 예측을 만든다", async () => {
     supabaseMock = makeSupabase()
     const POST = await loadRoute()

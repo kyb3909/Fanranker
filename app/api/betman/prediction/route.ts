@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { retryRefundTokens } from "@/lib/betman/refund-tokens"
+import { getExcludedMarketIds, loadMarketScopeRows } from "@/lib/betman/market-scope"
 import { recordFunnelMilestone } from "@/lib/analytics/funnel"
 import { z } from "zod"
 
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     const { data: games, error: gamesError } = await supabase
       .from("betman_games")
       .select(
-        "id, round_id, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, over_under_line, handicap, league_code"
+        "id, round_id, game_no, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, over_under_line, handicap, league_code"
       )
       .in("id", gameIds)
 
@@ -191,17 +192,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 전반전(반쪽) 마켓 베팅 차단 (2026-06-14, 사용자 요청) — GET 노출 제외와 일치.
-    // betman 전반 마켓은 S 접두사(S일반/S핸디캡/S언더오버). SUM/SSUM 은 prediction enum 에서 이미 차단.
-    const halfTimeGames = games.filter(
-      (g) =>
-        typeof g.game_type === "string" &&
-        g.game_type.startsWith("S") &&
-        g.game_type !== "SUM" &&
-        g.game_type !== "SSUM"
-    )
-    if (halfTimeGames.length > 0) {
-      return NextResponse.json({ error: "전반전 마켓은 예측할 수 없습니다." }, { status: 400 })
+    // Selected IDs may omit the SUM boundary; inspect all sibling markets before spending.
+    const excludedMarkets = getExcludedMarketIds(await loadMarketScopeRows(supabase, games))
+    if (games.some((g) => excludedMarkets.has(g.id))) {
+      return NextResponse.json({ error: "전반전·SUM 마켓은 예측할 수 없습니다." }, { status: 400 })
     }
 
     // Check per-game bet deadlines (must bet before kickoff)
