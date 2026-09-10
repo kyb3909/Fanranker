@@ -116,6 +116,10 @@ const NEWS_TEAM_SLUGS: Record<string, string[]> = {
   //    `milan` 을 별칭으로 넣고 싶어지면 참을 것. 그 토큰은 `…-inter-milan-…` 에도
   //    하이픈 경계로 걸려서, 인테르 경기 리포트를 AC밀란 경기가 가져간다.
   "manchester-united": ["man-utd"],
+  // 2026-09-11 실측: 경기 URL 은 `sabah-baku-fNGcxbyr`, 기사는
+  // `manchester-united-thrash-debutants-sabah-to-make-fast-champions-league-start`.
+  // 운영자 제보("맨유꺼가 없을리 없잖아")로 잡았다 — 원장은 "기사 없음"이라고만 했다.
+  "sabah-baku": ["sabah"],
   "ath-bilbao": ["athletic-bilbao", "athletic-club", "athletic"],
   "union-berlin": ["union"],
   "as-roma": ["roma"],

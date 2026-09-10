@@ -39,6 +39,36 @@ it("accepts known match/news slug differences and rejects a later reverse fixtur
   ).toBeNull()
 })
 
+it("맨유-사바 (2026-09-10 UCL): 경기 URL 의 `sabah-baku` 와 기사의 `sabah` 를 잇는다", () => {
+  // 실측: 기사는 킥오프 2시간 뒤(06:07 KST)에 올라와 있었는데 원장은 8시간 동안 "기사 없음"이었다.
+  const kickoff = ms("2026-09-10T19:00:00Z")
+  const report: ArticleMeta = {
+    id: "manutd-sabah",
+    title: "Manchester United thrash debutants Sabah to make fast Champions League start",
+    slug: "manchester-united-thrash-debutants-sabah-to-make-fast-champions-league-start",
+    publishedAtMs: ms("2026-09-10T21:07:00Z"),
+  }
+  const liveBlog: ArticleMeta = {
+    id: "live",
+    title: "Champions League live updates",
+    slug: "soccer-uefa-champions-league-live-updates-matchday-1-september-2026",
+    publishedAtMs: ms("2026-09-08T15:00:00Z"),
+  }
+  const transferRumour: ArticleMeta = {
+    id: "rumour",
+    title: "Man United's Lewis Hall pursuit",
+    slug: "soccer-premier-league-flashscore-sources-man-united-s-lewis-hall-pursuit-is-about-to-become-even-more-expensive",
+    publishedAtMs: ms("2026-09-10T19:32:00Z"),
+  }
+  const slugs = teamSlugsFromMatchUrl(
+    "https://www.soccerway.com/match/manchester-united-ppjDR086/sabah-baku-fNGcxbyr/"
+  )!
+  expect(slugs).toEqual(["manchester-united", "sabah-baku"])
+  expect(pickReportArticle([liveBlog, transferRumour, report], slugs, kickoff)?.id).toBe(
+    "manutd-sabah"
+  )
+})
+
 describe("teamSlugsFromMatchUrl", () => {
   it("팀 슬러그 뒤 8자 해시를 떼어낸다", () => {
     expect(
