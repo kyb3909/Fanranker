@@ -346,7 +346,8 @@ async function restoreRegisteredFixtures(
   const stored = range ? await listSupplementalFixtures(range.start, range.end).catch(() => []) : []
   let restored = [...rows]
   for (const row of stored) {
-    if (restored.some((f) => f.gameId === row.id)) continue
+    // LFA 행이 이미 있어도 연결된 베트맨 형제 행을 제거해야 한다.
+    // 킥오프가 달라 슬롯 병합이 실패하면 양쪽 행이 모두 목록에 남을 수 있다.
     const ids = row.betman_game_id
       ? await getSiblingGameIds(createServiceRoleClient(), row.id)
       : [row.id]

@@ -206,6 +206,41 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     )
     expect(state.writes).toHaveLength(0)
   })
+  it.each([false, true])(
+    "연결된 LFA 경기의 킥오프가 15분 바뀌어도 한 줄과 기존 UUID를 유지한다: 마켓 역순 %s",
+    async (reverse) => {
+      const [first] = await getFixturesForDay("2026-09-05")
+      state.tables.betman_games = [market("market-b"), market("market-a")]
+      await getFixturesForDay("2026-09-05")
+      if (reverse) state.tables.betman_games.reverse()
+      state.tables.betman_games.push({
+        ...market("unrelated"),
+        home_team_name: "Other Home FC",
+        away_team_name: "Other Away FC",
+      })
+      state.fixtures.mockResolvedValue([
+        fixture({
+          matchTime: "2026-09-05T18:15:00.000Z",
+          status: "completed",
+          homeScore: 6,
+          awayScore: 3,
+        }),
+      ])
+
+      const rows = await getFixturesForDay("2026-09-05")
+      expect(rows).toHaveLength(2)
+      expect(rows.map((row) => row.gameId)).toEqual(["unrelated", first.gameId])
+      expect(rows[1]).toMatchObject({
+        matchKey: first.matchKey,
+        betmanGameId: "market-b",
+        matchTime: "2026-09-05T18:15:00.000Z",
+        status: "completed",
+        homeScore: 6,
+        awayScore: 3,
+      })
+      expect(state.tables.lfa_fixtures).toHaveLength(1)
+    }
+  )
   it("베트맨 일별 조회 오류는 빈 목록으로 처리하지 않고 등록 전에 전파한다", async () => {
     state.fail = "betman_games"
     await expect(getFixturesForDay("2026-09-05")).rejects.toThrow(
