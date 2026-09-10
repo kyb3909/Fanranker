@@ -51,6 +51,22 @@ describe("report dictionary editing", () => {
       })
     ).toEqual(["Unknown Player", "loose ball"])
   })
+  it("lets listed original-spelling names through, whole or surname only, but still flags others", () => {
+    const report = {
+      title: "코모 1-0 라이프치히",
+      paragraphs: ["Nico Paz가 선제골을 넣었고 Paz의 두 번째 슛은 Vandevoordt가 막았다."],
+    }
+    expect(reportLatinRemainders(report, ["코모1907", "RB라이프치히"], ["Nico Paz"])).toEqual([
+      "Vandevoordt",
+    ])
+    expect(
+      reportLatinRemainders(
+        report,
+        ["코모1907", "RB라이프치히"],
+        ["Nico Paz", "Maarten Vandevoordt"]
+      )
+    ).toEqual([])
+  })
   it("allows abbreviations from the actual clubs without allowing unknown player names", () => {
     const report = {
       title: "VfB슈투트가르트 패배",

@@ -198,12 +198,29 @@ export function createReportNameEditor(
   return { resolve, edit }
 }
 
-/** Football abbreviations may remain; unresolved Latin prose/names require another edit. */
+/**
+ * Football abbreviations may remain; unresolved Latin prose/names require another edit.
+ *
+ * `allowedNames` (2026-09-11 운영자: "리포트 영문 이름 나가도 괜찮아") — 사전에 없는 선수는
+ * 보류·생략이 아니라 **영문 원명 그대로** 쓴다. 그 이름(전체 또는 성만)은 잔재로 세지 않는다.
+ * 임의 음차와 새 철자는 여전히 금지이므로 목록 밖 라틴 문자열은 그대로 잡힌다.
+ */
 export function reportLatinRemainders(
   report: { title: string; paragraphs: string[] },
-  teamNames: string[] = []
+  teamNames: string[] = [],
+  allowedNames: string[] = []
 ): string[] {
   const teamAbbreviations = new Set(teamNames.flatMap((name) => name.match(/[A-Za-z]+/g) ?? []))
+  const normalize = (s: string) => s.replace(/\.$/, "").replace(/\s+/g, " ").trim().toLowerCase()
+  const allowedFull = new Set(allowedNames.map(normalize).filter(Boolean))
+  const allowedTokens = new Set(
+    allowedNames.flatMap((name) => name.toLowerCase().match(/[a-zà-ž]+/g) ?? [])
+  )
+  const isAllowedName = (v: string) => {
+    if (allowedFull.has(normalize(v))) return true
+    const parts = v.toLowerCase().match(/[a-zà-ž]+/g) ?? []
+    return parts.length > 0 && parts.every((p) => allowedTokens.has(p))
+  }
   const values =
     [report.title, ...report.paragraphs]
       .join("\n")
@@ -214,7 +231,9 @@ export function reportLatinRemainders(
         .map((v) => v.trim())
         .filter(
           (v) =>
-            !/^(?:VAR|xG|PSG|PL|EPL|MLS|AS|AC|US|SSC|ACF|AJ)$/.test(v) && !teamAbbreviations.has(v)
+            !/^(?:VAR|xG|PSG|PL|EPL|MLS|AS|AC|US|SSC|ACF|AJ)$/.test(v) &&
+            !teamAbbreviations.has(v) &&
+            !isAllowedName(v)
         )
     ),
   ]

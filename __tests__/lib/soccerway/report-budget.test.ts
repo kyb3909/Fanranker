@@ -241,30 +241,57 @@ afterEach(() => {
 })
 
 describe("dictionary and allowlist", () => {
-  it("holds missing event names before compose; an unchanged recheck uses zero LLM calls", async () => {
+  // 2026-09-11 운영자: "리포트 영문 이름 나가도 괜찮아" — 사전 미등재 선수는 보류·생략이 아니라
+  // 영문 원명 그대로 쓴다. 보류(dictionary) 경로는 더 이상 타지 않는다.
+  it("does not hold on missing event names; compose receives them as original-spelling names", async () => {
     mocks.work.context!.extracted!.events.push(event("sub", "Karl Hein"))
-    expect(await run()).toBeNull()
-    expect(mocks.hold).toHaveBeenCalledWith("game", expect.anything(), expect.any(String), [
-      "Karl Hein",
-    ])
-    await run()
-    expect(mocks.fetch).not.toHaveBeenCalled()
-    expect(mocks.reserve).not.toHaveBeenCalled()
+    expect(await run()).not.toBeNull()
+    expect(mocks.hold).not.toHaveBeenCalled()
+    expect(mocks.work.missing_names).toEqual(["Karl Hein"])
+    expect(mocks.work.status).not.toBe("dictionary")
+    const payload = JSON.parse(JSON.parse(composeCalls()[0][1].body).messages[1].content)
+    expect(payload.영문_그대로_쓸_이름).toEqual(["Karl Hein"])
+    expect(payload.실명_사용_허용_목록).toEqual(["콜 팔머"])
   })
-  it("persists extraction before dictionary hold and never repeats extraction on retry", async () => {
+  it("persists extraction and never repeats it on retry", async () => {
     mocks.work.context!.extracted = null
     await run()
     await run()
-    expect(mocks.fetch).toHaveBeenCalledTimes(1) // extraction only
-    expect(composeCalls()).toHaveLength(0)
+    const parserCalls = mocks.fetch.mock.calls.filter(([, opts]) =>
+      JSON.parse(opts.body).messages[0].content.includes("추출하는 파서")
+    )
+    expect(parserCalls).toHaveLength(1)
     expect(mocks.work.context!.extracted!.events[0].players).toEqual(["Unknown Player"])
   })
-  it("optional note names do not hold; compose receives the explicit allowed Korean names", async () => {
+  it("a report written with an original-spelling name passes the Latin gate", async () => {
+    mocks.work.context!.extracted!.events.push(event("goal", "Nico Paz"))
+    mocks.badCompose = true // compose writes "Unknown Player scored." — not an allowed name
+    expect(await run()).toBeNull()
+    expect(mocks.attempts.every((a) => a.stage === "compose")).toBe(true)
+    mocks.attempts = []
+    mocks.badCompose = false
+    mocks.fetch.mockImplementation(async (_url, opts) => {
+      const system = JSON.parse(opts.body).messages[0].content as string
+      const value = system.includes("추출하는 파서")
+        ? { score: "2-1", events: [] }
+        : system.includes("쓰는 에디터")
+          ? {
+              title: "아스널 2-1 첼시",
+              paragraphs: ["Nico Paz가 득점했고 Paz의 두 번째 슛은 빗나갔다."],
+            }
+          : { pass: true, problems: [] }
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] })
+      )
+    })
+    expect(await run()).toMatchObject({ title: "아스널 2-1 첼시" })
+  })
+  it("optional note names do not block; compose receives the explicit allowed Korean names", async () => {
     mocks.work.context!.extracted!.events.push(event("note", "Optional Player"))
     expect(await run()).not.toBeNull()
     expect(mocks.hold).not.toHaveBeenCalled()
     const body = JSON.parse(composeCalls()[0][1].body)
-    expect(body.messages[0].content).toContain("목록 밖 선수가 필요한 부가 묘사는 생략")
+    expect(body.messages[0].content).toContain("두 목록에 없는 선수가 필요한 부가 묘사는 생략")
     expect(JSON.parse(body.messages[1].content).실명_사용_허용_목록).toEqual(["콜 팔머"])
     expect(mocks.attempts[0]).toMatchObject({
       compose_called: true,
@@ -275,19 +302,20 @@ describe("dictionary and allowlist", () => {
     expect(mocks.work.context!.usageByAttempt?.["1"]?.compose?.model).toBe("gpt-5.1")
     expect(mocks.work.context!.usageByAttempt?.["1"]?.verify?.model).toBe("gpt-5.6-terra")
   })
-  it("does not resume a dictionary hold until every required name is present", async () => {
+  it("records which names went out in the original spelling and clears them once confirmed", async () => {
     mocks.work.context!.extracted!.events = [
       event("goal", "Karl Hein"),
       event("assist", "Nico Paz"),
     ]
     await run()
-    mocks.names = [{ romanized: "Karl Hein", preferred_ko: "카를 하인" }]
-    await run()
-    expect(mocks.work.missing_names).toEqual(["Nico Paz"])
-    expect(composeCalls()).toHaveLength(0)
-    mocks.names = [...mocks.names, { romanized: "Nico Paz", preferred_ko: "니코 파스" }]
-    await run()
+    expect(mocks.work.missing_names).toEqual(["Karl Hein", "Nico Paz"])
     expect(composeCalls()).toHaveLength(1)
+    mocks.names = [
+      { romanized: "Karl Hein", preferred_ko: "카를 하인" },
+      { romanized: "Nico Paz", preferred_ko: "니코 파스" },
+    ]
+    await run()
+    expect(mocks.work.missing_names).toEqual([])
   })
 })
 

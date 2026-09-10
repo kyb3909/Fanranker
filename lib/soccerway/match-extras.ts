@@ -30,7 +30,6 @@ import {
   reserveReportCompose,
   markReportCall,
   finishReportCompose,
-  holdReportDictionary,
   loadReportDraft,
   reportRetryEligible,
   type ReportLease,
@@ -286,7 +285,8 @@ const MODEL = "gpt-5.1"
  *  "맞지만 잘못된 것으로 보일 수 있다"류 자기모순 지적으로 정상 리포트를 죽였다) */
 const VERIFIER_MODEL = "gpt-5.6-terra"
 // Bump the corresponding version whenever a writing prompt or verification rule changes.
-export const PROMPT_VERSION = "20260910-allowlist-v1"
+// 2026-09-11: 사전 미등재 선수를 보류·생략하지 않고 영문 원명으로 쓰게 바꿨다 (운영자 결정).
+export const PROMPT_VERSION = "20260911-latin-original-v1"
 export const VERIFY_RULE_VERSION = "20260910-v1"
 
 async function callLLM(
@@ -435,6 +435,8 @@ async function composeReportKo(
   /** 라인업에서 뽑은 득점 정본 (합이 확정 스코어와 맞을 때만 들어온다) */
   goalFacts: GoalFact[] | null,
   allowedNames: string[],
+  /** 사전에 없어 영문 원명 그대로 써야 하는 선수 (2026-09-11 운영자: 영문 이름 허용) */
+  latinNames: string[],
   feedback?: string[],
   onStart?: () => Promise<void>,
   onUsage?: (model: string, usage: unknown, latencyMs: number) => Promise<void>
@@ -470,8 +472,7 @@ ${
 - 톤: 사실 기반. 감탄사·과장·클리셰("환상적인", "믿을 수 없는")는 금지지만, 장면이 눈에
   그려지게는 쓴다. 기사체 평서문.
 - 선수 이름은 사전으로 확정된 목록의 한글 표기를 그대로 쓴다. detail에 영문 이름이 남아 있어도 같은 인물의 한글 표기를 따른다.
-- **실명 사용 허용 목록**에 있는 선수만 실명으로 쓴다. 목록 밖 선수가 필요한 부가 묘사는 생략한다. '한 선수' 같은 익명화로 주체를 흐리지 않는다. 대명사는 문맥상 주체가 명확할 때만 쓴다. 이름을 새로 지어내지 않는다.
-- 한글 표기를 확인하지 못한 선수는 임의 음차하거나 영문으로 쓰지 않는다. 해당 이름을 생략해 사건을 정확하게 서술하고, 핵심 득점자를 특정할 수 없다면 작성하지 않는다.
+- 선수 실명은 두 목록으로만 쓴다. **실명 사용 허용 목록**의 선수는 그 한글 표기 그대로, **영문 그대로 쓸 이름**의 선수는 목록에 적힌 영문 철자 그대로 쓴다(한글 음차 금지, 철자 변형 금지). 두 목록에 없는 선수가 필요한 부가 묘사는 생략한다. '한 선수' 같은 익명화로 주체를 흐리지 않는다. 대명사는 문맥상 주체가 명확할 때만 쓴다. 이름을 새로 지어내지 않는다.
 - 팀 이름: 홈팀 "${homeTeam}", 원정팀 "${awayTeam}".
 - ⚠️ **최종 스코어는 ${score ?? "(미확정)"} 이다 — 홈 ${homeTeam} 기준이다.** 이 스코어와
   다른 조합을 제목이나 본문에 절대 쓰지 마라. 사건 목록의 골 수를 세어 다른 값이
@@ -484,6 +485,7 @@ ${
       away: awayTeam,
       score,
       실명_사용_허용_목록: allowedNames,
+      영문_그대로_쓸_이름: latinNames,
       ...(goalFacts
         ? {
             득점_정본: goalFacts.map((g) => ({
@@ -727,15 +729,14 @@ async function generateLeasedReport(
     verifyRuleVersion: VERIFY_RULE_VERSION,
     names: names.representations,
   })
-  if (names.missing.length) {
-    await holdReportDictionary(gameId, lease, version, names.missing)
-    return null
-  }
+  // 사전에 없는 사건 선수는 보류하지 않는다 (2026-09-11 운영자: "리포트 영문 이름 나가도 괜찮아").
+  // 영문 원명 그대로 작성에 넘기고, 어떤 이름이었는지는 작업 표에 남겨 사전 보강 신호로 쓴다.
+  // 표기가 확정되면 입력 버전이 바뀌지만 저장된 리포트는 그대로다 — 다시 쓰지 않는다.
   if (lease.work.status === "held" && lease.work.input_version === version) return null
   await saveReportWork(gameId, lease.token, {
     input_version: version,
     status: "ready",
-    missing_names: [],
+    missing_names: names.missing,
     reason: null,
     held_at: null,
     context: { ...context, finalScore },
@@ -803,6 +804,13 @@ async function generateLeasedReport(
   const allowedNames = [...new Set([...names.allowed, ...(goalFacts ?? []).map((g) => g.scorer)])]
     .filter((name) => /[가-힣]/.test(name) && !/[A-Za-z]/.test(name))
     .sort()
+  // 영문 원명으로 쓸 이름 — 사전 미등재 사건 선수 + 득점 정본에서 한글화 못 한 득점자
+  const latinNames = [
+    ...new Set([
+      ...names.missing,
+      ...(goalFacts ?? []).map((g) => g.scorer).filter((s) => /[A-Za-z]/.test(s)),
+    ]),
+  ].sort()
   const sources = { paragraphs: body.paragraphs, events, stats, score, teams: [homeTeam, awayTeam] }
 
   // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
@@ -831,6 +839,7 @@ async function generateLeasedReport(
         stats,
         goalFacts,
         allowedNames,
+        latinNames,
         feedback,
         () => markReportCall(id, "compose_called"),
         keepUsage("compose")
@@ -843,12 +852,12 @@ async function generateLeasedReport(
         title: editor.edit(ko.title, knownNames),
         paragraphs: ko.paragraphs.map((p) => editor.edit(p, knownNames)),
       }
-      const latin = reportLatinRemainders(ko, [homeTeam, awayTeam])
+      const latin = reportLatinRemainders(ko, [homeTeam, awayTeam], latinNames)
       if (latin.length) {
         feedback = [
           "Unresolved player names or untranslated prose: " +
             latin.join(", ") +
-            ". Use the supplied dictionary names; omit an unverified personal name instead of inventing a spelling.",
+            ". Use the supplied dictionary names, or the exact original spelling from the listed Latin names; never invent a spelling or a transliteration.",
         ]
         await finishReportCompose(gameId, lease.token, id, "compose", feedback.join(" | "), null)
         continue
