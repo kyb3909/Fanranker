@@ -20,12 +20,7 @@ import { isMatchExtrasLeague, isMatchPageLeague } from "@/lib/match/leagues"
 import { findSealedMappings, type MappingAttemptRow } from "@/lib/ops/mapping-seal"
 import { PREDICATE_VERSION } from "@/lib/soccerway/mapping-version"
 import { matchKeyOf, matchLabelOf } from "@/lib/match/match-key"
-import {
-  lfaDetailRow,
-  pickFtScore,
-  type BetmanScore,
-  type LfaDetailRow,
-} from "@/lib/motm/ft-evidence"
+import { lfaDetailRow, pickFtScore, type LfaDetailRow } from "@/lib/motm/ft-evidence"
 import { findDuplicateReports, type GameRow } from "@/lib/ops/match-report-dup"
 import { assessMotmCoverage, MOTM_GRACE_MS } from "@/lib/ops/motm-coverage"
 import { auditLfaLinks, type LfaNamedMatch, type LinkedGame } from "@/lib/ops/lfa-link-audit"
@@ -37,7 +32,17 @@ import {
   type FixableName,
   type TimelineEventLike,
 } from "@/lib/ops/timeline-latin"
+import {
+  loadAuditMatchGroups,
+  loadAuditGamesByIds as loadGamesByIds,
+  readAuditByIds,
+} from "@/lib/ops/match-identities"
 import type { RosterEntry } from "@/lib/lfa/scorer-name"
+import {
+  MATCH_MISSING_FINDINGS,
+  missingMatchRefs,
+  missingMatchFindingResolved,
+} from "@/lib/ops/resolve-match-findings"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -122,30 +127,6 @@ const IN_CHUNK = 100
  */
 const EXTRA_HEARTBEATS: { job: string; gap: number | null }[] = [{ job: "betman-results", gap: 30 }]
 
-/** gameId 들의 betman 행 (경기 키 계산용). PostgREST 400 을 피해 끊어서 부른다 */
-async function loadGamesByIds(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  gameIds: string[]
-): Promise<GameRow[]> {
-  const ids = [...new Set(gameIds)]
-  const out: GameRow[] = []
-  for (let i = 0; i < ids.length; i += IN_CHUNK) {
-    const { data } = await supabase
-      .from("betman_games")
-      .select("id, home_team_name, away_team_name, match_time")
-      .in("id", ids.slice(i, i + IN_CHUNK))
-    for (const g of data ?? []) {
-      out.push({
-        id: String(g.id),
-        homeTeam: String(g.home_team_name),
-        awayTeam: String(g.away_team_name),
-        matchTime: String(g.match_time),
-      })
-    }
-  }
-  return out
-}
-
 /** gameId → LFA 상세 행들 (FT 증거 판정 입력) */
 async function loadDetailRows(
   supabase: ReturnType<typeof createServiceRoleClient>,
@@ -154,10 +135,11 @@ async function loadDetailRows(
   const out = new Map<string, LfaDetailRow[]>()
   const ids = [...new Set(gameIds)]
   for (let i = 0; i < ids.length; i += IN_CHUNK) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("match_details_cache")
       .select("game_id, finished, payload")
       .in("game_id", ids.slice(i, i + IN_CHUNK))
+    if (error) throw new Error("match_details_cache: " + error.message)
     for (const row of data ?? []) {
       const key = String(row.game_id)
       const list = out.get(key) ?? []
@@ -178,38 +160,15 @@ async function loadReadyLineupIds(
   const out = new Set<string>()
   const ids = [...new Set(gameIds)]
   for (let i = 0; i < ids.length; i += IN_CHUNK) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("match_lineups")
       .select("game_id, payload")
       .in("game_id", ids.slice(i, i + IN_CHUNK))
+    if (error) throw new Error("match_lineups: " + error.message)
     for (const row of data ?? []) {
       if ((row.payload as { status?: string } | null)?.status === "ready") {
         out.add(String(row.game_id))
       }
-    }
-  }
-  return out
-}
-
-/**
- * 베트맨 gameId → 연결된 LFA 전용 등록 경기의 폴 키(`lfa_<id>`) (2026-09-07).
- * 등록 뒤 베트맨이 붙은 경기는 MoTM 폴이 그 키 아래 생긴다 (lib/motm/poll.ts).
- */
-async function loadLfaAltKeys(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  gameIds: string[]
-): Promise<Map<string, string[]>> {
-  const out = new Map<string, string[]>()
-  const ids = [...new Set(gameIds)]
-  for (let i = 0; i < ids.length; i += IN_CHUNK) {
-    const { data } = await supabase
-      .from("lfa_fixtures")
-      .select("betman_game_id, lfa_match_id")
-      .in("betman_game_id", ids.slice(i, i + IN_CHUNK))
-    for (const row of data ?? []) {
-      if (!row.betman_game_id || !row.lfa_match_id) continue
-      const key = String(row.betman_game_id)
-      out.set(key, [...(out.get(key) ?? []), `lfa_${String(row.lfa_match_id)}`])
     }
   }
   return out
@@ -223,10 +182,11 @@ async function loadRosters(
   const out = new Map<string, RosterEntry[]>()
   const ids = [...new Set(gameIds)]
   for (let i = 0; i < ids.length; i += IN_CHUNK) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("match_lineups")
       .select("game_id, payload")
       .in("game_id", ids.slice(i, i + IN_CHUNK))
+    if (error) throw new Error("match_lineups: " + error.message)
     for (const row of data ?? []) {
       const p = row.payload as {
         status?: string
@@ -540,10 +500,11 @@ async function handler(req: NextRequest) {
   // 비었다" 는 데이터가 아니라 **코드가 깨졌다는 뜻**이다. 소스가 무엇으로 바뀌든
   // 같은 병이 재발하면 여기서 한 시간 안에 걸린다.
   try {
-    const { data: lus } = await supabase
+    const { data: lus, error: lusError } = await supabase
       .from("match_lineups")
       .select("game_id, payload")
       .gte("updated_at", new Date(now - 3 * 24 * H).toISOString())
+    if (lusError) throw new Error("match_lineups: " + lusError.message)
 
     const broken: string[] = []
     let ready = 0
@@ -582,10 +543,11 @@ async function handler(req: NextRequest) {
   // 체인을 다시 돌았다 (5경기 15건). 수리는 조회를 경기 단위로 바꾼 것이고 **저장은
   // 여전히 행 단위**라, 읽기 경로가 되돌아가면 그대로 재발한다. 중복 1건 = LLM 실비.
   try {
-    const { data: reps } = await supabase
+    const { data: reps, error: repsError } = await supabase
       .from("match_reports")
       .select("game_id, event_id, title")
       .gte("created_at", new Date(now - 7 * 24 * H).toISOString())
+    if (repsError) throw new Error("match_reports: " + repsError.message)
     const reports = (reps ?? []).map((r) => ({
       gameId: String(r.game_id),
       eventId: r.event_id ? String(r.event_id) : null,
@@ -618,74 +580,60 @@ async function handler(req: NextRequest) {
   // 늦었다. 마감이 익일 11:00 이라 정작 투표할 시간대가 지나간 뒤에 열렸다.
   // ⚠️ FT 증거 판정은 생성 파이프라인과 **같은 모듈**(pickFtScore)을 쓴다 — 복제 금지.
   try {
-    const { data: mrows } = await supabase
-      .from("betman_games")
-      .select("id, home_team_name, away_team_name, league_code, match_time, home_score, away_score")
-      .eq("sport", "축구")
-      .in("status", ["in_progress", "completed"])
-      .gt("match_time", new Date(now - 26 * H).toISOString())
-      .lte("match_time", new Date(now - (MOTM_FT_AFTER_MS + MOTM_GRACE_MS)).toISOString())
-      .neq("home_team_name", "미정")
-      .not("home_team_name", "is", null)
-
-    const byKey = new Map<
-      string,
-      { key: string; label: string; ftAtMs: number; ids: string[]; score: BetmanScore }
-    >()
-    for (const g of mrows ?? []) {
-      if (!isMatchPageLeague(g.league_code as string | null)) continue
-      const parts = {
-        homeTeam: String(g.home_team_name),
-        awayTeam: String(g.away_team_name),
-        matchTime: String(g.match_time),
-      }
-      const key = matchKeyOf(parts)
-      const hit = byKey.get(key)
-      if (hit) {
-        hit.ids.push(String(g.id))
-        if (hit.score.homeScore == null && g.home_score != null) {
-          hit.score = { homeScore: Number(g.home_score), awayScore: Number(g.away_score) }
-        }
-        continue
-      }
-      byKey.set(key, {
-        key,
-        label: matchLabelOf(parts),
-        ftAtMs: new Date(parts.matchTime).getTime() + MOTM_FT_AFTER_MS,
-        ids: [String(g.id)],
-        score: {
-          homeScore: g.home_score != null ? Number(g.home_score) : null,
-          awayScore: g.away_score != null ? Number(g.away_score) : null,
+    const groups = (
+      await loadAuditMatchGroups(
+        supabase,
+        new Date(now - 26 * H).toISOString(),
+        new Date(now - (MOTM_FT_AFTER_MS + MOTM_GRACE_MS) + 1).toISOString()
+      )
+    ).filter(
+      (g) =>
+        isMatchPageLeague(g.leagueCode) &&
+        !!g.homeTeam &&
+        g.homeTeam !== "미정" &&
+        (["in_progress", "completed"].includes(g.status) ||
+          g.supplemental.some((s) => s.fixture.status === "completed"))
+    )
+    const byKey = new Map(
+      groups.map((g) => [
+        g.key,
+        {
+          ...g,
+          label: matchLabelOf(g),
+          ftAtMs: new Date(g.matchTime).getTime() + MOTM_FT_AFTER_MS,
         },
-      })
-    }
+      ])
+    )
 
     if (byKey.size > 0) {
       const allIds = [...byKey.values()].flatMap((m) => m.ids)
-      const [detailsByGame, lineupGameIds, altKeyByBetmanId] = await Promise.all([
+      const [detailsByGame, lineupGameIds] = await Promise.all([
         loadDetailRows(supabase, allIds),
         loadReadyLineupIds(supabase, allIds),
-        loadLfaAltKeys(supabase, allIds),
       ])
       const candidates = [...byKey.values()].map((m) => ({
         matchKey: m.key,
         label: m.label,
         ftAtMs: m.ftAtMs,
         hasLineup: m.ids.some((id) => lineupGameIds.has(id)),
-        hasFtEvidence: !!pickFtScore(
-          m.score,
-          m.ids.flatMap((id) => detailsByGame.get(id) ?? [])
-        ),
+        hasFtEvidence: !!pickFtScore(m.score, [
+          ...m.ids.flatMap((id) => detailsByGame.get(id) ?? []),
+          ...m.supplemental.map((s) =>
+            lfaDetailRow({ finished: s.fixture.status === "completed", payload: s.fixture })
+          ),
+        ]),
         // LFA 전용 등록 뒤 베트맨이 연결된 경기는 폴이 `lfa_<id>` 키 아래 있다 (2026-09-07)
-        altKeys: [...new Set(m.ids.flatMap((id) => altKeyByBetmanId.get(id) ?? []))],
+        altKeys: m.pollKeys,
       }))
       const lookupKeys = [...new Set([...byKey.keys(), ...candidates.flatMap((c) => c.altKeys)])]
-      const { data: pollRows } = await supabase
-        .from("polls")
-        .select("match_key")
-        .eq("kind", "motm")
-        .in("match_key", lookupKeys)
-      const have = new Set((pollRows ?? []).map((p) => String(p.match_key)))
+      const pollRows = await readAuditByIds<{ match_key: string; kind: string }>(
+        supabase,
+        "polls",
+        "match_key,kind",
+        "match_key",
+        lookupKeys
+      )
+      const have = new Set(pollRows.filter((p) => p.kind === "motm").map((p) => p.match_key))
 
       const cov = assessMotmCoverage(candidates, have, now)
       if (cov.alert) {
@@ -696,6 +644,10 @@ async function handler(req: NextRequest) {
           summary: `FT+2시간이 지난 경기 ${cov.missing.length}/${cov.eligible}건(${pct}%)에 MoTM 폴이 없다 — 생성 크론(15분)이나 FT 증거 경로가 막혔는지 볼 것`,
           detail: {
             missing: cov.missing.slice(0, 20).map((m) => m.label),
+            matches: cov.missing.map((m) => ({
+              gameIds: byKey.get(m.matchKey)!.ids,
+              pollKeys: byKey.get(m.matchKey)!.pollKeys,
+            })),
             missing_count: cov.missing.length,
             eligible: cov.eligible,
           },
@@ -713,12 +665,13 @@ async function handler(req: NextRequest) {
   // ⚠️ **저장분은 스스로 안 낫는다** — 끝난 경기 상세는 수명이 사실상 무한이다.
   //    그래서 이 규칙이 울면 백필(scripts/backfill-timeline-names.ts --post)이 필요하다.
   try {
-    const { data: drows } = await supabase
+    const { data: drows, error: drowsError } = await supabase
       .from("match_details_cache")
       .select("game_id, payload")
       .eq("finished", true)
       .gte("updated_at", new Date(now - 3 * 24 * H).toISOString())
       .limit(TIMELINE_SCAN_LIMIT)
+    if (drowsError) throw new Error("match_details_cache: " + drowsError.message)
 
     const withTimeline = (drows ?? []).filter((r) => {
       const tl = (r.payload as { timeline?: unknown[] } | null)?.timeline
@@ -773,36 +726,34 @@ async function handler(req: NextRequest) {
   try {
     const linkFrom = new Date(now - 48 * H).toISOString()
     const linkTo = new Date(now - 3 * H).toISOString()
-    const { data: recentGames } = await supabase
-      .from("betman_games")
-      .select("id, home_team_name, away_team_name, match_time, league_code")
-      .eq("sport", "축구")
-      .gte("match_time", linkFrom)
-      .lte("match_time", linkTo)
-      .limit(2000)
-    const targetRows: GameRow[] = (recentGames ?? [])
-      .filter((g) => isMatchPageLeague(String(g.league_code)))
-      .map((g) => ({
-        id: String(g.id),
-        homeTeam: String(g.home_team_name),
-        awayTeam: String(g.away_team_name),
-        matchTime: String(g.match_time),
+    const groups = (
+      await loadAuditMatchGroups(
+        supabase,
+        linkFrom,
+        new Date(new Date(linkTo).getTime() + 1).toISOString()
+      )
+    ).filter((g) => isMatchPageLeague(g.leagueCode))
+    const targetRows: GameRow[] = groups.flatMap((g) =>
+      g.ids.map((id) => ({
+        id,
+        homeTeam: g.homeTeam,
+        awayTeam: g.awayTeam,
+        matchTime: g.matchTime,
       }))
-    // 경기 단위 (형제 행은 하나로) — 형제 중 한 행이라도 링크가 있으면 그 경기는 연결된 것
-    const rowsByKey = new Map<string, GameRow[]>()
-    for (const g of targetRows) {
-      const k = matchKeyOf(g)
-      rowsByKey.set(k, [...(rowsByKey.get(k) ?? []), g])
-    }
+    )
+    const rowsByKey = new Map(
+      groups.map((g) => [g.key, targetRows.filter((row) => g.ids.includes(row.id))])
+    )
     if (rowsByKey.size > 0) {
       const linkByGame = new Map<string, { lfaId: string; updated: string }>()
       const ids = targetRows.map((g) => g.id)
       for (let i = 0; i < ids.length; i += IN_CHUNK) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("match_details_cache")
           .select("game_id, lfa_match_id, updated_at")
           .in("game_id", ids.slice(i, i + IN_CHUNK))
           .not("lfa_match_id", "is", null)
+        if (error) throw new Error("match_details_cache: " + error.message)
         for (const r of data ?? []) {
           const gid = String(r.game_id)
           const prev = linkByGame.get(gid)
@@ -811,13 +762,22 @@ async function handler(req: NextRequest) {
           }
         }
       }
+      // An LFA registration is itself a saved provider link, even without a detail cache row.
+      for (const g of groups) {
+        for (const saved of g.supplemental) {
+          if (!linkByGame.has(saved.id))
+            linkByGame.set(saved.id, { lfaId: saved.lfa_match_id, updated: "" })
+        }
+      }
       const linked: LinkedGame[] = []
       const unlinked: string[] = []
+      const unlinkedMatches: { gameIds: string[] }[] = []
       for (const [, rows] of rowsByKey) {
         const rep = rows[0]
         const hit = rows.map((g) => linkByGame.get(g.id)).find(Boolean)
         if (!hit) {
           unlinked.push(matchLabelOf(rep))
+          unlinkedMatches.push({ gameIds: rows.map((g) => g.id) })
           continue
         }
         linked.push({
@@ -836,10 +796,11 @@ async function handler(req: NextRequest) {
           const d = new Date(rows[0].matchTime)
           if (Number.isFinite(d.getTime())) dateSet.add(d.toISOString().slice(0, 10))
         }
-        const { data: days } = await supabase
+        const { data: days, error: daysError } = await supabase
           .from("lfa_day_cache")
           .select("date_utc, payload")
           .in("date_utc", [...dateSet])
+        if (daysError) throw new Error("lfa_day_cache: " + daysError.message)
         const lfaById = new Map<string, LfaNamedMatch>()
         for (const d of days ?? []) {
           const list =
@@ -855,7 +816,7 @@ async function handler(req: NextRequest) {
             })
           }
         }
-        const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
+        const teamEn = new Map(await cachedTeamEn())
         const verdicts = auditLfaLinks(linked, lfaById, teamEn)
         for (const v of verdicts) {
           if (v.status !== "mismatch") continue
@@ -888,10 +849,11 @@ async function handler(req: NextRequest) {
       const THREAD_WINDOW_AFTER_MS = 120 * 60_000
       const readyCreatedAt = new Map<string, number>()
       for (let i = 0; i < ids.length; i += IN_CHUNK) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("match_lineups")
           .select("game_id, created_at, payload")
           .in("game_id", ids.slice(i, i + IN_CHUNK))
+        if (error) throw new Error("match_lineups: " + error.message)
         for (const row of data ?? []) {
           if ((row.payload as { status?: string } | null)?.status !== "ready") continue
           const t = new Date(String(row.created_at)).getTime()
@@ -903,11 +865,12 @@ async function handler(req: NextRequest) {
       }
       const threadedIds = new Set<string>()
       for (let i = 0; i < ids.length; i += IN_CHUNK) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("posts")
           .select("match_game_id")
           .in("match_game_id", ids.slice(i, i + IN_CHUNK))
           .is("deleted_at", null)
+        if (error) throw new Error("posts: " + error.message)
         for (const r of data ?? []) if (r.match_game_id) threadedIds.add(String(r.match_game_id))
       }
       for (const [key, rows] of rowsByKey) {
@@ -935,7 +898,12 @@ async function handler(req: NextRequest) {
           invariant: "lfa_link_missing",
           fingerprint: "lfa_link_missing",
           summary: `최근 48h 대상 리그 끝난 경기 ${unlinked.length}/${total}건(${pct}%)에 LFA 링크가 없다 — 사전 결손(팀명 가드가 끊음)·LFA 표기 변경·lfa-warm 결번 순으로 의심할 것`,
-          detail: { unlinked: unlinked.slice(0, 20), unlinked_count: unlinked.length, total },
+          detail: {
+            unlinked: unlinked.slice(0, 20),
+            unlinked_count: unlinked.length,
+            total,
+            matches: unlinkedMatches,
+          },
         })
       }
     }
@@ -952,24 +920,24 @@ async function handler(req: NextRequest) {
   // proposed 가 없고 마지막 판정이 no_candidate·ambiguous(ok) 또는 dead_letter 면 봉인이다.
   // 창 = 킥오프 -24h ~ +72h(매핑 크론의 조회 창과 같다), 리포트 리그(MATCH_EXTRAS_LEAGUES)만.
   try {
-    const { data: games, error: gamesError } = await supabase
-      .from("betman_games")
-      .select("id, home_team_name, away_team_name, match_time, league_code")
-      .eq("sport", "축구")
-      .gte("match_time", new Date(now - 24 * H).toISOString())
-      .lte("match_time", new Date(now + 72 * H).toISOString())
-      .neq("home_team_name", "미정")
-      .neq("away_team_name", "미정")
-    if (gamesError) throw new Error(gamesError.message)
-    const rows = (games ?? [])
-      .filter((g) => isMatchExtrasLeague(String(g.league_code ?? "")))
-      .map((g) => ({
-        id: String(g.id),
-        homeTeam: String(g.home_team_name),
-        awayTeam: String(g.away_team_name),
-        matchTime: String(g.match_time),
-        leagueCode: g.league_code ? String(g.league_code) : null,
+    const groups = (
+      await loadAuditMatchGroups(
+        supabase,
+        new Date(now - 24 * H).toISOString(),
+        new Date(now + 72 * H + 1).toISOString()
+      )
+    ).filter(
+      (g) => isMatchExtrasLeague(g.leagueCode) && g.homeTeam !== "미정" && g.awayTeam !== "미정"
+    )
+    const rows = groups.flatMap((g) =>
+      g.ids.map((id) => ({
+        id,
+        homeTeam: g.homeTeam,
+        awayTeam: g.awayTeam,
+        matchTime: g.matchTime,
+        leagueCode: g.leagueCode,
       }))
+    )
     const attempts: MappingAttemptRow[] = []
     const ids = rows.map((g) => g.id)
     for (let i = 0; i < ids.length; i += IN_CHUNK) {
@@ -1025,6 +993,24 @@ async function handler(req: NextRequest) {
 
   // ── 원장 반영: 신규/재발만 알림, 사라진 위반은 resolved ──
   const nowIso = new Date(now).toISOString()
+  const { data: openRows, error: openRowsError } = await supabase
+    .from("invariant_findings")
+    .select("id,fingerprint,invariant,detail")
+    .eq("status", "open")
+  if (openRowsError) checkErrors.push(`열린 경보 조회 실패: ${openRowsError.message}`)
+  // Aggregate finding fingerprints are stable. Keep their original match IDs across new windows.
+  for (const finding of findings) {
+    if (!MATCH_MISSING_FINDINGS.has(finding.invariant)) continue
+    const previous = openRows?.find((r) => r.fingerprint === finding.fingerprint)
+    if (!previous) continue
+    const refs = [
+      ...missingMatchRefs((previous.detail ?? {}) as Record<string, unknown>),
+      ...missingMatchRefs(finding.detail),
+    ]
+    finding.detail.matches = [
+      ...new Map(refs.map((r) => [[...r.gameIds].sort().join("|"), r])).values(),
+    ]
+  }
   const fingerprints = findings.map((f) => f.fingerprint)
   const { data: known } = fingerprints.length
     ? await supabase
@@ -1035,7 +1021,12 @@ async function handler(req: NextRequest) {
   const knownStatus = new Map((known ?? []).map((k) => [k.fingerprint, k.status]))
   // ignored = 운영자가 "위반 아님(정상 후속 기사 등)" 으로 판정한 지문. 다시 열지도, 알리지도
   // 않는다 — 판정 없이 매시 재알림되던 경보는 곧 무시당해 진짜 경보까지 묻었다 (2026-09-03).
-  const live = findings.filter((f) => knownStatus.get(f.fingerprint) !== "ignored")
+  const live = findings.filter(
+    (f) =>
+      knownStatus.get(f.fingerprint) !== "ignored" &&
+      // Missing-match findings retain IDs across windows. A failed read must not erase them.
+      !(openRowsError && MATCH_MISSING_FINDINGS.has(f.invariant))
+  )
   const fresh = live.filter((f) => knownStatus.get(f.fingerprint) !== "open")
 
   if (live.length > 0) {
@@ -1057,12 +1048,31 @@ async function handler(req: NextRequest) {
   let resolved = 0
   if (checkErrors.length === 0) {
     const currentFps = new Set(fingerprints)
-    const { data: openRows } = await supabase
-      .from("invariant_findings")
-      .select("id, fingerprint")
-      .eq("status", "open")
-    const toResolve = (openRows ?? []).filter((r) => !currentFps.has(r.fingerprint as string))
-    if (toResolve.length > 0) {
+    const toResolve: { id: number }[] = []
+    for (const row of openRows ?? []) {
+      if (currentFps.has(row.fingerprint)) continue
+      if (Date.now() - now > AUDIT_TIME_BUDGET_MS) {
+        checkErrors.push("만료 경보 재검사 시간 예산 초과 — 자동 해소 보류")
+        break
+      }
+      try {
+        if (
+          MATCH_MISSING_FINDINGS.has(row.invariant) &&
+          !(await missingMatchFindingResolved(
+            supabase,
+            row.invariant,
+            (row.detail ?? {}) as Record<string, unknown>
+          ))
+        )
+          continue
+        toResolve.push(row)
+      } catch (error) {
+        checkErrors.push(
+          `만료 경보 재검사: ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
+    }
+    if (toResolve.length > 0 && checkErrors.length === 0) {
       const { error: resolveError } = await supabase
         .from("invariant_findings")
         .update({ status: "resolved", resolved_at: nowIso })

@@ -3,11 +3,8 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isMatchPageLeague } from "@/lib/match/leagues"
-import {
-  getSupplementalFixture,
-  findSupplementalForBetmanIds,
-  supplementalSummary,
-} from "@/lib/match/supplemental-fixtures"
+import { supplementalSummary, type SupplementalFixture } from "@/lib/match/supplemental-fixtures"
+import { getMatchIdentity } from "@/lib/match/sibling-ids"
 
 /**
  * 매치 페이지 데이터 — betman_games 만으로 조립하는 경기 요약 (2026-08-16, 표시 전용).
@@ -46,18 +43,30 @@ export interface MatchSummary {
 
 async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> {
   const supabase = createServiceRoleClient()
+  const identity = await getMatchIdentity(supabase, gameId, { strict: true })
 
-  const { data: game } = await supabase
+  const { data: game, error: gameError } = await supabase
     .from("betman_games")
     .select("id, sport, home_team_name, away_team_name, league_code, match_time, venue")
     .eq("id", gameId)
     .maybeSingle()
-  if (!game) {
-    const supplemental = await getSupplementalFixture(gameId).catch(() => null)
-    return supplemental && isMatchPageLeague(supplemental.fixture.leagueCode)
-      ? supplementalSummary(supplemental)
-      : null
+  if (gameError) throw new Error(`match-summary-game:${gameError.message}`)
+  const { data: registered, error: registeredError } = await supabase
+    .from("lfa_fixtures")
+    .select("id,lfa_match_id,fixture,match_time,betman_game_id")
+    .in("id", identity.gameIds)
+  if (registeredError) throw new Error(`match-summary-lfa:${registeredError.message}`)
+  if ((registered?.length ?? 0) > 1) throw new Error("match-summary-lfa-conflict")
+  const supplemental = registered?.[0] as SupplementalFixture | undefined
+  if (supplemental) {
+    if (!isMatchPageLeague(supplemental.fixture.leagueCode)) return null
+    return {
+      ...supplementalSummary(supplemental),
+      // Compatibility only: both URL sources derive aliases from the same identity.
+      betmanMatchKey: identity.pollKeys.find((key) => !key.startsWith("lfa_")),
+    }
   }
+  if (!game) return null
   if (game.sport !== "축구") return null
   if (!isMatchPageLeague(game.league_code as string)) return null
   // UCL 예선 미확정 대진 — "OO vs 미정" 매치 페이지는 성립하지 않는다 (404)
@@ -66,24 +75,11 @@ async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> 
   // 형제 row 전체에서 상태·스코어를 접는다 — 결과 크롤이 어느 row 에 썼는지 보장이
   // 없어(마켓별 다중 row) 값이 있는 row 를 우선한다. (2026-09-02: 쓰는 쪽은 VPS betman
   // 결과 크롤이다 — 종전 주석의 wisetoto sync 는 걷어냈다)
-  const { data: siblings } = await supabase
+  const { data: siblings, error: siblingsError } = await supabase
     .from("betman_games")
     .select("id, status, home_score, away_score")
-    .eq("league_code", game.league_code)
-    .eq("home_team_name", game.home_team_name)
-    .eq("away_team_name", game.away_team_name)
-    .eq("match_time", game.match_time)
-
-  const supplemental = await findSupplementalForBetmanIds([
-    gameId,
-    ...(siblings ?? []).map((s) => String(s.id)),
-  ]).catch(() => null)
-  if (supplemental) {
-    return {
-      ...supplementalSummary(supplemental),
-      betmanMatchKey: `${game.home_team_name}_${game.away_team_name}_${game.match_time}`,
-    }
-  }
+    .in("id", identity.gameIds)
+  if (siblingsError) throw new Error(`match-summary-siblings:${siblingsError.message}`)
 
   let status: MatchSummary["status"] = "scheduled"
   let homeScore: number | null = null

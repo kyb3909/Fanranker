@@ -141,6 +141,7 @@ async function main() {
   const bump = (k: string) => (skipped[k] = (skipped[k] ?? 0) + 1)
 
   for (const t of targets) {
+    const requestedAt = new Date().toISOString()
     const qs = new URLSearchParams({ api_key: apiKey, match_id: t.event_id, lang: "en" })
     const res = await fetch(`https://live-football-api.com/api/v1/lineups?${qs}`).catch(() => null)
     if (!res?.ok) {
@@ -183,6 +184,10 @@ async function main() {
 
     const payload = {
       status: "ready",
+      source: "lfa",
+      matchId: t.event_id,
+      projected: false,
+      observation: { requestedAt },
       kickoff: t.payload.kickoff,
       home: {
         teamLabel: t.payload.home.teamLabel,
@@ -204,10 +209,11 @@ async function main() {
       `  ${apply ? "적재" : "예정"} ${tag} — 벤치 ${payload.home.bench.length}/${payload.away.bench.length}, 포메이션 ${payload.home.formation ?? "-"}/${payload.away.formation ?? "-"}`
     )
     if (apply) {
-      const { error: upErr } = await sb
-        .from("match_lineups")
-        .update({ payload, updated_at: new Date().toISOString() })
-        .eq("game_id", t.game_id)
+      const { error: upErr } = await sb.rpc("write_lfa_lineup_snapshot", {
+        p_game_ids: [t.game_id],
+        p_match_id: t.event_id,
+        p_payload: payload,
+      })
       if (upErr) {
         bump(`쓰기_${upErr.code ?? "실패"}`)
         continue

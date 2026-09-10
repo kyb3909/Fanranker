@@ -84,7 +84,7 @@ function codeOnly(line: string): string {
   ) {
     return ""
   }
-  return line.replace(/(^|[^:])\/\/.*$/, "$1")
+  return line.trimEnd().replace(/(^|[^:])\/\/.*$/, "$1")
 }
 
 /**
@@ -148,6 +148,10 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("아키텍처: 유저 화면에 도박 어휘가 없다", () => {
+  it("줄바꿈 형식과 무관하게 주석은 제외하고 실제 문자열은 검사한다", () => {
+    expect(BANNED.test(codeOnly("const interval = 5 // 배팅 목록\r"))).toBe(false)
+    expect(BANNED.test(codeOnly('const label = "배팅"\r'))).toBe(true)
+  })
   const hits: string[] = []
   const framingHits: string[] = []
 

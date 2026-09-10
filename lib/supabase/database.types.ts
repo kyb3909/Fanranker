@@ -8,6 +8,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      lfa_material_recovery_attempts: {
+        Row: { lfa_match_id: string; attempted_at: string }
+        Insert: { lfa_match_id: string; attempted_at: string }
+        Update: { lfa_match_id?: string; attempted_at?: string }
+        Relationships: []
+      }
       adj_titles: {
         Row: {
           board_slug: string | null
@@ -7847,6 +7853,38 @@ export type Database = {
       }
     }
     Functions: {
+      claim_lfa_material_recovery: {
+        Args: { p_lfa_match_id: string }
+        Returns: boolean
+      }
+      lfa_artifact_game_ids: { Args: { p_match_id: string }; Returns: string[] }
+      ensure_lfa_match_thread: {
+        Args: {
+          p_match_id: string
+          p_game_id: string
+          p_user_id: string
+          p_title: string
+          p_content: Json
+        }
+        Returns: Json
+      }
+      ensure_lfa_motm_poll: {
+        Args: {
+          p_match_id: string
+          p_game_id: string
+          p_match_key: string
+          p_question: string
+          p_options: Json
+          p_closes_at: string
+        }
+        Returns: Json
+      }
+      write_lfa_fixture_snapshot: { Args: { p_fixture: Json }; Returns: Json }
+      write_lfa_lineup_snapshot: {
+        Args: { p_game_ids: string[]; p_match_id: string; p_payload: Json }
+        Returns: Json
+      }
+      append_motm_options: { Args: { p_poll_id: string; p_options: Json }; Returns: Json }
       admin_adjust_gold: {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: Json

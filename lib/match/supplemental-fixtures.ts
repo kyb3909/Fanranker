@@ -105,24 +105,30 @@ export async function syncSupplementalFixtures(
     }
     eligible.push(f)
   }
-  const rows = eligible.map((f) => ({
-    lfa_match_id: f.lfaId,
-    fixture: f,
-    match_time: f.matchTime,
-    // Omit absent links: a concurrent/unmatched scan must not erase an established association.
-    ...(linked.has(f.lfaId) ? { betman_game_id: linked.get(f.lfaId) } : {}),
-    updated_at: new Date().toISOString(),
-  }))
-  // Separate payload shapes so PostgREST does not fill omitted link columns with NULL.
-  for (const hasLink of [false, true]) {
-    const batch = rows.filter((r) => (r.betman_game_id !== undefined) === hasLink)
-    if (!batch.length) continue
-    const { data: saved, error: saveError } = await db
-      .from("lfa_fixtures")
-      .upsert(batch, { onConflict: "lfa_match_id", defaultToNull: false })
-      .select(COLUMNS)
+  for (const fixture of eligible) {
+    // Historical DB snapshots without provenance remain readable, but cannot be
+    // republished as a fresh provider response by recovery or a page visit.
+    if (!Number.isFinite(fixture.sourceUpdatedAt) || fixture.sourceUpdatedAt! <= 0) continue
+    const { data: saved, error: saveError } = await db.rpc("write_lfa_fixture_snapshot", {
+      p_fixture: fixture as never,
+    })
     if (saveError) throw new Error(`lfa-fixture-save:${saveError.code}`)
-    for (const row of (saved ?? []) as SupplementalFixture[]) existing.set(row.lfa_match_id, row)
+    if (!saved) throw new Error("lfa-fixture-save:empty")
+    const row = saved as unknown as SupplementalFixture
+    existing.set(row.lfa_match_id, row)
+  }
+  // A repeated/concurrent scan can fill an empty link, but never move an established identity.
+  for (const [lfaId, betmanId] of linked) {
+    const current = existing.get(lfaId)
+    if (!current || current.betman_game_id) continue
+    const { data: attached, error: attachError } = await db
+      .from("lfa_fixtures")
+      .update({ betman_game_id: betmanId, updated_at: new Date().toISOString() })
+      .eq("id", current.id)
+      .is("betman_game_id", null)
+      .select(COLUMNS)
+    if (attachError) throw new Error(`lfa-fixture-attach:${attachError.code}`)
+    if (attached?.[0]) existing.set(lfaId, attached[0] as SupplementalFixture)
   }
   return existing
 }

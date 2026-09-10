@@ -60,25 +60,31 @@ describe("pickRichestLineup", () => {
 describe("mergeMotmOptions", () => {
   const existing = [opt("h-a"), opt("h-b")]
 
-  it("표가 없으면 통째로 갈아끼운다 — 선발까지 틀려 있을 수 있다", () => {
+  it("기존 후보는 항상 보존하고 새로운 후보만 추가한다", () => {
     const rebuilt = [opt("h-x"), opt("h-y"), opt("h-z", "sub")]
-    expect(mergeMotmOptions(existing, rebuilt, false)).toEqual(rebuilt)
+    expect(mergeMotmOptions(existing, rebuilt)).toEqual([...existing, ...rebuilt])
   })
 
   it("표가 있으면 기존 후보를 건드리지 않고 빠진 것만 덧붙인다", () => {
     const rebuilt = [opt("h-a"), opt("h-c", "sub")]
-    const merged = mergeMotmOptions(existing, rebuilt, true)
+    const merged = mergeMotmOptions(existing, rebuilt)
     // 기존 두 개가 자리·순서 그대로 남아야 이미 던진 표가 살아남는다
     expect(merged!.slice(0, 2)).toEqual(existing)
     expect(merged!.map((o) => o.key)).toEqual(["h-a", "h-b", "h-c"])
   })
 
   it("표가 있는데 새 후보가 없으면 아무것도 하지 않는다", () => {
-    expect(mergeMotmOptions(existing, [opt("h-a")], true)).toBeNull()
+    expect(mergeMotmOptions(existing, [opt("h-a")])).toBeNull()
   })
 
   it("표가 없어도 후보가 늘지 않으면 건드리지 않는다", () => {
-    expect(mergeMotmOptions(existing, [opt("h-a"), opt("h-b")], false)).toBeNull()
+    expect(mergeMotmOptions(existing, [opt("h-a"), opt("h-b")])).toBeNull()
+  })
+  it("반복 후보는 한 번만 추가하고 기존 key의 내용을 바꾸지 않는다", () => {
+    expect(mergeMotmOptions(existing, [opt("h-a", "sub"), opt("h-c"), opt("h-c")])).toEqual([
+      ...existing,
+      opt("h-c"),
+    ])
   })
 })
 

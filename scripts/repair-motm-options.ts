@@ -90,12 +90,8 @@ async function main() {
       continue
     }
 
-    const { count } = await sb
-      .from("poll_votes")
-      .select("id", { count: "exact", head: true })
-      .eq("poll_id", p.id)
     const existing = (p.options as MotmOption[] | null) ?? []
-    const merged = mergeMotmOptions(existing, rebuilt, (count ?? 0) > 0)
+    const merged = mergeMotmOptions(existing, rebuilt)
     if (!merged) {
       bump("변화_없음")
       continue
@@ -103,10 +99,13 @@ async function main() {
 
     const subs = merged.filter((o) => o.group === "sub").length
     console.log(
-      `  ${apply ? "적용" : "예정"} ${p.question} — 후보 ${existing.length} → ${merged.length} (교체 ${subs}명, 표 ${count ?? 0})`
+      `  ${apply ? "적용" : "예정"} ${p.question} — 후보 ${existing.length} → ${merged.length} (교체 ${subs}명)`
     )
     if (apply) {
-      const { error } = await sb.from("polls").update({ options: merged }).eq("id", p.id)
+      const { error } = await sb.rpc("append_motm_options", {
+        p_poll_id: p.id,
+        p_options: rebuilt,
+      })
       if (error) {
         bump(`쓰기_${error.code ?? "실패"}`)
         continue

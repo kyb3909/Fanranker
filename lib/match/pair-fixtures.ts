@@ -105,6 +105,53 @@ export interface TeamSided {
 }
 
 type TeamEvidence = "match" | "unknown" | "conflict"
+export interface PairingGame extends TeamSided {
+  gameId: string
+  gameIds?: string[]
+}
+
+/** Whole candidate graph. Collectors must consume this decision, never re-match one row. */
+export function pairLfaFixtures<T extends TeamSided & { lfaMatchId?: string }>(
+  games: PairingGame[],
+  candidates: T[],
+  savedOwners: ReadonlyMap<string, readonly string[]>,
+  teamEn: Map<string, string>,
+  teamIds?: ReadonlyMap<string, string>
+): Map<string, CounterpartDecision<T>> {
+  const decisions = games.map((game): CounterpartDecision<T> => {
+    const ids = new Set([game.gameId, ...(game.gameIds ?? [])])
+    const saved = [...savedOwners].filter(([, owners]) => owners.some((id) => ids.has(id)))
+    if (saved.length > 1) return { status: "conflict", candidate: null }
+    if (saved.length === 1) {
+      const candidate = candidates.find((c) => c.lfaMatchId === saved[0][0])
+      return candidate
+        ? { status: "matched", candidate, anchor: "both" }
+        : { status: "missing", candidate: null }
+    }
+    return matchLfaWithRecovery(
+      game,
+      candidates.filter((c) => !c.lfaMatchId || !savedOwners.has(c.lfaMatchId)),
+      teamEn,
+      teamIds
+    )
+  })
+  const claims = new Map<string, number>()
+  for (const decision of decisions) {
+    const id = decision.candidate?.lfaMatchId
+    if (id) claims.set(id, (claims.get(id) ?? 0) + 1)
+  }
+  const result = new Map<string, CounterpartDecision<T>>()
+  games.forEach((game, index) => {
+    const decision = decisions[index]
+    const final =
+      decision.candidate?.lfaMatchId && claims.get(decision.candidate.lfaMatchId)! > 1
+        ? { status: "ambiguous" as const, candidate: null }
+        : decision
+    for (const id of [game.gameId, ...(game.gameIds ?? [])]) result.set(id, final)
+  })
+  return result
+}
+
 export type CounterpartDecision<T> =
   | { status: "matched"; candidate: T; anchor: "home" | "away" | "both" }
   | { status: "missing" | "ambiguous" | "conflict"; candidate: null }
@@ -174,7 +221,8 @@ export function matchLfaCounterpart<T extends TeamSided>(
   betman: TeamSided,
   candidates: T[],
   teamEn: Map<string, string>,
-  teamIds?: ReadonlyMap<string, string>
+  teamIds?: ReadonlyMap<string, string>,
+  recovery = false
 ): CounterpartDecision<T> {
   // 별칭을 여러 구단이 공유하면 하나로 덮지 않는다. 모호한 별칭은 확정 근거가 아니다.
   const identities = new Map<string, Set<string>>()
@@ -198,6 +246,7 @@ export function matchLfaCounterpart<T extends TeamSided>(
   const compare = (ourName: string, side: Side): TeamEvidence => {
     const ourLfaId = lfaIdOf(ourName)
     if (ourLfaId && side.id && ourLfaId === side.id) return "match"
+    if (recovery && ourLfaId && side.id && ourLfaId !== side.id) return "conflict"
     const candidateName = side.name
     const original = side.original
     const a = identityKey(ourName)
@@ -214,7 +263,9 @@ export function matchLfaCounterpart<T extends TeamSided>(
   }
   const hits: Extract<CounterpartDecision<T>, { status: "matched" }>[] = []
   let conflict = false
-  for (const candidate of candidates.filter((c) => sameSlot(betman, c))) {
+  for (const candidate of candidates.filter((c) =>
+    recovery ? withinRecoveryWindow(betman, c) : sameSlot(betman, c)
+  )) {
     const homeSide: Side = {
       name: candidate.homeTeam,
       original: candidate.homeTeamEn,
@@ -234,7 +285,7 @@ export function matchLfaCounterpart<T extends TeamSided>(
       conflict = true
       continue
     }
-    if (home === "match" || away === "match") {
+    if (recovery ? home === "match" && away === "match" : home === "match" || away === "match") {
       hits.push({
         status: "matched",
         candidate,
@@ -244,6 +295,26 @@ export function matchLfaCounterpart<T extends TeamSided>(
   }
   if (hits.length > 1) return { status: "ambiguous", candidate: null }
   return hits[0] ?? { status: conflict ? "conflict" : "missing", candidate: null }
+}
+
+/** A small schedule correction is recoverable only with BOTH teams and a unique candidate. */
+export const LFA_RECOVERY_DRIFT_MS = 30 * 60_000
+
+function withinRecoveryWindow(a: TeamSided, b: TeamSided): boolean {
+  if (!a.leagueCode || a.leagueCode !== b.leagueCode) return false
+  const delta = Math.abs(Date.parse(a.matchTime ?? "") - Date.parse(b.matchTime ?? ""))
+  return Number.isFinite(delta) && delta <= LFA_RECOVERY_DRIFT_MS
+}
+
+export function matchLfaWithRecovery<T extends TeamSided>(
+  betman: TeamSided,
+  candidates: T[],
+  teamEn: Map<string, string>,
+  teamIds?: ReadonlyMap<string, string>
+): CounterpartDecision<T> {
+  const exact = matchLfaCounterpart(betman, candidates, teamEn, teamIds)
+  if (exact.status === "matched" || exact.status === "ambiguous") return exact
+  return matchLfaCounterpart(betman, candidates, teamEn, teamIds, true)
 }
 
 export function pickLfaCounterpart<T extends TeamSided>(

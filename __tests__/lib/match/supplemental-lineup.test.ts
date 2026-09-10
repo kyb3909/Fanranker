@@ -52,7 +52,7 @@ describe("LFA 전용 경기 라인업", () => {
     vi.setSystemTime(new Date("2026-09-05T17:30:00Z"))
     vi.clearAllMocks()
     m.stored = null
-    m.store.mockResolvedValue(undefined)
+    m.store.mockImplementation(async (_gameId, _matchId, payload) => payload)
     m.resolve.mockResolvedValue({ id: "lfa-betman" })
     m.summary.mockResolvedValue({
       source: "lfa",
@@ -96,6 +96,21 @@ describe("LFA 전용 경기 라인업", () => {
       "lfa-cup",
       expect.objectContaining({ projected: true })
     )
+  })
+  it("첫 저장 실패를 미저장 ready 명단으로 반환하지 않는다", async () => {
+    m.store.mockRejectedValue(new Error("lineup-store:WRITE_FAILED"))
+    await expect(getMatchLineup("fixture-uuid")).rejects.toThrow("lineup-store:WRITE_FAILED")
+  })
+  it("늦은 수집 응답 대신 DB가 채택한 명단을 반환한다", async () => {
+    const accepted = {
+      status: "ready",
+      projected: false,
+      fetchedAt: "2026-09-05T17:31:00Z",
+      home: { starters: [{ id: "accepted" }] },
+      away: { starters: [] },
+    }
+    m.store.mockResolvedValue(accepted)
+    expect(await getMatchLineup("fixture-uuid")).toBe(accepted)
   })
   it("미발표·일시 실패는 pending으로 재시도를 허용한다", async () => {
     m.lineup.mockResolvedValue(null)
@@ -144,6 +159,7 @@ describe("LFA 전용 경기 라인업", () => {
     }
     m.store.mockImplementation(async (_gameId, _matchId, payload) => {
       m.stored = payload
+      return payload
     })
     expect(await getMatchLineup("fixture-uuid", { refresh: true })).toMatchObject({
       projected: false,
@@ -157,6 +173,7 @@ describe("LFA 전용 경기 라인업", () => {
   it("벤치가 비어 있는 확정 명단도 재방문 때 재구매하지 않는다", async () => {
     m.store.mockImplementation(async (_gameId, _matchId, payload) => {
       m.stored = payload
+      return payload
     })
     const first = await getMatchLineup("fixture-uuid")
     const second = await getMatchLineup("fixture-uuid")
@@ -180,6 +197,7 @@ describe("LFA 전용 경기 라인업", () => {
   it("저장한 예상 명단은 120초 재사용하고 이후 확정 명단으로 한 번 교체한다", async () => {
     m.store.mockImplementation(async (_gameId, _matchId, payload) => {
       m.stored = payload
+      return payload
     })
     m.lineup.mockResolvedValueOnce({
       fetchedAt: new Date().toISOString(),
@@ -216,6 +234,7 @@ describe("LFA 전용 경기 라인업", () => {
     m.stored = { status: "ready", ...predicted }
     m.store.mockImplementation(async (_gameId, _matchId, payload) => {
       m.stored = payload
+      return payload
     })
     m.lineup.mockResolvedValueOnce(predicted)
     expect(await getMatchLineup("fixture-uuid")).toMatchObject({ projected: true, fetchedAt })

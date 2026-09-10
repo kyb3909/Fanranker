@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   writeDay: vi.fn(),
   writeDetails: vi.fn(),
   supplemental: vi.fn(),
+  tables: {} as Record<string, Record<string, unknown>[]>,
   cacheEntries: new Map<string, unknown>(),
 }))
 vi.mock("react", () => ({ cache: (fn: unknown) => fn }))
@@ -26,19 +27,21 @@ vi.mock("@/lib/lfa/persist", () => ({
   writeDayMatches: mocks.writeDay,
   writeMatchDetails: mocks.writeDetails,
 }))
-vi.mock("@/lib/supabase/server", () => ({
-  createServiceRoleClient: () => ({
-    from: () => ({
-      select: () => ({ data: [], neq: async () => ({ data: [] }) }),
-    }),
-  }),
-}))
+vi.mock("@/lib/supabase/server", async () => {
+  const { auditDb } = await import("@/__tests__/helpers/audit-db")
+  return { createServiceRoleClient: () => auditDb(mocks.tables).db }
+})
 vi.mock("@/lib/soccerway/lineup-lookup", () => ({
   getLineupForGame: async () => ({ status: "none" }),
 }))
 vi.mock("@/lib/match/resolve-team-id", () => ({ resolveTeamId: async () => null }))
 vi.mock("@/lib/match/supplemental-fixtures", () => ({ getSupplementalFixture: mocks.supplemental }))
-import { createLfaRefreshSession, getDayMatches, getLfaMatchInfo } from "@/lib/lfa/match"
+import {
+  createLfaRefreshSession,
+  getDayMatches,
+  getLfaMatchInfo,
+  resolveLfaMatch,
+} from "@/lib/lfa/match"
 
 const now = Date.parse("2026-09-04T20:00:00Z")
 const game = {
@@ -77,6 +80,16 @@ describe("LFA 실제 수집 시각과 실황 갱신", () => {
     vi.clearAllMocks()
     vi.spyOn(Date, "now").mockReturnValue(now)
     mocks.cacheEntries.clear()
+    mocks.tables = {
+      betman_games: ["game", "sibling"].map((id) => ({
+        id,
+        sport: "축구",
+        home_team_name: game.homeTeam,
+        away_team_name: game.awayTeam,
+        league_code: game.leagueCode,
+        match_time: game.matchTime,
+      })),
+    }
     mocks.readDetails.mockResolvedValue(null)
     mocks.supplemental.mockResolvedValue(null)
     mocks.readDay.mockResolvedValue({ matches: [match()], updatedAt: now - 30_000, stale: false })
@@ -131,22 +144,82 @@ describe("LFA 실제 수집 시각과 실황 갱신", () => {
     expect(mocks.fetch).toHaveBeenCalledWith("live_match_details", expect.anything())
   })
   it("같은 시각 1건이어도 팀명 증거가 없으면 붙이지 않는다", async () => {
+    for (const row of mocks.tables.betman_games)
+      Object.assign(row, { home_team_name: "사전없는홈", away_team_name: "사전없는원정" })
     expect(
       await getLfaMatchInfo({ ...game, homeTeam: "사전없는홈", awayTeam: "사전없는원정" })
     ).toBeNull()
     expect(mocks.fetch).not.toHaveBeenCalled()
   })
   it("같은 슬롯의 원정 팀만 확실해도 상세의 LFA ID를 연결한다", async () => {
+    for (const row of mocks.tables.betman_games) row.home_team_name = "사전없는하부팀"
     expect(await getLfaMatchInfo({ ...game, homeTeam: "사전없는하부팀" })).toMatchObject({
       matchId: "lfa-1",
     })
   })
-  it("양 팀이 맞아도 시각이 다른 경기로 폴백하지 않는다", async () => {
+  it("양 팀이 맞아도 30분을 넘는 시간 차이는 자동 복구하지 않는다", async () => {
     const m = match()
     m.kickoff = "18:00"
     mocks.readDay.mockResolvedValue({ matches: [m], updatedAt: now - 30_000, stale: false })
     expect(await getLfaMatchInfo(game)).toBeNull()
     expect(mocks.fetch).not.toHaveBeenCalled()
+  })
+  it("15분 차이 매핑을 복구한 뒤 상세를 실제 LFA ID에 맞춰 수집하고 저장한다", async () => {
+    const m = match()
+    m.kickoff = "19:15"
+    mocks.fetch.mockImplementation(async (endpoint) =>
+      endpoint === "matches" ? { matches: [m] } : detail()
+    )
+    const refresh = createLfaRefreshSession()
+    await refresh(game)
+    expect(mocks.writeDetails).toHaveBeenCalledWith(
+      "game",
+      expect.objectContaining({ matchId: "lfa-1" }),
+      { strict: true }
+    )
+  })
+  it("일정에서 충돌하는 두 경기에는 상세 수집도 같은 LFA 후보를 허용하지 않는다", async () => {
+    const first = { ...game, gameId: "first", matchTime: "2026-09-04T19:10:00Z" }
+    const second = { ...game, gameId: "second", matchTime: "2026-09-04T19:20:00Z" }
+    mocks.tables.betman_games = [first, second].map((g) => ({
+      id: g.gameId,
+      sport: "축구",
+      home_team_name: g.homeTeam,
+      away_team_name: g.awayTeam,
+      league_code: g.leagueCode,
+      match_time: g.matchTime,
+    }))
+    const m = { ...match(), kickoff: "19:15" }
+    mocks.readDay.mockResolvedValue({ matches: [m], updatedAt: now, stale: false })
+    expect(await resolveLfaMatch(first)).toBeNull()
+    expect(await resolveLfaMatch(second)).toBeNull()
+    expect(mocks.fetch).not.toHaveBeenCalled()
+    expect(mocks.writeDetails).not.toHaveBeenCalled()
+  })
+  it("UTC 자정 너머 후보와 경쟁 경기까지 같은 판정에 포함한다", async () => {
+    const midnight = { ...game, matchTime: "2026-09-04T23:55:00Z" }
+    mocks.tables.betman_games = [
+      {
+        id: "game",
+        sport: "축구",
+        home_team_name: game.homeTeam,
+        away_team_name: game.awayTeam,
+        league_code: game.leagueCode,
+        match_time: midnight.matchTime,
+      },
+    ]
+    const snapshot = vi.fn(async (date: string) => ({
+      matches: date === "2026-09-05" ? [{ ...match(), kickoff: "00:10" }] : [],
+      updatedAt: now,
+    }))
+    expect(await resolveLfaMatch(midnight, snapshot)).toMatchObject({ id: "lfa-1" })
+    expect(snapshot.mock.calls.map(([date]) => date)).toEqual(["2026-09-04", "2026-09-05"])
+    mocks.tables.betman_games.push({
+      ...mocks.tables.betman_games[0],
+      id: "competitor",
+      match_time: "2026-09-05T00:20:00Z",
+    })
+    expect(await resolveLfaMatch(midnight, snapshot)).toBeNull()
   })
   it("같은 시각 한 팀이 맞아도 대회가 다르면 연결하지 않는다", async () => {
     const m = match()
@@ -233,5 +306,19 @@ describe("LFA 실제 수집 시각과 실황 갱신", () => {
     expect(await createLfaRefreshSession()(game)).toMatchObject({ status: "settled" })
     expect(mocks.fetch).not.toHaveBeenCalled()
     expect(mocks.writeDetails).not.toHaveBeenCalled()
+  })
+  it("복구 회차는 24시간 안의 빈 종료 캐시만 다시 채울 수 있다", async () => {
+    mocks.readDetails.mockResolvedValue({ info: { finished: true, timeline: [] }, stale: false })
+    mocks.fetch.mockImplementation(async (endpoint) =>
+      endpoint === "matches" ? { matches: [match()] } : detail()
+    )
+    await createLfaRefreshSession()(game, { repairEmpty: true })
+    expect(mocks.writeDetails).toHaveBeenCalledTimes(1)
+    mocks.fetch.mockClear()
+    await createLfaRefreshSession()(
+      { ...game, matchTime: new Date(now - 25 * 3600_000).toISOString() },
+      { repairEmpty: true }
+    )
+    expect(mocks.fetch).not.toHaveBeenCalled()
   })
 })

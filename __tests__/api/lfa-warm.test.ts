@@ -1,52 +1,32 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
-
-const mocks = vi.hoisted(() => ({ fixtures: vi.fn(), refresh: vi.fn(), auth: vi.fn() }))
-vi.mock("@/lib/cron-auth", () => ({ verifyCronSecret: mocks.auth }))
+const m = vi.hoisted(() => ({ warm: vi.fn(), fixtures: vi.fn(), recover: vi.fn(), auth: vi.fn() }))
+vi.mock("@/lib/cron-auth", () => ({ verifyCronSecret: m.auth }))
 vi.mock("@/lib/cron/log-run", () => ({ withCronLog: (_name: string, handler: unknown) => handler }))
-vi.mock("@/lib/lfa/match", () => ({
-  createLfaRefreshSession: () => mocks.refresh,
-  getLfaDayIndex: async () => new Map(),
-}))
+vi.mock("@/lib/lfa/match", () => ({ getLfaDayIndex: m.warm }))
 vi.mock("@/lib/match/get-fixtures", () => ({
-  getFixturesForDay: mocks.fixtures,
-  todayKst: () => "2026-09-07",
+  getFixturesForDay: m.fixtures,
+  todayKst: () => "2026-09-10",
 }))
+vi.mock("@/lib/match/recover-materials", () => ({ recoverMatchMaterials: m.recover }))
 import { GET } from "@/app/api/cron/lfa-warm/route"
 
-const now = Date.parse("2026-09-06T21:10:00Z")
-const fixture = (elapsedHours: number) => ({
-  gameId: `game-${elapsedHours}`,
-  homeTeam: "Chelsea",
-  awayTeam: "Liverpool",
-  leagueCode: "EPL",
-  matchTime: new Date(now - elapsedHours * 3600_000).toISOString(),
-  status: "completed",
-})
-const request = () => new NextRequest("http://localhost/api/cron/lfa-warm")
-
-describe("lfa-warm handoff to live cron", () => {
+describe("date warming owns no material recovery", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(Date, "now").mockReturnValue(now)
-    mocks.auth.mockReturnValue(null)
-    mocks.fixtures.mockResolvedValue([])
-    mocks.refresh.mockResolvedValue({ info: { stats: [1] } })
+    m.auth.mockReturnValue(null)
+    m.warm.mockResolvedValue(new Map())
   })
-  afterEach(() => vi.restoreAllMocks())
-  it("실황 +4h까지는 새 크론에 맡기고 이전 매치데이 +4~6h를 보충한다", async () => {
-    mocks.fixtures.mockImplementation(async (day) =>
-      day === "2026-09-06" ? [fixture(2), fixture(4), fixture(5), fixture(7)] : []
-    )
-    expect((await GET(request())).status).toBe(200)
-    expect(mocks.refresh).toHaveBeenCalledTimes(1)
-    expect(mocks.refresh).toHaveBeenCalledWith(expect.objectContaining({ gameId: "game-5" }))
+  it("warms today and tomorrow without borrowing recovery's execution budget", async () => {
+    const res = await GET(new NextRequest("http://localhost/api/cron/lfa-warm"))
+    expect(res.status).toBe(200)
+    expect(m.warm.mock.calls).toEqual([["2026-09-10"], ["2026-09-11"]])
+    expect(m.fixtures).not.toHaveBeenCalled()
+    expect(m.recover).not.toHaveBeenCalled()
   })
-  it("상세 저장 실패를 성공으로 숨기지 않는다", async () => {
-    mocks.fixtures.mockImplementation(async (day) => (day === "2026-09-06" ? [fixture(5)] : []))
-    mocks.refresh.mockRejectedValue(new Error("lfa-details-persist-failed"))
-    const response = await GET(request())
-    expect(response.status).toBe(503)
-    expect(await response.json()).toMatchObject({ details: { errors: ["game-5"] } })
+  it("does not warm unauthorized requests", async () => {
+    m.auth.mockReturnValue(new Response(null, { status: 401 }))
+    expect((await GET(new NextRequest("http://localhost/api/cron/lfa-warm"))).status).toBe(401)
+    expect(m.warm).not.toHaveBeenCalled()
   })
 })

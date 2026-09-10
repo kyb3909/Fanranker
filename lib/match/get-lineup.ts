@@ -49,10 +49,10 @@ export async function getMatchLineup(
     home: { teamLabel: match.homeTeam, ...lu.home },
     away: { teamLabel: match.awayTeam, ...lu.away },
   }
-  let storeResult: "success" | "failed" = "success"
-  await storeLfaLineup(gameId, matchId, payload).catch(() => {
-    storeResult = "failed"
-  })
+  const outcome = await storeLfaLineup(gameId, matchId, payload).then(
+    (saved) => ({ ok: true as const, saved }),
+    (error: unknown) => ({ ok: false as const, error })
+  )
   console.info(
     "[match-lineup-store]",
     JSON.stringify({
@@ -64,8 +64,9 @@ export async function getMatchLineup(
       fetchedAt: lu.fetchedAt,
       storedAt: new Date().toISOString(),
       projected: lu.projected,
-      storeResult,
+      storeResult: outcome.ok ? "success" : "failed",
     })
   )
-  return payload
+  if (!outcome.ok) throw outcome.error
+  return outcome.saved ?? stored ?? pending
 }

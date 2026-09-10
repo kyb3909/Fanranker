@@ -116,6 +116,7 @@ async function main() {
   for (const p of polls ?? []) {
     const options = (p.options ?? []) as Option[]
     if (!Array.isArray(options)) continue
+    const originalOptions = JSON.stringify(options)
     let changed = false
 
     for (const o of options) {
@@ -144,6 +145,7 @@ async function main() {
           .from("polls")
           .update({ options: options as unknown as Record<string, unknown>[] })
           .eq("id", p.id)
+          .eq("options", originalOptions)
       }
     }
   }
@@ -161,6 +163,7 @@ async function main() {
   for (const row of lineups ?? []) {
     const payload = row.payload as Record<string, unknown> | null
     if (!payload) continue
+    const originalPayload = JSON.stringify(payload)
     let changed = false
     for (const side of ["home", "away"] as const) {
       const s = payload[side] as
@@ -193,6 +196,7 @@ async function main() {
           .from("match_lineups")
           .update({ payload: payload as never })
           .eq("game_id", row.game_id)
+          .eq("payload", originalPayload)
       }
     }
   }

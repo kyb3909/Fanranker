@@ -7,7 +7,8 @@ import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
 import { cachedTeamEn, cachedTeamLfaIds } from "@/lib/lfa/match"
 import { getBetmanLeagueMembers } from "@/lib/lfa/league-members"
 import { predictBetmanListing } from "@/lib/match/betman-coverage"
-import { normTeam, matchLfaCounterpart, teamIdIndex } from "@/lib/match/pair-fixtures"
+import { normTeam, pairLfaFixtures, teamIdIndex } from "@/lib/match/pair-fixtures"
+import { loadPairingContext } from "@/lib/match/pairing-context"
 import { isPopularFixture } from "@/lib/match/popular-teams"
 import { isLiveState, pickScore } from "@/lib/match/score-precedence"
 import { getSiblingGameIds } from "@/lib/match/sibling-ids"
@@ -144,7 +145,7 @@ async function fetchFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
 }
 
 /** 60초 Data Cache (날짜별 키) — betman 쪽만. LFA 병합은 아래에서 한다 */
-function getBetmanFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
+export function getBetmanFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   return unstable_cache(() => fetchFixturesForDay(dateKst), ["fixtures-day", dateKst], {
     revalidate: 60,
   })()
@@ -183,10 +184,25 @@ function slotKey(leagueCode: string, matchTime: string): string {
  * 독립 UUID로 등록해 매치센터·라인업·스탯·불판·MOM에 연결한다. 승부예측 마켓은 만들지 않는다.
  */
 export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
-  const [betman, lfa] = await Promise.all([
+  const range = kstDayRange(dateKst)
+  const [betman, fresh, stored] = await Promise.all([
     getBetmanFixturesForDay(dateKst),
-    getLfaFixturesForMatchday(dateKst),
+    getLfaFixturesForMatchday(dateKst, { paddingMinutes: 90 }),
+    range
+      ? listSupplementalFixtures(range.start, range.end).catch((error) => {
+          console.error("[fixtures] 저장 일정 복구 조회 실패", error)
+          return []
+        })
+      : Promise.resolve([]),
   ])
+  // A partial feed must not strand an already registered match when Betman arrives later.
+  // Fresh provider rows replace saved payloads; persisted UUIDs remain owned by the store.
+  const lfa = [
+    ...new Map([
+      ...stored.map((s) => [s.lfa_match_id, s.fixture] as const),
+      ...fresh.map((f) => [f.lfaId, f] as const),
+    ]).values(),
+  ]
   if (lfa.length === 0) {
     return restoreRegisteredFixtures(betman, dateKst)
   }
@@ -241,11 +257,27 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
     awayEn: string | null
     reason: string
   }[] = []
+  const allCandidates = [...slots.values()].flat()
+  // Include the owners of edge candidates too: candidate ±30m, competing owner another ±30m.
+  const context = range
+    ? await loadPairingContext(
+        createServiceRoleClient(),
+        new Date(Date.parse(range.start) - 60 * 60_000).toISOString(),
+        new Date(Date.parse(range.end) + 60 * 60_000).toISOString()
+      )
+    : { games: [], savedOwners: new Map<string, string[]>() }
+  const decisions = pairLfaFixtures(
+    context.games,
+    allCandidates,
+    context.savedOwners,
+    teamEn,
+    teamIds
+  )
   for (const b of betman) {
     // 앞선 행의 소비 때문에 모호한 슬롯이 뒤에서 단일 후보로 둔갑하지 않게 전체를 대조한다.
     const candidates = slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []
-    const decision = matchLfaCounterpart(b, candidates, teamEn, teamIds)
-    const hit = decision.candidate && !consumed.has(decision.candidate) ? decision.candidate : null
+    const decision = decisions.get(b.gameId!) ?? { status: "missing", candidate: null }
+    const hit = decision.candidate
     if (!hit) {
       for (const candidate of candidates) withheld.add(candidate)
       // 미확정·충돌·다중 후보를 구분해 남긴다. betman 일정과 링크는 보존하고 LFA 보강만 보류한다.
@@ -255,7 +287,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
         candidates: candidates.map((c) => `${c.homeTeam} vs ${c.awayTeam}`),
         homeEn: teamEn.get(b.homeTeam.trim()) ?? null,
         awayEn: teamEn.get(b.awayTeam.trim()) ?? null,
-        reason: decision.candidate ? "already-linked" : decision.status,
+        reason: decision.status,
       })
       // 짝 못 찾은 betman 행은 **그대로 싣는다** (2026-09-02, betman 정본). 링크·한글명은
       // betman 것이라 잃을 게 없고 라이브 스코어만 없다. 8/20 엔 "두 줄" 을 막으려 버렸는데,
@@ -296,7 +328,12 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   // LFA 전용 행(betman 미판매)은 인기 팀 경기만 싣는다 — 2026-09-02 운영자 결정 (위 doc 참조)
   for (const rows of slots.values()) {
     for (const row of rows) {
-      if (!consumed.has(row) && !withheld.has(row) && isPopularFixture(row)) merged.push(row)
+      const inDay =
+        range &&
+        Date.parse(row.matchTime) >= Date.parse(range.start) &&
+        Date.parse(row.matchTime) < Date.parse(range.end)
+      if (inDay && !consumed.has(row) && !withheld.has(row) && isPopularFixture(row))
+        merged.push(row)
     }
   }
 

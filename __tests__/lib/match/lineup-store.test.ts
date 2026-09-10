@@ -19,10 +19,12 @@ const m = vi.hoisted(() => ({
   update: vi.fn(),
   byGame: vi.fn(),
   byPrediction: vi.fn(),
+  rpc: vi.fn(),
 }))
 vi.mock("@/lib/match/sibling-ids", () => ({ getSiblingGameIds: async () => ["market", "sibling"] }))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
+    rpc: m.rpc,
     from: () => ({ select: () => ({ in: m.read }), upsert: m.upsert, update: m.update }),
   }),
 }))
@@ -35,6 +37,10 @@ beforeEach(() => {
   m.update.mockReturnValue({ eq: m.byGame })
   m.byGame.mockReturnValue({ eq: m.byPrediction })
   m.byPrediction.mockResolvedValue({ error: null })
+  m.rpc.mockImplementation(async (_name, args) => ({
+    data: { written: true, payload: args.p_payload },
+    error: null,
+  }))
 })
 const row = (
   eventId: string,
@@ -67,23 +73,26 @@ it("LFA 표시가 있어도 요청한 match ID가 다르면 거절한다", async
   m.read.mockResolvedValue({ data: [row("wrong-id")] })
   expect(await loadStoredLfaLineup("market", "right-id")).toBeNull()
 })
-it("예상 저장은 확정 행을 덮지 않는 조건부 쓰기를 사용한다", async () => {
+it("예상 저장은 형제 ID 전체를 원자 저장에 넘긴다", async () => {
   await storeLfaLineup("market", "lfa-id", { ...previewLineup, projected: true })
-  expect(m.upsert).toHaveBeenCalledWith(expect.anything(), {
-    onConflict: "game_id",
-    ignoreDuplicates: true,
-  })
-  expect(m.byGame).toHaveBeenCalledWith("game_id", "market")
-  expect(m.byPrediction).toHaveBeenCalledWith("payload->>projected", "true")
+  expect(m.rpc).toHaveBeenCalledWith(
+    "write_lfa_lineup_snapshot",
+    expect.objectContaining({
+      p_game_ids: ["market", "sibling"],
+      p_match_id: "lfa-id",
+      p_payload: expect.objectContaining({ projected: true }),
+    })
+  )
+  expect(m.upsert).not.toHaveBeenCalled()
 })
 it("확정 저장은 출처와 선수 ID를 보존한다", async () => {
   await storeLfaLineup("market", "lfa-id", previewLineup)
-  expect(m.upsert).toHaveBeenCalledWith(
+  expect(m.rpc).toHaveBeenCalledWith(
+    "write_lfa_lineup_snapshot",
     expect.objectContaining({
-      event_id: "lfa-id",
-      payload: expect.objectContaining({ source: "lfa", matchId: "lfa-id", projected: false }),
-    }),
-    { onConflict: "game_id" }
+      p_match_id: "lfa-id",
+      p_payload: expect.objectContaining({ source: "lfa", matchId: "lfa-id", projected: false }),
+    })
   )
 })
 it("과거 Soccerway 저장 명단도 외부 호출 없이 표시하고 출처를 위조하지 않는다", async () => {
@@ -119,8 +128,20 @@ it("벤치가 많은 예상 명단이 확정 저장분을 밀어내지 않는다
 it("DB 오류는 빈 결과나 저장 성공으로 숨기지 않는다", async () => {
   m.read.mockResolvedValue({ error: { code: "READ_FAILED" } })
   await expect(loadStoredLfaLineup("market")).rejects.toThrow("lineup-read:READ_FAILED")
-  m.upsert.mockResolvedValue({ error: { code: "WRITE_FAILED" } })
+  m.rpc.mockResolvedValue({ error: { code: "WRITE_FAILED" } })
   await expect(storeLfaLineup("market", "lfa-id", previewLineup)).rejects.toThrow(
     "lineup-store:WRITE_FAILED"
   )
+})
+it("늦은 응답을 거절하면 DB에 있는 최신 확정 명단을 반환한다", async () => {
+  const latest = { ...previewLineup, fetchedAt: "2026-09-10T12:10:00Z", projected: false }
+  m.rpc.mockResolvedValue({ data: { written: false, payload: latest }, error: null })
+  expect(
+    await storeLfaLineup("market", "lfa-id", {
+      ...previewLineup,
+      fetchedAt: "2026-09-10T12:20:00Z",
+      observation: { id: "slow", requestedAt: "2026-09-10T12:00:00Z", fingerprint: null },
+    })
+  ).toEqual(latest)
+  expect(m.rpc.mock.calls[0][1].p_payload.observation.requestedAt).toBe("2026-09-10T12:00:00Z")
 })

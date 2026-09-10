@@ -6,7 +6,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
 import { loadStoredLineup } from "@/lib/match/lineup-store"
-import { matchLfaCounterpart, teamIdIndex } from "@/lib/match/pair-fixtures"
+import { pairLfaFixtures, teamIdIndex } from "@/lib/match/pair-fixtures"
+import { loadPairingContext } from "@/lib/match/pairing-context"
 import { hasHangul, localizeFromSquad, localizeTimelineName } from "@/lib/lfa/scorer-name"
 
 // 종전 공개 API 유지 — 판정 자체는 순수 모듈이 소유한다 (2026-08-30)
@@ -42,7 +43,7 @@ import { isLfaFinishedStatus } from "@/lib/lfa/status"
 /* ── 팀명 대조 ── */
 
 /**
- * betman 한글 팀명 → 영문명 (1h 캐시).
+ * betman 한글 팀명 → 영문명 (5분 캐시 — 사전 보충 뒤 자동 매핑 재시도).
  *
  * 두 사전을 합친다:
  *  · `team_dictionary` — soccerway 경로가 쓰는 정본 (PK 가 soccerway_team_id)
@@ -57,13 +58,14 @@ import { isLfaFinishedStatus } from "@/lib/lfa/status"
 export const cachedTeamEn = unstable_cache(
   async (): Promise<[string, string][]> => {
     const supabase = createServiceRoleClient()
-    const [{ data }, { data: lfaNames }] = await Promise.all([
+    const [{ data, error }, { data: lfaNames, error: lfaError }] = await Promise.all([
       supabase
         .from("team_dictionary")
         .select("name_kr, aliases_kr, name_en")
         .neq("status", "rejected"),
       supabase.from("lfa_team_names").select("name_kr, name_en"),
     ])
+    if (error || lfaError) throw new Error(`lfa-team-en:${(error ?? lfaError)!.message}`)
     const out: [string, string][] = []
     for (const r of data ?? []) {
       const en = String(r.name_en ?? "").trim()
@@ -82,8 +84,8 @@ export const cachedTeamEn = unstable_cache(
     }
     return out
   },
-  ["lfa-team-en-v2"],
-  { revalidate: 3600 }
+  ["lfa-team-en-v3"],
+  { revalidate: 300 }
 )
 
 /**
@@ -96,7 +98,7 @@ export const cachedTeamEn = unstable_cache(
 export const cachedTeamLfaIds = unstable_cache(
   async (): Promise<[string, string][]> => {
     const supabase = createServiceRoleClient()
-    const [{ data }, { data: lfaNames }] = await Promise.all([
+    const [{ data, error }, { data: lfaNames, error: lfaError }] = await Promise.all([
       supabase
         .from("team_dictionary")
         .select("name_kr, aliases_kr, lfa_team_id")
@@ -104,6 +106,7 @@ export const cachedTeamLfaIds = unstable_cache(
         .not("lfa_team_id", "is", null),
       supabase.from("lfa_team_names").select("name_kr, lfa_team_id"),
     ])
+    if (error || lfaError) throw new Error(`lfa-team-ids:${(error ?? lfaError)!.message}`)
     const out: [string, string][] = []
     for (const r of data ?? []) {
       const id = String(r.lfa_team_id ?? "").trim()
@@ -119,8 +122,8 @@ export const cachedTeamLfaIds = unstable_cache(
     }
     return out
   },
-  ["lfa-team-ids-v1"],
-  { revalidate: 3600 }
+  ["lfa-team-ids-v2"],
+  { revalidate: 300 }
 )
 
 /**
@@ -173,7 +176,7 @@ function cachedDayMatches(dateUtc: string) {
  * 그래서 DB 를 정본 창고로 두고, LFA 는 그 창고를 채우는 쪽으로 역할을 바꾼다.
  * LFA 가 느리거나 죽으면 마지막으로 받은 목록을 쓴다 — 빈 화면보다 낫다.
  */
-const getDaySnapshot = cache(async (dateUtc: string, live: boolean) => {
+export const getDaySnapshot = cache(async (dateUtc: string, live: boolean) => {
   const cached = await readDayMatches(dateUtc, live)
   if (cached && !cached.stale) return cached
 
@@ -354,9 +357,23 @@ export async function resolveLfaMatch(
   const now = Date.now()
   const live = now >= ko && now <= ko + 3 * 3600_000
 
-  const snapshot = await daySnapshot(utcDate(game.matchTime), live)
-  const all = snapshot.matches.map((m) => ({ ...m, sourceUpdatedAt: snapshot.updatedAt }))
-  const inLeague = all.filter((m) => m.league?.id === leagueId)
+  if (!Number.isFinite(ko)) return null
+  // Include the full graph across UTC midnight: target → candidate → competitor → its candidates.
+  const dates = [
+    ...new Set([ko - 90 * 60_000, ko + 90 * 60_000].map((t) => utcDate(new Date(t).toISOString()))),
+  ]
+  const snapshots = await Promise.all(
+    dates.map(async (date) => ({ date, snapshot: await daySnapshot(date, live) }))
+  )
+  const inLeague = snapshots.flatMap(({ date, snapshot }) =>
+    snapshot.matches
+      .filter((m) => m.league?.id === leagueId)
+      .map((m) => ({
+        ...m,
+        sourceUpdatedAt: snapshot.updatedAt,
+        fixtureTime: `${date}T${m.kickoff}:00Z`,
+      }))
+  )
   if (inLeague.length === 0) return null
 
   // LFA-only fixtures already have a provider identity. Never re-match their translated names.
@@ -365,22 +382,29 @@ export async function resolveLfaMatch(
 
   const dict = new Map(await cachedTeamEn())
   const teamIds = teamIdIndex(await cachedTeamLfaIds().catch(() => [] as [string, string][]))
-  // 일정 목록과 동일한 결정기를 사용한다. 시간이 바뀐 경기는 자동으로 범위를 넓히지 않는다.
-  const decision = matchLfaCounterpart(
-    game,
+  const context = await loadPairingContext(
+    createServiceRoleClient(),
+    new Date(ko - 60 * 60_000).toISOString(),
+    new Date(ko + 60 * 60_000 + 1).toISOString()
+  )
+  // No collector-specific matching. The same full-graph decision owns schedule and acquisition.
+  const decisions = pairLfaFixtures(
+    context.games,
     inLeague.map((m) => ({
+      lfaMatchId: m.id,
       homeTeam: m.home?.name ?? "",
       awayTeam: m.away?.name ?? "",
       homeTeamId: m.home?.id || undefined,
       awayTeamId: m.away?.id || undefined,
       leagueCode: game.leagueCode,
-      matchTime: `${utcDate(game.matchTime)}T${m.kickoff}:00Z`,
+      matchTime: m.fixtureTime,
       match: m,
     })),
+    context.savedOwners,
     dict,
     teamIds
   )
-  return decision.candidate?.match ?? null
+  return decisions.get(game.gameId)?.candidate?.match ?? null
 }
 
 /* ── 일정 페이지용 하루치 색인 ── */
@@ -693,10 +717,14 @@ export function createLfaRefreshSession() {
     }
     return pending
   }
-  return async (game: BetmanGameKey) => {
+  return async (game: BetmanGameKey, opts: { repairEmpty?: boolean } = {}) => {
     // 종료된 완전한 저장분은 재구매하지 않는다. 빈 종료 상세는 기존 재시도 창을 따른다.
     const stored = await readMatchDetails(game.gameId, game.matchTime)
-    if (stored?.info.finished && !stored.stale)
+    const repairEmpty =
+      opts.repairEmpty === true &&
+      Date.now() - Date.parse(game.matchTime) < 24 * 3600_000 &&
+      stored?.info.timeline?.length === 0
+    if (stored?.info.finished && !stored.stale && !repairEmpty)
       return { status: "settled" as const, info: stored.info }
     const fresh = await computeLfaMatchInfo(game, daySnapshot, detailSnapshot, true)
     if (!fresh) throw new Error("lfa-match-unresolved")

@@ -55,30 +55,21 @@ export async function loadStoredLfaLineup(
   return best?.payload ?? null
 }
 
-export async function storeLfaLineup(gameId: string, matchId: string, payload: LineupResponse) {
-  if (payload.status !== "ready" || typeof payload.projected !== "boolean") return
+export async function storeLfaLineup(
+  gameId: string,
+  matchId: string,
+  payload: LineupResponse
+): Promise<LineupResponse | null> {
+  if (payload.status !== "ready" || typeof payload.projected !== "boolean") return null
   const db = createServiceRoleClient()
-  const row = {
-    game_id: gameId,
-    event_id: matchId,
-    payload: { ...payload, source: "lfa", matchId },
-    updated_at: payload.fetchedAt,
-  }
-  if (payload.projected) {
-    // Insert only if absent, then update only a still-predicted row. A late prediction
-    // must not overwrite a confirmed/legacy snapshot, including concurrent requests.
-    const inserted = await db
-      .from("match_lineups")
-      .upsert(row, { onConflict: "game_id", ignoreDuplicates: true })
-    if (inserted.error) throw new Error(`lineup-store:${inserted.error.code}`)
-    const updated = await db
-      .from("match_lineups")
-      .update(row)
-      .eq("game_id", gameId)
-      .eq("payload->>projected", "true")
-    if (updated.error) throw new Error(`lineup-store:${updated.error.code}`)
-    return
-  }
-  const { error } = await db.from("match_lineups").upsert(row, { onConflict: "game_id" })
+  const ids = await getSiblingGameIds(db, gameId, { strict: true })
+  const { data, error } = await db.rpc("write_lfa_lineup_snapshot", {
+    p_game_ids: ids,
+    p_match_id: matchId,
+    p_payload: { ...payload, source: "lfa", matchId } as never,
+  })
   if (error) throw new Error(`lineup-store:${error.code}`)
+  const result = data as { payload?: LineupResponse } | null
+  if (!result?.payload) throw new Error("lineup-store:empty")
+  return result.payload
 }

@@ -24,7 +24,7 @@ import { threadMatchdays, THREAD_BEFORE_MS, THREAD_AFTER_MS } from "@/lib/match/
  * - 생성 창 = 킥오프 90분 전 ~ 킥오프 120분 후. 확정 라인업이 ready 인 경기만 — 라인업
  *   발표(통상 T-60분)가 곧 "불판 깔 때"라는 운영자 정의를 그대로 따른다.
  * - 대상 = 매치센터와 같은 화이트리스트 (MATCH_PAGE_LEAGUES — 운영자 확정).
- * - 중복 방지: 형제 행 전체의 기존 글 조회 + 정렬된 대표 gameId로 insert + unique 인덱스.
+ * - 중복 방지: LFA 경기 번호 잠금 아래 DB에서 기존 글 조회와 생성을 함께 처리한다.
  *   제목은 반복 대진의 식별자가 아니므로 중복 판정에 사용하지 않는다.
  */
 
@@ -97,7 +97,7 @@ export async function sweepMatchThreads(opts?: {
       result.skipped.push({ gameId: requestedId, reason: "sibling-lookup-failed" })
       continue
     }
-    const gameId = f.source === "lfa" ? requestedId : [...siblingIds].sort()[0]
+    const gameId = requestedId
     const home = displayTeamName(f.homeTeam, shortNames)
     const away = displayTeamName(f.awayTeam, shortNames)
     const title = threadTitle(home, away, leagueLabel(f.leagueCode))
@@ -128,8 +128,12 @@ export async function sweepMatchThreads(opts?: {
       continue
     }
 
-    if (!lineup || lineup.status !== "ready" || lineup.projected === true) {
+    if (!lineup || lineup.status !== "ready" || lineup.projected !== false) {
       result.skipped.push({ gameId, reason: "lineup-not-ready" })
+      continue
+    }
+    if (lineup.source !== "lfa" || !lineup.matchId) {
+      result.skipped.push({ gameId, reason: "lfa-identity-missing" })
       continue
     }
 
@@ -159,20 +163,22 @@ export async function sweepMatchThreads(opts?: {
       ],
     }
 
-    const { data: inserted, error } = await supabase
-      .from("posts")
-      .insert({
-        user_id: MATCH_THREAD_BOT_USER_ID,
-        community_slug: "football",
-        title,
-        content: doc,
-        match_game_id: gameId,
+    const { data: inserted, error } = await supabase.rpc("ensure_lfa_match_thread", {
+      p_match_id: lineup.matchId,
+      p_game_id: gameId,
+      p_user_id: MATCH_THREAD_BOT_USER_ID,
+      p_title: title,
+      p_content: doc,
+    })
+    if (error || !inserted?.id) {
+      result.skipped.push({
+        gameId,
+        reason: `insert: ${error?.code ?? error?.message ?? "no-result"}`,
       })
-      .select("id")
-      .single()
-    if (error) {
-      // unique(match_game_id) 충돌 = 동시 실행 레이스 — 정상 스킵
-      result.skipped.push({ gameId, reason: `insert: ${error.code ?? error.message}` })
+      continue
+    }
+    if (!inserted.created) {
+      result.skipped.push({ gameId, reason: "exists" })
       continue
     }
     result.created.push({ gameId, postId: inserted.id, title })

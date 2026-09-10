@@ -23,17 +23,49 @@ vi.mock("@/lib/lfa/match", () => ({
 vi.mock("@/lib/lfa/league-members", () => ({ getBetmanLeagueMembers: state.members }))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
+    rpc: async (name: string, { p_fixture: fixture }: { p_fixture: LfaFixture }) => {
+      if (name !== "write_lfa_fixture_snapshot") throw new Error(`unexpected rpc ${name}`)
+      if (state.fail === "lfa_fixtures") return { data: null, error: { code: "unavailable" } }
+      const rows = (state.tables.lfa_fixtures ??= [])
+      let row = rows.find((r) => r.lfa_match_id === fixture.lfaId)
+      const old = row?.fixture as LfaFixture | undefined
+      if (!row) {
+        row = {
+          id: `00000000-0000-4000-8000-${String(rows.length + 1).padStart(12, "0")}`,
+          lfa_match_id: fixture.lfaId,
+          betman_game_id: null,
+        }
+        rows.push(row)
+      }
+      if (
+        !old ||
+        ((old.sourceUpdatedAt ?? 0) < fixture.sourceUpdatedAt! &&
+          !(old.status === "completed" && fixture.status !== "completed"))
+      ) {
+        Object.assign(row, { fixture, match_time: fixture.matchTime })
+        state.writes.push("lfa_fixtures")
+      }
+      return { data: row, error: null }
+    },
     from: (table: string) => {
       type Row = Record<string, unknown>
       const filters: ((r: Row) => boolean)[] = []
       let pending: Row[] | undefined
+      let update: Row | undefined
       let single = false
       let limit = Infinity
+      let offset = 0
       const run = () => {
         if (state.fail === table) {
           return { data: null, error: { code: "unavailable", message: "connection failed" } }
         }
         const rows = (state.tables[table] ??= [])
+        if (update) {
+          state.writes.push(table)
+          const changed = rows.filter((r) => filters.every((f) => f(r)))
+          for (const row of changed) Object.assign(row, update)
+          return { data: changed, error: null }
+        }
         if (pending) {
           state.writes.push(table)
           const saved = pending.map((r) => {
@@ -50,13 +82,27 @@ vi.mock("@/lib/supabase/server", () => ({
           })
           return { data: saved, error: null }
         }
-        const found = rows.filter((r) => filters.every((f) => f(r))).slice(0, limit)
+        const found = rows.filter((r) => filters.every((f) => f(r))).slice(offset, limit)
         return { data: single ? (found[0] ?? null) : found, error: null }
       }
       const q = {
         select: () => q,
+        order: () => q,
+        range: (from: number, to: number) => {
+          offset = from
+          limit = to + 1
+          return q
+        },
         eq: (k: string, v: unknown) => {
           filters.push((r) => r[k] === v)
+          return q
+        },
+        is: (k: string, v: unknown) => {
+          filters.push((r) => (r[k] ?? null) === v)
+          return q
+        },
+        update: (row: Row) => {
+          update = row
           return q
         },
         neq: (k: string, v: unknown) => {
@@ -106,6 +152,7 @@ import { getSiblingGameIds } from "@/lib/match/sibling-ids"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
 const fixture = (overrides: Partial<LfaFixture> = {}): LfaFixture => ({
+  sourceUpdatedAt: Date.parse("2026-09-04T18:00:00Z"),
   lfaId: "cup-city-minnow",
   leagueCode: "잉글FA컵",
   homeTeam: "맨체스터 시티",
@@ -163,7 +210,13 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
   it("재실행·번역/킥오프 변경에도 내부 ID와 투표 키가 유지된다", async () => {
     const one = await syncSupplementalFixtures([fixture()], new Map(), new Set([fixture().lfaId]))
     const two = await syncSupplementalFixtures(
-      [fixture({ homeTeam: "맨시티", matchTime: "2026-09-06T19:00:00.000Z" })],
+      [
+        fixture({
+          homeTeam: "맨시티",
+          matchTime: "2026-09-06T19:00:00.000Z",
+          sourceUpdatedAt: fixture().sourceUpdatedAt! + 1,
+        }),
+      ],
       new Map(),
       new Set()
     )
@@ -190,7 +243,7 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     })
     expect(
       await getSiblingGameIds(createServiceRoleClient(), first.gameId!, { strict: true })
-    ).toEqual([first.gameId, "market-b", "market-a"])
+    ).toEqual([first.gameId, "market-a", "market-b"])
     await syncSupplementalFixtures([fixture()], new Map(), new Set())
     expect(state.tables.lfa_fixtures[0].betman_game_id).toBe("market-b")
   })
@@ -207,6 +260,41 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     expect(state.writes).toHaveLength(0)
   })
   it.each([false, true])(
+    "늦은 베트맨 발표와 15분 차이를 자동 복구한다: 피드 중단 %s",
+    async (feedMissing) => {
+      const [first] = await getFixturesForDay("2026-09-05")
+      state.tables.betman_games = [{ ...market("late"), match_time: "2026-09-05T18:15:00.000Z" }]
+      if (feedMissing) state.fixtures.mockResolvedValue([])
+      const rows = await getFixturesForDay("2026-09-05")
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ gameId: first.gameId, betmanGameId: "late" })
+      expect(
+        await getSiblingGameIds(createServiceRoleClient(), "late", { strict: true })
+      ).toContain(first.gameId)
+      expect(state.tables.lfa_fixtures).toHaveLength(1)
+      expect((await getFixturesForDay("2026-09-05"))[0].gameId).toBe(first.gameId)
+    }
+  )
+  it("다른 두 베트맨 경기가 하나의 LFA 후보를 주장하면 어느 쪽에도 연결하지 않는다", async () => {
+    await getFixturesForDay("2026-09-05")
+    state.tables.betman_games = [
+      { ...market("a"), match_time: "2026-09-05T18:10:00.000Z" },
+      { ...market("b"), match_time: "2026-09-05T18:20:00.000Z" },
+    ]
+    await getFixturesForDay("2026-09-05")
+    expect(state.tables.lfa_fixtures[0].betman_game_id).toBeNull()
+  })
+  it("이미 확정한 연결은 재시도의 다른 후보로 바꾸지 않는다", async () => {
+    await getFixturesForDay("2026-09-05")
+    await syncSupplementalFixtures([fixture()], new Map([[fixture().lfaId, "first"]]), new Set())
+    await syncSupplementalFixtures(
+      [fixture()],
+      new Map([[fixture().lfaId, "different"]]),
+      new Set()
+    )
+    expect(state.tables.lfa_fixtures[0].betman_game_id).toBe("first")
+  })
+  it.each([false, true])(
     "연결된 LFA 경기의 킥오프가 15분 바뀌어도 한 줄과 기존 UUID를 유지한다: 마켓 역순 %s",
     async (reverse) => {
       const [first] = await getFixturesForDay("2026-09-05")
@@ -220,6 +308,7 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
       })
       state.fixtures.mockResolvedValue([
         fixture({
+          sourceUpdatedAt: fixture().sourceUpdatedAt! + 1,
           matchTime: "2026-09-05T18:15:00.000Z",
           status: "completed",
           homeScore: 6,
@@ -397,7 +486,9 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
     const f = fixture({ leagueCode: "UCL" })
     const saved = await syncSupplementalFixtures([f], new Map(), new Set([f.lfaId]))
     const id = saved.get(f.lfaId)!.id
-    state.fixtures.mockResolvedValue([{ ...f, homeScore: 1 }])
+    state.fixtures.mockResolvedValue([
+      { ...f, homeScore: 1, sourceUpdatedAt: f.sourceUpdatedAt! + 1 },
+    ])
     expect((await getFixturesForDay("2026-09-05"))[0]).toMatchObject({ gameId: id, homeScore: 1 })
     state.tables.betman_games = [{ ...market("market-a"), league_code: "UCL" }]
     expect((await getFixturesForDay("2026-09-05"))[0]).toMatchObject({

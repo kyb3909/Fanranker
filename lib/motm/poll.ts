@@ -17,6 +17,8 @@ import { lfaDetailRow, pickFtScore, type LfaDetailRow } from "@/lib/motm/ft-evid
 import { matchKeyOf } from "@/lib/match/match-key"
 import { listSupplementalFixtures, supplementalSummary } from "@/lib/match/supplemental-fixtures"
 import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { getMatchIdentity } from "@/lib/match/sibling-ids"
+import type { LineupResponse } from "@/lib/match/lineup-types"
 
 // 기존 import 경로를 지킨다 (매치 페이지·투표 API·카드가 여기서 가져간다)
 export { buildMotmOptions, mergeMotmOptions, pickRichestLineup }
@@ -29,9 +31,7 @@ export type { MotmOption } from "@/lib/motm/options"
  * FT+110분 → 폴 자동 생성(라인업 스냅샷 = 후보) → 피드 FT 행·불판·매치센터에서 투표
  * → 익일 11:00 KST 마감(is_active=false → 기존 투표 API 가 자동 차단) → 결과 영속.
  *
- * ## 경기 키 = match_key (betman matchKey)
- * betman 은 같은 경기를 마켓별 다중 행으로 갖는다(소수핸디캡/언더오버…). game_id 를
- * 키로 쓰면 같은 경기에 폴이 두 개 생긴다 — match_key partial unique 인덱스가 정본.
+ * ## 생성 잠금 = LFA 경기 번호. 기존 match_key/game_id는 참조로 보존한다.
  *
  * ## 후보 = 출전 선수만
  * 선발 22명 + LFA 타임라인에서 교체 투입(subIn)이 확인된 벤치. 타임라인이 없으면
@@ -67,10 +67,11 @@ async function loadLfaDetails(gameIds: string[]): Promise<Map<string, LfaDetailR
   if (ids.length === 0) return out
   const supabase = createServiceRoleClient()
   for (let i = 0; i < ids.length; i += IN_CHUNK) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("match_details_cache")
       .select("game_id, finished, payload")
       .in("game_id", ids.slice(i, i + IN_CHUNK))
+    if (error) throw new Error(`motm-details:${error.message}`)
     for (const row of data ?? []) {
       const key = String(row.game_id)
       const list = out.get(key) ?? []
@@ -147,6 +148,7 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     homeScore: number | null
     awayScore: number | null
     lfaOnly?: boolean
+    altKeys?: string[]
   }
   const byKey = new Map<string, Cand>()
   for (const g of rows ?? []) {
@@ -193,7 +195,6 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     errors.push({ scope: "lfa_fixtures", message: describe(e) })
     return [] as Awaited<ReturnType<typeof listSupplementalFixtures>>
   })
-  const supplementalEvidence = new Map<string, LfaDetailRow[]>()
   for (const row of supplemental) {
     const match = supplementalSummary(row)
     if (!isMatchPageLeague(match.leagueCode) || match.status === "cancelled") continue
@@ -205,17 +206,19 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
       continue
     }
     // Later Betman markets share the existing LFA poll, not a second name-based poll.
+    const altKeys: string[] = []
     for (const [key, c] of byKey) {
-      if (c.gameIds.some((id) => ids.includes(id))) byKey.delete(key)
+      if (c.gameIds.some((id) => ids.includes(id))) {
+        altKeys.push(key)
+        byKey.delete(key)
+      }
     }
     byKey.set(match.matchKey, {
       ...match,
       gameIds: ids,
       lfaOnly: true,
+      altKeys,
     })
-    const info = await getLfaMatchInfo(match).catch(() => null)
-    if (info?.finished)
-      supplementalEvidence.set(row.id, [lfaDetailRow({ finished: true, payload: info })])
   }
   /**
    * 연기/취소 잔재 가드 — 스코어가 한 번도 안 찍힌 경기는 FT 로 단정하지 않는다.
@@ -226,7 +229,6 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
    *    가드 자체는 그대로다 — 시간만으로 FT 를 단정하는 경로는 생기지 않는다.
    */
   const lfaByGameId = await loadLfaDetails([...byKey.values()].flatMap((c) => c.gameIds))
-  for (const [id, evidence] of supplementalEvidence) lfaByGameId.set(id, evidence)
   const cands: (Cand & { ftSource: "betman" | "lfa" })[] = []
   for (const c of byKey.values()) {
     const ft = pickFtScore(
@@ -246,49 +248,107 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
 
   // 3) 이미 폴이 있는 경기 — 보통은 건너뛰지만, **교체 후보가 통째로 빠진** 폴은
   //    라인업이 뒤늦게 고쳐졌을 수 있으므로 다시 짜 본다 (열려 있는 동안만).
-  const { data: existing } = await supabase
-    .from("polls")
-    .select("id, match_key, options, is_active")
-    .eq("kind", "motm")
-    .in(
-      "match_key",
-      cands.map((c) => c.matchKey)
-    )
+  const [{ data: byKeyPolls, error: keyError }, { data: byIdPolls, error: idError }] =
+    await Promise.all([
+      supabase
+        .from("polls")
+        .select("id, game_id, match_key, options, is_active")
+        .eq("kind", "motm")
+        .in(
+          "match_key",
+          cands.flatMap((c) => [c.matchKey, ...(c.altKeys ?? [])])
+        ),
+      supabase
+        .from("polls")
+        .select("id, game_id, match_key, options, is_active")
+        .eq("kind", "motm")
+        .in(
+          "game_id",
+          cands.flatMap((c) => c.gameIds)
+        ),
+    ])
+  if (keyError || idError) {
+    errors.push({ scope: "existing_polls", message: (keyError ?? idError)!.message })
+    return { finalized, created, skipped, repaired, errors }
+  }
+  const existing = [
+    ...new Map([...(byKeyPolls ?? []), ...(byIdPolls ?? [])].map((p) => [p.id, p])).values(),
+  ]
   interface Prior {
     id: string
     options: MotmOption[]
     active: boolean
   }
   const priorByKey = new Map<string, Prior>()
-  for (const e of existing ?? []) {
-    priorByKey.set(String(e.match_key), {
+  for (const c of cands) {
+    const e =
+      existing.find((p) => p.match_key === c.matchKey) ??
+      existing.find((p) => c.gameIds.includes(p.game_id) || c.altKeys?.includes(p.match_key))
+    if (!e) continue
+    priorByKey.set(c.matchKey, {
       id: String(e.id),
       options: (e.options as MotmOption[] | null) ?? [],
       active: e.is_active === true,
     })
   }
-  const needsRepair = (p: Prior) => p.active && !p.options.some((o) => o.group === "sub")
 
   for (const c of cands) {
     const prior = priorByKey.get(c.matchKey)
-    if (prior && !needsRepair(prior)) continue
+    if (prior && !prior.active) continue
     try {
-      // The shared LFA-only entrypoint rejects legacy Soccerway snapshots.
-      const fetched = await getMatchLineup(c.gameIds[0]).catch(() => null)
+      // Existing polls consume stored material only. Candidate repair must not buy another feed.
+      let fetched: LineupResponse | null
+      if (prior) {
+        const identity = await getMatchIdentity(supabase, c.gameIds[0], { strict: true })
+        c.gameIds = identity.gameIds
+        const { data, error } = await supabase
+          .from("match_lineups")
+          .select("payload")
+          .in("game_id", c.gameIds)
+        if (error) throw new Error(`motm-lineup:${error.message}`)
+        fetched = pickRichestLineup(
+          (data ?? [])
+            .map((r) => r.payload as LineupResponse)
+            .filter(
+              (p) =>
+                p?.status === "ready" &&
+                p.projected === false &&
+                p.source === "lfa" &&
+                !!p.matchId &&
+                p.matchId === identity.lfaMatchId
+            )
+        )
+      } else {
+        fetched = await getMatchLineup(c.gameIds[0])
+      }
       const lineup = fetched?.status === "ready" ? fetched : null
-      if (!lineup || lineup.projected === true) {
+      if (!lineup || lineup.projected !== false || lineup.source !== "lfa" || !lineup.matchId) {
         skipped.push({ matchKey: c.matchKey, reason: "no_lineup" })
         continue
       }
 
       // 교체 투입 판정 재료 — LFA 타임라인 (불판·매치센터와 같은 캐시)
-      const lfa = await getLfaMatchInfo({
-        gameId: c.gameIds[0],
-        homeTeam: c.homeTeam,
-        awayTeam: c.awayTeam,
-        matchTime: c.matchTime,
-        leagueCode: c.leagueCode,
-      }).catch(() => null)
+      let lfa: Awaited<ReturnType<typeof getLfaMatchInfo>> = null
+      if (prior) {
+        const { data, error } = await supabase
+          .from("match_details_cache")
+          .select("payload")
+          .in("game_id", c.gameIds)
+          .eq("lfa_match_id", lineup.matchId)
+          .order("finished", { ascending: false })
+          .order("updated_at", { ascending: false })
+          .limit(1)
+        if (error) throw new Error(`motm-detail:${error.message}`)
+        lfa = data?.[0]?.payload ?? null
+      } else {
+        lfa = await getLfaMatchInfo({
+          gameId: c.gameIds[0],
+          homeTeam: c.homeTeam,
+          awayTeam: c.awayTeam,
+          matchTime: c.matchTime,
+          leagueCode: c.leagueCode,
+        })
+      }
       const enriched = lfa?.timeline.length
         ? enrichLineupWithTimeline(lineup, lfa.timeline)
         : lineup
@@ -299,49 +359,34 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
         continue
       }
 
-      // 3-b) 기존 폴 보강 — 표가 없으면 통째로, 있으면 빠진 후보만 덧붙인다
+      // 3-b) DB의 현재 후보판에 추가만 한다. 조회 후 투표/다른 보강이 들어와도 키가 유지된다.
       if (prior) {
-        const { count } = await supabase
-          .from("poll_votes")
-          .select("id", { count: "exact", head: true })
-          .eq("poll_id", prior.id)
-        const merged = mergeMotmOptions(prior.options, options, (count ?? 0) > 0)
-        if (!merged) {
+        const { data: appended, error: upErr } = await supabase.rpc("append_motm_options", {
+          p_poll_id: prior.id,
+          p_options: options,
+        })
+        if (upErr || !appended) throw new Error(`motm-append:${upErr?.message ?? "no-result"}`)
+        if (!appended.added) {
           skipped.push({ matchKey: c.matchKey, reason: "repair_noop" })
           continue
         }
-        const { error: upErr } = await supabase
-          .from("polls")
-          .update({ options: merged })
-          .eq("id", prior.id)
-        if (upErr) {
-          skipped.push({ matchKey: c.matchKey, reason: `repair:${upErr.code ?? "err"}` })
-          continue
-        }
-        repaired.push({ pollId: prior.id, added: merged.length - prior.options.length })
+        repaired.push({ pollId: prior.id, added: appended.added })
         continue
       }
 
       const score =
         c.homeScore != null && c.awayScore != null ? ` ${c.homeScore}–${c.awayScore} ` : " vs "
-      const { data: poll, error } = await supabase
-        .from("polls")
-        .insert({
-          question: `오늘의 MoTM은? · ${c.homeTeam}${score}${c.awayTeam}`,
-          options,
-          is_active: true,
-          allow_reason: false,
-          created_by: "system_motm",
-          kind: "motm",
-          match_key: c.matchKey,
-          game_id: c.gameIds[0],
-          closes_at: motmClosesAtUtc(c.matchTime),
-        })
-        .select("id")
-        .single()
-      if (error) {
-        // unique(match_key) 경합 = 다른 인스턴스가 먼저 만든 것 — 실패 아님
-        skipped.push({ matchKey: c.matchKey, reason: `insert:${error.code ?? "err"}` })
+      const { data: poll, error } = await supabase.rpc("ensure_lfa_motm_poll", {
+        p_match_id: lineup.matchId,
+        p_game_id: c.gameIds[0],
+        p_match_key: c.matchKey,
+        p_question: `오늘의 MoTM은? · ${c.homeTeam}${score}${c.awayTeam}`,
+        p_options: options,
+        p_closes_at: motmClosesAtUtc(c.matchTime),
+      })
+      if (error || !poll?.id) throw new Error(`motm-create:${error?.message ?? "no-result"}`)
+      if (!poll.created) {
+        skipped.push({ matchKey: c.matchKey, reason: "exists" })
         continue
       }
       created.push({
@@ -351,11 +396,46 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
         ftSource: c.ftSource,
       })
     } catch (e) {
-      skipped.push({ matchKey: c.matchKey, reason: e instanceof Error ? e.message : "unknown" })
+      errors.push({ scope: c.matchKey, message: describe(e) })
     }
   }
 
   return { finalized, created, skipped, repaired, errors }
+}
+
+/** Both legacy and LFA URLs resolve the same stored poll references. Read failures aren't cached misses. */
+export function getMotmPollForGame(gameId: string): Promise<MotmPollRef | null> {
+  return unstable_cache(
+    async (id: string) => {
+      const db = createServiceRoleClient()
+      const identity = await getMatchIdentity(db, id, { strict: true })
+      const [byId, byKey] = await Promise.all([
+        db
+          .from("polls")
+          .select("id,is_active,closes_at,created_at")
+          .eq("kind", "motm")
+          .in("game_id", identity.gameIds),
+        identity.pollKeys.length
+          ? db
+              .from("polls")
+              .select("id,is_active,closes_at,created_at")
+              .eq("kind", "motm")
+              .in("match_key", identity.pollKeys)
+          : Promise.resolve({ data: [], error: null }),
+      ])
+      if (byId.error || byKey.error)
+        throw new Error(`motm-reference:${(byId.error ?? byKey.error)!.message}`)
+      const rows = [
+        ...new Map([...(byId.data ?? []), ...(byKey.data ?? [])].map((r) => [r.id, r])).values(),
+      ].sort(
+        (a, b) =>
+          String(a.created_at).localeCompare(String(b.created_at)) || a.id.localeCompare(b.id)
+      )
+      return rows[0] ? refFromRow(rows[0]) : null
+    },
+    ["motm-poll-for-game-v1"],
+    { revalidate: 30 }
+  )(gameId)
 }
 
 function refFromRow(row: {

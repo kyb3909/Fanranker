@@ -100,20 +100,19 @@ export function buildMotmOptions(lineup: LineupResponse): MotmOption[] | null {
 /**
  * 후보판 보강 (2026-08-31 운영자 제보: "MoTM 명단에 교체 선수가 빠져 있다").
  *
- * 라인업이 뒤늦게 고쳐진 폴을 되살린다. 표가 없으면 통째로 다시 만들고(선발까지 틀려
- * 있을 수 있다), **표가 있으면 빠진 후보만 덧붙인다** — 이미 던진 표의 key 를 흔들면
- * 그 표가 무효가 된다. 어느 쪽이든 후보가 늘지 않으면 아무것도 하지 않는다.
+ * 자동 보강은 항상 기존 key를 보존하고 새 후보만 추가한다. 표 유무를 조회하지 않는다.
+ * 실제 저장은 append_motm_options가 DB의 현재 후보판에 원자적으로 합친다.
  */
 export function mergeMotmOptions(
   existing: MotmOption[],
-  rebuilt: MotmOption[],
-  hasVotes: boolean
+  rebuilt: MotmOption[]
 ): MotmOption[] | null {
-  if (!hasVotes) {
-    return rebuilt.length > existing.length ? rebuilt : null
-  }
   const have = new Set(existing.map((o) => o.key))
-  const added = rebuilt.filter((o) => !have.has(o.key))
+  const added = rebuilt.filter((o) => {
+    if (have.has(o.key)) return false
+    have.add(o.key)
+    return true
+  })
   return added.length > 0 ? [...existing, ...added] : null
 }
 

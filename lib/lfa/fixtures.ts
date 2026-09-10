@@ -3,7 +3,7 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { type LfaMatch } from "@/lib/lfa/client"
-import { getDayMatches } from "@/lib/lfa/match"
+import { getDaySnapshot } from "@/lib/lfa/match"
 import { BETMAN_CODE_BY_LFA_ID } from "@/lib/lfa/leagues"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { isLfaFinishedStatus } from "@/lib/lfa/status"
@@ -28,6 +28,8 @@ import { isLfaFinishedStatus } from "@/lib/lfa/status"
  */
 
 export interface LfaFixture {
+  /** Original provider request time; never replace this when reading a cache. */
+  sourceUpdatedAt?: number
   /** LFA 경기 id — betman 이 없는 경기의 유일한 키 */
   lfaId: string
   /** betman league_code (대상 리그로 이미 걸러진 상태) */
@@ -149,18 +151,22 @@ function toIso(dateUtc: string, kickoff: string): string | null {
  * 이제 두 경로가 DB 한 줄을 공유한다 — 하루치 목록은 무슨 일이 있어도 한 번만 산다.
  */
 async function cachedDay(dateUtc: string, ttl: number) {
-  return getDayMatches(dateUtc, ttl === 300)
+  return getDaySnapshot(dateUtc, ttl === 300)
 }
 
 /**
  * 매치데이(KST 06:00~다음날 06:00) 대상 리그 전 경기.
  * KST 하루가 UTC 두 날짜에 걸치므로 최대 2콜 — 그 2콜이 그날 전 경기를 덮는다.
  */
-export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFixture[]> {
+export async function getLfaFixturesForMatchday(
+  dateKst: string,
+  opts: { paddingMinutes?: number } = {}
+): Promise<LfaFixture[]> {
   try {
     const startMs = new Date(`${dateKst}T06:00:00+09:00`).getTime()
     if (!Number.isFinite(startMs)) return []
     const endMs = startMs + 24 * 3600_000
+    const paddingMs = Math.min(90, Math.max(0, opts.paddingMinutes ?? 0)) * 60_000
     const now = Date.now()
     // 진행 중인 매치데이만 짧게 — 지난 날·미래 날은 값이 굳어 있다
     const ttl = now >= startMs && now <= endMs ? 300 : 12 * 3600
@@ -173,18 +179,20 @@ export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFix
 
     const out: LfaFixture[] = []
     for (const d of [...new Set(dates)]) {
-      for (const m of await cachedDay(d, ttl)) {
+      const snapshot = await cachedDay(d, ttl)
+      for (const m of snapshot.matches) {
         const code = BETMAN_CODE_BY_LFA_ID.get(m.league?.id ?? "")
         if (!code || !MATCH_PAGE_LEAGUES.has(code)) continue
         const iso = toIso(d, m.kickoff)
         if (!iso) continue
         const t = new Date(iso).getTime()
-        if (t < startMs || t >= endMs) continue // 다른 매치데이 소속
+        if (t < startMs - paddingMs || t >= endMs + paddingMs) continue
         const toNum = (v: string | null | undefined) => {
           const n = Number(v)
           return v != null && v !== "" && Number.isFinite(n) ? n : null
         }
         out.push({
+          sourceUpdatedAt: snapshot.updatedAt,
           lfaId: m.id,
           leagueCode: code,
           homeTeam: toKorean(m.home, index),

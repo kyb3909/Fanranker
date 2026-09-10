@@ -26,7 +26,7 @@ import { MatchdayRail } from "@/components/match/matchday-rail"
 import { getMatchLineup, getStoredMatchLineup } from "@/lib/match/get-lineup"
 import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
-import { getMotmPollByMatchKey } from "@/lib/motm/poll"
+import { getMotmPollForGame } from "@/lib/motm/poll"
 import { MotmCard } from "@/components/motm/motm-card"
 import { findSeasonSagasForTeams } from "@/lib/saga/season"
 import { isEventLive } from "@/lib/event/gunners-season"
@@ -174,10 +174,8 @@ export default async function MatchPage({ params }: Props) {
 
   // MoTM 폴 (2026-08-22 저니맵 v2) — matchKey 조회라 어느 마켓 행으로 들어와도 같은 폴.
   // 종료 경기 한정: 마감 후에도 결과가 경기 기록으로 영속한다 (expandAll = 전체 분포)
-  // LFA 전용 등록 전에 베트맨 키로 만들어진 폴도 찾는다 (betmanMatchKey — 2026-09-07)
-  const motmPoll = finished
-    ? await getMotmPollByMatchKey(match.matchKey, match.betmanMatchKey).catch(() => null)
-    : null
+  // 어느 출처의 URL에서도 저장된 동일 경기 참조로 찾는다.
+  const motmPoll = finished ? await getMotmPollForGame(gameId).catch(() => null) : null
 
   // 시즌 실록 도선 (2026-08-22 3자 토의 판결 E — saga-entry-FINAL) — FT 직후가
   // "방금 경기가 벌써 적힌 문서"를 열어볼 유일한 교집합 시간. 위키 있는 팀만, 종단 배치
