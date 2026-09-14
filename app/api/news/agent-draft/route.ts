@@ -7,6 +7,7 @@ import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
+import { NewsEvidenceSchema } from "@/lib/news/evidence"
 
 export const dynamic = "force-dynamic"
 
@@ -38,7 +39,13 @@ const BodySchema = z.object({
   /** 원문 소스 URL (트윗/기사) */
   source_url: z.string().url().optional(),
   /** 원문 재료 텍스트 (기사 발췌/트윗 전문) — 검수자가 원문과 비교하며 고칠 수 있게 보존 */
-  source_text: z.string().max(4000).optional(),
+  source_text: z.string().max(24000).optional(),
+  original_title: z.string().max(2000).optional(),
+  subreddit: z
+    .string()
+    .regex(/^[a-zA-Z0-9_]{1,40}$/)
+    .optional(),
+  evidence: NewsEvidenceSchema.optional(),
   /** 발견 출처 (r/soccer 글 등) */
   origin_url: z.string().url().optional(),
   /** 기사 게시 시각(ISO) — /api/og publishedAt. 자동발행이 옛 기사 재탕을 거르는 근거 (2026-09-03) */
@@ -91,6 +98,9 @@ export async function POST(req: NextRequest) {
     )
   }
   const d = parsed.data
+  if (d.evidence && d.evidence.source_url !== d.source_url) {
+    return NextResponse.json({ error: "원문과 증거 URL이 일치하지 않습니다" }, { status: 400 })
+  }
 
   // 본문 sanitize — 허용 노드/마크/임베드만 통과 (저장형 XSS 차단)
   const content = sanitizeTipTapJSON(d.content)
@@ -109,6 +119,7 @@ export async function POST(req: NextRequest) {
     type: "hermes",
     origin_url: d.origin_url ?? null,
     source_url: d.source_url ?? null,
+    ...(d.subreddit ? { subreddit: d.subreddit } : {}),
   }
   const contentHash = createHash("sha256")
     .update(JSON.stringify({ title: d.title, content, source_url: d.source_url ?? null }))
@@ -204,6 +215,8 @@ export async function POST(req: NextRequest) {
     urls: { source: d.source_url ?? null, origin: d.origin_url ?? null },
     raw: {
       title: d.title,
+      ...(d.original_title ? { original_title: d.original_title } : {}),
+      ...(d.evidence ? { evidence: d.evidence } : {}),
       dedupe_key: d.dedupe_key,
       ...(d.source_text ? { source_text: d.source_text } : {}),
       // 종목은 불변 스냅샷(raw)에 둔다 — draft 는 검수 편집이 덮을 수 있다

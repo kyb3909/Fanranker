@@ -47,7 +47,14 @@ vi.mock("@/lib/news/quality-gate", () => ({
   // 원문 리드 기반 판정 (2026-08-09 케롤린 실사고) — 한국어에는 성별 단서가 안 남는다
   isWomensFootballSource: (src: string | null | undefined) => /\bWSL\b/.test(src ?? ""),
 }))
-vi.mock("@/lib/saga/cluster", () => ({ titleSimilarity: () => 0 }))
+const titleSimilarityMock = vi.fn((..._args: unknown[]) => 0)
+const followupMock = vi.fn()
+vi.mock("@/lib/saga/cluster", () => ({
+  titleSimilarity: (...args: unknown[]) => titleSimilarityMock(...args),
+}))
+vi.mock("@/lib/news/followup", () => ({
+  inspectNewsFollowup: (...args: unknown[]) => followupMock(...args),
+}))
 const rehostMock = vi.fn(async (src: string, _userId?: string) => src)
 vi.mock("@/lib/images/rehost", () => ({
   isSelfHostedImageUrl: () => true,
@@ -70,12 +77,13 @@ interface DraftRow {
   tags: null
   decision: Record<string, unknown> | null
   created_at: string
+  raw?: { source_text?: string; original_title?: string }
 }
 
 let drafts: DraftRow[] = []
 let botPublishedToday = 0
 let autoPublishedToday = 0
-let recentPostRows: { title: string; source_url: string | null }[] = []
+let recentPostRows: { title: string; source_url: string | null; content?: unknown }[] = []
 let knownCandidates: { candidate_id: string; state: string; last_reason_code: string | null }[] = []
 const inserted: Record<string, unknown>[] = []
 const reservoirUpdates: Array<{ id: string; patch: Record<string, unknown> }> = []
@@ -219,7 +227,88 @@ async function call() {
 }
 
 describe("GET /api/cron/news-auto-publish", () => {
+  it.each(["new_information", "duplicate", "unavailable"])(
+    "compares similar titles using source-backed followup evidence: %s",
+    async (verdict) => {
+      drafts = [draft("followup", visualDoc)]
+      drafts[0].raw = {
+        source_text: "A newly reported answer from the post-match press conference.",
+      }
+      recentPostRows = [
+        {
+          title: "Earlier match report",
+          source_url: "https://example.com/earlier",
+          content: visualDoc,
+        },
+      ]
+      titleSimilarityMock.mockReturnValue(0.7)
+      followupMock.mockResolvedValue(verdict)
+      const body = await (await call()).json()
+      expect(followupMock).toHaveBeenCalledWith(
+        expect.any(String),
+        visualDoc,
+        drafts[0].raw.source_text,
+        [recentPostRows[0]]
+      )
+      expect(body.published).toBe(verdict === "new_information" ? 1 : 0)
+      if (verdict === "unavailable") {
+        expect(reservoirUpdates).toHaveLength(0)
+        expect(ledgerEvents.at(-1)).toMatchObject({
+          to_state: "retry_wait",
+          reason_code: "followup_check_unavailable",
+        })
+      }
+      if (verdict === "duplicate") {
+        expect(reservoirUpdates[0].patch.decision).toMatchObject({ auto_gate: { pass: false } })
+      }
+    }
+  )
+
+  it("retries legacy inspector outages without bypassing content inspection", async () => {
+    drafts = [draft("legacy-infra", visualDoc)]
+    drafts[0].decision = {
+      auto_gate: { pass: false, reasons: ["검사관 호출 실패(타임아웃/파싱)"] },
+    }
+    const body = await (await call()).json()
+    expect(body.published).toBe(1)
+  })
+
+  it("records a bounded retry instead of permanently rejecting an unavailable inspector", async () => {
+    drafts = [draft("infra", visualDoc)]
+    const { inspectDraft } = await import("@/lib/news/quality-gate")
+    vi.mocked(inspectDraft).mockResolvedValueOnce({
+      pass: false,
+      infra: true,
+      reasons: ["검사관 호출 실패(HTTP 503)"],
+      playerNamesKr: [],
+      coachNamesKr: [],
+    })
+    const body = await (await call()).json()
+    expect(body.published).toBe(0)
+    const patch = reservoirUpdates.find((u) => u.id === "infra")!.patch
+    expect(patch.decision).toMatchObject({ quality_retry: { attempts: 1 } })
+    expect(patch.decision).not.toHaveProperty("auto_gate")
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "retry_wait",
+      reason_code: "quality_check_unavailable",
+    })
+  })
+
+  it("does not call the inspector during backoff or after the retry limit", async () => {
+    drafts = [draft("waiting", visualDoc), draft("exhausted", visualDoc)]
+    drafts[0].decision = {
+      quality_retry: { attempts: 1, next_at: new Date(Date.now() + 3600000).toISOString() },
+    }
+    drafts[1].decision = { quality_retry: { attempts: 4 } }
+    const { inspectDraft } = await import("@/lib/news/quality-gate")
+    vi.mocked(inspectDraft).mockClear()
+    expect((await (await call()).json()).published).toBe(0)
+    expect(inspectDraft).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
+    titleSimilarityMock.mockReset().mockReturnValue(0)
+    followupMock.mockReset().mockResolvedValue("unavailable")
     vi.resetModules()
     process.env.CRON_SECRET = "test-secret"
     // 2026-07-30 opt-in 전환 — 발행 동작 테스트는 명시적으로 켠다

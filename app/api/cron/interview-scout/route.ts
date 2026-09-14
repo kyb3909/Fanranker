@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
-import { CLUB_SUBREDDITS, isInterviewCandidate, MIN_MATERIAL_LENGTH } from "@/lib/interviews/scout"
+import {
+  CLUB_SUBREDDITS,
+  isInterviewCandidate,
+  MIN_MATERIAL_LENGTH,
+  interviewMaterial,
+} from "@/lib/interviews/scout"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -30,11 +35,16 @@ async function handler(req: NextRequest) {
 
   const { data: rows, error } = await supabase
     .from("news_reservoir")
-    .select("id, source, urls, raw, created_at")
+    .select("id, source, urls, raw, draft, created_at")
     .gte("created_at", since)
     .neq("status", "duplicate")
     // 서브레딧 필터는 쿼리에서 — 앱 필터 + limit 조합은 대상 행이 잘려나간다 (리허설 실측)
-    .in("source->>subreddit", subs)
+    .or(
+      [
+        `source->>subreddit.in.(${subs.join(",")})`,
+        ...subs.map((s) => `source->>origin_url.ilike.%reddit.com/r/${s}/%`),
+      ].join(",")
+    )
     .order("created_at", { ascending: false })
     .limit(400)
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
@@ -42,21 +52,16 @@ async function handler(req: NextRequest) {
   let scanned = 0
   let inserted = 0
   for (const row of rows ?? []) {
-    const sub = (row.source as { subreddit?: string } | null)?.subreddit ?? ""
-    if (!subs.includes(sub)) continue
+    const { subreddit: sub, title, material, sourceUrl, tags } = interviewMaterial(row)
+    if (!sub) continue
     scanned++
 
-    const raw = (row.raw ?? {}) as { title?: string; articleText?: string }
-    const title = raw.title ?? ""
-    const material = raw.articleText ?? ""
-    if (!title || !isInterviewCandidate(title, material.length)) continue
-
-    const urls = (row.urls ?? {}) as { article?: string; reddit?: string }
+    if (!title || !isInterviewCandidate(`${title} ${tags}`, material.length)) continue
     const { error: insErr } = await supabase.from("interview_cards").insert({
       reservoir_id: row.id,
       team_id: CLUB_SUBREDDITS[sub],
       subreddit: sub,
-      source_url: urls.article ?? urls.reddit ?? null,
+      source_url: sourceUrl,
       source_title: title.slice(0, 500),
       material: material.slice(0, 8000),
       occurred_at: row.created_at,

@@ -44,6 +44,8 @@ import {
   type NewsCandidateState,
 } from "@/lib/news/candidate-ledger"
 import { titleSimilarity } from "@/lib/saga/cluster"
+import { inspectNewsFollowup } from "@/lib/news/followup"
+import { isInfrastructureGate, qualityRetryState, readNewsEvidence } from "@/lib/news/evidence"
 
 export const dynamic = "force-dynamic"
 /**
@@ -155,7 +157,13 @@ async function run(request: NextRequest) {
       decision: Record<string, unknown> | null
       created_at: string
       /** 원문 스냅샷 — 금액 증거 검사(오피셜)·종목 라우팅용 */
-      raw: { source_text?: string; sport?: string; published_at?: string } | null
+      raw: {
+        source_text?: string
+        sport?: string
+        published_at?: string
+        original_title?: string
+        evidence?: unknown
+      } | null
     })[]),
   ].sort((a, b) => {
     const [ua, ub] = [at(a) <= urgentCutoff, at(b) <= urgentCutoff]
@@ -173,6 +181,8 @@ async function run(request: NextRequest) {
   // 브레이킹 자가 재평가 상한 (P0-2) — 게이트 재실행은 LLM 비용이라 회당 제한
   const BREAKING_RETRY_CAP = 3
   let breakingRetries = 0
+  let qualityChecks = 0
+  let followupChecks = 0
 
   // 오피셜 웹 대조용 클럽 한글 표기 (팀 사전 — 제목에서 클럽 찾기)
   const { data: clubRows } = await supabase.from("team_dictionary").select("name_kr, aliases_kr")
@@ -189,7 +199,7 @@ async function run(request: NextRequest) {
   // 같은 기사가 2번 발행됨 — 같은 URL 은 제목이 아무리 달라도 같은 기사다)
   const { data: recentPosts } = await supabase
     .from("posts")
-    .select("title, source_url")
+    .select("title, source_url, content")
     .eq("user_id", NEWS_BOT_USER_ID)
     .is("deleted_at", null)
     .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
@@ -391,12 +401,22 @@ async function run(request: NextRequest) {
         breakingRetries < BREAKING_RETRY_CAP &&
         isBreaking(row.id) &&
         isRetryableGateReasons(priorGate.reasons)
-      if (!selfHealEligible) {
+      if (!selfHealEligible && !isInfrastructureGate(priorGate)) {
         noteSkip(row.id, "prior_gate_rejected", "needs_human")
         continue
       }
-      breakingRetries++
+      if (selfHealEligible) breakingRetries++
       // fall through — 게이트 전체 재실행 (표기 루프가 사전·흡수로 해소 시도)
+    }
+
+    const qualityRetry = qualityRetryState(row.decision)
+    if (qualityRetry.exhausted) {
+      noteSkip(row.id, "quality_retry_exhausted", "needs_human")
+      continue
+    }
+    if (qualityRetry.waiting) {
+      noteSkip(row.id, "quality_retry_backoff", "retry_wait")
+      continue
     }
 
     // 중복 차단 1 — **같은 원문 URL 은 제목이 아무리 달라도 같은 기사다** (결정론, 최우선).
@@ -445,8 +465,27 @@ async function run(request: NextRequest) {
     }
 
     // 중복 차단 2 — 최근 발행 기사와 제목이 비슷하면 같은 소식의 재탕 (다른 URL 대비)
-    const dup = recentTitles.find((t) => titleSimilarity(t, title) >= 0.5)
+    const similar = recentTitles.filter((t) => titleSimilarity(t, title) >= 0.5)
+    const dup = similar[0]
+    let newInformation = false
     if (dup) {
+      if (followupChecks >= 3) {
+        noteSkip(row.id, "followup_run_budget", "retry_wait")
+        continue
+      }
+      followupChecks++
+      const previous = (recentPosts ?? []).filter((p) => similar.includes(p.title))
+      const followup =
+        previous.length && previous.length <= 3 && previous.every((p) => p.content)
+          ? await inspectNewsFollowup(title, content, row.raw?.source_text, previous)
+          : "unavailable"
+      if (followup === "unavailable") {
+        noteSkip(row.id, "followup_check_unavailable", "retry_wait")
+        continue
+      }
+      newInformation = followup === "new_information"
+    }
+    if (dup && !newInformation) {
       const { error: gateWriteError } = await supabase
         .from("news_reservoir")
         .update({
@@ -518,7 +557,35 @@ async function run(request: NextRequest) {
      *    정합성"만 봤고, 그래서 원문에 없는 이적설이 붙어도 구조적으로 알 수 없었다.
      *    지어내기를 잡으려면 대조할 원본이 있어야 한다.
      */
-    const verdict = await inspectDraft(title, content, row.raw?.source_text)
+    // Bound failed-inspector work so one outage cannot consume the entire cron deadline.
+    if (qualityChecks >= 6) {
+      noteSkip(row.id, "quality_run_budget", "retry_wait")
+      continue
+    }
+    qualityChecks++
+    const evidence = readNewsEvidence(row.raw?.evidence)
+    const verdict = await inspectDraft(title, content, row.raw?.source_text, {
+      ...evidence,
+      original_title: evidence?.original_title ?? row.raw?.original_title,
+      source_url: row.urls?.source ?? undefined,
+    })
+    if (verdict.infra) {
+      const { error: retryError } = await supabase
+        .from("news_reservoir")
+        .update({
+          decision: {
+            ...(row.decision ?? {}),
+            quality_retry: { ...qualityRetry.next, reasons: verdict.reasons },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      if (retryError) {
+        errors.push(`${row.id}: 검사 재시도 기록 실패 — ${retryError.message}`)
+      }
+      noteSkip(row.id, "quality_check_unavailable", "retry_wait")
+      continue
+    }
     const promo = hasGamblingPromo(title, content)
     let failReasons: string[] = promo ? [promo] : verdict.pass ? [] : verdict.reasons
     if (verdict.pass && !promo) {
@@ -696,6 +763,7 @@ async function run(request: NextRequest) {
     publishedIds.push(result.postId!)
     // 같은 run 안의 다음 후보도 방금 발행분과 중복 검사되도록 (제목 + 원문 URL)
     recentTitles.push(title)
+    recentPosts?.push({ title, source_url: row.urls?.source ?? null, content: workingContent })
     if (srcCanonical) recentUrls.add(srcCanonical)
   }
 

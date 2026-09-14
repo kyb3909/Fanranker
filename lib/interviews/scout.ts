@@ -34,9 +34,51 @@ export function isInterviewCandidate(title: string, materialLength: number): boo
   const quoted = t.match(/["“]([^"”]{40,})["”]/)
   if (quoted) return true
   // 명시 키워드
-  if (/\binterview\b|press conference|\bpresser\b|pre-?match quotes|post-?match quotes/i.test(t))
+  if (
+    /\binterview\b|press conference|\bpresser\b|pre-?match quotes|post-?match quotes|인터뷰|기자회견|경기\s*(전|후)\s*발언/i.test(
+      t
+    )
+  )
     return true
   return false
+}
+
+/** Read both the legacy collector and the current Hermes payload. */
+export function interviewMaterial(row: {
+  source?: unknown
+  urls?: unknown
+  raw?: unknown
+  draft?: unknown
+}) {
+  const source = row.source as { subreddit?: string; origin_url?: string } | null
+  const urls = row.urls as {
+    source?: string
+    origin?: string
+    article?: string
+    reddit?: string
+  } | null
+  const raw = row.raw as {
+    original_title?: string
+    title?: string
+    source_text?: string
+    articleText?: string
+  } | null
+  const draft = row.draft as { tags?: string[] } | null
+  const found =
+    source?.subreddit ??
+    (source?.origin_url ?? urls?.origin ?? urls?.reddit ?? "").match(
+      /reddit\.com\/r\/([a-z0-9_]+)\//i
+    )?.[1]
+  const subreddit = Object.keys(CLUB_SUBREDDITS).find(
+    (s) => s.toLowerCase() === found?.toLowerCase()
+  )
+  return {
+    subreddit,
+    title: raw?.original_title ?? raw?.title ?? "",
+    material: raw?.source_text ?? raw?.articleText ?? "",
+    sourceUrl: urls?.source ?? urls?.article ?? urls?.reddit ?? null,
+    tags: Array.isArray(draft?.tags) ? draft.tags.join(" ") : "",
+  }
 }
 
 /** 따옴표·공백 정규화 — 발췌 대조(부분문자열)와 번역 전 정리가 공유하는 규약 */
