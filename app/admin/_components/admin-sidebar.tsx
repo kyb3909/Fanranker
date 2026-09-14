@@ -106,6 +106,7 @@ const navGroups: NavGroup[] = [
         badgeKeys: ["news-review", "saga-blocked"],
       },
       { title: "뉴스룸 큐", href: "/admin/content/newsroom", icon: Inbox },
+      { title: "기사 데스킹 · 학습", href: "/admin/news-review/desk", icon: GraduationCap },
       {
         title: "사가 검수",
         href: "/admin/saga-review",

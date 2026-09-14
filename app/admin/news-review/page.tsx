@@ -1,4 +1,5 @@
 import { requireAdminPageAccess } from "@/lib/admin/page-access"
+import Link from "next/link"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { suggestFlairs, type FlairOption } from "@/lib/news/suggest-flair"
 import { isBreakingNewsItem } from "@/lib/news/breaking"
@@ -213,6 +214,12 @@ export default async function NewsReviewPage() {
 
   return (
     <div className="mx-auto max-w-[900px] p-6">
+      <Link
+        href="/admin/news-review/desk"
+        className="border-wc-line bg-wc-card text-wc-ink hover:bg-wc-paper mb-4 block rounded-xl border p-4 text-sm font-medium"
+      >
+        기사 데스킹 · 학습 → 연습 초안을 고치고 다음 기사에 작성 기준을 남기세요.
+      </Link>
       {/* 지금 막힌 것 — 자동발행이 못 내보낸 후보의 사유별 현황 (0건이면 숨김) */}
       {stuck && (
         <div className="mb-4 rounded-xl border bg-amber-50 p-3 text-xs dark:bg-amber-950/30">

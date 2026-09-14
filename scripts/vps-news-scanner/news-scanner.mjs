@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { NEWS_WRITER_POLICY } from "./writer-policy.mjs"
 /**
  * news-scanner.mjs — 스포츠 뉴스 스캐너 (결정적 스캔 + OpenAI 작성. 축구 + NBA)
  *
@@ -623,7 +624,15 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
       ...chatParams(material ? MODEL_LONG : MODEL, { temperature: 0.4 }),
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: sys },
+        {
+          role: "system",
+          content:
+            sys +
+            "\n\n다음 편집 원칙은 위의 느슨한 통과 기준보다 우선한다. 사실 추출·출처 검증·자체 검수를 먼저 수행하고, 근거 부족이면 worthy=false로 보류한다. 기존 JSON 출력 형식은 유지한다.\n" +
+            NEWS_WRITER_POLICY +
+            "\n\n편집자가 저장한 활성 학습(사례 값은 새 기사 사실이 아님):\n" +
+            JSON.stringify((corrections.lessons ?? []).slice(0, 12)),
+        },
         { role: "user", content: user },
       ],
     }),
@@ -755,6 +764,7 @@ async function fetchCorrectionExamples() {
       articles: Array.isArray(d?.articles) ? d.articles : [],
       // 확정 표기 사전 [{ ko, en[] }] — 지어내기 전에 정답을 주기 위한 재료
       naming: Array.isArray(d?.naming) ? d.naming : [],
+      lessons: Array.isArray(d?.lessons) ? d.lessons.slice(0, 12) : [],
     }
   } catch {
     return empty

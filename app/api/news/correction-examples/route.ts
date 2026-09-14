@@ -3,6 +3,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { loadNotationSafe } from "@/lib/news/notation"
+import { loadDeskLessons } from "@/lib/news/desk/service"
 import type { TipTapNode } from "@/types/post"
 
 export const dynamic = "force-dynamic"
@@ -83,7 +84,11 @@ async function handler(req: NextRequest) {
   // 확정 표기 힌트 — 규칙(무엇을 en 으로 볼지)은 notation 모듈이 소유한다
   const { hints: naming } = await loadNotationSafe(supabase)
 
-  return NextResponse.json({ examples, articles, naming })
+  const lessons = await loadDeskLessons(supabase).catch(() => [])
+  return NextResponse.json(
+    { examples, articles, naming, lessons },
+    { headers: { "Cache-Control": "private, no-store" } }
+  )
 }
 
 export const GET = handler

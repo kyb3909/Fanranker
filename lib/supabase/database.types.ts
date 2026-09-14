@@ -10,41 +10,29 @@ export type Database = {
     Tables: {
       account_deletion_requests: {
         Row: {
-          user_id: string
-          created_at: string
-          completed_at: string | null
-          last_attempt_at: string | null
           attempts: number
+          completed_at: string | null
+          created_at: string
+          last_attempt_at: string | null
           last_error: string | null
+          user_id: string
         }
         Insert: {
-          user_id: string
-          created_at?: string
-          completed_at?: string | null
-          last_attempt_at?: string | null
           attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          last_attempt_at?: string | null
           last_error?: string | null
+          user_id: string
         }
         Update: {
-          user_id?: string
-          created_at?: string
-          completed_at?: string | null
-          last_attempt_at?: string | null
           attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          last_attempt_at?: string | null
           last_error?: string | null
+          user_id?: string
         }
-        Relationships: []
-      }
-      seller_reward_receipts: {
-        Row: { purchase_id: string; seller_id: string; amount: number; paid_at: string }
-        Insert: { purchase_id: string; seller_id: string; amount: number; paid_at?: string }
-        Update: { purchase_id?: string; seller_id?: string; amount?: number; paid_at?: string }
-        Relationships: []
-      }
-      lfa_material_recovery_attempts: {
-        Row: { lfa_match_id: string; attempted_at: string }
-        Insert: { lfa_match_id: string; attempted_at: string }
-        Update: { lfa_match_id?: string; attempted_at?: string }
         Relationships: []
       }
       adj_titles: {
@@ -3160,6 +3148,21 @@ export type Database = {
         }
         Relationships: []
       }
+      lfa_material_recovery_attempts: {
+        Row: {
+          attempted_at: string
+          lfa_match_id: string
+        }
+        Insert: {
+          attempted_at: string
+          lfa_match_id: string
+        }
+        Update: {
+          attempted_at?: string
+          lfa_match_id?: string
+        }
+        Relationships: []
+      }
       lfa_team_names: {
         Row: {
           created_at: string
@@ -4307,6 +4310,214 @@ export type Database = {
         }
         Relationships: []
       }
+      news_desk_items: {
+        Row: {
+          applied_lesson_ids: string[]
+          created_at: string
+          draft: Json | null
+          error: string | null
+          generated_at: string | null
+          generation_token: string
+          id: string
+          original: Json | null
+          quality: Json | null
+          research: Json | null
+          source_reservoir_id: string
+          sources: Json
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          applied_lesson_ids?: string[]
+          created_at?: string
+          draft?: Json | null
+          error?: string | null
+          generated_at?: string | null
+          generation_token: string
+          id?: string
+          original?: Json | null
+          quality?: Json | null
+          research?: Json | null
+          source_reservoir_id: string
+          sources: Json
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          applied_lesson_ids?: string[]
+          created_at?: string
+          draft?: Json | null
+          error?: string | null
+          generated_at?: string | null
+          generation_token?: string
+          id?: string
+          original?: Json | null
+          quality?: Json | null
+          research?: Json | null
+          source_reservoir_id?: string
+          sources?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      news_desk_lessons: {
+        Row: {
+          active: boolean
+          category: string
+          correct: string
+          created_at: string
+          explanation: string
+          field: string
+          id: string
+          instruction: string
+          ordinal: number
+          revision_id: string
+          scope: string
+          updated_at: string
+          wrong: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          correct: string
+          created_at?: string
+          explanation: string
+          field: string
+          id?: string
+          instruction: string
+          ordinal: number
+          revision_id: string
+          scope: string
+          updated_at?: string
+          wrong: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          correct?: string
+          created_at?: string
+          explanation?: string
+          field?: string
+          id?: string
+          instruction?: string
+          ordinal?: number
+          revision_id?: string
+          scope?: string
+          updated_at?: string
+          wrong?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_desk_lessons_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "news_desk_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_desk_revisions: {
+        Row: {
+          after_draft: Json
+          before_draft: Json
+          created_at: string
+          editor_id: string
+          editor_reason: string
+          id: string
+          item_id: string
+          learning_attempts: number
+          learning_error: string | null
+          learning_state: string
+          learning_token: string | null
+          lease_until: string | null
+          next_attempt_at: string
+          version: number
+        }
+        Insert: {
+          after_draft: Json
+          before_draft: Json
+          created_at?: string
+          editor_id: string
+          editor_reason?: string
+          id?: string
+          item_id: string
+          learning_attempts?: number
+          learning_error?: string | null
+          learning_state?: string
+          learning_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string
+          version: number
+        }
+        Update: {
+          after_draft?: Json
+          before_draft?: Json
+          created_at?: string
+          editor_id?: string
+          editor_reason?: string
+          id?: string
+          item_id?: string
+          learning_attempts?: number
+          learning_error?: string | null
+          learning_state?: string
+          learning_token?: string | null
+          lease_until?: string | null
+          next_attempt_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_desk_revisions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "news_desk_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_desk_settings: {
+        Row: {
+          daily_limit: number
+          enabled: boolean
+          id: boolean
+          last_error: string | null
+          last_run_at: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_auto_at: string
+          pending_target: number
+          updated_at: string
+        }
+        Insert: {
+          daily_limit?: number
+          enabled?: boolean
+          id?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_auto_at?: string
+          pending_target?: number
+          updated_at?: string
+        }
+        Update: {
+          daily_limit?: number
+          enabled?: boolean
+          id?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_auto_at?: string
+          pending_target?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       news_error_reports: {
         Row: {
           claim: string
@@ -5204,30 +5415,30 @@ export type Database = {
       }
       prediction_purchases: {
         Row: {
-          reward_version: string
           activity_id: string
           buyer_id: string
           created_at: string | null
           gold_spent: number
           id: string
+          reward_version: string
           seller_id: string
         }
         Insert: {
-          reward_version?: string
           activity_id: string
           buyer_id: string
           created_at?: string | null
           gold_spent?: number
           id?: string
+          reward_version?: string
           seller_id: string
         }
         Update: {
-          reward_version?: string
           activity_id?: string
           buyer_id?: string
           created_at?: string | null
           gold_spent?: number
           id?: string
+          reward_version?: string
           seller_id?: string
         }
         Relationships: [
@@ -6135,6 +6346,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seller_reward_receipts: {
+        Row: {
+          amount: number
+          paid_at: string
+          purchase_id: string
+          seller_id: string
+        }
+        Insert: {
+          amount: number
+          paid_at?: string
+          purchase_id: string
+          seller_id: string
+        }
+        Update: {
+          amount?: number
+          paid_at?: string
+          purchase_id?: string
+          seller_id?: string
+        }
+        Relationships: []
       }
       settlement_audit_log: {
         Row: {
@@ -7889,41 +8121,6 @@ export type Database = {
       }
     }
     Functions: {
-      request_account_deletion: { Args: { p_user_id: string }; Returns: undefined }
-      pay_analysis_seller: { Args: { p_purchase_id: string }; Returns: Json }
-      retry_pending_seller_reward: { Args: { p_reward_id: string }; Returns: Json }
-      claim_lfa_material_recovery: {
-        Args: { p_lfa_match_id: string }
-        Returns: boolean
-      }
-      lfa_artifact_game_ids: { Args: { p_match_id: string }; Returns: string[] }
-      ensure_lfa_match_thread: {
-        Args: {
-          p_match_id: string
-          p_game_id: string
-          p_user_id: string
-          p_title: string
-          p_content: Json
-        }
-        Returns: Json
-      }
-      ensure_lfa_motm_poll: {
-        Args: {
-          p_match_id: string
-          p_game_id: string
-          p_match_key: string
-          p_question: string
-          p_options: Json
-          p_closes_at: string
-        }
-        Returns: Json
-      }
-      write_lfa_fixture_snapshot: { Args: { p_fixture: Json }; Returns: Json }
-      write_lfa_lineup_snapshot: {
-        Args: { p_game_ids: string[]; p_match_id: string; p_payload: Json }
-        Returns: Json
-      }
-      append_motm_options: { Args: { p_poll_id: string; p_options: Json }; Returns: Json }
       admin_adjust_gold: {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: Json
@@ -7933,6 +8130,10 @@ export type Database = {
         Returns: Json
       }
       api_cost_summary: { Args: never; Returns: Json }
+      append_motm_options: {
+        Args: { p_options: Json; p_poll_id: string }
+        Returns: Json
+      }
       apply_flair_score: {
         Args: { p_delta: number; p_flair_id: string; p_user_id: string }
         Returns: undefined
@@ -7983,11 +8184,53 @@ export type Database = {
       }
       can_post_comment: { Args: { user_id_param: string }; Returns: boolean }
       check_achievements: { Args: { p_user_id: string }; Returns: Json }
+      claim_lfa_material_recovery: {
+        Args: { p_lfa_match_id: string }
+        Returns: boolean
+      }
       claim_match_report: { Args: { p_game_id: string }; Returns: Json }
+      claim_news_desk_item: {
+        Args: {
+          p_manual?: boolean
+          p_source_id: string
+          p_sources: Json
+          p_token: string
+        }
+        Returns: Json
+      }
+      claim_news_desk_learning: {
+        Args: { p_revision?: string; p_token: string }
+        Returns: {
+          after_draft: Json
+          before_draft: Json
+          created_at: string
+          editor_id: string
+          editor_reason: string
+          id: string
+          item_id: string
+          learning_attempts: number
+          learning_error: string | null
+          learning_state: string
+          learning_token: string | null
+          lease_until: string | null
+          next_attempt_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "news_desk_revisions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cleanup_expired_ticker_comments: { Args: never; Returns: number }
       cleanup_old_ticker_items: { Args: never; Returns: number }
       cleanup_temperature_queue: {
         Args: { days_old?: number }
+        Returns: number
+      }
+      complete_news_desk_learning: {
+        Args: { p_lessons: Json; p_revision: string; p_token: string }
         Returns: number
       }
       compute_daily_id: { Args: { match_time: string }; Returns: string }
@@ -8007,6 +8250,27 @@ export type Database = {
       ensure_daily_token_reset: {
         Args: { target_user_id: string }
         Returns: number
+      }
+      ensure_lfa_match_thread: {
+        Args: {
+          p_content: Json
+          p_game_id: string
+          p_match_id: string
+          p_title: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      ensure_lfa_motm_poll: {
+        Args: {
+          p_closes_at: string
+          p_game_id: string
+          p_match_id: string
+          p_match_key: string
+          p_options: Json
+          p_question: string
+        }
+        Returns: Json
       }
       escrow_hold_gold:
         | { Args: { p_order_id: string }; Returns: Json }
@@ -8128,6 +8392,7 @@ export type Database = {
         Args: { p_expert_id: string; p_subscriber_id: string }
         Returns: boolean
       }
+      lfa_artifact_game_ids: { Args: { p_match_id: string }; Returns: string[] }
       metaverse_award_flair_karma: {
         Args: {
           p_delta: number
@@ -8159,6 +8424,7 @@ export type Database = {
         Args: { p_amount: number; p_purpose?: string; p_user_id: string }
         Returns: Json
       }
+      pay_analysis_seller: { Args: { p_purchase_id: string }; Returns: Json }
       process_temperature_queue: {
         Args: { batch_size?: number }
         Returns: number
@@ -8201,6 +8467,10 @@ export type Database = {
           success: boolean
         }[]
       }
+      request_account_deletion: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       reserve_report_compose: {
         Args: { p_game_id: string; p_token: string; p_version: string }
         Returns: Json
@@ -8221,12 +8491,28 @@ export type Database = {
         }
         Returns: undefined
       }
+      retry_pending_seller_reward: {
+        Args: { p_reward_id: string }
+        Returns: Json
+      }
       reward_gold: {
         Args: {
           p_amount: number
           p_description?: string
           p_transaction_type?: string
           p_user_id: string
+        }
+        Returns: Json
+      }
+      save_news_desk_edit: {
+        Args: {
+          p_article: string
+          p_editor: string
+          p_expected_version: number
+          p_id: string
+          p_reason: string
+          p_status: string
+          p_title: string
         }
         Returns: Json
       }
@@ -8318,6 +8604,11 @@ export type Database = {
       write_lfa_day_snapshot: {
         Args: { p_date: string; p_payload: Json; p_updated_at: string }
         Returns: boolean
+      }
+      write_lfa_fixture_snapshot: { Args: { p_fixture: Json }; Returns: Json }
+      write_lfa_lineup_snapshot: {
+        Args: { p_game_ids: string[]; p_match_id: string; p_payload: Json }
+        Returns: Json
       }
       write_lfa_match_snapshot: {
         Args: {

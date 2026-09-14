@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
 const STRICT_PATHS = [
+  "/api/admin/news-desk",
   "/api/tokens/spend",
   "/api/payments/purchase",
   "/api/predictions/settle",
