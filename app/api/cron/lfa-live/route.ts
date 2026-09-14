@@ -6,6 +6,7 @@ import { createLfaRefreshSession } from "@/lib/lfa/match"
 import { readMatchDetails } from "@/lib/lfa/persist"
 import { getFixturesForDay, todayKst } from "@/lib/match/get-fixtures"
 import { isMatchPageLeague } from "@/lib/match/leagues"
+import { detailsFreshnessMs } from "@/lib/lfa/day-freshness"
 
 export const maxDuration = 120
 
@@ -56,6 +57,20 @@ async function cronGet(request: NextRequest) {
         targets.slice(i, i + 6).map(async ({ fixture }) => {
           try {
             const result = await refresh(fixture)
+            // The atomic writer may return an existing winner instead of saving.
+            // A completed request is not proof that this winner is still fresh.
+            const limit = detailsFreshnessMs({
+              finished: result.info.finished,
+              live: result.info.live,
+              matchTime: fixture.matchTime,
+              emptyDetails: (result.info.timeline?.length ?? 0) === 0,
+            })
+            if (
+              !Number.isFinite(result.info.sourceUpdatedAt) ||
+              Date.now() - result.info.sourceUpdatedAt! > limit
+            ) {
+              throw new Error("lfa-refresh-stale")
+            }
             results.push({
               gameId: fixture.gameId,
               status: result.status,

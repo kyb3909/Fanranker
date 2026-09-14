@@ -20,8 +20,7 @@
  *   node scripts/check-design-tokens.mjs --report  # 위반 위치까지 출력
  *   node scripts/check-design-tokens.mjs --update  # 현재 값으로 상한 재설정(줄었을 때만)
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs"
-import { execSync } from "node:child_process"
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs"
 
 const BUDGET_FILE = "scripts/design-token-budget.json"
 
@@ -73,11 +72,19 @@ const RULES = {
 }
 
 function sourceFiles() {
-  const out = execSync('find app components -name "*.tsx"', { encoding: "utf8", maxBuffer: 1 << 26 })
-  return out
-    .split("\n")
-    .filter(Boolean)
-    .filter((f) => !EXCLUDE.some((e) => f.includes(e)))
+  // Native filesystem traversal also works in Windows, where find is a text command.
+  const files = []
+  function visit(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const file = directory + "/" + entry.name
+      if (EXCLUDE.some((excluded) => file.includes(excluded))) continue
+      if (entry.isDirectory()) visit(file)
+      else if (entry.isFile() && entry.name.endsWith(".tsx")) files.push(file)
+    }
+  }
+  visit("app")
+  visit("components")
+  return files.sort()
 }
 
 function scan() {
@@ -144,7 +151,9 @@ for (const [k, rule] of Object.entries(RULES)) {
   const ok = now <= cap
   if (!ok) failed = true
   const arrow = now < cap ? ` (▼ ${cap - now} 감소 — --update 로 상한을 잠그세요)` : ""
-  console.log(`${ok ? "✓" : "✗"} ${rule.label.padEnd(18)} ${String(now).padStart(4)} / 상한 ${cap}${arrow}`)
+  console.log(
+    `${ok ? "✓" : "✗"} ${rule.label.padEnd(18)} ${String(now).padStart(4)} / 상한 ${cap}${arrow}`
+  )
   if (!ok) {
     console.log(`    → ${rule.hint}`)
     hits[k].slice(0, 10).forEach((h) => console.log(`      ${h}`))

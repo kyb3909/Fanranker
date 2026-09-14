@@ -1,108 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
-import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
-import { z } from "zod"
+import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 
-const TokenSpendSchema = z.object({
-  amount: z.number().int("토큰 양은 정수여야 합니다.").positive("토큰 양은 0보다 커야 합니다."),
-  description: z.string().optional(),
-  related_prediction_id: z.string().optional(),
-  idempotency_key: z.string().uuid().optional(),
-})
-
-/**
- * POST /api/tokens/spend
- *
- * Spend tokens for a prediction or other action
- * Uses database transaction to ensure atomicity
- *
- * Body:
- * - amount: number (required) - Amount of tokens to spend (positive integer)
- * - description?: string - Optional description
- * - related_prediction_id?: string - Optional prediction ID
- */
+/** Retired unused endpoint. Prediction submission owns atomic spending and retry keys. */
 export async function POST(request: NextRequest) {
   try {
     const limited = checkRateLimit(request, "STRICT")
     if (limited) return limited
-
-    const user = await currentUser()
-
-    if (!user) {
-      return apiUnauthorized()
-    }
-
-    const userId = user.id
-
-    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const supabase = createServiceRoleClient()
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return apiBadRequest("잘못된 요청 본문입니다.")
-    }
-    const parsed = TokenSpendSchema.safeParse(body)
-    if (!parsed.success) {
-      return apiBadRequest(parsed.error.issues[0]?.message || "유효하지 않은 토큰 양입니다.")
-    }
-    const { amount, description, related_prediction_id, idempotency_key } = parsed.data
-
-    // Idempotency check: prevent duplicate spend requests
-    if (idempotency_key) {
-      const { data: existing } = await supabase
-        .from("token_transactions")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("idempotency_key", idempotency_key)
-        .single()
-
-      if (existing) {
-        // Already processed - return current balance
-        const { data: tokenData } = await supabase
-          .from("user_tokens")
-          .select("token_balance")
-          .eq("user_id", userId)
-          .single()
-        return NextResponse.json({
-          success: true,
-          balance: tokenData?.token_balance ?? 0,
-          spent: amount,
-          duplicate: true,
-        })
-      }
-    }
-
-    // Atomic token deduction via RPC (prevents race conditions)
-    const { data: result, error: rpcError } = (await supabase
-      .rpc("spend_tokens", {
-        p_user_id: userId,
-        p_amount: amount,
-        p_description: description || null,
-        p_related_prediction_id: related_prediction_id || null,
-      })
-      .single()) as {
-      data: { success: boolean; remaining_balance: number; error_message: string | null } | null
-      error: unknown
-    }
-
-    if (rpcError || !result) {
-      return apiError("토큰 차감 중 오류가 발생했습니다.", 500, rpcError)
-    }
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error_message, balance: result.remaining_balance, required: amount },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json({
-      success: true,
-      balance: result.remaining_balance,
-      spent: amount,
-    })
+    if (!(await currentUser())) return apiUnauthorized()
+    return NextResponse.json(
+      { error: "이 토큰 사용 경로는 종료되었습니다. 승부예측 화면에서 제출해주세요." },
+      { status: 410, headers: { "Cache-Control": "no-store" } }
+    )
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

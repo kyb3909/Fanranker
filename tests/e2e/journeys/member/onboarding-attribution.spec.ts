@@ -28,7 +28,7 @@
  * 실행: `E2E_BOT_COUNT=1 pnpm test:e2e --grep "유입 귀속"`
  */
 import { expect, test } from "@playwright/test"
-import { createClient } from "@supabase/supabase-js"
+import { dbClient as db } from "../../helpers/db-verifier"
 import { loginAs } from "../../helpers/auth"
 import { loadBots, type Bot } from "../../setup/bot-factory"
 
@@ -37,10 +37,6 @@ const UTM = {
   medium: "test",
   campaign: "preopen",
   content: "onboarding-attribution",
-}
-
-function db() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
 test.describe("온보딩 완료 → 유입 귀속", () => {

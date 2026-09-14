@@ -363,13 +363,13 @@ export async function loadControlCenter(db: Db): Promise<ControlCenterData> {
       dueAt: dueFrom(sellerRewards.oldestAt, 24),
       owner: null,
       state: "actionable",
-      nextAction: "골드를 수동 지급 — 이 앱에는 처리 화면이 없습니다",
-      href: null,
+      nextAction: "구매·지급 원장을 확인하고 재시도",
+      href: "/admin/seller-rewards",
       severity: "critical",
       observation: sellerRewards.state,
       // 큐에 쌓기만 하고 읽는 코드가 없었다. 여기서 처음 보이게 했지만 처리 경로는 여전히 없다.
-      actionWired: false,
-      note: "지급·기록 화면이 아직 없어 숫자만 보여줍니다",
+      actionWired: true,
+      note: "과거 구매는 기존 지급 이력 대사 후 처리해야 합니다",
     },
     {
       key: "orphan-settlement",

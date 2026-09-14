@@ -752,12 +752,18 @@ function UndoStrip({
  * 티커 즉시 삭제 — 담벼락 티커에 이상한 게 올라오면 여기서 바로 죽인다.
  * (구 대시보드 DashboardNewsCrawler 의 실용 기능 승계)
  */
-export function TickerModPanel({ items: initial }: { items: { id: string; title: string }[] }) {
+export function TickerModPanel({
+  items: initial,
+  canManage,
+}: {
+  items: { id: string; title: string }[]
+  canManage: boolean
+}) {
   const [items, setItems] = useState(initial)
   const busyRef = useRef<Set<string>>(new Set())
 
   const remove = async (t: { id: string; title: string }, index: number) => {
-    if (busyRef.current.has(t.id)) return
+    if (!canManage || busyRef.current.has(t.id)) return
     busyRef.current.add(t.id)
     setItems((prev) => prev.filter((x) => x.id !== t.id))
     try {
@@ -794,12 +800,14 @@ export function TickerModPanel({ items: initial }: { items: { id: string; title:
           {items.map((t, i) => (
             <li key={t.id} className="flex items-center gap-2 py-1.5 text-xs">
               <span className="min-w-0 flex-1 truncate">{t.title}</span>
-              <button
-                onClick={() => void remove(t, i)}
-                className="shrink-0 rounded border border-red-200 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
-              >
-                즉시 삭제
-              </button>
+              {canManage && (
+                <button
+                  onClick={() => void remove(t, i)}
+                  className="shrink-0 rounded border border-red-200 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                >
+                  즉시 삭제
+                </button>
+              )}
             </li>
           ))}
         </ul>

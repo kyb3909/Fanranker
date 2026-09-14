@@ -56,7 +56,16 @@ const STRICT_CSP_REPORT_ONLY = [
 const nextConfig = {
   // The isolated avatar preview can run beside the main app dev server without
   // both processes writing to the same route/build manifests.
-  distDir: process.env.AVATAR_LAB_DEV === "1" ? ".next-avatar-lab" : ".next",
+  // E2E builds embed local public keys; they must not replace the normal build.
+  distDir:
+    process.env.E2E_TEST_BUILD === "1"
+      ? ".next-e2e"
+      : process.env.AVATAR_LAB_DEV === "1"
+        ? ".next-avatar-lab"
+        : ".next",
+  typescript: {
+    tsconfigPath: process.env.E2E_TEST_BUILD === "1" ? "tsconfig.e2e.json" : "tsconfig.json",
+  },
   // OG 카드(app/opengraph-image.tsx)가 fs 로 읽는 임베드 폰트 — 파일 트레이싱이 놓치면
   // 프로덕션에서만 ENOENT 로 죽는다 (satori 는 woff2 를 못 읽어 ttf 를 따로 둠, 2026-08-20)
   outputFileTracingIncludes: {

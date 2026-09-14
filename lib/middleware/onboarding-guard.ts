@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 const ONBOARDING_EXCLUDED = [
+  "/account-deleted",
   "/onboarding",
   "/api/",
   "/sign-up",
@@ -22,10 +23,12 @@ function isOnboardingExcluded(pathname: string): boolean {
 /**
  * 온보딩 미완료 유저를 /sign-up으로 리다이렉트.
  * 쿠키로 24시간 캐싱하여 매 요청 DB 조회 방지.
+ * 통과 시에는 호출자가 만든 응답만 사용해 신뢰된 요청 헤더를 보존한다.
  */
 export async function onboardingGuard(
   auth: () => Promise<{ userId: string | null }>,
-  req: NextRequest
+  req: NextRequest,
+  nextResponse: NextResponse
 ): Promise<NextResponse | null> {
   if (isOnboardingExcluded(req.nextUrl.pathname)) return null
 
@@ -69,14 +72,13 @@ export async function onboardingGuard(
     }
 
     // 온보딩 완료 확인됨 → 쿠키에 캐싱 (24시간)
-    const response = NextResponse.next()
-    response.cookies.set("onboarding_done", "1", {
+    nextResponse.cookies.set("onboarding_done", "1", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24,
     })
-    return response
+    return nextResponse
   } catch (onboardingError) {
     console.error("Onboarding check failed:", onboardingError)
     return NextResponse.redirect(new URL("/sign-up", req.url))

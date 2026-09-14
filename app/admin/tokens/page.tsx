@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { TokenMonitoringTable } from "./token-table"
@@ -17,6 +18,7 @@ function aggregate(rows: { transaction_type: string; amount: number }[] | null):
 }
 
 export default async function AdminTokensPage() {
+  await requireAdminPageAccess("/admin/tokens")
   const supabase = createServiceRoleClient()
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 

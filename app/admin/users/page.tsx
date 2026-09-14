@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { UserDirectoryTable } from "./user-directory-table"
@@ -6,6 +7,7 @@ export const metadata: Metadata = { title: "사용자 관리" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminUsersPage() {
+  await requireAdminPageAccess("/admin/users")
   const supabase = createServiceRoleClient()
 
   const { data, count } = await supabase

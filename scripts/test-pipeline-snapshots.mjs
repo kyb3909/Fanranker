@@ -1,7 +1,7 @@
 /** Isolated SQL regressions. No environment variables, network, or production DB. */
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
-import { PGlite } from "../output/lfa-snapshot-test/node_modules/@electric-sql/pglite/dist/index.js"
+import { PGlite } from "@electric-sql/pglite"
 
 const db = new PGlite()
 const stamp = (n) => new Date(Date.parse("2026-09-10T12:00:00Z") + n * 60_000).toISOString()

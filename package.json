@@ -22,13 +22,15 @@
     "audit:diff": "tsx tests/audit/lib/compare-runs.ts",
     "audit:parse": "tsx tests/audit/lib/parse-events.ts",
     "test:e2e": "playwright test --config=playwright.e2e.config.ts",
+    "test:e2e:check": "tsx tests/e2e/setup/preflight-cli.ts",
     "test:e2e:report": "tsx scripts/generate-e2e-report.ts",
     "test:e2e:cleanup": "tsx tests/e2e/setup/bot-factory-cli.ts cleanup",
     "lint:slop": "node scripts/lint-slop.mjs",
     "design:check": "node scripts/check-design-tokens.mjs",
     "design:report": "node scripts/check-design-tokens.mjs --report",
     "avatar:kits": "tsx scripts/avatar3d/generate-kit-textures.ts",
-    "avatar:verify": "tsx scripts/avatar3d/verify-avatar-lab.ts"
+    "avatar:verify": "tsx scripts/avatar3d/verify-avatar-lab.ts",
+    "test:sql": "node scripts/test-lfa-snapshots.mjs && node scripts/test-pipeline-snapshots.mjs && node scripts/test-materials-recovery.mjs && node scripts/test-match-artifact-creation.mjs && node scripts/test-report-budget.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -91,6 +93,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@next/bundle-analyzer": "^16.2.1",
     "@oxlint/plugins": "1.80.0",
     "@playwright/test": "^1.57.0",

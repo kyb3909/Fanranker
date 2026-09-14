@@ -253,6 +253,37 @@ describe("dictionary and allowlist", () => {
     expect(payload.영문_그대로_쓸_이름).toEqual(["Karl Hein"])
     expect(payload.실명_사용_허용_목록).toEqual(["콜 팔머"])
   })
+  it.each([
+    { name: "Filip Jorgensen", passes: true },
+    { name: "Invented Keeper", passes: false },
+  ])(
+    "optional source names reach verification but foreign names do not: $name",
+    async ({ name, passes }) => {
+      mocks.work.context!.extracted!.events.push(
+        { ...event("injury", "Anis Soubeir"), detail: "Anis Soubeir was injured." },
+        { ...event("note", "Filip Jorgensen"), detail: "Filip Jorgensen made a save." },
+        { ...event("chance", "Filip Jorgensen"), detail: "Filip Jorgensen saved the shot." }
+      )
+      mocks.fetch.mockImplementation(async (_url, opts) => {
+        const system = JSON.parse(opts.body).messages[0].content as string
+        const value = system.includes("쓰는 에디터")
+          ? {
+              title: "아스널 2-1 첼시",
+              paragraphs: ["Anis Soubeir가 다쳤고 " + name + "이 선방했다."],
+            }
+          : { pass: true, problems: [] }
+        return new Response(
+          JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] })
+        )
+      })
+      const result = await run()
+      const payload = JSON.parse(JSON.parse(composeCalls()[0][1].body).messages[1].content)
+      expect(payload.영문_그대로_쓸_이름).toEqual(["Anis Soubeir", "Filip Jorgensen"])
+      expect(mocks.attempts.every((a) => a.verify_called === passes)).toBe(true)
+      expect(result !== null).toBe(passes)
+    }
+  )
+
   it("persists extraction and never repeats it on retry", async () => {
     mocks.work.context!.extracted = null
     await run()
@@ -355,6 +386,19 @@ describe("version budget and retained inputs", () => {
     await run()
     expect(mocks.attempts[0]).toMatchObject({ compose_index: 1, version: version() })
   })
+  it("optional-name evidence changes the input once, while identical retries keep the six-start cap", async () => {
+    mocks.work.status = "held"
+    mocks.work.input_version = version()
+    mocks.work.context!.extracted!.events.push(event("note", "Filip Jorgensen"))
+    mocks.badCompose = true
+    await run()
+    expect(mocks.attempts[0].version).not.toBe(version())
+    await run()
+    await run()
+    expect(composeCalls()).toHaveLength(6)
+    expect(new Set(mocks.attempts.map((a) => a.version)).size).toBe(1)
+    expect(mocks.work.status).toBe("held")
+  })
   it("a changed DB score resumes an old hold without an external score lookup", async () => {
     mocks.work.status = "held"
     mocks.work.input_version = version()
@@ -441,5 +485,7 @@ describe("stable input identity", () => {
       () => null
     )
     expect(result.missing).toEqual(["A", "B", "C"])
+    expect(result.original).toEqual(["A", "B", "C", "D", "E"])
+    expect(result.representations).toEqual(["A", "B", "C", "D", "E"])
   })
 })

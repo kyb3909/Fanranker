@@ -237,24 +237,20 @@ export function MyProfileSettings() {
   }
 
   const handleDeleteAccount = async () => {
+    const response = await fetch("/api/profile/me", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: "계정삭제" }),
+    })
+    if (!response.ok) {
+      const result = await response.json().catch(() => null)
+      throw new Error(result?.error || "계정 삭제에 실패했습니다.")
+    }
     try {
-      const response = await fetch("/api/profile/me", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: "계정삭제" }),
-      })
-      if (response.ok) {
-        await signOut()
-        router.push("/")
-      } else {
-        toast({ variant: "destructive", title: "오류", description: "계정 삭제에 실패했습니다." })
-      }
+      await signOut()
+      router.replace("/")
     } catch {
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: "계정 삭제 중 오류가 발생했습니다.",
-      })
+      window.location.assign("/account-deleted")
     }
   }
 

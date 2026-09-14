@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { attachNicknames } from "@/lib/admin/attach-nicknames"
@@ -7,6 +8,7 @@ export const metadata: Metadata = { title: "댓글 관리" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminCommentsPage() {
+  await requireAdminPageAccess("/admin/content/comments")
   const supabase = createServiceRoleClient()
 
   // comments↔posts(title) FK 는 정상이지만 comments↔profiles 는 FK 가 없어 임베드 실패

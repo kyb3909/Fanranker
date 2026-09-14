@@ -4,6 +4,7 @@ import { Trophy, Target, Loader2 } from "lucide-react"
 import type { RankingUser, MyRank } from "@/types/betting"
 
 interface BettingRankingsProps {
+  rankingFilter?: "profit" | "winRate" | "roi"
   rankings: RankingUser[]
   myRank: MyRank | null
   isLoading: boolean
@@ -21,7 +22,14 @@ const medalRowBg = [
   "bg-orange-50/70 dark:bg-orange-950/20", // 동
 ]
 
-export function BettingRankings({ rankings, myRank, isLoading }: BettingRankingsProps) {
+export function BettingRankings({
+  rankings,
+  myRank,
+  isLoading,
+  rankingFilter = "profit",
+}: BettingRankingsProps) {
+  const metricClass = (metric: "profit" | "winRate" | "roi") =>
+    `${rankingFilter === metric ? "block" : "hidden"} text-right sm:block`
   return (
     <div className="space-y-3">
       {/* 내 순위 카드 */}
@@ -142,9 +150,9 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
           >
             <span className="text-center">#</span>
             <span>유저</span>
-            <span className="text-right">수익률</span>
-            <span className="hidden text-right sm:block">적중률</span>
-            <span className="hidden text-right sm:block">순수익</span>
+            <span className={metricClass("roi")}>수익률</span>
+            <span className={metricClass("winRate")}>적중률</span>
+            <span className={metricClass("profit")}>순수익</span>
           </div>
 
           {/* 랭킹 행 */}
@@ -174,7 +182,7 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
                 </div>
 
                 {/* 수익률 */}
-                <div className="text-right">
+                <div className={metricClass("roi")}>
                   <span
                     className="text-xs font-bold tabular-nums"
                     style={{
@@ -190,7 +198,7 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
                 </div>
 
                 {/* 적중률 */}
-                <div className="hidden text-right sm:block">
+                <div className={metricClass("winRate")}>
                   <span
                     className="text-xs font-bold tabular-nums"
                     style={{ color: "var(--wc-burgundy, #961E37)" }}
@@ -200,7 +208,7 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
                 </div>
 
                 {/* 순수익 */}
-                <div className="hidden text-right sm:block">
+                <div className={metricClass("profit")}>
                   <span
                     className="text-xs font-bold tabular-nums"
                     style={{

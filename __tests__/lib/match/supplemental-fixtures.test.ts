@@ -195,6 +195,19 @@ describe("LFA 전용 경기 등록 → 기존 경기 경로", () => {
   afterEach(() => {
     vi.useRealTimers()
   })
+  it("a newer stored kickoff cannot leak into the old matchday through a stale feed", async () => {
+    const moved = fixture({
+      matchTime: "2026-09-06T19:00:00.000Z",
+      sourceUpdatedAt: fixture().sourceUpdatedAt! + 100,
+    })
+    await syncSupplementalFixtures([moved], new Map(), new Set([moved.lfaId]))
+    state.fixtures.mockResolvedValue([fixture()])
+    expect(await getFixturesForDay("2026-09-05")).toEqual([])
+    state.fixtures.mockResolvedValue([])
+    expect(await getFixturesForDay("2026-09-06")).toEqual([
+      expect.objectContaining({ matchTime: moved.matchTime }),
+    ])
+  })
   it("인기팀 컵경기를 독립 UUID로 등록하고 매치센터에서 읽는다", async () => {
     const [f] = await getFixturesForDay("2026-09-05")
     expect(f.gameId).toMatch(/^[a-f0-9-]{36}$/)

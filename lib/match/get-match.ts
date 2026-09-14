@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isMatchPageLeague } from "@/lib/match/leagues"
 import { supplementalSummary, type SupplementalFixture } from "@/lib/match/supplemental-fixtures"
-import { getMatchIdentity } from "@/lib/match/sibling-ids"
+import { getReadMatchIdentity } from "@/lib/match/read-identity"
 
 /**
  * 매치 페이지 데이터 — betman_games 만으로 조립하는 경기 요약 (2026-08-16, 표시 전용).
@@ -43,7 +43,7 @@ export interface MatchSummary {
 
 async function fetchMatchByGameId(gameId: string): Promise<MatchSummary | null> {
   const supabase = createServiceRoleClient()
-  const identity = await getMatchIdentity(supabase, gameId, { strict: true })
+  const identity = await getReadMatchIdentity(gameId)
 
   const { data: game, error: gameError } = await supabase
     .from("betman_games")

@@ -9,28 +9,31 @@ import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { rateLimitGuard } from "@/lib/middleware/rate-limit-guard"
 import { adminGuard } from "@/lib/middleware/admin-guard"
+import { accountGuard } from "@/lib/middleware/account-guard"
 import { onboardingGuard } from "@/lib/middleware/onboarding-guard"
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
+  // Every pass-through response carries the real path, including the first
+  // visit that sets onboarding_done. Never trust an incoming x-pathname value.
+  const headers = new Headers(req.headers)
+  headers.set("x-pathname", req.nextUrl.pathname)
+  const nextResponse = NextResponse.next({ request: { headers } })
+
   try {
     // 1. Rate limiting for API routes
     const rateLimited = rateLimitGuard(req)
     if (rateLimited) return rateLimited
+
+    const accountResponse = await accountGuard(auth, req)
+    if (accountResponse) return accountResponse
 
     // 2. Admin route protection
     const adminRedirect = await adminGuard(auth, req)
     if (adminRedirect) return adminRedirect
 
     // 3. Onboarding redirect for incomplete users
-    const onboardingRedirect = await onboardingGuard(auth, req)
-    if (onboardingRedirect) return onboardingRedirect
-
-    // 4. 현재 경로를 헤더로 넘긴다 — 레이아웃(서버 컴포넌트)은 pathname 을 못 받는데,
-    //    /admin 레이아웃이 역할별 경로 허용을 판정하려면 어느 화면인지 알아야 한다.
-    //    (lib/admin/route-access.ts — 헤더가 없으면 거부하는 fail-closed 규칙)
-    const headers = new Headers(req.headers)
-    headers.set("x-pathname", req.nextUrl.pathname)
-    return NextResponse.next({ request: { headers } })
+    const onboardingResponse = await onboardingGuard(auth, req, nextResponse)
+    return onboardingResponse ?? nextResponse
   } catch (error) {
     console.error("Middleware error:", error)
     // 관리자 영역은 가드 예외 시 fail-closed — 예외를 틈탄 보호 우회를 막는다.
@@ -42,7 +45,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         ? NextResponse.json({ error: "일시적 오류로 요청을 처리할 수 없습니다." }, { status: 503 })
         : NextResponse.redirect(new URL("/", req.url))
     }
-    return NextResponse.next()
+    return nextResponse
   }
 })
 

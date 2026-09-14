@@ -21,6 +21,7 @@ import {
   type WorkItem,
 } from "@/lib/admin/control-center"
 import type { ControlCenterResponse } from "./types"
+import { canOpenAdminPath, type PanelRole } from "@/lib/admin/route-access"
 
 /**
  * 관제 센터 — 관리자 첫 화면 (2026-09-08).
@@ -268,14 +269,14 @@ export function ControlCenter() {
           )}
         </Section>
 
-        <DetailPanel item={selected} now={now} />
+        <DetailPanel item={selected} now={now} role={data.role} />
       </div>
 
       {/* ── ③ 업무별 현황 ─────────────────────────────────────────────── */}
       <Section title="업무별 현황" className="mt-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {view.domains.map((d) => (
-            <DomainCard key={d.domain} summary={d} now={now} />
+            <DomainCard key={d.domain} summary={d} now={now} role={data.role} />
           ))}
         </div>
       </Section>
@@ -524,7 +525,11 @@ function ActionRow({
 
 /* ─────────────────────────── ② 상세 ─────────────────────────── */
 
-function DetailPanel({ item, now }: { item: WorkItem | null; now: number }) {
+function canOpenWorkItem(role: PanelRole, href: string) {
+  return canOpenAdminPath(role, href.split(/[?#]/, 1)[0])
+}
+
+function DetailPanel({ item, now, role }: { item: WorkItem | null; now: number; role: PanelRole }) {
   if (!item) {
     return (
       <Section title="선택한 업무">
@@ -589,11 +594,13 @@ function DetailPanel({ item, now }: { item: WorkItem | null; now: number }) {
           <p className="text-sm font-medium">{item.nextAction}</p>
         </div>
 
-        {item.href && item.actionWired ? (
+        {item.href && item.actionWired && canOpenWorkItem(role, item.href) ? (
           <Button asChild size="sm" className="w-full">
             {/* 필터·정렬을 URL 로 넘긴다 — 돌아왔을 때 같은 화면이 복원된다 */}
             <Link href={item.href}>처리 화면 열기</Link>
           </Button>
+        ) : item.href && item.actionWired ? (
+          <p className="text-muted-foreground text-xs">관리자 권한으로 처리할 수 있습니다.</p>
         ) : (
           <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
             이 업무를 처리하는 화면이 아직 없습니다. 숫자만 보여드리고 있으며, 처리하려면 다른
@@ -610,9 +617,11 @@ function DetailPanel({ item, now }: { item: WorkItem | null; now: number }) {
 function DomainCard({
   summary,
   now,
+  role,
 }: {
   summary: ReturnType<typeof summarizeDomains>[number]
   now: number
+  role: PanelRole
 }) {
   // 정상 0건만 접는다. 확인 불가가 섞이면 접지 않는다 — 그게 "0건처럼 보이는" 원인이다
   const [open, setOpen] = useState(!summary.collapsible)
@@ -664,7 +673,7 @@ function DomainCard({
               >
                 {i.observation === "ok" ? i.count : OBSERVATION_TEXT[i.observation].label}
               </span>
-              {i.href && i.actionWired ? (
+              {i.href && i.actionWired && canOpenWorkItem(role, i.href) ? (
                 <Link href={i.href} className="min-w-0 flex-1 truncate hover:underline">
                   {i.label}
                 </Link>

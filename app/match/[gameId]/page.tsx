@@ -32,7 +32,7 @@ import { findSeasonSagasForTeams } from "@/lib/saga/season"
 import { isEventLive } from "@/lib/event/gunners-season"
 import { matchTitleScore, pickScore } from "@/lib/match/score-precedence"
 import { readMatchDetails } from "@/lib/lfa/persist"
-import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { getReadMatchIdentity } from "@/lib/match/read-identity"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -152,7 +152,7 @@ export default async function MatchPage({ params }: Props) {
   //    같은 (팀, 킥오프)의 **모든 행 id** 로 찾는다. 아니면 어느 행으로 들어왔느냐에
   //    따라 배너가 있다 없다 한다 (2026-08-20 실측).
   const admin = createServiceRoleClient()
-  const gameIds = await getSiblingGameIds(admin, match.gameId)
+  const { gameIds } = await getReadMatchIdentity(match.gameId)
 
   // 리포트가 아직 없으면 응답 뒤에 생성 체인을 건다 — 단, **방문마다는 아니다** (2026-09-07).
   // 해석(resolve) 단계엔 부정 캐시가 없어 매핑이 안 된 경기는 방문할 때마다 Soccerway 페이지

@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import aggConfig from "@/data/agents/config/aggregator.json"
 import { AggReviewClient, type AggReviewItem } from "./agg-review-client"
@@ -17,6 +18,7 @@ interface Row {
 }
 
 export default async function AggReviewPage() {
+  await requireAdminPageAccess("/admin/agg-review")
   const supabase = createServiceRoleClient()
 
   const { data } = await supabase

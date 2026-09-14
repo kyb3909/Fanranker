@@ -47,18 +47,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let newVoteType: string | null = voteType
 
     if (checkError && checkError.code !== "PGRST116") {
-      console.error("Failed to check existing vote:", checkError)
+      return apiError("기존 투표 확인 중 오류가 발생했습니다.", 500, checkError)
     }
 
     if (existing) {
       if (existing.vote_type === voteType) {
         // 같은 타입 재클릭 → 취소
-        await supabase.from("comment_votes").delete().eq("id", existing.id)
+        const { error } = await supabase.from("comment_votes").delete().eq("id", existing.id)
+        if (error) return apiError("투표 취소 중 오류가 발생했습니다.", 500, error)
         action = "deleted"
         newVoteType = null
       } else {
         // 다른 타입으로 변경
-        await supabase.from("comment_votes").update({ vote_type: voteType }).eq("id", existing.id)
+        const { error } = await supabase
+          .from("comment_votes")
+          .update({ vote_type: voteType })
+          .eq("id", existing.id)
+        if (error) return apiError("투표 변경 중 오류가 발생했습니다.", 500, error)
         action = "updated"
       }
     } else {

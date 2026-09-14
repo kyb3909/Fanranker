@@ -24,6 +24,7 @@ import { reportStatCoverageGap } from "@/lib/lfa/stat-coverage-notice"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
 import { getSupplementalFixture } from "@/lib/match/supplemental-fixtures"
 import { isLfaFinishedStatus } from "@/lib/lfa/status"
+import { recoverKnownMatchDetails } from "@/lib/lfa/detail-fallback"
 
 /**
  * betman 경기 → live-football-api 경기 해석 + 스코어/스탯 (2026-08-17).
@@ -331,7 +332,7 @@ const cachedSquad = unstable_cache(
 
 /* ── 본체 ── */
 
-interface BetmanGameKey {
+export interface BetmanGameKey {
   /** betman_games.id — 라인업 조회(득점자 한글화)에 쓴다 */
   gameId: string
   homeTeam: string
@@ -593,105 +594,115 @@ async function computeLfaMatchInfo(
     }
     if (info.live) info.minute = d.header?.status?.minute?.trim() || null
 
-    const mapped = mapLfaStats(d.stats ?? null)
-    info.stats.push(...mapped.rows)
-
-    /**
-     * ⚠️ 조용히 죽지 않게 한다. 이 사고의 본질은 "라벨이 바뀐 것"이 아니라
-     *    **바뀐 걸 아무도 몰랐다는 것**이다 — 지면에 슈팅 한 줄만 뜬 채로 하루가 갔다.
-     *    LFA 가 스탯을 넉넉히 줬는데 우리가 거의 못 알아보면 못 알아본 라벨을 남긴다.
-     */
-    const given = d.stats?.length ?? 0
-    await reportStatCoverageGap(m.id, given, mapped.rows.length, mapped.unknown).catch(() => {})
-
-    // ⚠️ LFA 이벤트 타입은 표기가 섞인다 — 실측: "Goal"(대문자·공백) 과 "red_card"
-    //    (소문자·언더스코어)가 같은 응답에 함께 온다. 반드시 정규화하고 비교할 것.
-    const norm = (t: unknown) =>
-      String(t ?? "")
-        .toLowerCase()
-        .replace(/_/g, " ")
-        .trim()
-    const kindOf = (t: string): LfaTimelineEvent["kind"] | null => {
-      if (t === "goal") return "goal"
-      if (t === "penalty" || t.includes("penalty goal")) return "pen"
-      if (t === "own goal") return "og"
-      if (t === "yellow card") return "yellow"
-      // 다이렉트 퇴장과 경고 누적 퇴장 둘 다 퇴장이다
-      if (t.includes("red card") || t.includes("second yellow")) return "red"
-      if (t === "substitution") return "sub"
-      return null // VAR 등 — 뜻이 불확실한 이벤트는 싣지 않는다
-    }
-
-    const rawEvents = (d.events ?? [])
-      .map((e) => ({ e, kind: kindOf(norm(e.type)) }))
-      .filter(
-        (x): x is { e: (typeof d.events)[number]; kind: LfaTimelineEvent["kind"] } =>
-          x.kind !== null
-      )
-    // Live events reuse the stored roster; they never buy a lineup on every refresh.
-    // Acquisition/persistence belongs exclusively to getMatchLineup.
-    const lineup = rawEvents.length ? await loadStoredLineup(game.gameId).catch(() => null) : null
-
-    // 라인업이 없어도(=지난 경기) 스쿼드 사전으로 한글화한다. 사건이 있을 때만 부른다.
-    const [homeSquad, awaySquad] = rawEvents.length
-      ? await Promise.all([cachedSquad(game.homeTeam), cachedSquad(game.awayTeam)])
-      : [[], []]
-
-    // 이름 한글화 한 사람분 — 판정은 순수 모듈이 소유한다 (백필 CLI 가 같은 규칙을 쓴다)
-    const roster =
-      lineup?.status === "ready"
-        ? [
-            ...lineup.home.starters,
-            ...lineup.home.bench,
-            ...lineup.away.starters,
-            ...lineup.away.bench,
-          ]
-        : []
-    const localizeName = (raw: string | undefined, side: "home" | "away"): string | null =>
-      localizeTimelineName(raw, roster, side === "away" ? awaySquad : homeSquad)
-
-    for (const { e, kind } of rawEvents) {
-      const minute = String(e.time ?? "")
-      if (kind === "sub") {
-        // player = 나간 선수(out), inPlayer = 들어온 선수 — 실측: 둘 다 이름이 온다
-        const out = localizeName(e.detail?.out?.name, e.side)
-        const inp = localizeName(e.detail?.in?.name, e.side)
-        if (!out && !inp) continue
-        info.timeline.push({
-          minute,
-          side: e.side,
-          kind,
-          player: out ?? "",
-          ...(e.detail?.out?.id ? { playerId: e.detail.out.id } : {}),
-          ...(e.detail?.in?.id ? { inPlayerId: e.detail.in.id } : {}),
-          ...(inp ? { inPlayer: inp } : {}),
-        })
-        continue
-      }
-      // ⚠️ 자책골의 실축 선수는 **상대 팀** 로스터에 있다 (side 는 득점이 오른 팀)
-      const playerSide = kind === "og" ? (e.side === "home" ? "away" : "home") : e.side
-      const player = localizeName(e.detail?.player?.name, playerSide)
-      if (!player) continue
-      const assist =
-        kind === "goal" || kind === "pen" ? localizeName(e.detail?.assist?.name, e.side) : null
-      info.timeline.push({
-        minute,
-        side: e.side,
-        kind,
-        player,
-        ...(e.detail?.player?.id ? { playerId: e.detail.player.id } : {}),
-        ...(assist ? { assist } : {}),
-        ...(kind === "goal" || kind === "pen" || kind === "og"
-          ? { score: e.detail?.score ?? "" }
-          : {}),
-      })
-    }
-
-    return info
+    return await addLfaDetailContent(game, info, d)
   } catch (error) {
     if (strict) throw error
     return null
   }
+}
+
+/** Both normal collection and verified detail recovery use the same translations. */
+async function addLfaDetailContent(
+  game: BetmanGameKey,
+  info: LfaMatchInfo,
+  d: LfaMatchDetails
+): Promise<LfaMatchInfo> {
+  const mapped = mapLfaStats(d.stats ?? null)
+  info.stats.push(...mapped.rows)
+
+  /**
+   * ⚠️ 조용히 죽지 않게 한다. 이 사고의 본질은 "라벨이 바뀐 것"이 아니라
+   *    **바뀐 걸 아무도 몰랐다는 것**이다 — 지면에 슈팅 한 줄만 뜬 채로 하루가 갔다.
+   *    LFA 가 스탯을 넉넉히 줬는데 우리가 거의 못 알아보면 못 알아본 라벨을 남긴다.
+   */
+  const given = d.stats?.length ?? 0
+  await reportStatCoverageGap(info.matchId, given, mapped.rows.length, mapped.unknown).catch(
+    () => {}
+  )
+
+  // ⚠️ LFA 이벤트 타입은 표기가 섞인다 — 실측: "Goal"(대문자·공백) 과 "red_card"
+  //    (소문자·언더스코어)가 같은 응답에 함께 온다. 반드시 정규화하고 비교할 것.
+  const norm = (t: unknown) =>
+    String(t ?? "")
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .trim()
+  const kindOf = (t: string): LfaTimelineEvent["kind"] | null => {
+    if (t === "goal") return "goal"
+    if (t === "penalty" || t.includes("penalty goal")) return "pen"
+    if (t === "own goal") return "og"
+    if (t === "yellow card") return "yellow"
+    // 다이렉트 퇴장과 경고 누적 퇴장 둘 다 퇴장이다
+    if (t.includes("red card") || t.includes("second yellow")) return "red"
+    if (t === "substitution") return "sub"
+    return null // VAR 등 — 뜻이 불확실한 이벤트는 싣지 않는다
+  }
+
+  const rawEvents = (d.events ?? [])
+    .map((e) => ({ e, kind: kindOf(norm(e.type)) }))
+    .filter(
+      (x): x is { e: (typeof d.events)[number]; kind: LfaTimelineEvent["kind"] } => x.kind !== null
+    )
+  // Live events reuse the stored roster; they never buy a lineup on every refresh.
+  // Acquisition/persistence belongs exclusively to getMatchLineup.
+  const lineup = rawEvents.length ? await loadStoredLineup(game.gameId).catch(() => null) : null
+
+  // 라인업이 없어도(=지난 경기) 스쿼드 사전으로 한글화한다. 사건이 있을 때만 부른다.
+  const [homeSquad, awaySquad] = rawEvents.length
+    ? await Promise.all([cachedSquad(game.homeTeam), cachedSquad(game.awayTeam)])
+    : [[], []]
+
+  // 이름 한글화 한 사람분 — 판정은 순수 모듈이 소유한다 (백필 CLI 가 같은 규칙을 쓴다)
+  const roster =
+    lineup?.status === "ready"
+      ? [
+          ...lineup.home.starters,
+          ...lineup.home.bench,
+          ...lineup.away.starters,
+          ...lineup.away.bench,
+        ]
+      : []
+  const localizeName = (raw: string | undefined, side: "home" | "away"): string | null =>
+    localizeTimelineName(raw, roster, side === "away" ? awaySquad : homeSquad)
+
+  for (const { e, kind } of rawEvents) {
+    const minute = String(e.time ?? "")
+    if (kind === "sub") {
+      // player = 나간 선수(out), inPlayer = 들어온 선수 — 실측: 둘 다 이름이 온다
+      const out = localizeName(e.detail?.out?.name, e.side)
+      const inp = localizeName(e.detail?.in?.name, e.side)
+      if (!out && !inp) continue
+      info.timeline.push({
+        minute,
+        side: e.side,
+        kind,
+        player: out ?? "",
+        ...(e.detail?.out?.id ? { playerId: e.detail.out.id } : {}),
+        ...(e.detail?.in?.id ? { inPlayerId: e.detail.in.id } : {}),
+        ...(inp ? { inPlayer: inp } : {}),
+      })
+      continue
+    }
+    // ⚠️ 자책골의 실축 선수는 **상대 팀** 로스터에 있다 (side 는 득점이 오른 팀)
+    const playerSide = kind === "og" ? (e.side === "home" ? "away" : "home") : e.side
+    const player = localizeName(e.detail?.player?.name, playerSide)
+    if (!player) continue
+    const assist =
+      kind === "goal" || kind === "pen" ? localizeName(e.detail?.assist?.name, e.side) : null
+    info.timeline.push({
+      minute,
+      side: e.side,
+      kind,
+      player,
+      ...(e.detail?.player?.id ? { playerId: e.detail.player.id } : {}),
+      ...(assist ? { assist } : {}),
+      ...(kind === "goal" || kind === "pen" || kind === "og"
+        ? { score: e.detail?.score ?? "" }
+        : {}),
+    })
+  }
+
+  return info
 }
 
 /** 크론 실행 하나의 수집 세션. SWR/React/DB 신선도 캐시를 우회하고 날짜당 한 번만 구매한다. */
@@ -726,7 +737,25 @@ export function createLfaRefreshSession() {
       stored?.info.timeline?.length === 0
     if (stored?.info.finished && !stored.stale && !repairEmpty)
       return { status: "settled" as const, info: stored.info }
-    const fresh = await computeLfaMatchInfo(game, daySnapshot, detailSnapshot, true)
+    let fresh: LfaMatchInfo | null
+    try {
+      fresh = await computeLfaMatchInfo(game, daySnapshot, detailSnapshot, true)
+    } catch (error) {
+      // A missing day response used to stop every match sharing that day, even
+      // when each match already had a verified identity and a working detail feed.
+      // Do not bypass ambiguous matching, persistence errors, or the buying window.
+      if (!(error instanceof Error) || error.message !== "lfa-day-failed") throw error
+      try {
+        const recovered = await recoverKnownMatchDetails(game, stored?.info, detailSnapshot)
+        fresh = await addLfaDetailContent(game, recovered.info, recovered.details)
+      } catch (recoveryError) {
+        throw new Error(
+          `lfa-day-failed; recovery:${
+            recoveryError instanceof Error ? recoveryError.message : "failed"
+          }`
+        )
+      }
+    }
     if (!fresh) throw new Error("lfa-match-unresolved")
     const saved = await writeMatchDetails(game.gameId, fresh, { strict: true })
     if (!saved) throw new Error("lfa-details-persist-failed")

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import Link from "@/components/ui/app-link"
 import { User } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import { BettingMyStats } from "./betting-my-stats"
@@ -24,7 +24,7 @@ export function MypageTab({
   myStats,
   isLoadingMyStats,
 }: MypageTabProps) {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn, userId } = useAuth()
 
   if (!isSignedIn) {
     return (
@@ -57,21 +57,12 @@ export function MypageTab({
             <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-full">
               <User className="text-muted-foreground h-10 w-10" />
             </div>
-            <div className="w-full space-y-3">
-              <div>
-                <label className="text-muted-foreground text-xs">닉네임</label>
-                <Input placeholder="닉네임을 입력하세요" className="mt-1" />
-              </div>
-              <div>
-                <label className="text-muted-foreground text-xs">이메일</label>
-                <Input type="email" placeholder="이메일을 입력하세요" className="mt-1" />
-              </div>
-              <div>
-                <label className="text-muted-foreground text-xs">소개</label>
-                <Input placeholder="자기소개를 입력하세요" className="mt-1" />
-              </div>
-              <Button className="w-full">저장하기</Button>
-            </div>
+            <p className="text-muted-foreground text-sm">
+              프로필에서 닉네임과 소개를 확인하고 수정할 수 있습니다.
+            </p>
+            <Button asChild className="w-full">
+              <Link href={`/profile/${userId}`}>프로필 수정하기</Link>
+            </Button>
           </div>
         </Card>
       )}

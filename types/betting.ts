@@ -362,6 +362,7 @@ export function formatMatchTime(dateStr: string): string {
   const date = new Date(dateStr)
   return date
     .toLocaleDateString("ko-KR", {
+      timeZone: "Asia/Seoul",
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
@@ -374,6 +375,7 @@ export function formatMatchTime(dateStr: string): string {
 function formatDeadline(dateStr: string): string {
   const date = new Date(dateStr)
   return date.toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
     month: "long",
     day: "numeric",
     weekday: "short",

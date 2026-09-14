@@ -1,12 +1,12 @@
 /**
  * 격리 PostgreSQL SQL 회귀 테스트. 운영 연결/환경 변수 불필요.
- * npm install --prefix output/lfa-snapshot-test --no-package-lock --no-audit --no-fund @electric-sql/pglite
+ * pnpm install --frozen-lockfile
  * node scripts/test-lfa-snapshots.mjs
  * PGlite는 단일 연결이므로 실제 다중 세션 동시성 부하 테스트를 대체하지 않는다.
  */
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
-import { PGlite } from "../output/lfa-snapshot-test/node_modules/@electric-sql/pglite/dist/index.js"
+import { PGlite } from "@electric-sql/pglite"
 
 const db = new PGlite()
 let passed = 0

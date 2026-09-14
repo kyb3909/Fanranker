@@ -115,6 +115,7 @@ export default function BettingPage({
 
       {!bettingOnly && activeTab === "ranking" && (
         <RankingTab
+          rankingFilter={rankings.rankingFilter}
           rankings={rankings.rankings}
           myRank={rankings.myRank}
           isLoading={rankings.isLoadingRankings}

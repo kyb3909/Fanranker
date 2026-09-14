@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,6 +43,7 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default async function AdminNewsroomPage() {
+  await requireAdminPageAccess("/admin/content/newsroom")
   const supabase = createServiceRoleClient()
 
   const [{ data: queueRaw }, { data: draftedRaw }] = await Promise.all([

@@ -1,13 +1,14 @@
 import "server-only"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { getReadMatchIdentity } from "@/lib/match/read-identity"
 import { pickLineupRow } from "@/lib/match/pick-sibling-row"
 import type { LineupResponse } from "./lineup-types"
 import { lineupConfidence } from "./lineup-confidence"
 
 async function readLineupRows(gameId: string) {
   const db = createServiceRoleClient()
-  const ids = await getSiblingGameIds(db, gameId)
+  const { gameIds: ids } = await getReadMatchIdentity(gameId)
   const { data, error } = await db
     .from("match_lineups")
     .select("game_id,event_id,payload,updated_at")

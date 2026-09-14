@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { TrainingClient, type TrainingEntry } from "./training-client"
 
@@ -20,6 +21,7 @@ interface Row {
 }
 
 export default async function AggTrainingPage() {
+  await requireAdminPageAccess("/admin/agg-training")
   const supabase = createServiceRoleClient()
 
   const { data } = await supabase

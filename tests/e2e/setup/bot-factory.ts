@@ -7,20 +7,15 @@
  * Bots created here log in through the normal UI (sign-in has no CAPTCHA).
  *
  * CLI:
- *   pnpm exec tsx tests/e2e/setup/bot-factory.ts create [count]   (default 10)
- *   pnpm exec tsx tests/e2e/setup/bot-factory.ts cleanup
- *   pnpm exec tsx tests/e2e/setup/bot-factory.ts list
+ *   pnpm exec tsx tests/e2e/setup/bot-factory-cli.ts create [count]   (default 10)
+ *   pnpm exec tsx tests/e2e/setup/bot-factory-cli.ts cleanup
+ *   pnpm exec tsx tests/e2e/setup/bot-factory-cli.ts list
  */
-import { config as loadEnv } from "dotenv"
 import { randomBytes } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
-
-loadEnv()
-loadEnv({ path: ".env.local", override: true })
-// .env.e2e wins: the bot factory always targets the Clerk development instance
-// (bots live there, not in the production instance).
-loadEnv({ path: join(process.cwd(), "tests/e2e/.env.e2e"), override: true })
+import { loadE2EEnvironment } from "./environment"
+import { assertE2EPrerequisites } from "./preflight"
 
 const CLERK_API = "https://api.clerk.com/v1"
 const FIXTURES_PATH = join(process.cwd(), "tests", "e2e", "fixtures", "bots.json")
@@ -33,9 +28,7 @@ export interface Bot {
 }
 
 function secretKey(): string {
-  const key = process.env.CLERK_SECRET_KEY
-  if (!key) throw new Error("CLERK_SECRET_KEY 가 .env 에 없습니다.")
-  return key
+  return loadE2EEnvironment().CLERK_SECRET_KEY
 }
 
 async function clerkFetch(
@@ -44,6 +37,8 @@ async function clerkFetch(
 ): Promise<{ ok: boolean; status: number; body: any }> {
   const res = await fetch(`${CLERK_API}${path}`, {
     ...init,
+    redirect: "error",
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${secretKey()}`,
       "Content-Type": "application/json",
@@ -101,6 +96,11 @@ async function createBot(index: number): Promise<Bot> {
 }
 
 export async function createBots(count = 10): Promise<Bot[]> {
+  loadE2EEnvironment()
+  if (!Number.isInteger(count) || count < 1 || count > 100) {
+    throw new Error("E2E 봇 수는 1~100 사이의 정수여야 합니다.")
+  }
+  await assertE2EPrerequisites()
   const bots: Bot[] = []
   for (let i = 1; i <= count; i++) {
     const bot = await createBot(i)
@@ -122,6 +122,7 @@ export async function createBots(count = 10): Promise<Bot[]> {
  * CAPTCHA, email verification, and 2FA. See helpers/auth.ts.
  */
 export async function mintSignInToken(clerkUserId: string): Promise<string> {
+  loadE2EEnvironment()
   const res = await clerkFetch(`/sign_in_tokens`, {
     method: "POST",
     body: JSON.stringify({ user_id: clerkUserId }),
@@ -142,6 +143,7 @@ export function loadBots(): Bot[] {
 }
 
 export async function cleanupBots(): Promise<void> {
+  loadE2EEnvironment()
   if (!existsSync(FIXTURES_PATH)) {
     console.log("bots.json 없음 — 정리할 봇이 없습니다.")
     return

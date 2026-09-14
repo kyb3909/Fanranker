@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { SystemHealthCards } from "./system-health-cards"
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: "시스템 상태" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminSystemPage() {
+  await requireAdminPageAccess("/admin/system")
   const supabase = createServiceRoleClient()
 
   const cronJobs = await Promise.all(

@@ -8,6 +8,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          user_id: string
+          created_at: string
+          completed_at: string | null
+          last_attempt_at: string | null
+          attempts: number
+          last_error: string | null
+        }
+        Insert: {
+          user_id: string
+          created_at?: string
+          completed_at?: string | null
+          last_attempt_at?: string | null
+          attempts?: number
+          last_error?: string | null
+        }
+        Update: {
+          user_id?: string
+          created_at?: string
+          completed_at?: string | null
+          last_attempt_at?: string | null
+          attempts?: number
+          last_error?: string | null
+        }
+        Relationships: []
+      }
+      seller_reward_receipts: {
+        Row: { purchase_id: string; seller_id: string; amount: number; paid_at: string }
+        Insert: { purchase_id: string; seller_id: string; amount: number; paid_at?: string }
+        Update: { purchase_id?: string; seller_id?: string; amount?: number; paid_at?: string }
+        Relationships: []
+      }
       lfa_material_recovery_attempts: {
         Row: { lfa_match_id: string; attempted_at: string }
         Insert: { lfa_match_id: string; attempted_at: string }
@@ -5171,6 +5204,7 @@ export type Database = {
       }
       prediction_purchases: {
         Row: {
+          reward_version: string
           activity_id: string
           buyer_id: string
           created_at: string | null
@@ -5179,6 +5213,7 @@ export type Database = {
           seller_id: string
         }
         Insert: {
+          reward_version?: string
           activity_id: string
           buyer_id: string
           created_at?: string | null
@@ -5187,6 +5222,7 @@ export type Database = {
           seller_id: string
         }
         Update: {
+          reward_version?: string
           activity_id?: string
           buyer_id?: string
           created_at?: string | null
@@ -7853,6 +7889,9 @@ export type Database = {
       }
     }
     Functions: {
+      request_account_deletion: { Args: { p_user_id: string }; Returns: undefined }
+      pay_analysis_seller: { Args: { p_purchase_id: string }; Returns: Json }
+      retry_pending_seller_reward: { Args: { p_reward_id: string }; Returns: Json }
       claim_lfa_material_recovery: {
         Args: { p_lfa_match_id: string }
         Returns: boolean

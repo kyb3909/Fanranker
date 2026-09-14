@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { PollForm } from "./poll-form"
 import { PollList } from "./poll-list"
@@ -13,6 +14,7 @@ interface PollRow {
 }
 
 export default async function AdminPollsPage() {
+  await requireAdminPageAccess("/admin/content/polls")
   const supabase = createServiceRoleClient()
   const { data: polls } = await supabase
     .from("polls")

@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { BannerManagement } from "./banner-management"
@@ -6,6 +7,7 @@ export const metadata: Metadata = { title: "배너 관리" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminBannersPage() {
+  await requireAdminPageAccess("/admin/content/banners")
   const supabase = createServiceRoleClient()
 
   const { data } = await supabase

@@ -4,9 +4,11 @@ type SupabaseClient = {
   rpc: (
     fn: string,
     params: Record<string, unknown>
-  ) => { error: unknown } | PromiseLike<{ error: unknown }>
+  ) => { data?: unknown; error: unknown } | PromiseLike<{ data?: unknown; error: unknown }>
   from: (table: string) => {
-    insert: (data: Record<string, unknown>) => { error: unknown } | PromiseLike<{ error: unknown }>
+    insert: (
+      data: Record<string, unknown>
+    ) => { data?: unknown; error: unknown } | PromiseLike<{ data?: unknown; error: unknown }>
   }
 }
 
@@ -34,41 +36,53 @@ export async function retrySellerReward(
   const transactionType = ctx.transactionType ?? "analysis_sale_revenue"
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const { error } = await supabase.rpc("reward_gold", {
-      p_user_id: ctx.sellerId,
-      p_amount: ctx.amount,
-      p_description: ctx.description,
-      p_transaction_type: transactionType,
-    })
-    if (!error) return true
-    console.error(`reward_gold attempt ${attempt}/${maxRetries} failed:`, error)
+    if (!ctx.purchaseId) break
+    try {
+      const { data, error } = await supabase.rpc("pay_analysis_seller", {
+        p_purchase_id: ctx.purchaseId,
+      })
+      if (!error && data && typeof data === "object" && "success" in data && data.success === true)
+        return true
+      console.error(`pay_analysis_seller attempt ${attempt}/${maxRetries} failed:`, error)
+    } catch (error) {
+      // A lost HTTP acknowledgement may already have committed the payment.
+      // Retry the same purchase identifier; the receipt prevents double payment.
+      console.error(`pay_analysis_seller attempt ${attempt}/${maxRetries} unavailable:`, error)
+    }
     if (attempt < maxRetries) await new Promise((r) => setTimeout(r, 500 * attempt))
   }
 
   // 모든 retry 실패 — admin 큐에 기록
-  const { error: queueError } = (await supabase.from("pending_seller_rewards").insert({
-    seller_id: ctx.sellerId,
-    buyer_id: ctx.buyerId,
-    activity_id: ctx.activityId,
-    purchase_id: ctx.purchaseId ?? null,
-    amount: ctx.amount,
-    description: ctx.description,
-    transaction_type: transactionType,
-    attempts: maxRetries,
-    last_error: "All retry attempts failed",
-  })) as { error: unknown }
+  let queueError: unknown = null
+  try {
+    const result = await supabase.from("pending_seller_rewards").insert({
+      seller_id: ctx.sellerId,
+      buyer_id: ctx.buyerId,
+      activity_id: ctx.activityId,
+      purchase_id: ctx.purchaseId ?? null,
+      amount: ctx.amount,
+      description: ctx.description,
+      transaction_type: transactionType,
+      attempts: maxRetries,
+      last_error: "All retry attempts failed",
+    })
+    queueError = result.error
+  } catch (error) {
+    queueError = error
+  }
 
   if (queueError) {
     // 이중 실패 — RPC도 실패하고 큐 기록조차 실패. audit trail 0.
     console.error("pending_seller_rewards INSERT failed:", queueError)
     Sentry.captureMessage(
-      `reward_gold AND pending_seller_rewards INSERT both failed — gold lost with no audit trail`,
+      `pay_analysis_seller AND pending_seller_rewards INSERT both failed — payment acknowledgement and recovery queue unavailable; reconcile purchase receipt`,
       {
         level: "fatal",
         extra: {
           sellerId: ctx.sellerId,
           buyerId: ctx.buyerId,
           activityId: ctx.activityId,
+          purchaseId: ctx.purchaseId,
           amount: ctx.amount,
           queueError: String(queueError),
         },
@@ -76,7 +90,7 @@ export async function retrySellerReward(
     )
   } else {
     Sentry.captureMessage(
-      `reward_gold failed after ${maxRetries} retries — recorded in pending_seller_rewards`,
+      `pay_analysis_seller failed after ${maxRetries} retries — recorded in pending_seller_rewards`,
       {
         level: "fatal",
         extra: {

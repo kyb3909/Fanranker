@@ -9,19 +9,15 @@
  * activity therefore writes to local Supabase only; production stays clean.
  */
 import { defineConfig, devices } from "@playwright/test"
-import { config as loadEnv } from "dotenv"
-import { join } from "node:path"
+import { E2E_BASE_URL, loadE2EEnvironment } from "./tests/e2e/setup/environment"
 
-// .env gives the test process the Clerk keys (bot factory / sign-in tokens).
-loadEnv()
-// .env.e2e holds the local Supabase overrides for the app under test.
-const e2eEnv = loadEnv({ path: join(process.cwd(), "tests/e2e/.env.e2e") }).parsed ?? {}
-
-// The test process also needs the local Supabase values (db-verifier.ts).
-for (const [k, v] of Object.entries(e2eEnv)) process.env[k] = v
+// Validate the dedicated file before any build/start/setup. Never inherit a
+// missing credential from .env or .env.local. Workers and Next receive the same keys.
+const e2eEnv = loadE2EEnvironment()
+Object.assign(process.env, e2eEnv)
 
 const PORT = 3100
-const BASE_URL = `http://localhost:${PORT}`
+const BASE_URL = E2E_BASE_URL
 
 export default defineConfig({
   testDir: "./tests/e2e/journeys",
@@ -52,10 +48,10 @@ export default defineConfig({
   webServer: {
     // 프로덕션 빌드로 구동 — next dev(Turbopack)는 10워커 동시 부하에서
     // 요청별 컴파일로 응답 불능이 된다. next build + next start 는 부하에 강함.
-    command: `pnpm build && pnpm start --port ${PORT}`,
+    command: `pnpm exec tsx tests/e2e/setup/preflight-cli.ts && pnpm build && pnpm start --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 600_000, // 빌드(~수분) + 기동
-    env: { ...process.env, ...e2eEnv } as Record<string, string>,
+    env: { ...process.env, ...e2eEnv, E2E_TEST_BUILD: "1" } as Record<string, string>,
   },
 })

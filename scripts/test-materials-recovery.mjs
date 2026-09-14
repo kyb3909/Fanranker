@@ -2,7 +2,7 @@
 // PGlite has a single connection: this verifies SQL semantics, not multi-session load.
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
-import { PGlite } from "../output/lfa-snapshot-test/node_modules/@electric-sql/pglite/dist/index.js"
+import { PGlite } from "@electric-sql/pglite"
 
 const db = new PGlite()
 let passed = 0

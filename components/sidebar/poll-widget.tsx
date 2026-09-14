@@ -2,6 +2,9 @@
 
 import { useState, useEffect, memo } from "react"
 import { BarChart3 } from "lucide-react"
+import useSWR from "swr"
+import { useAuth } from "@clerk/nextjs"
+import { fetcher } from "@/lib/swr"
 
 interface PollOption {
   key: string
@@ -25,28 +28,38 @@ interface PollEntry {
  * 클라이언트 fetch 후 선택이라 SSR 하이드레이션 불일치 없음.
  */
 export const PollWidget = memo(function PollWidget() {
-  const [entry, setEntry] = useState<PollEntry | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const [pollId, setPollId] = useState<string | null>(null)
+  const { userId, isLoaded } = useAuth()
+  const { data, mutate } = useSWR<{ polls: PollEntry[] }>(
+    isLoaded ? ["/api/polls/active", userId ?? "guest"] : null,
+    ([url]: [string, string]) => fetcher(url),
+    { revalidateOnFocus: false }
+  )
 
   useEffect(() => {
-    let alive = true
-    fetch("/api/polls/active")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { polls?: PollEntry[] } | null) => {
-        if (alive && d?.polls && d.polls.length > 0) {
-          setEntry(d.polls[Math.floor(Math.random() * d.polls.length)])
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (alive) setLoaded(true)
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
+    const polls = data?.polls ?? []
+    setPollId((previous) =>
+      polls.some((entry) => entry.poll.id === previous)
+        ? previous
+        : (polls[Math.floor(Math.random() * polls.length)]?.poll.id ?? null)
+    )
+  }, [data])
+  const entry = data?.polls.find((item) => item.poll.id === pollId)
+  function onVoted(updated: PollEntry) {
+    void mutate(
+      (current) =>
+        current
+          ? {
+              polls: current.polls.map((item) =>
+                item.poll.id === updated.poll.id ? updated : item
+              ),
+            }
+          : current,
+      false
+    )
+  }
 
-  if (!loaded || !entry) return null
+  if (!data || !entry) return null
 
   return (
     <div
@@ -66,7 +79,7 @@ export const PollWidget = memo(function PollWidget() {
         </h3>
       </div>
 
-      <PollCard key={entry.poll.id} initial={entry} />
+      <PollCard key={(userId ?? "guest") + entry.poll.id} initial={entry} onVoted={onVoted} />
     </div>
   )
 })
@@ -74,12 +87,23 @@ export const PollWidget = memo(function PollWidget() {
 PollWidget.displayName = "PollWidget"
 
 /** 폴 1개 — 투표/결과/한마디 상태를 독립적으로 가진다 */
-function PollCard({ initial }: { initial: PollEntry }) {
+function PollCard({
+  initial,
+  onVoted,
+}: {
+  initial: PollEntry
+  onVoted: (updated: PollEntry) => void
+}) {
   const [data, setData] = useState<PollEntry>(initial)
   const [submitting, setSubmitting] = useState(false)
   const [needLogin, setNeedLogin] = useState(false)
   const [reason, setReason] = useState("")
   const [reasonSaved, setReasonSaved] = useState(!!initial.myVote?.reason)
+
+  useEffect(() => {
+    setData(initial)
+    setReasonSaved(!!initial.myVote?.reason)
+  }, [initial])
 
   const { poll, results, total, myVote } = data
   const voted = !!myVote
@@ -100,7 +124,9 @@ function PollCard({ initial }: { initial: PollEntry }) {
       }
       if (!res.ok) return
       const d = await res.json()
-      setData((prev) => ({ ...prev, results: d.results, total: d.total, myVote: d.myVote }))
+      const updated = { ...data, results: d.results, total: d.total, myVote: d.myVote }
+      setData(updated)
+      onVoted(updated)
       if (withReason && withReason.length > 0) setReasonSaved(true)
     } finally {
       setSubmitting(false)

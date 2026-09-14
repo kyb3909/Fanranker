@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": ".next-e2e/tsconfig.tsbuildinfo"
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next-e2e/types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "output/**",
+    "public/**",
+    "supabase/functions/**",
+    "tools/oxlint/anti-slop/**",
+    ".next/**",
+    ".next-avatar-lab/**"
+  ]
+}

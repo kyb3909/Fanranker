@@ -25,6 +25,7 @@ export async function GET(
         "user_id, nickname, avatar_url, bio, is_journalist, is_expert, created_at, display_title_id"
       )
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .single()
 
     // profiles 에 row 가 없는 봇 작성자(시드봇 등) 처리.

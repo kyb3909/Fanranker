@@ -40,8 +40,12 @@ export async function getCurrentRole(): Promise<string | null> {
     const { userId } = await auth()
     if (!userId) return null
     const supabase = createServiceRoleClient()
-    const { data } = await supabase.from("profiles").select("role").eq("user_id", userId).single()
-    return data?.role ?? null
+    const { data } = await supabase
+      .from("profiles")
+      .select("role,deleted_at")
+      .eq("user_id", userId)
+      .single()
+    return data?.deleted_at ? null : (data?.role ?? null)
   } catch (e) {
     console.error("역할 조회 실패:", e)
     return null
@@ -75,11 +79,11 @@ export async function requireRoleApi(
   const supabase = createServiceRoleClient()
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role,deleted_at")
     .eq("user_id", userId)
     .single()
 
-  const role = profile?.role
+  const role = profile?.deleted_at ? null : profile?.role
   if (!role || !allowed.includes(role)) {
     return NextResponse.json({ error: forbiddenMessage }, { status: 403 })
   }

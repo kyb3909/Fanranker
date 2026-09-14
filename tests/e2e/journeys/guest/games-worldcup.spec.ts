@@ -21,11 +21,11 @@ for (let run = 1; run <= REPEAT; run++) {
     const errors = collectErrors(page)
 
     await page.goto("/worldcup")
-    await expect(page).toHaveURL(/\/worldcup/)
+    await expect(page).toHaveURL(/\/prediction(?:[?#]|$)/)
     await expect(page.getByRole("heading").first()).toBeVisible()
 
     await page.goto("/worldcup/leaderboard")
-    await expect(page).toHaveURL(/\/worldcup\/leaderboard/)
+    await expect(page).toHaveURL(/\/prediction(?:[?#]|$)/)
 
     await finishJourney(errors, testInfo)
   })

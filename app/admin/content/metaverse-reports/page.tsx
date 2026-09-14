@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MetaverseReportQueue } from "./metaverse-report-queue"
@@ -6,6 +7,7 @@ export const metadata: Metadata = { title: "메타버스 신고 관리" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminMetaverseReportsPage() {
+  await requireAdminPageAccess("/admin/content/metaverse-reports")
   const supabase = createServiceRoleClient()
 
   const { data, count } = await supabase

@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
         seller_id: activity.user_id,
         activity_id: activity_id,
         gold_spent: GOLD_COST,
+        reward_version: "receipt-v1",
       })
       .select("id")
       .single()

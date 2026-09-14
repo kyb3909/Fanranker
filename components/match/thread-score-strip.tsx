@@ -299,7 +299,7 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
                 className="text-[12px] font-bold no-underline"
                 style={{ color: CREAM_DIM }}
               >
-                매치 리포트 →
+                경기 정보·기록 →
               </Link>
               <Link
                 href="/matches"

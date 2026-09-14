@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 /**
  * onboardingGuard — **실제 가드를 import 해서** 검증한다.
@@ -28,7 +28,10 @@ vi.mock("@supabase/supabase-js", () => ({
   }),
 }))
 
-import { onboardingGuard } from "@/lib/middleware/onboarding-guard"
+import { onboardingGuard as runOnboardingGuard } from "@/lib/middleware/onboarding-guard"
+
+const onboardingGuard = (auth: () => Promise<{ userId: string | null }>, req: NextRequest) =>
+  runOnboardingGuard(auth, req, NextResponse.next())
 
 const authAs = (userId: string | null) => vi.fn(async () => ({ userId }))
 

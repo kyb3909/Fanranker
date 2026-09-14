@@ -33,6 +33,9 @@ jobs:
         # 의 래칫 방식 (실측 바로 아래에서 시작, 올리기만 함)
         run: pnpm test:coverage
 
+      - name: SQL regression (isolated PostgreSQL)
+        run: pnpm test:sql
+
       - name: Build
         run: pnpm build
         env:

@@ -10,16 +10,11 @@
  * SEED_MARKER) are deleted and recreated each run. Matches / betman games are
  * not seeded here — prediction journeys seed those when they are written.
  */
-import { config as loadEnv } from "dotenv"
-import { execFileSync } from "node:child_process"
-import { join } from "node:path"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import type { Bot } from "./bot-factory"
 import { getDailyWindow } from "../../../lib/betman/daily-round"
-
-loadEnv()
-loadEnv({ path: ".env.local", override: true })
-loadEnv({ path: join(process.cwd(), "tests/e2e/.env.e2e"), override: true })
+import { loadE2EEnvironment } from "./environment"
+import { assertE2EPrerequisites, runLocalE2ESql } from "./preflight"
 
 export const SEED_MARKER = "[E2E시드]"
 
@@ -41,26 +36,22 @@ const tiptapDoc = (text: string) => ({
 })
 
 function localDb(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error("seed: 로컬 Supabase URL/KEY 없음 (.env.e2e 확인)")
-  return createClient(url, key, { auth: { persistSession: false } })
+  const env = loadE2EEnvironment()
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, redirect: "error" }) },
+  })
 }
 
-/** profiles.role 을 승격. trg_prevent_role_self_change(BEFORE UPDATE)가
- *  user→admin/moderator 변경을 막으므로, 트리거를 끈 채
- *  (session_replication_role=replica) 로컬 DB 컨테이너에서 raw SQL 로 갱신한다.
- *  userId 는 Clerk id(영숫자+_), role 은 고정 리터럴이라 안전. */
+/** profiles.role 을 승격. 로컬 DB 컨테이너에서 raw SQL 로 갱신한다.
+ *  userId 는 Clerk id(영숫자+_), role 은 고정 리터럴이라 안전.
+ *  (마이그레이션 20260904d 이전에는 trg_prevent_role_self_change 가 승격을 막아
+ *   session_replication_role=replica 로 트리거를 꺼야 했다 — 트리거는 제거됐다.) */
 function promoteRole(userId: string, role: "admin" | "moderator"): void {
-  const sql =
-    `SET session_replication_role=replica; ` +
-    `UPDATE public.profiles SET role='${role}' WHERE user_id='${userId}'; ` +
-    `SET session_replication_role=origin;`
-  execFileSync(
-    "docker",
-    ["exec", "supabase_db_community", "psql", "-U", "postgres", "-d", "postgres", "-c", sql],
-    { stdio: "pipe" }
-  )
+  if (!/^user_[A-Za-z0-9_-]+$/.test(userId))
+    throw new Error("E2E 봇 사용자 ID가 올바르지 않습니다.")
+  const sql = `UPDATE public.profiles SET role='${role}' WHERE user_id='${userId}';`
+  runLocalE2ESql(sql)
 }
 
 /** 이전 run 의 e2ebot 프로필을 정리한다. 매 run 봇이 새 Clerk ID 로 생성돼
@@ -72,18 +63,12 @@ function cleanupPriorE2EProfiles(): void {
     `SET session_replication_role=replica; ` +
     `DELETE FROM public.profiles WHERE nickname LIKE 'e2ebot%'; ` +
     `SET session_replication_role=origin;`
-  execFileSync(
-    "docker",
-    ["exec", "supabase_db_community", "psql", "-U", "postgres", "-d", "postgres", "-c", sql],
-    { stdio: "pipe" }
-  )
+  runLocalE2ESql(sql)
 }
 
 async function seedProfiles(db: SupabaseClient, bots: Bot[]): Promise<void> {
-  // role 은 upsert 에 포함하지 않는다 — prevent_role_self_change 트리거가
-  // moderator→user 같은 변경을 막기 때문. 신규 프로필은 컬럼 기본값 'user',
-  // 기존 프로필은 role 유지. admin/moderator 승격은 아래 promoteRole 이 담당.
-  // is_expert/is_journalist 는 트리거 대상이 아니라 upsert 로 설정 가능.
+  // role 은 upsert 에 포함하지 않는다. 신규 프로필은 컬럼 기본값 'user',
+  // 기존 프로필은 role 유지. admin/moderator 승격은 아래 promoteRole 이 담당한다.
   const rows = bots.map((b) => ({
     user_id: b.clerkUserId,
     nickname: `e2ebot${String(b.index).padStart(2, "0")}`,
@@ -561,7 +546,9 @@ async function seedPurchasableActivity(db: SupabaseClient, bots: Bot[]): Promise
 
 /** Populate the local DB. Call after createBots() in globalSetup. */
 export async function seedDatabase(bots: Bot[]): Promise<void> {
+  loadE2EEnvironment()
   if (bots.length === 0) throw new Error("seedDatabase: 봇이 없습니다.")
+  await assertE2EPrerequisites()
   const db = localDb()
   console.log("[seed] 합성 시드 적용 중...")
   cleanupPriorE2EProfiles()

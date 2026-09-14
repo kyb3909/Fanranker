@@ -21,7 +21,10 @@ const m = vi.hoisted(() => ({
   byPrediction: vi.fn(),
   rpc: vi.fn(),
 }))
-vi.mock("@/lib/match/sibling-ids", () => ({ getSiblingGameIds: async () => ["market", "sibling"] }))
+vi.mock("@/lib/match/sibling-ids", () => ({
+  getSiblingGameIds: async () => ["market", "sibling"],
+  getMatchIdentity: async () => ({ gameIds: ["market", "sibling"] }),
+}))
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
     rpc: m.rpc,

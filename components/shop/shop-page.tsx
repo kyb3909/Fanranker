@@ -14,7 +14,6 @@ import {
 } from "lucide-react"
 import { StickerUploadDialog } from "./sticker-upload-dialog"
 import { StickerCard } from "./sticker-card"
-import { TitleCard, type TitleItem } from "./title-card"
 
 interface Sticker {
   id: string
@@ -49,64 +48,6 @@ const SHOP_TABS = [
   // 구매 버튼은 핸들러 없는 준비 화면이었으나 KRW 가격표 노출 자체가 "포인트 구매
   // 경로 없음" 방어 논리와 어긋난다. 골드 오픈 시 이 줄 복원.
   // { id: "gold" as ShopTab, label: "골드 충전", icon: Coins, color: "text-yellow-400" },
-]
-
-const MOCK_TITLES: TitleItem[] = [
-  {
-    id: "t1",
-    name: "구너 칭호",
-    adjTitle: "아스날",
-    nounTitle: "구너",
-    rarity: "common",
-    price: 2_000,
-    description: "아스날 팬덤 입문 칭호",
-  },
-  {
-    id: "t2",
-    name: "앙리의 후예",
-    adjTitle: "앙리의",
-    nounTitle: "후예",
-    rarity: "rare",
-    price: 10_000,
-    description: "레전드 선수 헌정 칭호",
-    owned: true,
-  },
-  {
-    id: "t3",
-    name: "인빈서블",
-    adjTitle: "무패의",
-    nounTitle: "인빈서블",
-    rarity: "epic",
-    price: 50_000,
-    description: "무패우승 시그니처 칭호",
-  },
-  {
-    id: "t4",
-    name: "레드 데빌",
-    adjTitle: "레드",
-    nounTitle: "데빌",
-    rarity: "common",
-    price: 2_000,
-    description: "맨체스터 유나이티드 팬덤 칭호",
-  },
-  {
-    id: "t5",
-    name: "퍼기의 계승자",
-    adjTitle: "퍼기의",
-    nounTitle: "계승자",
-    rarity: "rare",
-    price: 10_000,
-    description: "레전드 감독 헌정 칭호",
-  },
-  {
-    id: "t6",
-    name: "트레블러",
-    adjTitle: "역대급",
-    nounTitle: "트레블러",
-    rarity: "epic",
-    price: 50_000,
-    description: "3관왕 시그니처 칭호",
-  },
 ]
 
 const GOLD_PACKAGES = [
@@ -202,7 +143,7 @@ export default function ShopPage() {
               아이템 상점
             </h1>
             <p className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
-              스티커 · 칭호 · 픽셀아트를 활동 포인트로 구매하세요
+              스티커와 픽셀아트를 활동 포인트로 구매하세요
             </p>
           </div>
         </div>
@@ -386,10 +327,12 @@ export default function ShopPage() {
 
       {/* ====== 칭호 탭 ====== */}
       {activeTab === "titles" && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {MOCK_TITLES.map((item) => (
-            <TitleCard key={item.id} item={item} />
-          ))}
+        <div className="rounded-xl p-8 text-center" style={{ background: "var(--wc-paper)" }}>
+          <Award className="mx-auto h-8 w-8" style={{ color: "var(--wc-mute)" }} />
+          <p className="mt-3 text-sm font-medium">칭호 상점은 준비 중입니다.</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            활동으로 획득한 칭호는 내 프로필에서 확인하고 선택할 수 있습니다.
+          </p>
         </div>
       )}
 

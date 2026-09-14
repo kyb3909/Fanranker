@@ -57,9 +57,13 @@ export function reportEventNames(
   const required = [
     ...new Set(events.filter((e) => REQUIRED_EVENTS.has(e.type)).flatMap((e) => e.players)),
   ].sort()
+  const all = [...new Set(events.flatMap((e) => e.players))].sort()
   return {
+    // Required-name gaps remain the dictionary backlog; optional source names
+    // must also reach composition and the original-spelling gate.
+    original: all.filter((name) => !resolve(name)),
     missing: required.filter((name) => !resolve(name)),
-    representations: required.map((name) => resolve(name) ?? name),
+    representations: all.map((name) => resolve(name) ?? name),
     allowed: [
       ...new Set(
         events

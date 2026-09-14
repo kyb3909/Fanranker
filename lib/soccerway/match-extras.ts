@@ -807,7 +807,7 @@ async function generateLeasedReport(
   // 영문 원명으로 쓸 이름 — 사전 미등재 사건 선수 + 득점 정본에서 한글화 못 한 득점자
   const latinNames = [
     ...new Set([
-      ...names.missing,
+      ...names.original,
       ...(goalFacts ?? []).map((g) => g.scorer).filter((s) => /[A-Za-z]/.test(s)),
     ]),
   ].sort()

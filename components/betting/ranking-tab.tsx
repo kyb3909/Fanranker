@@ -4,6 +4,7 @@ import { BettingRankings } from "./betting-rankings"
 import type { RankingUser, MyRank } from "@/types/betting"
 
 interface RankingTabProps {
+  rankingFilter: "profit" | "winRate" | "roi"
   rankings: RankingUser[]
   myRank: MyRank | null
   isLoading: boolean
@@ -13,6 +14,7 @@ interface RankingTabProps {
 }
 
 export function RankingTab({
+  rankingFilter,
   rankings,
   myRank,
   isLoading,
@@ -22,6 +24,7 @@ export function RankingTab({
 }: RankingTabProps) {
   return (
     <BettingRankings
+      rankingFilter={rankingFilter}
       rankings={rankings}
       myRank={myRank}
       isLoading={isLoading}

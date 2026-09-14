@@ -5,13 +5,18 @@ vi.mock("@sentry/nextjs", () => ({
   captureMessage: vi.fn(),
 }))
 
-function createMockSupabase(rpcResults: ({ error: unknown } | PromiseLike<{ error: unknown }>)[]) {
+function createMockSupabase(
+  rpcResults: (
+    | { error: unknown; data?: unknown }
+    | PromiseLike<{ error: unknown; data?: unknown }>
+  )[]
+) {
   let callIndex = 0
-  const insertMock = vi.fn().mockReturnValue({ error: null })
+  const insertMock = vi.fn().mockReturnValue({ error: null, data: { success: true } })
   return {
     supabase: {
       rpc: vi.fn().mockImplementation(() => {
-        const result = rpcResults[callIndex] ?? { error: null }
+        const result = rpcResults[callIndex] ?? { error: null, data: { success: true } }
         callIndex++
         return result
       }),
@@ -32,21 +37,21 @@ const ctx = {
 
 describe("retrySellerReward", () => {
   it("succeeds on first attempt and returns true", async () => {
-    const { supabase } = createMockSupabase([{ error: null }])
+    const { supabase } = createMockSupabase([{ error: null, data: { success: true } }])
     const result = await retrySellerReward(supabase, ctx, 3)
     expect(result).toBe(true)
     expect(supabase.rpc).toHaveBeenCalledTimes(1)
-    expect(supabase.rpc).toHaveBeenCalledWith("reward_gold", {
-      p_user_id: "seller-1",
-      p_amount: 450,
-      p_description: "분석글 판매 수익 (soccer)",
-      p_transaction_type: "analysis_sale_revenue",
+    expect(supabase.rpc).toHaveBeenCalledWith("pay_analysis_seller", {
+      p_purchase_id: "purchase-uuid-1",
     })
     expect(supabase.from).not.toHaveBeenCalled()
   })
 
   it("retries on failure and returns true on eventual success", async () => {
-    const { supabase } = createMockSupabase([{ error: new Error("timeout") }, { error: null }])
+    const { supabase } = createMockSupabase([
+      { error: new Error("timeout") },
+      { error: null, data: { success: true } },
+    ])
     const result = await retrySellerReward(supabase, ctx, 3)
     expect(result).toBe(true)
     expect(supabase.rpc).toHaveBeenCalledTimes(2)
@@ -76,13 +81,12 @@ describe("retrySellerReward", () => {
     })
   })
 
-  it("uses custom transactionType when provided", async () => {
-    const { supabase } = createMockSupabase([{ error: null }])
+  it("uses the purchase identity even when caller passes another transaction type", async () => {
+    const { supabase } = createMockSupabase([{ error: null, data: { success: true } }])
     await retrySellerReward(supabase, { ...ctx, transactionType: "custom_type" }, 1)
-    expect(supabase.rpc).toHaveBeenCalledWith(
-      "reward_gold",
-      expect.objectContaining({ p_transaction_type: "custom_type" })
-    )
+    expect(supabase.rpc).toHaveBeenCalledWith("pay_analysis_seller", {
+      p_purchase_id: ctx.purchaseId,
+    })
   })
 
   it("inserts null purchase_id when not provided", async () => {
@@ -117,6 +121,32 @@ describe("retrySellerReward", () => {
     }
     const result = await retrySellerReward(supabase, ctx, 1)
     expect(result).toBe(false)
+    expect(insertMock).toHaveBeenCalled()
+  })
+})
+
+describe("transport and RPC result failures", () => {
+  it("does not accept a business failure as a successful payout", async () => {
+    const { supabase, insertMock } = createMockSupabase([{ error: null, data: { success: false } }])
+    expect(await retrySellerReward(supabase, ctx, 1)).toBe(false)
+    expect(insertMock).toHaveBeenCalled()
+  })
+  it("reuses the same purchase after a thrown lost acknowledgement", async () => {
+    const { supabase } = createMockSupabase([])
+    supabase.rpc
+      .mockReset()
+      .mockRejectedValueOnce(new Error("network lost"))
+      .mockResolvedValueOnce({ error: null, data: { success: true, duplicate: true } })
+    expect(await retrySellerReward(supabase, ctx, 2)).toBe(true)
+    expect(supabase.rpc.mock.calls).toEqual([
+      ["pay_analysis_seller", { p_purchase_id: ctx.purchaseId }],
+      ["pay_analysis_seller", { p_purchase_id: ctx.purchaseId }],
+    ])
+  })
+  it("records the obligation after thrown RPC failures", async () => {
+    const { supabase, insertMock } = createMockSupabase([])
+    supabase.rpc.mockRejectedValue(new Error("network lost"))
+    expect(await retrySellerReward(supabase, ctx, 1)).toBe(false)
     expect(insertMock).toHaveBeenCalled()
   })
 })

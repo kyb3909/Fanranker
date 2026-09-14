@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { suggestFlairs, type FlairOption } from "@/lib/news/suggest-flair"
 import { isBreakingNewsItem } from "@/lib/news/breaking"
@@ -83,6 +84,7 @@ function firstImage(content: unknown): string | null {
 }
 
 export default async function NewsReviewPage() {
+  await requireAdminPageAccess("/admin/news-review")
   const supabase = createServiceRoleClient()
 
   // 축구 게시판 활성 말머리 (UI 선택지 + 자동 추천 근거)

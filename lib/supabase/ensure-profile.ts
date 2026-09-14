@@ -45,10 +45,12 @@ export async function ensureProfile() {
       .single()
 
     if (existingProfile) {
-      return existingProfile
+      return existingProfile.deleted_at ? null : existingProfile
     }
 
-    // Profile doesn't exist, create it
+    if (fetchError && fetchError.code !== "PGRST116") return null
+
+    // Profile does not exist; do not overwrite an existing or deleted profile.
     const user = await currentUser()
 
     if (!user) {
@@ -69,26 +71,13 @@ export async function ensureProfile() {
 
     if (insertError) {
       console.error("Failed to create profile:", insertError)
-      // If insert failed due to RLS or other issues, try upsert
-      const { data: upsertProfile, error: upsertError } = await supabase
+      if (insertError.code !== "23505") return null
+      const { data: raced, error } = await supabase
         .from("profiles")
-        .upsert(
-          {
-            user_id: userId,
-            nickname: nickname,
-            avatar_url: user.imageUrl,
-          },
-          { onConflict: "user_id" }
-        )
-        .select()
+        .select("*")
+        .eq("user_id", userId)
         .single()
-
-      if (upsertError) {
-        console.error("Failed to upsert profile:", upsertError)
-        return null
-      }
-
-      return upsertProfile
+      return error || raced?.deleted_at ? null : raced
     }
 
     return newProfile
@@ -97,46 +86,4 @@ export async function ensureProfile() {
     // 조용히 null 반환
     return null
   }
-}
-
-/**
- * Server Action to sync current user's profile
- * Call this after user updates their Clerk profile
- */
-async function syncProfile() {
-  "use server"
-
-  const { userId } = await auth()
-
-  if (!userId) {
-    return { success: false, error: "Not authenticated" }
-  }
-
-  const user = await currentUser()
-
-  if (!user) {
-    return { success: false, error: "User not found" }
-  }
-
-  const supabase = createServiceRoleClient()
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        user_id: userId,
-        nickname: `User_${userId.slice(-8)}`,
-        avatar_url: user.imageUrl,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    )
-    .select()
-    .single()
-
-  if (error) {
-    return { success: false, error: error.message }
-  }
-
-  return { success: true, profile: data }
 }

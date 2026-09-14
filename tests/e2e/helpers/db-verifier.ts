@@ -10,24 +10,27 @@
  * from checking the DB a few milliseconds too early.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { loadE2EEnvironment } from "../setup/environment"
 
 type Row = Record<string, unknown>
 type Match = Record<string, string | number | boolean | null>
 
 let cached: SupabaseClient | null = null
+let cachedUrl: string | undefined
+let cachedKey: string | undefined
 
 /** Service-role client for the local Supabase instance under test. */
 export function dbClient(): SupabaseClient {
-  if (cached) return cached
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) {
-    throw new Error(
-      "E2E DB 클라이언트: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 없음. " +
-        "tests/e2e/.env.e2e 가 로드됐는지 확인하세요."
-    )
-  }
-  cached = createClient(url, key, { auth: { persistSession: false } })
+  const env = loadE2EEnvironment()
+  const url = env.NEXT_PUBLIC_SUPABASE_URL
+  const key = env.SUPABASE_SERVICE_ROLE_KEY
+  if (cached && cachedUrl === url && cachedKey === key) return cached
+  cached = createClient(url, key, {
+    auth: { persistSession: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, redirect: "error" }) },
+  })
+  cachedUrl = url
+  cachedKey = key
   return cached
 }
 

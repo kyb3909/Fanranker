@@ -7,6 +7,7 @@ import type { LfaMatch } from "@/lib/lfa/client"
 // 재구매 주기 정책 = 크레딧 비용의 절반. 순수 함수라 따로 두고 시험이 지킨다.
 import { dayFreshnessMs, detailsFreshnessMs } from "@/lib/lfa/day-freshness"
 import { getSiblingGameIds } from "@/lib/match/sibling-ids"
+import { getReadMatchIdentity } from "@/lib/match/read-identity"
 import { pickDetailsRow } from "@/lib/match/pick-sibling-row"
 
 /**
@@ -48,7 +49,7 @@ export async function readMatchDetails(
     //    다시 사고 복사본을 하나 더 만들었다. 여러 행이면 finished 가 이기고 → 최신
     //    (첼시 4-3: 경기 중 1-0 으로 굳은 행 3개 옆에 FT 행이 있었다).
     const supabase = createServiceRoleClient()
-    const ids = await getSiblingGameIds(supabase, gameId)
+    const { gameIds: ids } = await getReadMatchIdentity(gameId)
     const { data: rows } = await supabase
       .from("match_details_cache")
       .select("game_id, payload, finished, updated_at")

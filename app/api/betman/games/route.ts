@@ -11,6 +11,7 @@ import {
 } from "@/lib/betman/games-payload"
 import { z } from "zod"
 import { toScheduleRow } from "@/lib/betman/schedule-row"
+import { gamesCacheControl } from "@/lib/betman/games-cache"
 
 const gamesPostSchema = z.object({
   roundId: z
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
     // (종전 `currentUser()` 는 비로그인 방문자에게도 Clerk API 왕복을 물렸다.)
     const { userId } = await auth()
 
+    const generatedAt = Date.now()
     const payload = await buildGamesPayload({
       sport: sportFilter,
       gameType: gameTypeFilter,
@@ -76,16 +78,8 @@ export async function GET(request: NextRequest) {
     })
 
     const res = NextResponse.json(payload)
-    // ⚠️ 응답에 userPredictions(개인 예측)가 들어가므로 **로그인 상태에서는 절대 공용
-    //    캐시에 올리지 않는다.** 종전에는 로그인·비로그인 구분 없이 `public, s-maxage=30`
-    //    을 붙이고 있었다 — 개인화 응답에 공용 캐시 지시가 붙은 조합이라 위험했고,
-    //    동시에 캐시 시간을 늘리는 가장 값싼 최적화를 막고 있었다 (2026-08-15).
-    // 비로그인 응답은 개인 정보가 없으므로 길게 캐시 + stale 허용 → 대부분의 방문자가
-    // 오리진(1.4~2.9초) 대신 CDN(137ms) 경로를 탄다.
-    res.headers.set(
-      "Cache-Control",
-      userId ? "private, no-store" : "public, s-maxage=120, stale-while-revalidate=600"
-    )
+    // Personal predictions stay private. Anonymous cache cannot cross a deadline.
+    res.headers.set("Cache-Control", gamesCacheControl(userId, payload.games, generatedAt))
     return res
   } catch (error) {
     if (error instanceof BetmanGamesError) {

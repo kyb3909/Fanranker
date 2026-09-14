@@ -381,15 +381,31 @@ async function restoreRegisteredFixtures(
 ): Promise<FixtureRow[]> {
   const range = kstDayRange(dateKst)
   const stored = range ? await listSupplementalFixtures(range.start, range.end).catch(() => []) : []
+  if (!range) return []
+  const db = createServiceRoleClient()
+  const identities = new Map<string, string[]>()
+  // Bound simultaneous graph reads; preserve the existing identity conflict checks.
+  for (let offset = 0; offset < stored.length; offset += 4) {
+    await Promise.all(
+      stored.slice(offset, offset + 4).map(async (row) => {
+        identities.set(row.id, row.betman_game_id ? await getSiblingGameIds(db, row.id) : [row.id])
+      })
+    )
+  }
   let restored = [...rows]
   for (const row of stored) {
     // LFA 행이 이미 있어도 연결된 베트맨 형제 행을 제거해야 한다.
     // 킥오프가 달라 슬롯 병합이 실패하면 양쪽 행이 모두 목록에 남을 수 있다.
-    const ids = row.betman_game_id
-      ? await getSiblingGameIds(createServiceRoleClient(), row.id)
-      : [row.id]
+    const ids = identities.get(row.id)!
     restored = restored.filter((f) => !f.gameId || !ids.includes(f.gameId))
     restored.push(supplementalSummary(row))
   }
-  return restored.sort((a, b) => a.matchTime.localeCompare(b.matchTime))
+  // Saved canonical fixtures may move a feed row to another matchday. Filter after restoration.
+  return restored
+    .filter(
+      (row) =>
+        Date.parse(row.matchTime) >= Date.parse(range.start) &&
+        Date.parse(row.matchTime) < Date.parse(range.end)
+    )
+    .sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 }

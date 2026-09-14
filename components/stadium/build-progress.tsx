@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useClerk } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { Card } from "@/components/ui/card"
@@ -16,6 +17,22 @@ interface FlairScore {
   flair_name: string
   team_id: string | null
   score_balance: number
+}
+
+function StadiumSignIn() {
+  const { openSignIn } = useClerk()
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="mt-3"
+      onClick={() =>
+        openSignIn({ forceRedirectUrl: window.location.pathname + window.location.search })
+      }
+    >
+      <LogIn className="mr-1.5 h-3.5 w-3.5" /> 로그인
+    </Button>
+  )
 }
 
 interface MeTitlesResponse {
@@ -252,12 +269,11 @@ export function BuildProgress({
           </>
         )}
 
-        {meError && (
-          <Button asChild size="sm" variant="outline" className="mt-3">
-            <a href="/sign-in">
-              <LogIn className="mr-1.5 h-3.5 w-3.5" /> 로그인
-            </a>
-          </Button>
+        {meError?.status === 401 && <StadiumSignIn />}
+        {meError && meError.status !== 401 && (
+          <p role="alert" className="text-destructive mt-3 text-sm">
+            내 건설 정보를 불러오지 못했습니다. 잠시 후 새로고침해주세요.
+          </p>
         )}
       </Card>
 

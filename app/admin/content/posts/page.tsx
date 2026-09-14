@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { attachNicknames } from "@/lib/admin/attach-nicknames"
@@ -7,6 +8,7 @@ export const metadata: Metadata = { title: "게시글 관리" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminPostsPage() {
+  await requireAdminPageAccess("/admin/content/posts")
   const supabase = createServiceRoleClient()
 
   // posts.user_id ↔ profiles.user_id 는 FK 가 없어 PostgREST 임베드(profiles!inner) 가

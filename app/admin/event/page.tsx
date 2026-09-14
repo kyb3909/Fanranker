@@ -1,3 +1,4 @@
+import { requireAdminPageAccess } from "@/lib/admin/page-access"
 import type { Metadata } from "next"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { Card } from "@/components/ui/card"
@@ -42,6 +43,7 @@ interface RegistrationRow {
 }
 
 export default async function AdminEventPage() {
+  await requireAdminPageAccess("/admin/event")
   const supabase = createServiceRoleClient()
 
   const { data: event } = await supabase

@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
+import { finishAccountDeletion } from "@/lib/account/deletion"
 
 const patchProfileSchema = z.object({
   nickname: z.string().optional(),
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, role, is_journalist, onboarding_completed, created_at, updated_at"
+        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, role, is_journalist, onboarding_completed, created_at, updated_at, deleted_at"
       )
       .eq("user_id", userId)
       .single()
@@ -88,13 +89,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    if (profile?.deleted_at)
+      return NextResponse.json({ error: "탈퇴한 계정입니다." }, { status: 410 })
     return NextResponse.json(profile || {}, {
-      headers: { "Cache-Control": "private, max-age=30" },
+      headers: { "Cache-Control": "private, no-store" },
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error("GET /api/profile/me error:", msg)
-    return NextResponse.json({ error: "서버 오류", debug: msg }, { status: 500 })
+    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 })
   }
 }
 
@@ -202,7 +205,7 @@ export async function PATCH(request: NextRequest) {
     // 먼저 프로필이 존재하는지 확인
     const { data: existingProfile, error: fetchError } = await supabase
       .from("profiles")
-      .select("user_id, nickname, nickname_changed_at")
+      .select("user_id, nickname, nickname_changed_at, deleted_at")
       .eq("user_id", userId)
       .single()
 
@@ -216,6 +219,9 @@ export async function PATCH(request: NextRequest) {
       })
       return NextResponse.json({ error: "프로필 확인 중 오류가 발생했습니다." }, { status: 500 })
     }
+
+    if (existingProfile?.deleted_at)
+      return NextResponse.json({ error: "탈퇴한 계정입니다." }, { status: 410 })
 
     // Case 2: 프로필이 없으면 새로 생성
     if (fetchError?.code === "PGRST116") {
@@ -273,6 +279,7 @@ export async function PATCH(request: NextRequest) {
       .from("profiles")
       .update(updateData)
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .select(PROFILE_SELECT)
       .single()
 
@@ -290,14 +297,14 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error("PATCH /api/profile/me error:", msg)
-    return NextResponse.json({ error: "서버 오류", debug: msg }, { status: 500 })
+    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 })
   }
 }
 
 /**
  * DELETE /api/profile/me
  *
- * Delete current user's account (soft delete)
+ * Erase local personal content atomically, then delete Clerk identity with durable retries.
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -337,21 +344,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "서버 설정 오류가 발생했습니다." }, { status: 500 })
     }
 
-    // Soft delete - mark profile as deleted
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        deleted_at: new Date().toISOString(),
-        nickname: "[삭제된 사용자]",
-      })
-      .eq("user_id", userId)
-
-    if (error) {
-      console.error("Failed to delete profile:", error)
-      return NextResponse.json({ error: "계정 삭제 중 오류가 발생했습니다." }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
+    const { error } = await supabase.rpc("request_account_deletion", { p_user_id: userId })
+    if (error) return apiError("계정 삭제 중 오류가 발생했습니다.", 500, error)
+    const completed = await finishAccountDeletion(supabase, userId).catch(() => false)
+    const response = NextResponse.json(
+      { success: true, status: completed ? "deleted" : "pending" },
+      { status: completed ? 200 : 202, headers: { "Cache-Control": "no-store" } }
+    )
+    for (const name of ["onboarding_done", "onboarding_status"])
+      response.cookies.set(name, "", { path: "/", maxAge: 0 })
+    return response
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
