@@ -22,9 +22,41 @@ const STOP = new Set(
   )
 )
 
+const ENTITY_STOP = new Set([
+  ...STOP,
+  ..."we our you your his her why how need needs improve details winning again focused key quotes full latest live update updates report highlights verdict exclusive inside watch read interview interviews city united".split(
+    " "
+  ),
+])
+const fold = (text: string) => text.normalize("NFKD").replace(/\p{M}/gu, "")
+const searchable = (text: string) =>
+  ` ${fold(text)
+    .toLowerCase()
+    .replace(/[^\p{L}]+/gu, " ")
+    .trim()} `
+
+/** Keep complete names (Joao Pedro), so generic "need to improve" cannot link unrelated stories. */
+function titleEntities(title: string): string[] {
+  return (fold(title).match(/\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)*/gu) ?? [])
+    .flatMap((group) =>
+      group
+        .split(/\s+/)
+        .map((word) => (ENTITY_STOP.has(word.toLowerCase()) ? "|" : word))
+        .join(" ")
+        .split("|")
+        .map((name) => name.trim())
+        .filter((name) => name.length >= 3)
+    )
+    .map(searchable)
+}
+
 function words(text: string): Set<string> {
   return new Set(
-    (text.toLowerCase().match(/[\p{L}]{3,}/gu) ?? []).filter((word) => !STOP.has(word))
+    (
+      fold(text)
+        .toLowerCase()
+        .match(/[\p{L}]{3,}/gu) ?? []
+    ).filter((word) => !STOP.has(word))
   )
 }
 
@@ -35,7 +67,10 @@ export function selectBackground(
   now = Date.now()
 ): BackgroundSource[] {
   const asOf = Math.min(now, Date.parse(query.published_at ?? "") || now)
-  const terms = words(query.title.replace(/^\s*\[[^\]]+\]/, ""))
+  const headline = query.title.replace(/^\s*\[[^\]]+\]/, "")
+  const terms = words(headline)
+  const entities = titleEntities(headline)
+  if (!entities.length) return []
   const queryWords = words(`${query.title} ${query.material.slice(0, 4000)}`)
   const currentUrl = canonicalSourceUrl(query.source_url)
   const sources = new Set<string>()
@@ -60,6 +95,9 @@ export function selectBackground(
       )
         return []
       const candidateWords = words(`${row.raw?.original_title ?? ""} ${text}`)
+      // A passing mention deep in another story does not establish its main subject.
+      const candidateText = searchable(`${row.raw?.original_title ?? ""} ${text.slice(0, 800)}`)
+      if (!entities.some((name) => candidateText.includes(name))) return []
       const headlineOverlap = [...terms].filter((t) => candidateWords.has(t)).length
       const totalOverlap = [...queryWords].filter((t) => candidateWords.has(t)).length
       // A club name alone is not enough to attach a different match's quotes.

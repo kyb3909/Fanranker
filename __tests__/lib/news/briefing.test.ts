@@ -25,6 +25,42 @@ const query = {
   published_at: "2026-09-13T17:00:00Z",
 }
 describe("news evidence retrieval and recovery", () => {
+  it("requires the complete named subject, ignoring common interview wording and accents", () => {
+    const joao = row("joao")
+    joao.raw!.original_title = "Alonso on João Pedro"
+    joao.raw!.source_text =
+      "João Pedro needs to improve on the details. Chelsea training focuses on defensive positioning and balance. ".repeat(
+        5
+      )
+    const unrelated = row("other-pedro")
+    unrelated.raw!.original_title = "Pedro Neto on training"
+    unrelated.raw!.source_text =
+      "Pedro Neto says we need to improve on the details. Training focuses on defensive positioning and balance. ".repeat(
+        5
+      )
+    const passingMention = row("passing-mention")
+    passingMention.raw!.original_title = "Arteta discusses a defensive injury"
+    passingMention.raw!.source_text =
+      unrelated.raw!.source_text.repeat(3) + "\nJoao Pedro was mentioned as an opponent."
+    expect(
+      selectBackground(
+        {
+          ...query,
+          title: "Joao Pedro: We need to improve on the details",
+          material: joao.raw!.source_text,
+        },
+        [joao, unrelated, passingMention],
+        now
+      ).map((r) => r.id)
+    ).toEqual(["joao"])
+  })
+
+  it("excludes an old article captured only after the current interview", () => {
+    const capturedLater = row("updated-page")
+    capturedLater.created_at = "2026-09-14T01:00:00Z"
+    expect(selectBackground(query, [capturedLater], now)).toEqual([])
+  })
+
   it("returns captured original excerpts, excluding future, undated and same-source records", () => {
     const undated = row("undated")
     delete undated.raw!.published_at
