@@ -1,5 +1,55 @@
 // Shared by the live scanner and the editorial practice generator.
 export const NEWS_WRITER_POLICY_VERSION = "2026-09-15.1"
+// Checks only these explicitly approved style rules; this is not a factual verdict.
+export const EDITORIAL_STYLE_RULE_IDS = {
+  declarative: "8f228310-bbe8-44b5-a705-c31d217e1401",
+  lead: "8f228310-bbe8-44b5-a705-c31d217e1402",
+}
+export function findEditorialStyleViolations(article, rules = []) {
+  const active = new Set(rules.filter((rule) => rule.active !== false).map((rule) => rule.id))
+  const text = String(article ?? "")
+  // Direct quotations may retain the speaker's register. Inspect narration outside them.
+  const narration = text.replace(/"[^"\n]*"|“[^”]*”|‘[^’]*’|'[^'\n]*'/gu, "")
+  const violations = []
+  if (active.has(EDITORIAL_STYLE_RULE_IDS.declarative)) {
+    const matches =
+      narration.match(
+        /[가-힣]*(?:습니다|입니다|합니다|됩니다|십니다|해요|했어요|이에요|예요)(?=[.!?。…\s]|$)/gu
+      ) ?? []
+    if (matches.length)
+      violations.push({
+        rule_id: EDITORIAL_STYLE_RULE_IDS.declarative,
+        excerpt: [...new Set(matches)].join(", "),
+        instruction: "직접 인용 밖의 존대 종결을 한다·했다체로 고친다.",
+      })
+  }
+  if (active.has(EDITORIAL_STYLE_RULE_IDS.lead)) {
+    const lead = text.trim().split(/\n\s*\n/)[0] ?? ""
+    const prefix = lead.match(/^[^\n,。!?]{1,80}(?:에 따르면|에 의하면)[,，\s]/u)?.[0]
+    if (prefix)
+      violations.push({
+        rule_id: EDITORIAL_STYLE_RULE_IDS.lead,
+        excerpt: prefix,
+        instruction:
+          "첫 문단을 핵심 소식 1~2문장으로 다시 쓰고 매체·인터뷰 출처는 다음 문단에 밝힌다. 보도·주장을 확정 사실로 바꾸지 않는다.",
+      })
+  }
+  return violations
+}
+export async function enforceEditorialStyle(draft, rules, rewrite) {
+  const violations = findEditorialStyleViolations(draft.summary, rules)
+  if (!violations.length) return { draft, rewritten: false }
+  const corrected = await rewrite(
+    `다음은 작성된 원고에서 실제 검출한 편집 원칙 위반이다. 한 번에 모두 고치고 사실·인용·조건·숫자는 제공 원문과 일치하도록 유지한다.\n${JSON.stringify(violations)}\n직전 원고:\n${JSON.stringify({ title: draft.title, summary: draft.summary })}`
+  )
+  if (
+    !corrected?.worthy ||
+    !corrected.summary ||
+    findEditorialStyleViolations(corrected.summary, rules).length
+  )
+    throw Error("재작성 후에도 편집 원칙 위반이 남아 초안 저장을 보류합니다.")
+  return { draft: corrected, rewritten: true }
+}
 export const NEWS_WRITER_POLICY = `
 너는 번역기가 아니라 한국어 뉴스 에디터다. Accuracy > Clarity > Speed > Style.
 모르는 것은 쓰지 않는다. 확인되지 않은 것은 확인된 것처럼 쓰지 않는다. 분량을 위해 사실을 생성하지 않는다.

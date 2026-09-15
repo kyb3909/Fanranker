@@ -423,7 +423,11 @@ export function DeskWorkspace() {
                   >
                     <span className="text-wc-mute mb-2 flex items-center justify-between gap-2 text-xs">
                       <span>{STATUS[i.status]}</span>
-                      <span>{date(i.created_at)}</span>
+                      <span>
+                        {i.article_created_at
+                          ? `기사 작성 ${date(i.article_created_at)}`
+                          : `데스킹 추가 ${date(i.created_at)}`}
+                      </span>
                     </span>
                     <span className="block text-sm leading-relaxed font-medium">
                       {i.draft?.title ?? i.sources[0]?.title ?? "새 기사 작성 중"}
@@ -676,6 +680,12 @@ function ArticleEditor({
             직접 수정
           </p>
           <p className="text-wc-mute mt-1 text-xs">
+            기사 작성 {date(item.article_created_at ?? null)} · 데스킹 추가 {date(item.created_at)}
+          </p>
+          <p className="text-wc-mute mt-1 text-xs">
+            기존 원고를 그대로 불러옵니다. 이후 등록한 규칙은 이 원고를 자동으로 다시 쓰지 않습니다.
+          </p>
+          <p className="text-wc-mute mt-1 text-xs">
             저장하면 실제 제목·본문과 교정 사례가 함께 갱신됩니다. 현재 발행·반려·삭제 상태는
             유지됩니다.
           </p>
@@ -863,12 +873,13 @@ function ArticleEditor({
               )}
               <p className="text-wc-mute text-xs">
                 이 기사에 참고한 기존 학습 {item.applied_lesson_ids.length}건 · 상시 원칙{" "}
-                {item.applied_rule_ids?.length ?? 0}건 · 검수 완료는 공개 발행을 의미하지 않습니다.
+                {item.applied_rule_ids?.length ?? 0}건 (작성 시 참고 기록) · 검수 완료는 공개 발행을
+                의미하지 않습니다.
               </p>
               {item.applied_lesson_ids.length > 0 && (
                 <details>
                   <summary className="text-wc-mute cursor-pointer text-xs">
-                    작성에 반영한 학습 보기
+                    작성 때 참고한 학습 보기
                   </summary>
                   <ul className="mt-3 space-y-2 text-sm">
                     {item.applied_lesson_ids.map((id) => {

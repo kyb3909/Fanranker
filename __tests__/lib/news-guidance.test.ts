@@ -8,9 +8,86 @@ import {
   fetchCorrectionExamples,
   judgeAndWrite,
 } from "@/scripts/vps-news-scanner/news-scanner.mjs"
-import { NEWS_WRITER_POLICY_VERSION } from "@/scripts/vps-news-scanner/writer-policy.mjs"
+import {
+  NEWS_WRITER_POLICY_VERSION,
+  EDITORIAL_STYLE_RULE_IDS,
+  findEditorialStyleViolations,
+  enforceEditorialStyle,
+} from "@/scripts/vps-news-scanner/writer-policy.mjs"
 
 afterEach(() => vi.unstubAllGlobals())
+
+describe("owner style rules on the generated article", () => {
+  const rules = Object.values(EDITORIAL_STYLE_RULE_IDS).map((id) => ({ id, active: true }))
+  it("detects the actual Barcelona lead failure and narration honorifics", () => {
+    const body =
+      "Culemanía 보도에 따르면, 바르셀로나는 후순위 대출을 활용하는 방안을 협의했다고 한다.\n\n이 대출은 결산에 반영됐습니다."
+    expect(findEditorialStyleViolations(body, rules).map((v) => v.rule_id)).toEqual(
+      expect.arrayContaining(Object.values(EDITORIAL_STYLE_RULE_IDS))
+    )
+  })
+  it("accepts a news-first reported lead with attribution later and quoted honorifics", () => {
+    expect(
+      findEditorialStyleViolations(
+        "바르셀로나가 후순위 대출을 활용하는 방안을 협의했다고 전해졌다.\n\nCulemanía는 구단 관계자가 “협의를 마쳤습니다”라고 말했다고 보도했다.",
+        rules
+      )
+    ).toEqual([])
+    expect(findEditorialStyleViolations('그는 "동의합니다"라고 말했다.', rules)).toEqual([])
+    expect(
+      findEditorialStyleViolations("구단은 발표했습니다.", [
+        { id: EDITORIAL_STYLE_RULE_IDS.declarative, active: false },
+      ])
+    ).toEqual([])
+  })
+  it("repairs the whole article once and does not let an unrepaired result through", async () => {
+    const draft = {
+      worthy: true,
+      title: "협의 보도",
+      summary: "BBC 보도에 따르면, 구단이 협의했습니다.",
+    }
+    const rewrite = vi.fn().mockResolvedValue({
+      ...draft,
+      summary: "구단이 협의했다고 전해졌다.\n\nBBC가 이같이 보도했다.",
+    })
+    expect((await enforceEditorialStyle(draft, rules, rewrite)).rewritten).toBe(true)
+    expect(rewrite).toHaveBeenCalledTimes(1)
+    rewrite.mockClear().mockResolvedValue(draft)
+    await expect(enforceEditorialStyle(draft, rules, rewrite)).rejects.toThrow("저장을 보류")
+    expect(rewrite).toHaveBeenCalledTimes(1)
+  })
+  it("passes the editor's reason and removes the old conflicting instructions from the writer request", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        choices: [{ message: { content: '{"worthy":true,"title":"기사","summary":"보도됐다."}' } }],
+      })
+    )
+    vi.stubGlobal("fetch", fetch)
+    await judgeAndWrite(
+      { title: "Club interview", subreddit: "soccer", url: "https://club.example/news" },
+      {
+        guidance_available: true,
+        editorial_rules: rules,
+        lessons: [],
+        naming: [],
+        examples: [],
+        articles: [
+          {
+            before: "보도에 따르면",
+            after: "감독이 말했다.",
+            reason: "재인용 매체 대신 직접 인터뷰 출처를 밝힌다.",
+          },
+        ],
+      },
+      { kind: "article", text: "The club interviewed the manager." }
+    )
+    const prompt = JSON.parse(fetch.mock.calls[0][1].body).messages[0].content
+    expect(prompt).toContain("재인용 매체 대신 직접 인터뷰 출처")
+    expect(prompt).not.toContain("첫 문장은 누구의 보도인지로 연다")
+    expect(prompt).not.toContain('와이어체("~라고 합니다"')
+    expect(prompt).toContain("상시 편집 원칙은 과거 교정 예시")
+  })
+})
 
 describe("dictionary input selection", () => {
   const hints: NotationHint[] = [

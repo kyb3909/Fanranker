@@ -103,6 +103,7 @@ export interface DeskRevision {
 }
 export interface DeskItem {
   id: string
+  article_created_at?: string | null
   source_reservoir_id: string
   status: "generating" | "drafted" | "reviewed" | "rejected" | "failed"
   sources: DeskSource[]

@@ -1,5 +1,10 @@
 #!/usr/bin/env node
-import { NEWS_WRITER_POLICY, NEWS_WRITER_POLICY_VERSION } from "./writer-policy.mjs"
+import {
+  NEWS_WRITER_POLICY,
+  NEWS_WRITER_POLICY_VERSION,
+  enforceEditorialStyle,
+  findEditorialStyleViolations,
+} from "./writer-policy.mjs"
 /**
  * news-scanner.mjs — 스포츠 뉴스 스캐너 (결정적 스캔 + OpenAI 작성. 축구 + NBA)
  *
@@ -493,13 +498,12 @@ async function discoverMatchNews(seen, cursor) {
 /**
  * OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON)
  * material: { kind: "article"|"tweet", text, author? } — 확보한 원문 재료 (없으면 null)
+ * @param {any} post
+ * @param {any} corrections
+ * @param {{kind: string, text: string, author?: string} | null} material
+ * @param {string} retryNote
  */
-async function judgeAndWrite(
-  post,
-  corrections,
-  material = null,
-  retryNote = ""
-) {
+async function judgeAndWrite(post, corrections, material = null, retryNote = "") {
   if (!corrections?.guidance_available) {
     throw Error("표기 사전과 편집 기준을 확인하지 못해 새 기사 작성을 보류합니다.")
   }
@@ -530,7 +534,7 @@ async function judgeAndWrite(
     ? `\n\n## 검수자가 기사를 다시 쓴 예시 ${articles.length}건 (봇 초안 → 검수자 최종본)\n검수자는 봇 초안을 아래 "최종본"처럼 고쳐 쓴다. 처음부터 최종본의 문장 구조·문단 흐름·정보 밀도로 써라 (내용은 당연히 지금 글의 재료에서만):\n${articles
         .map(
           (a, i) =>
-            `[예시 ${i + 1} — 봇 초안]\n${a.beforeTitle ? `제목: ${a.beforeTitle}\n` : ""}${a.before}\n[예시 ${i + 1} — 검수자 최종본]\n${a.afterTitle ? `제목: ${a.afterTitle}\n` : ""}${a.after}`
+            `[예시 ${i + 1} — 봇 초안]\n${a.beforeTitle ? `제목: ${a.beforeTitle}\n` : ""}${a.before}\n[예시 ${i + 1} — 검수자 최종본]\n${a.afterTitle ? `제목: ${a.afterTitle}\n` : ""}${a.after}${a.reason ? `\n편집자가 설명한 수정 이유: ${a.reason}` : ""}`
         )
         .join("\n\n")}`
     : ""
@@ -559,10 +563,11 @@ worthy=false 로 버려라. (이적료·계약 기간·부상 진단명처럼 **
 예외 둘: ① **한국 선수**가 주인공이면 리그 불문 통과 ② 빅리그 구단·선수가 실제로
 얽힌 건이면 통과(예: 타 리그 구단이 빅리그 구장을 쓰는 문제, 빅리그 이적 임박).
 
-- 톤: 한국어, 드라이한 팩트 와이어체("~라고 합니다", "~로 전해집니다"). AI 티 나는 감상/질문/평가 금지.
-- **출처를 본문에 밝힌다** (운영자 지시 2026-08-09). 첫 문장은 누구의 보도인지로 연다:
-  기자까지 확인되면 "디 애슬레틱의 데이비드 온스테인에 따르면", 매체만 확인되면
-  "BBC 보도에 따르면", 구단 공식 홈페이지의 인터뷰이면 "구단 홈페이지에 실린 인터뷰에서".
+- 톤: 한국어의 건조한 기사체("~라고 말했다", "~로 전해졌다"). 직접 인용 밖은 한다·했다체로 쓴다. AI 티 나는 감상/질문/평가 금지.
+- **첫 문단은 핵심 소식 1~2문장, 다음 문단에 출처와 세부 내용**을 쓴다.
+  첫 문장을 매체명·"보도에 따르면"으로 열지 않는다. 미확인 보도는 리드에서도
+  "보도됐다·전해졌다·말했다"로 정보의 성격을 유지한다. 다음 문단에 확인된 매체·기자나
+  인터뷰 매체·시점을 자연스럽게 밝힌다. 재인용 기사이면 실제 발언의 직접 출처를 구분한다.
   구단 홈페이지 기사와 구단의 공식 성명·발표는 구분한다.
   ⛔ 확인되지 않은 매체·기자 이름을 지어내지 마라 — 재료(기사 원문·트윗 작성자·제목의
   대괄호)에 실재하는 이름만 쓴다. 출처가 불명확하면 귀속 문구 없이 사실만 쓴다.
@@ -636,7 +641,8 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
             "\n\n편집자가 저장한 활성 학습(사례 값은 새 기사 사실이 아님):\n" +
             JSON.stringify((corrections.lessons ?? []).slice(0, 12)) +
             "\n\n관리자가 등록한 상시 편집 원칙(사실 정확성을 지키면서 높은 우선순위부터 적용):\n" +
-            JSON.stringify((corrections.editorial_rules ?? []).slice(0, 20)),
+            JSON.stringify((corrections.editorial_rules ?? []).slice(0, 20)) +
+            "\n상시 편집 원칙은 과거 교정 예시와 일반 문체 안내보다 우선한다. 교정 예시에 남은 존댓말·오타·수정하지 않은 문장을 그대로 모방하지 않는다. 편집자의 수정 이유를 함께 읽고 그 의도를 적용한다.",
         },
         { role: "user", content: user },
       ],
@@ -754,7 +760,11 @@ function buildContent(summary, mediaNode) {
  * articles 는 검수자가 "고치고 반려"·수정 발행으로 다시 쓴 기사에서 나온다 —
  * 구조·톤을 통째로 흉내내는 게 목적.
  */
-async function fetchCorrectionExamples({ baseUrl = BASE_URL, cronSecret = CRON_SECRET, fetchImpl = fetch } = {}) {
+async function fetchCorrectionExamples({
+  baseUrl = BASE_URL,
+  cronSecret = CRON_SECRET,
+  fetchImpl = fetch,
+} = {}) {
   const unavailable = (error) => ({ guidance_available: false, error })
   if (!cronSecret) return unavailable("학습 자료 인증 설정이 없습니다.")
   try {
@@ -762,12 +772,20 @@ async function fetchCorrectionExamples({ baseUrl = BASE_URL, cronSecret = CRON_S
       headers: { Authorization: `Bearer ${cronSecret}` },
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) return unavailable(`학습 자료 조회 실패 (${res.status}). 다음 회차에 재시도합니다.`)
+    if (!res.ok)
+      return unavailable(`학습 자료 조회 실패 (${res.status}). 다음 회차에 재시도합니다.`)
     const d = await res.json()
-    if (d?.guidance_available !== true ||
-      !["examples", "articles", "naming", "lessons", "editorial_rules"].every((key) => Array.isArray(d[key])) ||
-      d.policy_version !== NEWS_WRITER_POLICY_VERSION || !Number.isFinite(Date.parse(d.loaded_at))) {
-      return unavailable("학습 자료와 작성 정책 버전을 확인하지 못했습니다. 앱과 스캐너 배포 상태를 확인해 주세요.")
+    if (
+      d?.guidance_available !== true ||
+      !["examples", "articles", "naming", "lessons", "editorial_rules"].every((key) =>
+        Array.isArray(d[key])
+      ) ||
+      d.policy_version !== NEWS_WRITER_POLICY_VERSION ||
+      !Number.isFinite(Date.parse(d.loaded_at))
+    ) {
+      return unavailable(
+        "학습 자료와 작성 정책 버전을 확인하지 못했습니다. 앱과 스캐너 배포 상태를 확인해 주세요."
+      )
     }
     return {
       guidance_available: true,
@@ -991,7 +1009,14 @@ function buildNamingHints(naming, sourceText) {
       [...list]
         .filter((en) => !AMBIGUOUS_EN.has(en))
         .sort((a, b) => b.length - a.length)
-        .find((en) => includesProperNoun(sourceText, lower, en, row.allow_lowercase === true && row.kind === "label"))
+        .find((en) =>
+          includesProperNoun(
+            sourceText,
+            lower,
+            en,
+            row.allow_lowercase === true && row.kind === "label"
+          )
+        )
 
     let matched = pick(row.en)
 
@@ -1030,10 +1055,14 @@ function buildNamingHints(naming, sourceText) {
   return `\n\n## 확정 한글 표기 (반드시 이대로)\n원문에 등장하는 고유명사다. 아래 한글 표기를 **그대로** 써라 — 다르게 음차하지 마라:\n${top
     .map((h) => {
       if (!h.first_mention_ko) return `- ${h.en} = ${h.ko}`
-      const ambiguous = h.kind === "person" && [h.family_name_ko, h.short_name_ko].some((name) =>
-        (mentionOwners.get(name?.replace(/\s+/g, "") ?? "")?.size ?? 0) > 1
-      )
-      const subsequent = ambiguous ? h.first_mention_ko : h.subsequent_mention_ko || h.first_mention_ko
+      const ambiguous =
+        h.kind === "person" &&
+        [h.family_name_ko, h.short_name_ko].some(
+          (name) => (mentionOwners.get(name?.replace(/\s+/g, "") ?? "")?.size ?? 0) > 1
+        )
+      const subsequent = ambiguous
+        ? h.first_mention_ko
+        : h.subsequent_mention_ko || h.first_mention_ko
       return `- ${h.en} = ${h.ko} · 본문 첫 언급: ${h.first_mention_ko} · 이후: ${subsequent}${h.given_name_ko ? ` · 이름: ${h.given_name_ko}` : ""}${h.family_name_ko ? ` · 성: ${h.family_name_ko}` : ""}${ambiguous ? " · 같은 성·호칭의 다른 인물이 함께 등장하므로 전체 이름 유지" : ""}`
     })
     .join(
@@ -1375,6 +1404,22 @@ ${v.summary || ""}`,
           continue
         }
       }
+      const style = await enforceEditorialStyle(v, corrections.editorial_rules, async (note) => {
+        if (llmCalls >= MAX_LLM_PER_RUN)
+          throw Error("편집 원칙 재작성 예산 소진 — 다음 회차에 재시도")
+        llmCalls++
+        log(`retry(편집원칙) [${p.subreddit}/${p.id}]`)
+        return judgeAndWrite(p, corrections, material, note)
+      })
+      v = style.draft
+      // A final rewrite must still pass the existing evidence and title guards.
+      if (
+        style.rewritten &&
+        (!isKoreanTitle(v.title) ||
+          findDateViolations(`${v.title}\n${v.summary}`, dateSrc).length ||
+          findNameViolations(`${v.title}\n${v.summary}`, dateSrc, corrections.naming).length)
+      )
+        throw Error("편집 원칙 재작성 후 제목·날짜·이름 검증 실패 — 초안 미생성")
       if (DRY_RUN) {
         seen.add(p.id)
         drafted++
@@ -1397,7 +1442,7 @@ ${v.summary || ""}`,
         // 원문 = 영상 그 자체. embed-card 가 url 로 플레이어 iframe 을 만든다 (html 불필요)
         mediaNode = { type: "embed", attrs: { url: p.url, provider: "streamable" } }
       } else if (isExternalArticle(p.url)) {
-        const { imageNode, ogSummary, publishedAt } = await buildArticleOg(p.url)
+        const { imageNode, publishedAt } = await buildArticleOg(p.url)
         const articleAgeH = publishedAt ? (Date.now() - Date.parse(publishedAt)) / 3600e3 : null
         if (articleAgeH != null && articleAgeH > STALE_ARTICLE_HOURS) {
           log(
@@ -1407,8 +1452,9 @@ ${v.summary || ""}`,
         }
         articlePublishedAt = articlePublishedAt ?? publishedAt
         mediaNode = imageNode
-        if (ogSummary && (summary || "").length < 40) summary = ogSummary
       }
+      if (findEditorialStyleViolations(summary, corrections.editorial_rules).length)
+        throw Error("최종 원고 편집 원칙 검사 실패 — 초안 미생성")
       const sport = sportOf(p.subreddit)
       // VS 쟁점 제안 (2단 판정) — 축구 전용 (판정 프롬프트가 축구 데스크 기준).
       // 실패해도 초안은 나간다.
@@ -1564,7 +1610,15 @@ async function reportHeat(rotation) {
   log(`heat: 측정 ${items.length}건 → 발행글 매칭 ${d.updated ?? 0}건 (${res.status})`)
 }
 
-export { judgeAndWrite, fetchArticleBody, findDateViolations, findNameViolations, fetchCorrectionExamples, editorialGuidanceTrace, buildNamingHints }
+export {
+  judgeAndWrite,
+  fetchArticleBody,
+  findDateViolations,
+  findNameViolations,
+  fetchCorrectionExamples,
+  editorialGuidanceTrace,
+  buildNamingHints,
+}
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => {
     log("치명적 오류:", e.stack || e.message)
