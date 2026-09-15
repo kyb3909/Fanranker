@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { NEWS_WRITER_POLICY_VERSION } from "@/scripts/vps-news-scanner/writer-policy.mjs"
+import type { EditorialRule } from "@/lib/news/training/types"
 
 /**
  * 뉴스 자동발행 cron — 검수 없이 담벼락에 나가는 유일한 경로.
@@ -33,8 +35,10 @@ vi.mock("@/lib/cron/log-run", () => ({
 }))
 const inspectImageMock = vi.fn()
 const publishingSettingsMock = vi.fn()
+const editorialRulesMock = vi.fn()
 vi.mock("@/lib/news/training/settings", () => ({
   loadPublishingSettings: (...args: unknown[]) => publishingSettingsMock(...args),
+  loadEditorialRules: (...args: unknown[]) => editorialRulesMock(...args),
 }))
 vi.mock("@/lib/news/quality-gate", () => ({
   // 검사관은 유지하되 작성 모델과 다른 모델로 돈다 (quality-gate.ts 상단 참조)
@@ -81,7 +85,7 @@ interface DraftRow {
   tags: null
   decision: Record<string, unknown> | null
   created_at: string
-  raw?: { source_text?: string; original_title?: string }
+  raw?: { source_text?: string; original_title?: string; editorial_guidance?: unknown }
 }
 
 let drafts: DraftRow[] = []
@@ -207,6 +211,49 @@ const textOnlyDoc = {
   content: [{ type: "paragraph", content: [{ type: "text", text: "글만 있는 기사" }] }],
 }
 
+const currentRules: EditorialRule[] = [
+  {
+    id: "8f228310-bbe8-44b5-a705-c31d217e1401",
+    title: "존댓말 없는 건조한 기사체",
+    instruction: "서술과 간접 인용은 한다·했다체로 통일한다.",
+    category: "style",
+    priority: 100,
+    active: true,
+    version: 0,
+    updated_at: "2026-09-15T18:19:03.445Z",
+  },
+  {
+    id: "8f228310-bbe8-44b5-a705-c31d217e1402",
+    title: "첫 문단에 요지, 이후 출처와 세부 내용",
+    instruction: "첫 문단은 요지, 다음 문단에 매체 출처를 설명한다.",
+    category: "structure",
+    priority: 95,
+    active: true,
+    version: 0,
+    updated_at: "2026-09-15T18:19:03.496Z",
+  },
+]
+const currentGuidance = {
+  policy_version: NEWS_WRITER_POLICY_VERSION,
+  loaded_at: "2026-09-15T20:15:00.000Z",
+  applied_rule_ids: currentRules.map((rule) => rule.id),
+}
+// Actual published copy reported by the editor on 2026-09-16.
+const solankeDoc = {
+  type: "doc",
+  content: [
+    {
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: '더 타임스 보도에 따르면 로베르토 데 제르비 토트넘 감독은 도미닉 솔란케가 10~15골을 넣을 수 있다고 믿는다고 말했습니다. 데 제르비 감독은 "그는 본머스에서 이미 득점했고, 토트넘에서 못 넣을 이유가 무엇이냐"며 솔란케를 다시 최고의 모습으로 되돌리겠다고 했습니다. 토트넘은 리그 4경기째 무득점이며, 데 제르비 감독은 선수들에게 과제를 내주고 맥주를 사주는 방식도 활용하고 있는 것으로 전해졌습니다.',
+        },
+      ],
+    },
+  ],
+}
+
 function draft(id: string, content: unknown, ageHours = 0): DraftRow {
   return {
     id,
@@ -322,6 +369,7 @@ describe("GET /api/cron/news-auto-publish", () => {
       effective_enabled: process.env.NEWS_AUTO_PUBLISH === "on",
       per_run_cap: 2,
     }))
+    editorialRulesMock.mockReset().mockResolvedValue([])
     drafts = []
     botPublishedToday = 0
     autoPublishedToday = 0
@@ -332,6 +380,121 @@ describe("GET /api/cron/news-auto-publish", () => {
     ledgerEvents.length = 0
     inspectImageMock.mockReset().mockResolvedValue({ pass: true, reason: "ok" })
     rehostMock.mockReset().mockImplementation(async (src: string) => src)
+  })
+
+  it.each([undefined, currentGuidance])(
+    "holds the reported Solanke copy even with current guidance: %j",
+    async (guidance) => {
+      editorialRulesMock.mockResolvedValue(currentRules)
+      drafts = [draft("hermes-reddit-1wgwzfy", solankeDoc, 9)]
+      drafts[0].raw = { editorial_guidance: guidance }
+      const { inspectDraft } = await import("@/lib/news/quality-gate")
+      vi.mocked(inspectDraft).mockClear()
+      const body = await (await call()).json()
+      expect(body.published).toBe(0)
+      expect(body.skipCounts.editorial_style_violation).toBe(1)
+      expect(inserted).toHaveLength(0)
+      expect(reservoirUpdates).toHaveLength(0)
+      expect(inspectDraft).not.toHaveBeenCalled()
+      expect(ledgerEvents.at(-1)).toMatchObject({
+        to_state: "needs_human",
+        reason_code: "editorial_style_violation",
+      })
+    }
+  )
+
+  it.each([
+    undefined,
+    { ...currentGuidance, applied_rule_ids: [] },
+    { ...currentGuidance, policy_version: "2026-09-15.1" },
+    { ...currentGuidance, loaded_at: "2026-09-15T11:06:00.000Z" },
+  ])(
+    "holds an old draft until current rules are used, even when its wording passes: %j",
+    async (guidance) => {
+      editorialRulesMock.mockResolvedValue(currentRules)
+      drafts = [draft("old-copy", visualDoc, 9)]
+      drafts[0].raw = { editorial_guidance: guidance }
+      const body = await (await call()).json()
+      expect(body.published).toBe(0)
+      expect(body.skipCounts.editorial_rules_stale).toBe(1)
+      expect(inserted).toHaveLength(0)
+      expect(reservoirUpdates).toHaveLength(0)
+    }
+  )
+
+  it("publishes current compliant copy through the existing quality checks", async () => {
+    editorialRulesMock.mockResolvedValue(currentRules)
+    drafts = [draft("current-copy", visualDoc)]
+    drafts[0].raw = { editorial_guidance: currentGuidance }
+    const body = await (await call()).json()
+    expect(body.published).toBe(1)
+    expect(inserted).toHaveLength(1)
+    expect(editorialRulesMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("rechecks rules changed during inspection before inserting the post", async () => {
+    editorialRulesMock
+      .mockResolvedValueOnce(currentRules)
+      .mockResolvedValue(
+        currentRules.map((rule) => ({ ...rule, updated_at: "2026-09-15T20:16:00.000Z" }))
+      )
+    drafts = [draft("changed-rules", visualDoc)]
+    drafts[0].raw = { editorial_guidance: currentGuidance }
+    const body = await (await call()).json()
+    expect(body.published).toBe(0)
+    expect(body.skipCounts.editorial_rules_stale).toBe(1)
+    expect(inserted).toHaveLength(0)
+    expect(reservoirUpdates).toHaveLength(0)
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "needs_human",
+      reason_code: "editorial_rules_stale",
+    })
+  })
+
+  it("fails closed when current editorial rules cannot be loaded", async () => {
+    editorialRulesMock.mockRejectedValue(Error("rules unavailable"))
+    drafts = [draft("rules-unavailable", visualDoc)]
+    expect((await call()).status).toBe(503)
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("retries a final rule lookup failure without publishing or rejecting the draft", async () => {
+    editorialRulesMock
+      .mockResolvedValueOnce(currentRules)
+      .mockRejectedValue(Error("rules unavailable"))
+    drafts = [draft("final-rules-unavailable", visualDoc)]
+    drafts[0].raw = { editorial_guidance: currentGuidance }
+    const body = await (await call()).json()
+    expect(body.published).toBe(0)
+    expect(body.skipCounts.editorial_rules_unavailable).toBe(1)
+    expect(inserted).toHaveLength(0)
+    expect(reservoirUpdates).toHaveLength(0)
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "retry_wait",
+      reason_code: "editorial_rules_unavailable",
+    })
+  })
+
+  it("blocks the reported copy at the common publisher even if the cron precheck is bypassed", async () => {
+    editorialRulesMock.mockResolvedValue(currentRules)
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    const { publishNewsDraft } = await import("@/lib/news/publish")
+    const result = await publishNewsDraft(
+      createServiceRoleClient(),
+      {
+        ...draft("direct-auto", solankeDoc),
+        raw: { editorial_guidance: currentGuidance },
+      },
+      {
+        title: '[더 타임스] 데 제르비 "솔란케, 10~15골 넣을 수 있다"',
+        content: solankeDoc,
+        auto: true,
+      }
+    )
+    expect(result.editorialHold?.reasonCode).toBe("editorial_style_violation")
+    expect(result.postId).toBeUndefined()
+    expect(inserted).toHaveLength(0)
+    expect(reservoirUpdates).toHaveLength(0)
   })
 
   it("실제 이미지가 있는 초안만 발행하고 auto=true 로 표시한다", async () => {

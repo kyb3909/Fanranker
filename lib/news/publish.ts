@@ -27,6 +27,11 @@ import { splitLongParagraphs } from "@/lib/tiptap/split-paragraphs"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
 import type { TipTapNode } from "@/types/post"
+import { loadEditorialRules } from "@/lib/news/training/settings"
+import {
+  editorialPublicationHold,
+  type EditorialPublicationHold,
+} from "@/lib/news/editorial-publication"
 
 /**
  * 뉴스 발행 공용 로직 — 검수 API(/api/admin/news-review)와 자동발행 cron 이 공유.
@@ -69,7 +74,7 @@ export interface NewsReservoirItem {
     original?: { title?: string; content?: unknown }
   } | null
   /** 유입 스냅샷(불변) — 스캐너가 실은 종목 등. select 에 raw 를 빼먹으면 축구로 발행되니 주의 */
-  raw?: { sport?: string } | null
+  raw?: { sport?: string; editorial_guidance?: unknown } | null
   entities: {
     teams?: { surface?: string | null; preferred_ko?: string | null }[]
   } | null
@@ -148,6 +153,7 @@ export async function publishNewsDraft(
 ): Promise<{
   postId?: string
   error?: string
+  editorialHold?: EditorialPublicationHold
   /** 검수자 지정 연결의 결과 (자동 연결은 after 에서 처리돼 여기 없음) */
   saga?: { slug: string; title: string } | null
   sagaError?: string
@@ -259,6 +265,26 @@ export async function publishNewsDraft(
     flairIds = [...flairIds].sort((a, b) => Number(isKind(a)) - Number(isKind(b)))
   }
   const primaryFlairId = flairIds[0] ?? null
+
+  // Re-read immediately before insertion: rules may change while the inspector runs.
+  // Human desking keeps its explicit publication decision; this protects automatic publication.
+  if (opts.auto) {
+    let hold: EditorialPublicationHold | null
+    try {
+      hold = editorialPublicationHold(
+        content,
+        item.raw?.editorial_guidance,
+        await loadEditorialRules(supabase)
+      )
+    } catch {
+      hold = {
+        reasonCode: "editorial_rules_unavailable",
+        reasons: ["현재 편집 규칙을 확인할 수 없어 자동 발행을 보류합니다."],
+        retryable: true,
+      }
+    }
+    if (hold) return { error: hold.reasons.join(" / "), editorialHold: hold }
+  }
 
   const { data: post, error: postErr } = await supabase
     .from("posts")

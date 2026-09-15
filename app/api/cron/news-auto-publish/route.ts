@@ -44,7 +44,8 @@ import {
   type NewsCandidateState,
 } from "@/lib/news/candidate-ledger"
 import { titleSimilarity } from "@/lib/saga/cluster"
-import { loadPublishingSettings } from "@/lib/news/training/settings"
+import { loadEditorialRules, loadPublishingSettings } from "@/lib/news/training/settings"
+import { editorialPublicationHold } from "@/lib/news/editorial-publication"
 import { inspectNewsFollowup } from "@/lib/news/followup"
 import { isInfrastructureGate, qualityRetryState, readNewsEvidence } from "@/lib/news/evidence"
 
@@ -118,6 +119,13 @@ async function run(request: NextRequest) {
     })
   }
 
+  let editorialRules
+  try {
+    editorialRules = await loadEditorialRules(supabase)
+  } catch {
+    return NextResponse.json({ error: "현재 편집 규칙을 확인하지 못했습니다." }, { status: 503 })
+  }
+
   const ledgerRunId = newsCandidateRunId("news-auto-publish")
 
   // 오늘 발행량 집계 — 상한 아님, 응답 리포트용 (디스코드/로그에서 하루 흐름 관찰).
@@ -165,6 +173,7 @@ async function run(request: NextRequest) {
         published_at?: string
         original_title?: string
         evidence?: unknown
+        editorial_guidance?: unknown
       } | null
     })[]),
   ].sort((a, b) => {
@@ -269,6 +278,8 @@ async function run(request: NextRequest) {
       official_unverified: "오피셜인데 공식 출처(구단·리그 공식 채널)가 확인되지 않음",
       basketball_manual_only: "농구는 수동 발행만 하도록 잠겨 있음",
       prior_gate_rejected: "앞 단계 게이트가 이미 거절한 초안이 다시 올라옴",
+      editorial_style_violation: "현재 편집 규칙에 어긋나는 문체·리드가 남아 있음",
+      editorial_rules_stale: "현재 편집 규칙으로 다시 작성하거나 데스킹해야 함",
     }
     notifyDiscordOps({
       title: `🚨 브레이킹 막힘 — ${REASON_KO[reason] ?? reason}`,
@@ -314,6 +325,16 @@ async function run(request: NextRequest) {
     const content = sanitizeTipTapJSON(row.draft?.content)
     if (!title || !content) {
       noteSkip(row.id, "invalid_draft")
+      continue
+    }
+    // Drafts written before the current rules can otherwise wait in the queue and publish later.
+    const editorialHold = editorialPublicationHold(
+      content,
+      row.raw?.editorial_guidance,
+      editorialRules
+    )
+    if (editorialHold) {
+      noteSkip(row.id, editorialHold.reasonCode, "needs_human")
       continue
     }
     // 개인 블로그·뉴스레터 출처는 자동발행 금지 (2026-08-04 Substack 실사고)
@@ -756,6 +777,14 @@ async function run(request: NextRequest) {
       auto: true,
     })
     if (result.error) {
+      if (result.editorialHold) {
+        noteSkip(
+          row.id,
+          result.editorialHold.reasonCode,
+          result.editorialHold.retryable ? "retry_wait" : "needs_human"
+        )
+        continue
+      }
       // 실패 항목은 drafted 로 남는다 — 다음 run 재시도 또는 수동 검수로 처리 가능
       errors.push(`${row.id}: ${result.error}`)
       ledgerEvents.push({
