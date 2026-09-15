@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { DeskWorkspace } from "@/app/admin/news-review/desk/workspace"
 const mock = vi.hoisted(() => ({
@@ -6,8 +6,13 @@ const mock = vi.hoisted(() => ({
   mutate: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock("swr", () => ({
-  default: (key: string) => ({
-    data: key?.startsWith("/api/admin/news-desk/articles") ? { items: [], limit: 80 } : mock.data,
+  default: (key: string | null) => ({
+    data:
+      key === null
+        ? undefined
+        : key.startsWith("/api/admin/news-desk/articles")
+          ? { items: [], limit: 80 }
+          : mock.data,
     error: null,
     isLoading: false,
     mutate: mock.mutate,
@@ -25,9 +30,131 @@ const item = (id: string) => ({
   applied_lesson_ids: [],
   origin: { kind: "draft", id, title: "제목 " + id, imported_at: "2026-09-14T01:00:00Z" },
 })
+beforeEach(() => {
+  window.history.replaceState(null, "", "/admin/news-review/desk")
+  vi.clearAllMocks()
+  mock.mutate.mockReset().mockResolvedValue(undefined)
+})
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
+
+describe("moving through actual articles in the desk queue", () => {
+  function queue() {
+    const first = item("11111111-1111-4111-8111-111111111111")
+    const second = item("22222222-2222-4222-8222-222222222222")
+    const data = {
+      items: [first, second],
+      isAdmin: false,
+      lessons: [],
+      revisions: [],
+      settings: { enabled: false, pending_target: 6, daily_limit: 12 },
+      counts: { pending: 2, reviewed: 0, lessons: 0, today: 2 },
+    }
+    mock.data = data
+    return { first, second, data }
+  }
+
+  it("saves the open article before advancing from the prepared queue, and can return to it", async () => {
+    const { first, second, data } = queue()
+    mock.mutate.mockImplementation(async () => {
+      mock.data = {
+        ...data,
+        items: [
+          second,
+          {
+            ...first,
+            status: "reviewed",
+            version: 1,
+            draft: { ...first.draft, title: "교정한 제목" },
+          },
+        ],
+      }
+    })
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(Response.json({ version: 1, changed: true, applied_to_article: true }))
+    vi.stubGlobal("fetch", fetcher)
+    render(<DeskWorkspace />)
+    expect(
+      screen.getByRole("button", { name: /전체 기사 데스킹/ }).getAttribute("aria-expanded")
+    ).toBe("false")
+    fireEvent.change(screen.getByLabelText("기사 제목"), { target: { value: "교정한 제목" } })
+    fireEvent.click(screen.getByRole("button", { name: "검수 완료·다음" }))
+    await waitFor(() =>
+      expect((screen.getByLabelText("기사 제목") as HTMLTextAreaElement).value).toBe(
+        second.draft.title
+      )
+    )
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toMatchObject({
+      id: first.id,
+      status: "reviewed",
+      draft: { title: "교정한 제목" },
+    })
+    expect(new URLSearchParams(window.location.search).get("item")).toBe(second.id)
+    fireEvent.click(screen.getByRole("button", { name: "이전 기사" }))
+    await waitFor(() =>
+      expect((screen.getByLabelText("기사 제목") as HTMLTextAreaElement).value).toBe("교정한 제목")
+    )
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps unsaved text when the editor declines moving to another article", async () => {
+    const { first } = queue()
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false)
+    render(<DeskWorkspace />)
+    fireEvent.change(screen.getByLabelText("기사 제목"), {
+      target: { value: "아직 저장하지 않은 제목" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "다음 기사" }))
+    await waitFor(() => expect(confirm).toHaveBeenCalledOnce())
+    expect((screen.getByLabelText("기사 제목") as HTMLTextAreaElement).value).toBe(
+      "아직 저장하지 않은 제목"
+    )
+    expect(new URLSearchParams(window.location.search).get("item")).toBe(first.id)
+  })
+
+  it("disables navigation during saving and stays on the article if saving fails", async () => {
+    const { first, second } = queue()
+    let finish!: (response: Response) => void
+    const fetcher = vi.fn().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finish = resolve
+      })
+    )
+    vi.stubGlobal("fetch", fetcher)
+    render(<DeskWorkspace />)
+    fireEvent.change(screen.getByLabelText("기사 제목"), { target: { value: "충돌 중인 내 수정" } })
+    fireEvent.click(screen.getByRole("button", { name: "검수 완료·다음" }))
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "다음 기사" }) as HTMLButtonElement).disabled
+      ).toBe(true)
+    )
+    const other = screen.getByRole("button", {
+      name: new RegExp(second.draft.title),
+    }) as HTMLButtonElement
+    expect(other.disabled).toBe(true)
+    fireEvent.click(other)
+    finish(Response.json({ error: "다른 창에서 먼저 수정했습니다." }, { status: 409 }))
+    await waitFor(() => expect(screen.getByText("다른 창에서 먼저 수정했습니다.")).toBeTruthy())
+    expect((screen.getByLabelText("기사 제목") as HTMLTextAreaElement).value).toBe(
+      "충돌 중인 내 수정"
+    )
+    expect(new URLSearchParams(window.location.search).get("item")).toBe(first.id)
+  })
+
+  it("restores the article specified in the URL instead of opening the first pending item", () => {
+    const { second } = queue()
+    window.history.replaceState(null, "", "/admin/news-review/desk?item=" + second.id)
+    render(<DeskWorkspace />)
+    expect((screen.getByLabelText("기사 제목") as HTMLTextAreaElement).value).toBe(
+      second.draft.title
+    )
+  })
 })
 describe("desk editing while the automatic queue refreshes", () => {
   it("does not put standalone practice articles into the actual article work queue", () => {

@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import {
   BookOpen,
   Check,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
   Loader2,
@@ -83,28 +84,50 @@ export function DeskWorkspace() {
     {
       refreshInterval: 10000,
       revalidateOnFocus: true,
+      keepPreviousData: true,
     }
   )
   const [filter, setFilter] = useState("pending")
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [editorBusy, setEditorBusy] = useState(false)
+  const [history, setHistory] = useState<string[]>([])
   const [notice, setNotice] = useState("")
   const [nextArticles, setNextArticles] = useState<Array<{ kind: "post" | "draft"; id: string }>>(
     []
   )
-  const items = (data?.items ?? [])
-    .filter((entry) => Boolean(entry.origin))
-    .filter(
-      (item) =>
-        filter === "all" ||
-        (filter === "pending" && ["drafted", "generating"].includes(item.status)) ||
-        (filter === "reviewed" && item.status === "reviewed") ||
-        (filter === "failed" && ["failed", "rejected"].includes(item.status))
-    )
+  // Saving changes updated_at and the API puts the selected item first. Neither
+  // should move the editor's queue: use the stable time it entered the desk.
+  const workItems = useMemo(
+    () =>
+      (data?.items ?? [])
+        .filter((entry) => Boolean(entry.origin))
+        .sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id)),
+    [data?.items]
+  )
+  const items = workItems.filter(
+    (item) =>
+      filter === "all" ||
+      (filter === "pending" && ["drafted", "generating"].includes(item.status)) ||
+      (filter === "reviewed" && item.status === "reviewed") ||
+      (filter === "failed" && ["failed", "rejected"].includes(item.status))
+  )
   const item = selected ? data?.items.find((i) => i.id === selected) : items[0]
+  const position = workItems.findIndex((entry) => entry.id === item?.id)
+  const pendingItems = workItems.filter((entry) => entry.status === "drafted" && entry.draft)
+  const nextPending =
+    workItems.slice(position + 1).find((entry) => entry.status === "drafted" && entry.draft) ??
+    pendingItems.find((entry) => entry.id !== item?.id)
+  const previousId = history.at(-1) ?? workItems[position - 1]?.id
+  const navigationBusy = busy || editorBusy
   // Pin the first selection so a newly generated item cannot replace an editor's open draft.
   useEffect(() => {
     if (selected) return
+    const requested = new URLSearchParams(window.location.search).get("item")
+    if (requested && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(requested)) {
+      setSelected(requested)
+      return
+    }
     if (window.location.hash === "#lessons" && data) {
       const pending = new Set(
         data.lessons.filter((l) => l.review_status === "pending").map((l) => l.revision_id)
@@ -122,6 +145,12 @@ export function DeskWorkspace() {
     if (items[0]) setSelected(items[0].id)
   }, [selected, items, data])
   useEffect(() => {
+    if (!selected) return
+    const url = new URL(window.location.href)
+    url.searchParams.set("item", selected)
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash)
+  }, [selected])
+  useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty) {
         event.preventDefault()
@@ -131,16 +160,26 @@ export function DeskWorkspace() {
     window.addEventListener("beforeunload", warn)
     return () => window.removeEventListener("beforeunload", warn)
   }, [dirty])
-  const choose = (id: string) => {
-    if (item?.id === id) return
-    if (dirty && !window.confirm("저장하지 않은 수정이 있습니다. 다른 기사로 이동할까요?")) return
+  const choose = (id: string, remember = true) => {
+    if (navigationBusy || item?.id === id) return false
+    if (dirty && !window.confirm("저장하지 않은 수정이 있습니다. 다른 기사로 이동할까요?"))
+      return false
+    if (remember && item) setHistory((previous) => [...previous, item.id])
     setDirty(false)
     setSelected(id)
     setNextArticles([])
+    return true
   }
   async function nextArticle() {
     const next = nextArticles[0]
-    if (!next) return
+    if (!next) {
+      if (nextPending) {
+        if (item) setHistory((previous) => [...previous, item.id])
+        setDirty(false)
+        setSelected(nextPending.id)
+      }
+      return
+    }
     const response = await fetch(API + "/articles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -148,6 +187,8 @@ export function DeskWorkspace() {
     })
     const result = await response.json()
     if (!response.ok) throw Error(result.error || "다음 기사를 불러오지 못했습니다.")
+    if (item) setHistory((previous) => [...previous, item.id])
+    setDirty(false)
     setSelected(result.id)
     setNextArticles((queue) => queue.slice(1))
   }
@@ -234,12 +275,14 @@ export function DeskWorkspace() {
       {data && (
         <>
           <DeskArticlePicker
-            disabled={dirty || busy}
+            disabled={dirty || navigationBusy}
+            initiallyOpen={!workItems.length}
             autoSelect={!selected}
             refreshKey={item ? `${item.id}:${item.version}` : undefined}
             onChoose={async (id, next) => {
               window.history.replaceState(null, "", window.location.pathname)
               setFilter("all")
+              if (item && item.id !== id) setHistory((previous) => [...previous, item.id])
               setSelected(id)
               setNextArticles(next ?? [])
               await mutate()
@@ -341,9 +384,11 @@ export function DeskWorkspace() {
             </section>
           </details>
           <div className="grid items-start gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <aside className={box + " min-w-0 p-3"} aria-label="기사 대기함">
+            <aside className={box + " min-w-0 p-3 lg:sticky lg:top-4"} aria-label="기사 대기함">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold">작업 목록</h2>
+                <h2 className="text-sm font-semibold">
+                  작업 목록 <span className="text-wc-mute">{items.length}</span>
+                </h2>
                 <select
                   aria-label="기사 상태 필터"
                   value={filter}
@@ -356,16 +401,18 @@ export function DeskWorkspace() {
                   <option value="all">전체</option>
                 </select>
               </div>
-              <div className="max-h-64 space-y-2 overflow-y-auto lg:max-h-[75vh]">
+              <div className="max-h-40 space-y-2 overflow-y-auto lg:max-h-[70vh]">
                 {!items.length && (
                   <p className="text-wc-mute px-2 py-6 text-sm leading-relaxed">
-                    이 목록에 기사가 없습니다. 새 원문이 들어오면 초안을 보충합니다.
+                    이 목록의 작업을 마쳤습니다. 위 ‘전체 기사 데스킹’을 열면 다른 기사도 가져올 수
+                    있습니다.
                   </p>
                 )}
                 {items.map((i) => (
                   <button
                     key={i.id}
                     onClick={() => choose(i.id)}
+                    disabled={navigationBusy}
                     aria-pressed={item?.id === i.id}
                     className={
                       "w-full rounded-lg border p-3 text-left transition-colors " +
@@ -395,7 +442,31 @@ export function DeskWorkspace() {
                 item={item}
                 data={data}
                 dirtyChanged={setDirty}
-                next={nextArticles.length ? nextArticle : undefined}
+                busyChanged={setEditorBusy}
+                pendingCount={pendingItems.length}
+                previous={
+                  previousId
+                    ? () => {
+                        if (choose(previousId, false)) setHistory((entries) => entries.slice(0, -1))
+                      }
+                    : undefined
+                }
+                next={nextArticles.length || nextPending ? nextArticle : undefined}
+                skip={
+                  nextArticles.length || nextPending
+                    ? async () => {
+                        if (
+                          navigationBusy ||
+                          (dirty &&
+                            !window.confirm(
+                              "저장하지 않은 수정이 있습니다. 다음 기사로 이동할까요?"
+                            ))
+                        )
+                          return
+                        await nextArticle()
+                      }
+                    : undefined
+                }
                 refresh={async () => {
                   await mutate()
                 }}
@@ -482,12 +553,20 @@ function ArticleEditor({
   item,
   data,
   dirtyChanged,
+  busyChanged,
+  pendingCount,
+  previous,
+  skip,
   refresh,
   next,
 }: {
   item: DeskItem
   data: DeskResponse
   dirtyChanged: (v: boolean) => void
+  busyChanged: (v: boolean) => void
+  pendingCount: number
+  previous?: () => void
+  skip?: () => Promise<void>
   refresh: () => Promise<void>
   next?: () => Promise<void>
 }) {
@@ -500,6 +579,11 @@ function ArticleEditor({
     if (window.location.hash === "#lessons") setTab("learning")
   }, [])
   const [busy, setBusy] = useState(false)
+  const editor = useRef<HTMLElement>(null)
+  useEffect(() => {
+    editor.current?.scrollIntoView?.({ block: "start" })
+    editor.current?.focus({ preventScroll: true })
+  }, [])
   const [notice, setNotice] = useState("")
   const [compare, setCompare] = useState(false)
   const [lessonEdits, setLessonEdits] = useState<Record<string, boolean>>({})
@@ -525,6 +609,7 @@ function ArticleEditor({
   const lessons = data.lessons.filter((l) => revisions.some((r) => r.id === l.revision_id))
   async function save(status: "drafted" | "reviewed" | "rejected", advance = false) {
     setBusy(true)
+    busyChanged(true)
     setNotice("")
     try {
       const saved = await request({ action: "save", id: item.id, version, draft, reason, status })
@@ -545,10 +630,39 @@ function ArticleEditor({
       setNotice(errorText(e))
     } finally {
       setBusy(false)
+      busyChanged(false)
     }
   }
   return (
-    <section className={box + " min-w-0 overflow-hidden"} aria-label="기사 편집">
+    <section
+      ref={editor}
+      tabIndex={-1}
+      className={box + " min-w-0 scroll-mt-4 overflow-clip outline-none"}
+      aria-label="기사 편집"
+    >
+      <nav
+        aria-label="기사 간 이동"
+        className="border-wc-line bg-wc-card sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b p-3"
+      >
+        <Button variant="outline" size="sm" disabled={busy || !previous} onClick={previous}>
+          <ChevronLeft className="mr-1 size-4" />
+          이전 기사
+        </Button>
+        <span className="text-wc-mute text-xs">
+          대기 {pendingCount}건 · {STATUS[item.status]}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy || !skip}
+          onClick={() => {
+            if (skip) void skip().catch((error) => setNotice(errorText(error)))
+          }}
+        >
+          다음 기사
+          <ChevronRight className="ml-1 size-4" />
+        </Button>
+      </nav>
       {item.origin && (
         <div className="border-wc-line bg-wc-paper border-b p-4 text-sm">
           <p className="font-medium">
@@ -705,7 +819,7 @@ function ArticleEditor({
                 이유는 선택입니다. 직접 고친 원고를 기준으로 AI가 먼저 해석하고, ‘수정·학습
                 이력’에서 의도에 맞게 설명을 보완할 수 있습니다.
               </p>
-              <div className="flex flex-wrap justify-between gap-3">
+              <div className="border-wc-line bg-wc-card sticky bottom-0 z-10 flex flex-wrap justify-between gap-3 border-t py-3">
                 <Button variant="ghost" size="sm" onClick={() => setCompare(!compare)}>
                   {compare
                     ? "비교 원고 접기"
@@ -717,11 +831,11 @@ function ArticleEditor({
                   <Button variant="outline" disabled={busy} onClick={() => void save("rejected")}>
                     보관
                   </Button>
-                  <Button variant="outline" disabled={busy} onClick={() => void save("reviewed")}>
-                    <Check className="mr-2 size-4" />
-                    검수 완료
-                  </Button>
-                  <Button disabled={busy || !dirty} onClick={() => void save("drafted")}>
+                  <Button
+                    variant="outline"
+                    disabled={busy || !dirty}
+                    onClick={() => void save("drafted")}
+                  >
                     {busy ? (
                       <Loader2 className="mr-2 size-4 animate-spin" />
                     ) : (
@@ -729,15 +843,13 @@ function ArticleEditor({
                     )}
                     수정 저장·기사 반영
                   </Button>
-                  {next && (
-                    <Button
-                      variant="outline"
-                      disabled={busy || hasLessonEdits}
-                      onClick={() => void save("reviewed", true)}
-                    >
-                      저장 후 다음 기사
-                    </Button>
-                  )}
+                  <Button
+                    disabled={busy || hasLessonEdits}
+                    onClick={() => void save("reviewed", Boolean(next))}
+                  >
+                    <Check className="mr-2 size-4" />
+                    {next ? "검수 완료·다음" : "검수 완료"}
+                  </Button>
                 </div>
               </div>
               {compare && item.original && (
