@@ -1,12 +1,8 @@
 import { after, NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireStaffApi } from "@/lib/admin/roles"
-import {
-  loadDesk,
-  reserveDeskDraft,
-  generateDeskDraft,
-  learnDeskRevision,
-} from "@/lib/news/desk/service"
+import { loadDesk, learnDeskRevision } from "@/lib/news/desk/service"
+import { refillLiveDesk } from "@/lib/news/desk/auto-queue"
 import { ArticleSchema } from "@/lib/news/desk/types"
 
 export const dynamic = "force-dynamic"
@@ -74,15 +70,10 @@ export async function POST(req: NextRequest) {
   const data = parsed.data,
     db = auth.supabase
   if ((data.action === "settings" || data.action === "generate") && auth.role !== "admin")
-    return json({ error: "자동 작성 설정과 추가 생성은 관리자만 실행할 수 있습니다." }, 403)
+    return json({ error: "자동 보충 설정과 추가 보충은 관리자만 실행할 수 있습니다." }, 403)
   try {
     if (data.action === "generate") {
-      const reservation = await reserveDeskDraft(db, true)
-      if (reservation.id)
-        after(async () => {
-          await generateDeskDraft(db, reservation)
-        })
-      return json(reservation, reservation.id ? 202 : 200)
+      return json(await refillLiveDesk(db))
     }
     if (data.action === "settings") {
       const { error } = await db

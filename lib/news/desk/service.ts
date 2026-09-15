@@ -90,15 +90,18 @@ export async function loadDesk(
     db
       .from("news_desk_items")
       .select("id", { count: "exact", head: true })
+      .eq("origin->>auto_queue", "true")
       .in("status", ["generating", "drafted"]),
     db
       .from("news_desk_items")
       .select("id", { count: "exact", head: true })
+      .not("origin", "is", null)
       .eq("status", "reviewed"),
     db.from("news_desk_lessons").select("id", { count: "exact", head: true }).eq("active", true),
     db
       .from("news_desk_items")
       .select("id", { count: "exact", head: true })
+      .eq("origin->>auto_queue", "true")
       .gte("created_at", kstDayStart()),
   ])
   results.forEach(checked)

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   load: vi.fn(),
   reserve: vi.fn(),
   generate: vi.fn(),
+  refill: vi.fn(),
   learn: vi.fn(),
   rpc: vi.fn(),
   from: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock("next/server", async () => ({
   after: mocks.after,
 }))
 vi.mock("@/lib/admin/roles", () => ({ requireStaffApi: mocks.auth }))
+vi.mock("@/lib/news/desk/auto-queue", () => ({ refillLiveDesk: mocks.refill }))
 vi.mock("@/lib/news/desk/service", () => ({
   loadDesk: mocks.load,
   reserveDeskDraft: mocks.reserve,
@@ -99,13 +101,22 @@ describe("news desk access and saving", () => {
   })
   it("does not spend tokens when quota reservation declines the request", async () => {
     mocks.auth.mockResolvedValue({ userId: "owner", role: "admin", supabase: db })
-    mocks.reserve.mockResolvedValue({ skipped: "daily_limit" })
+    mocks.refill.mockResolvedValue({ skipped: "daily_limit" })
     const { POST } = await import("@/app/api/admin/news-desk/route")
     expect(await (await POST(req({ action: "generate" }))).json()).toEqual({
       skipped: "daily_limit",
     })
     expect(mocks.after).not.toHaveBeenCalled()
     expect(mocks.generate).not.toHaveBeenCalled()
+  })
+  it("adds actual articles without starting a separate practice writer", async () => {
+    mocks.auth.mockResolvedValue({ userId: "owner", role: "admin", supabase: db })
+    mocks.refill.mockResolvedValue({ added: 2, ids: [id] })
+    const { POST } = await import("@/app/api/admin/news-desk/route")
+    expect(await (await POST(req({ action: "generate" }))).json()).toMatchObject({ added: 2 })
+    expect(mocks.refill).toHaveBeenCalledWith(db)
+    expect(mocks.reserve).not.toHaveBeenCalled()
+    expect(mocks.after).not.toHaveBeenCalled()
   })
   it("rejects malformed, oversized, and out-of-range mutations", async () => {
     const { POST } = await import("@/app/api/admin/news-desk/route")

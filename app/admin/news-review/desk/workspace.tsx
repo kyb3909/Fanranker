@@ -52,11 +52,11 @@ const KIND = {
   OPINION: "평가·의견",
 }
 const SKIP: Record<string, string> = {
-  busy: "다른 초안을 작성 중입니다.",
-  paused: "자동 작성이 멈춰 있습니다.",
+  busy: "새 기사 대기함을 보충 중입니다.",
+  paused: "자동 보충이 멈춰 있습니다.",
   not_due: "다음 작성 시각을 기다리고 있습니다.",
   queue_full: "대기함이 찼습니다. 기사를 검수하거나 대기 목표를 늘려 주세요.",
-  daily_limit: "오늘 생성 한도에 도달했습니다.",
+  daily_limit: "오늘 대기함 보충 한도에 도달했습니다.",
   no_source: "최근 원문 중 아직 작성하지 않은 신뢰 출처가 없습니다.",
   duplicate_source: "이미 작성한 원문입니다.",
 }
@@ -290,13 +290,13 @@ export function DeskWorkspace() {
           />
           <details>
             <summary className="text-wc-mute cursor-pointer text-xs">
-              별도 연습 초안 자동 작성 설정
+              새 기사 자동 보충 설정
             </summary>
-            <section className={box + " mt-3 overflow-hidden"} aria-label="자동 작성 현황">
+            <section className={box + " mt-3 overflow-hidden"} aria-label="자동 보충 현황">
               <div className="flex flex-wrap items-center justify-between gap-4 p-4">
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                   <span>
-                    대기 <strong className="ml-1 text-lg">{data.counts.pending}</strong>
+                    새 기사 대기 <strong className="ml-1 text-lg">{data.counts.pending}</strong>
                     <span className="text-wc-mute"> / {data.settings.pending_target}</span>
                   </span>
                   <span>
@@ -313,7 +313,7 @@ export function DeskWorkspace() {
                     ) : (
                       <Pause className="size-3" />
                     )}
-                    {data.settings.enabled ? "매시간 자동 보충" : "자동 작성 멈춤"}
+                    {data.settings.enabled ? "15분마다 자동 보충" : "자동 보충 멈춤"}
                   </span>
                   {data.isAdmin && (
                     <Button
@@ -336,13 +336,14 @@ export function DeskWorkspace() {
               </div>
               <details className="border-wc-line border-t px-4 py-3">
                 <summary className="text-wc-mute cursor-pointer text-xs">
-                  오늘 {data.counts.today} / {data.settings.daily_limit}건 · 운영 설정과 작성 원칙
+                  오늘 보충 {data.counts.today} / {data.settings.daily_limit}건 · 운영 설정과 작성
+                  원칙
                 </summary>
                 <div className="mt-4 grid gap-5 text-sm md:grid-cols-2">
                   <div className="space-y-2 leading-relaxed">
                     <p>
-                      실제 축구 뉴스 원문에서 소재를 골라 별도 연습 초안을 만듭니다. 이 공간의
-                      초안은 공개 발행되지 않습니다.
+                      편집 원칙을 적용해 새로 작성된 실제 축구 기사를 작업 목록에 자동으로
+                      보충합니다. 검수를 마치면 다음 기사가 들어옵니다.
                     </p>
                     <p>
                       정확성 → 명료함 → 속도 → 문체 순으로 작성합니다. 원문에 없는 사실을 보태지
@@ -368,12 +369,11 @@ export function DeskWorkspace() {
                       />
                     )}
                     <p className="text-wc-mute mt-3 text-xs">
-                      마지막 확인 {date(data.settings.last_run_at)} · 다음 보충{" "}
-                      {date(data.settings.next_auto_at)} 이후
+                      마지막 확인 {date(data.settings.last_run_at)} · 15분마다 새 기사를 확인합니다.
                     </p>
                     <p className="text-wc-mute mt-1 text-xs">
-                      한국 시간 기준 · 실패한 작성도 생성 한도에 포함됩니다. 이미 시작한 작성은
-                      일시정지 후에도 마무리됩니다.
+                      하루 한도는 한국 시간 기준으로 작업 목록에 자동 추가한 기사 수입니다. 예전에
+                      직접 불러온 기사는 새 기사 대기 목표에 포함하지 않습니다.
                     </p>
                     {data.settings.last_error && (
                       <p className="text-wc-mute mt-2 text-sm">{data.settings.last_error}</p>
@@ -530,9 +530,9 @@ function SettingsForm({
         />
       </label>
       <label className="space-y-2 text-xs">
-        하루 생성 한도
+        하루 보충 한도
         <Input
-          aria-label="하루 생성 한도"
+          aria-label="하루 보충 한도"
           type="number"
           min={1}
           max={48}
