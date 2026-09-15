@@ -44,6 +44,7 @@ import {
   type NewsCandidateState,
 } from "@/lib/news/candidate-ledger"
 import { titleSimilarity } from "@/lib/saga/cluster"
+import { loadPublishingSettings } from "@/lib/news/training/settings"
 import { inspectNewsFollowup } from "@/lib/news/followup"
 import { isInfrastructureGate, qualityRetryState, readNewsEvidence } from "@/lib/news/evidence"
 
@@ -65,7 +66,7 @@ export const maxDuration = 300
  *   3. 회당 상한 — 몰아서 발행하지 않고 하루에 걸쳐 분산
  *   (일일 총량·자동 상한은 2026-08-04 운영자 "무제한" 지시로 제거 — 품질 게이트가 문)
  *
- * 끄기: Vercel env NEWS_AUTO_PUBLISH=off (배포 없이 즉시).
+ * 관리자 학습·자동화 화면의 DB 설정이 우선한다. 미설정 시 기존 환경변수를 따른다.
  * 자동발행분은 reservoir publish.auto=true 로 표시 — 사후 구분·회수용.
  * 검수 편집이 없으므로 교정 학습은 안 태운다 — 발행 후 운영자가 글을 고치면
  * 배치 학습기(hermes learn-news-edits, 매일 21시)가 diff 로 줍는다.
@@ -74,7 +75,6 @@ export const maxDuration = 300
 /** 회당 발행 상한 — 유일하게 남은 페이싱 장치. 일일 상한(총 20·자동 10)은 2026-08-04
  *  운영자 "무제한으로" 지시로 제거 — 30분 주기 × 2건 = 이론 최대 96건/일이 실공급
  *  (이미지 초안 ~80건/일)을 웃돌아 사실상 무제한이면서 몰아치기만 막는다 */
-const PER_RUN_CAP = 2
 /** 초안 신선도 (시간) */
 const MAX_AGE_HOURS = 24
 /**
@@ -103,19 +103,21 @@ async function run(request: NextRequest) {
   const authError = verifyCronSecret(request)
   if (authError) return authError
 
-  // ⚠️ 2026-07-30 운영자 정지 — 기본값을 꺼짐으로 뒤집음 (opt-in).
-  // 사유: 무검수 발행분에서 오타·영어 미번역·이미지 없는 글이 그대로 나감.
-  // 검수(빠른검수 화면)가 품질 게이트였는데 자동발행이 그걸 우회한 것.
-  // 재개 조건: 발행 전 품질 게이트(LLM 한국어/오타 검사 + 실제 이미지 필수)를
-  // 붙인 뒤 Vercel env NEWS_AUTO_PUBLISH=on 으로만 재개.
-  if (process.env.NEWS_AUTO_PUBLISH !== "on") {
+  // Explicit owner setting wins. An untouched setting preserves the prior environment switch.
+  const supabase = createServiceRoleClient()
+  let publishingSettings
+  try {
+    publishingSettings = await loadPublishingSettings(supabase)
+  } catch {
+    return NextResponse.json({ error: "자동발행 설정을 확인하지 못했습니다." }, { status: 503 })
+  }
+  if (!publishingSettings.effective_enabled) {
     return NextResponse.json({
       ok: true,
-      skipped: "자동발행 정지 (opt-in — env NEWS_AUTO_PUBLISH=on 필요)",
+      skipped: "자동발행 정지 (관리자 학습·자동화에서 시작할 수 있습니다)",
     })
   }
 
-  const supabase = createServiceRoleClient()
   const ledgerRunId = newsCandidateRunId("news-auto-publish")
 
   // 오늘 발행량 집계 — 상한 아님, 응답 리포트용 (디스코드/로그에서 하루 흐름 관찰).
@@ -230,7 +232,7 @@ async function run(request: NextRequest) {
     ])
   )
 
-  const budget = PER_RUN_CAP
+  const budget = publishingSettings.per_run_cap
   let published = 0
   let ledgerHealthy = true
   const publishedIds: string[] = []
@@ -740,6 +742,14 @@ async function run(request: NextRequest) {
       }
     }
 
+    // A pause made while the quality inspector was running takes effect before publication.
+    try {
+      const latestSettings = await loadPublishingSettings(supabase)
+      if (!latestSettings.effective_enabled || published >= latestSettings.per_run_cap) break
+    } catch {
+      errors.push("자동발행 설정 조회 실패")
+      break
+    }
     const result = await publishNewsDraft(supabase, row, {
       title: publishTitle,
       content: workingContent,

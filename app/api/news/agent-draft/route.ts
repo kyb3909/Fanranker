@@ -46,6 +46,15 @@ const BodySchema = z.object({
     .regex(/^[a-zA-Z0-9_]{1,40}$/)
     .optional(),
   evidence: NewsEvidenceSchema.optional(),
+  /** 실제 작성 입력에 포함한 편집 기준. 준수 여부 판정과는 별개다. */
+  editorial_guidance: z
+    .object({
+      policy_version: z.string().min(1).max(100),
+      loaded_at: z.string().datetime({ offset: true }),
+      applied_lesson_ids: z.array(z.string().uuid()).max(12),
+      applied_rule_ids: z.array(z.string().uuid()).max(20),
+    })
+    .optional(),
   /** 발견 출처 (r/soccer 글 등) */
   origin_url: z.string().url().optional(),
   /** 기사 게시 시각(ISO) — /api/og publishedAt. 자동발행이 옛 기사 재탕을 거르는 근거 (2026-09-03) */
@@ -217,6 +226,7 @@ export async function POST(req: NextRequest) {
       title: d.title,
       ...(d.original_title ? { original_title: d.original_title } : {}),
       ...(d.evidence ? { evidence: d.evidence } : {}),
+      ...(d.editorial_guidance ? { editorial_guidance: d.editorial_guidance } : {}),
       dedupe_key: d.dedupe_key,
       ...(d.source_text ? { source_text: d.source_text } : {}),
       // 종목은 불변 스냅샷(raw)에 둔다 — draft 는 검수 편집이 덮을 수 있다
@@ -226,7 +236,13 @@ export async function POST(req: NextRequest) {
     scores: d.scores ?? {},
     dedupe_key: d.dedupe_key,
     status: "drafted",
-    draft: { title: d.title, content, tags: d.tags ?? [], ...(d.vs ? { vs: d.vs } : {}) },
+    draft: {
+      title: d.title,
+      content,
+      tags: d.tags ?? [],
+      ...(d.vs ? { vs: d.vs } : {}),
+      ...(d.editorial_guidance ? { editorial_guidance: d.editorial_guidance } : {}),
+    },
     audit: { created_by: "hermes-agent", created_at: now },
   })
   if (error) {

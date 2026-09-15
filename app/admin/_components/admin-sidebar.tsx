@@ -107,6 +107,8 @@ const navGroups: NavGroup[] = [
       },
       { title: "뉴스룸 큐", href: "/admin/content/newsroom", icon: Inbox },
       { title: "기사 데스킹 · 학습", href: "/admin/news-review/desk", icon: GraduationCap },
+      { title: "학습·자동화", href: "/admin/news-training", icon: GraduationCap },
+      { title: "AI 글 학습", href: "/admin/agg-training", icon: GraduationCap },
       {
         title: "사가 검수",
         href: "/admin/saga-review",
@@ -196,6 +198,7 @@ const navGroups: NavGroup[] = [
         badgeKeys: ["squad-backlog"],
       },
       { title: "팀 사전·경기 매핑", href: "/admin/team-dictionary", icon: BookOpen },
+      { title: "통합 표기 사전", href: "/admin/news-dictionary", icon: BookOpen },
     ],
   },
   {
@@ -224,7 +227,6 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     icon: FolderOpen,
     items: [
-      { title: "AI 글 학습", href: "/admin/agg-training", icon: GraduationCap },
       { title: "인터뷰 카드 검수", href: "/admin/interviews", icon: Sparkles },
       { title: "MOD 관리", href: "/admin/content/moderators", icon: UserCog },
       { title: "전문가 승인", href: "/admin/experts", icon: Shield },

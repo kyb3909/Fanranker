@@ -27,11 +27,17 @@ const PERSON_CATEGORIES = ["player", "coach"] as const
 /** 출처 라벨 — 매체와 구단(공식 발표) */
 const LABEL_CATEGORIES = ["media", "team"] as const
 /** 사전에서 읽어오는 전체 범위 */
-const NOTATION_CATEGORIES = [...PERSON_CATEGORIES, ...LABEL_CATEGORIES] as const
+const NOTATION_CATEGORIES = [
+  ...PERSON_CATEGORIES,
+  ...LABEL_CATEGORIES,
+  "competition",
+  "term",
+] as const
 
 export type PersonCategory = (typeof PERSON_CATEGORIES)[number]
 
-const COLUMNS = "id, category, preferred_ko, romanized, surfaces, hangul_alts, disambiguation"
+const COLUMNS =
+  "id, category, preferred_ko, romanized, surfaces, hangul_alts, disambiguation, given_name_ko, family_name_ko, short_name_ko"
 
 /** 한 번 읽어 만든 사전 뷰 — 소비자는 필요한 조각만 꺼내 쓴다 */
 interface Notation {
@@ -62,7 +68,10 @@ function toView(entries: NotationEntry[]): Notation {
     // '아스널'인데 구단이 치환 대상이 아니라 틀린 쪽이 3.6배 많았다. 같은 팀이 기사마다
     // 다른 이름으로 나오면 독자는 매체로 안 본다.
     // 안전은 buildNamingPairs 가 진다 — 한글 alt 만, 2자 이상, 대표 표기 충돌 시 제외.
-    pairs: buildNamingPairs(entries),
+    // Competition/term hints guide writing; never globally replace ordinary football words.
+    pairs: buildNamingPairs(
+      entries.filter((e) => e.category !== "competition" && e.category !== "term")
+    ),
     labels: buildSourceLabelMap(labelRows),
     hints: buildNotationHints(entries),
   }

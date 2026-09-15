@@ -92,10 +92,7 @@ export interface SyncResult {
 }
 
 /**
- * 확정된(`confirmed`) 스쿼드 이름만 뉴스 사전으로 흘려보낸다.
- *
- * ⚠️ `proposed` 는 보내지 않는다 — 검수 안 된 추정치가 기사 표기가 되면
- *    [[project-dictionary-poisoning]] 이 그대로 재현된다.
+ * 라인업에 반영된 name_kr를 뉴스 사전으로 보낸다. name_kr_draft 후보는 제외한다.
  */
 export async function syncSquadNamesToNews(
   supabase: SupabaseClient,

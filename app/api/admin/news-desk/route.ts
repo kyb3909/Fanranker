@@ -34,6 +34,8 @@ const ActionSchema = z.discriminatedUnion("action", [
     id: z.string().uuid(),
     active: z.boolean(),
     explanation: z.string().trim().min(1).max(2000),
+    instruction: z.string().trim().min(5).max(1000),
+    expected: z.string().datetime({ offset: true }),
   }),
   z.object({ action: z.literal("retry_learning"), id: z.string().uuid() }),
 ])
@@ -93,18 +95,27 @@ export async function POST(req: NextRequest) {
       return json({ ok: true })
     }
     if (data.action === "lesson") {
+      const stamp = new Date().toISOString()
       const { data: updated, error } = await db
         .from("news_desk_lessons")
         .update({
           active: data.active,
           explanation: data.explanation,
-          updated_at: new Date().toISOString(),
+          instruction: data.instruction,
+          review_status: "reviewed",
+          updated_at: stamp,
         })
         .eq("id", data.id)
+        .eq("updated_at", data.expected)
         .select("id")
         .maybeSingle()
       if (error) throw error
-      return updated ? json({ ok: true }) : json({ error: "학습 항목을 찾을 수 없습니다." }, 404)
+      return updated
+        ? json({ ok: true, updated_at: stamp })
+        : json(
+            { error: "다른 창에서 해석을 변경했습니다. 입력을 보관하고 새로 불러와 주세요." },
+            409
+          )
     }
     if (data.action === "retry_learning") {
       const { data: updated, error } = await db

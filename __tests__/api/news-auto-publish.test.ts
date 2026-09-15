@@ -32,6 +32,10 @@ vi.mock("@/lib/cron/log-run", () => ({
   withCronLog: (_name: string, handler: (request: Request) => Promise<Response>) => handler,
 }))
 const inspectImageMock = vi.fn()
+const publishingSettingsMock = vi.fn()
+vi.mock("@/lib/news/training/settings", () => ({
+  loadPublishingSettings: (...args: unknown[]) => publishingSettingsMock(...args),
+}))
 vi.mock("@/lib/news/quality-gate", () => ({
   // 검사관은 유지하되 작성 모델과 다른 모델로 돈다 (quality-gate.ts 상단 참조)
   inspectDraft: vi
@@ -313,6 +317,11 @@ describe("GET /api/cron/news-auto-publish", () => {
     process.env.CRON_SECRET = "test-secret"
     // 2026-07-30 opt-in 전환 — 발행 동작 테스트는 명시적으로 켠다
     process.env.NEWS_AUTO_PUBLISH = "on"
+    publishingSettingsMock.mockReset().mockImplementation(async () => ({
+      publish_enabled: null,
+      effective_enabled: process.env.NEWS_AUTO_PUBLISH === "on",
+      per_run_cap: 2,
+    }))
     drafts = []
     botPublishedToday = 0
     autoPublishedToday = 0
@@ -369,6 +378,48 @@ describe("GET /api/cron/news-auto-publish", () => {
     const body = await (await call()).json()
 
     expect(body.skipped).toContain("정지")
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("honors an explicit admin pause even when the environment is enabled", async () => {
+    publishingSettingsMock.mockResolvedValue({ effective_enabled: false, per_run_cap: 2 })
+    drafts = [draft("paused", visualDoc)]
+    expect((await (await call()).json()).skipped).toContain("정지")
+    expect(inserted).toHaveLength(0)
+    expect(ledgerEvents).toHaveLength(0)
+  })
+
+  it("fails closed when publishing settings cannot be read", async () => {
+    publishingSettingsMock.mockRejectedValue(Error("settings unavailable"))
+    drafts = [draft("blocked", visualDoc)]
+    expect((await call()).status).toBe(503)
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("applies the admin cap and rechecks a pause before publishing inspected content", async () => {
+    publishingSettingsMock.mockResolvedValue({ effective_enabled: true, per_run_cap: 1 })
+    drafts = [draft("first", visualDoc), draft("second", visualDoc)]
+    expect((await (await call()).json()).published).toBe(1)
+    expect(inserted).toHaveLength(1)
+
+    inserted.length = 0
+    publishingSettingsMock
+      .mockReset()
+      .mockResolvedValueOnce({ effective_enabled: true, per_run_cap: 2 })
+      .mockResolvedValue({ effective_enabled: false, per_run_cap: 2 })
+    expect((await (await call()).json()).published).toBe(0)
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("holds inspected content when the final settings refresh fails", async () => {
+    publishingSettingsMock
+      .mockResolvedValueOnce({ effective_enabled: true, per_run_cap: 2 })
+      .mockRejectedValueOnce(Error("settings unavailable"))
+    drafts = [draft("refresh-failed", visualDoc)]
+    const body = await (await call()).json()
+    expect(body.published).toBe(0)
+    expect(body.ok).toBe(false)
+    expect(body.errors).toContain("자동발행 설정 조회 실패")
     expect(inserted).toHaveLength(0)
   })
 

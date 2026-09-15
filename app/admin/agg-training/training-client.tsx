@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useSWRConfig } from "swr"
 import { Loader2, Check, Save, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,7 @@ interface Draft {
 }
 
 export function TrainingClient({ items: initial }: { items: TrainingEntry[] }) {
+  const { mutate } = useSWRConfig()
   const [items, setItems] = useState(initial)
   const [busy, setBusy] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
@@ -40,6 +42,24 @@ export function TrainingClient({ items: initial }: { items: TrainingEntry[] }) {
       ])
     )
   )
+
+  // Refresh after generation adds new drafts without losing edits already in progress.
+  useEffect(() => {
+    setItems(initial)
+    setDrafts((current) =>
+      Object.fromEntries(
+        initial.map((it) => [
+          it.id,
+          current[it.id] ?? {
+            title: it.aiTitle,
+            body: it.aiBody,
+            rejectOpen: false,
+            rejectReason: "",
+          },
+        ])
+      )
+    )
+  }, [initial])
 
   function setDraft(id: string, patch: Partial<Draft>) {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }))
@@ -64,6 +84,7 @@ export function TrainingClient({ items: initial }: { items: TrainingEntry[] }) {
         return
       }
       setItems((prev) => prev.filter((it) => it.id !== id))
+      void mutate("/api/admin/news-training")
       toast({
         title:
           d.status === "corrected"
@@ -73,10 +94,16 @@ export function TrainingClient({ items: initial }: { items: TrainingEntry[] }) {
               : "통과 처리됨",
         description:
           d.status === "corrected"
-            ? "learn 실행 시 few-shot 예시로 학습됩니다."
+            ? "다음 생성의 교정 예시로 참고합니다."
             : d.status === "rejected"
-              ? "learn 실행 시 소재 회피 신호로 학습됩니다."
+              ? "다음 생성의 소재 회피 기준으로 참고합니다."
               : undefined,
+      })
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "저장 실패",
+        description: e instanceof Error ? e.message : "연결 상태를 확인해 주세요.",
       })
     } finally {
       setBusy(null)
@@ -86,11 +113,7 @@ export function TrainingClient({ items: initial }: { items: TrainingEntry[] }) {
   if (items.length === 0) {
     return (
       <div className="text-muted-foreground mt-10 rounded-lg border border-dashed p-10 text-center text-sm">
-        검수할 학습 라운드가 없습니다. 로컬에서{" "}
-        <code className="bg-muted rounded px-1 py-0.5 text-xs">
-          node data/agents/scripts/agg-train.js gen
-        </code>{" "}
-        으로 새 라운드를 생성하세요.
+        검수 대기 중인 연습이 없습니다. 아래에서 소재를 선택하고 ‘연습 1건 생성’을 누르세요.
       </div>
     )
   }

@@ -163,31 +163,104 @@ export const LESSON_INSTRUCTIONS: Record<LessonProposal["category"], string> = {
   style:
     "교정 예시의 표현 선택과 정보 밀도를 참고하되 사건·이름·수치를 옮겨 쓰지 않는다. 의미와 확신 수준을 보존해 자연스러운 한국어로 쓴다.",
 }
+
+const occurrenceCount = (text: string, value: string) => (value ? text.split(value).length - 1 : 0)
+
+/** Turn an unchanged but moved paragraph into actual, differently ordered source blocks. */
+function structuralMove(proposal: LessonProposal, before: string, after: string): LessonProposal {
+  if (
+    proposal.category !== "structure" ||
+    proposal.field !== "article" ||
+    !proposal.wrong ||
+    proposal.wrong !== proposal.correct
+  )
+    return proposal
+  const anchor = proposal.wrong
+  const beforeParagraphs = before
+    .split(/\n\s*\n/)
+    .map((text) => text.trim())
+    .filter(Boolean)
+  const afterParagraphs = after
+    .split(/\n\s*\n/)
+    .map((text) => text.trim())
+    .filter(Boolean)
+  if (
+    !beforeParagraphs.includes(anchor) ||
+    !afterParagraphs.includes(anchor) ||
+    occurrenceCount(before, anchor) !== 1 ||
+    occurrenceCount(after, anchor) !== 1
+  )
+    return proposal
+  const oldAt = before.indexOf(anchor),
+    nextAt = after.indexOf(anchor)
+  for (const other of beforeParagraphs) {
+    if (
+      other === anchor ||
+      !afterParagraphs.includes(other) ||
+      occurrenceCount(before, other) !== 1 ||
+      occurrenceCount(after, other) !== 1
+    )
+      continue
+    const oldOther = before.indexOf(other),
+      nextOther = after.indexOf(other)
+    const wasBeforeAnchor = oldOther < oldAt
+    const isBeforeAnchor = nextOther < nextAt
+    if (wasBeforeAnchor === isBeforeAnchor) continue
+    const wrong = before.slice(
+      Math.min(oldAt, oldOther),
+      Math.max(oldAt + anchor.length, oldOther + other.length)
+    )
+    const correct = after.slice(
+      Math.min(nextAt, nextOther),
+      Math.max(nextAt + anchor.length, nextOther + other.length)
+    )
+    if (wrong.length <= 2000 && correct.length <= 2000) return { ...proposal, wrong, correct }
+  }
+  return proposal
+}
+
 export function anchoredLessons(
   proposals: LessonProposal[],
   before: DeskArticle,
-  after: DeskArticle
+  after: DeskArticle,
+  editorReason = ""
 ) {
+  const seen = new Set<string>()
   return proposals
+    .map((p) => structuralMove(p, before[p.field], after[p.field]))
     .filter((p) => {
       const old = before[p.field],
         next = after[p.field]
+      const key = JSON.stringify([p.category, p.field, p.wrong, p.correct])
+      if (seen.has(key)) return false
+      seen.add(key)
+      const removed = occurrenceCount(old, p.wrong) > occurrenceCount(next, p.wrong)
+      const inserted = occurrenceCount(next, p.correct) > occurrenceCount(old, p.correct)
       return (
         old !== next &&
         p.wrong !== p.correct &&
         (p.wrong.length > 0 || p.correct.length > 0) &&
         old.includes(p.wrong) &&
         next.includes(p.correct) &&
-        !(p.wrong && p.correct && old.includes(p.correct) && next.includes(p.wrong))
+        (p.wrong === "" ? inserted : p.correct === "" ? removed : removed || inserted)
       )
     })
-    .map((p) => ({
-      ...p,
-      instruction: LESSON_INSTRUCTIONS[p.category],
-      // Values and identity corrections are cases, not global replacements.
-      scope: ["fact", "number", "time", "naming"].includes(p.category)
-        ? ("case" as const)
-        : ("general" as const),
-    }))
+    .map((p) => {
+      const isCase = ["fact", "number", "time", "naming"].includes(p.category)
+      const prefix = editorReason.trim() ? "편집자 메모를 참고한 AI 해석: " : "AI 해석: "
+      return {
+        ...p,
+        explanation:
+          `${prefix}${p.explanation.replace(/^(편집자 메모를 참고한 )?AI 해석:\s*/, "")}`.slice(
+            0,
+            2000
+          ),
+        instruction: isCase
+          ? LESSON_INSTRUCTIONS[p.category]
+          : p.instruction?.trim() || LESSON_INSTRUCTIONS[p.category],
+        // Values and identity corrections are cases, not global replacements.
+        scope: isCase ? ("case" as const) : ("general" as const),
+      }
+    })
     .slice(0, 12)
 }

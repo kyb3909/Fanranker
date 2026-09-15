@@ -69,6 +69,8 @@ const nextConfig = {
   // OG 카드(app/opengraph-image.tsx)가 fs 로 읽는 임베드 폰트 — 파일 트레이싱이 놓치면
   // 프로덕션에서만 ENOENT 로 죽는다 (satori 는 woff2 를 못 읽어 ttf 를 따로 둠, 2026-08-20)
   outputFileTracingIncludes: {
+    "/api/admin/news-training": ["./data/agents/prompts/agg-rewriter.md"],
+    "/api/cron/admin-training": ["./data/agents/prompts/agg-rewriter.md"],
     // 메타데이터 라우트는 빌드에 따라 키가 "/opengraph-image" 또는 "/opengraph-image/route" 로
     // 잡힌다 — 둘 다 건다 (한쪽은 no-op, 비용 없음)
     "/opengraph-image": ["./app/_og/*.ttf"],

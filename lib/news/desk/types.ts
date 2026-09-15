@@ -74,6 +74,7 @@ export const LessonProposalSchema = z.object({
   wrong: z.string().max(2000),
   correct: z.string().max(2000),
   explanation: z.string().min(1).max(2000),
+  instruction: z.string().trim().min(5).max(1000).optional(),
 })
 export type LessonProposal = z.infer<typeof LessonProposalSchema>
 export interface DeskLesson extends LessonProposal {
@@ -83,6 +84,7 @@ export interface DeskLesson extends LessonProposal {
   instruction: string
   scope: "general" | "case"
   active: boolean
+  review_status?: "pending" | "reviewed" | "legacy"
   created_at: string
   updated_at: string
 }
@@ -109,6 +111,8 @@ export interface DeskItem {
   draft: DeskArticle | null
   quality: { pass: boolean; reasons: string[] } | null
   applied_lesson_ids: string[]
+  applied_rule_ids?: string[]
+  origin?: { kind: "post" | "draft"; id: string; title: string; imported_at: string }
   version: number
   error: string | null
   created_at: string

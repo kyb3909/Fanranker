@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
-import { loadNotationSafe } from "@/lib/news/notation"
+import { loadNotation } from "@/lib/news/notation"
 import { loadDeskLessons } from "@/lib/news/desk/service"
+import { loadEditorialRules } from "@/lib/news/training/settings"
 import type { TipTapNode } from "@/types/post"
+import { NEWS_WRITER_POLICY_VERSION } from "@/scripts/vps-news-scanner/writer-policy.mjs"
 
 export const dynamic = "force-dynamic"
 
@@ -43,52 +45,75 @@ async function handler(req: NextRequest) {
   const authError = verifyCronSecret(req)
   if (authError) return authError
 
-  const supabase = createServiceRoleClient()
-  const { data } = await supabase
-    .from("news_reservoir")
-    .select("raw, draft, status, updated_at")
-    .in("status", ["published", "rejected"])
-    .filter("source->>type", "eq", "hermes")
-    .order("updated_at", { ascending: false })
-    .limit(120)
+  try {
+    const supabase = createServiceRoleClient()
+    const { data, error } = await supabase
+      .from("news_reservoir")
+      .select("raw, draft, status, updated_at")
+      .in("status", ["published", "rejected"])
+      .filter("source->>type", "eq", "hermes")
+      .order("updated_at", { ascending: false })
+      .limit(120)
+    if (error) throw Error("교정 이력을 불러오지 못했습니다.")
 
-  const rows = (data as ReservoirRow[]) ?? []
+    const rows = (data as ReservoirRow[]) ?? []
 
-  // 제목 교정 쌍 — 발행본만 (반려 제목은 어차피 안 나간 것이라 표기 근거로 약하다)
-  const examples = rows
-    .filter((r) => r.status === "published")
-    .map((r) => ({ from: r.raw?.title?.trim() ?? "", to: r.draft?.title?.trim() ?? "" }))
-    .filter((e) => e.from && e.to && e.from !== e.to)
-    .slice(0, 12)
+    // 제목 교정 쌍 — 발행본만 (반려 제목은 어차피 안 나간 것이라 표기 근거로 약하다)
+    const examples = rows
+      .filter((r) => r.status === "published")
+      .map((r) => ({ from: r.raw?.title?.trim() ?? "", to: r.draft?.title?.trim() ?? "" }))
+      .filter((e) => e.from && e.to && e.from !== e.to)
+      .slice(0, 12)
 
-  // 기사 재작성 쌍 — 봇 원본(draft.original)이 보존된 것 중 본문이 실제로 바뀐 것.
-  // 프롬프트 예산상 최근 2건만, 각 측 길이 제한.
-  const articles = rows
-    .flatMap((r) => {
-      const orig = r.draft?.original
-      if (!orig?.content || !r.draft?.content) return []
-      const before = norm(extractTextFromTipTapJSON(orig.content as TipTapNode))
-      const after = norm(extractTextFromTipTapJSON(r.draft.content as TipTapNode))
-      if (!before || !after || before === after || after.length < 100) return []
-      return [
-        {
-          beforeTitle: (orig.title ?? "").trim(),
-          before: before.slice(0, 700),
-          afterTitle: (r.draft.title ?? "").trim(),
-          after: after.slice(0, 1200),
-        },
-      ]
-    })
-    .slice(0, 2)
+    // 기사 재작성 쌍 — 봇 원본(draft.original)이 보존된 것 중 본문이 실제로 바뀐 것.
+    // 프롬프트 예산상 최근 2건만, 각 측 길이 제한.
+    const articles = rows
+      .flatMap((r) => {
+        const orig = r.draft?.original
+        if (!orig?.content || !r.draft?.content) return []
+        const before = norm(extractTextFromTipTapJSON(orig.content as TipTapNode))
+        const after = norm(extractTextFromTipTapJSON(r.draft.content as TipTapNode))
+        if (!before || !after || before === after || after.length < 100) return []
+        return [
+          {
+            beforeTitle: (orig.title ?? "").trim(),
+            before: before.slice(0, 700),
+            afterTitle: (r.draft.title ?? "").trim(),
+            after: after.slice(0, 1200),
+          },
+        ]
+      })
+      .slice(0, 2)
 
-  // 확정 표기 힌트 — 규칙(무엇을 en 으로 볼지)은 notation 모듈이 소유한다
-  const { hints: naming } = await loadNotationSafe(supabase)
-
-  const lessons = await loadDeskLessons(supabase).catch(() => [])
-  return NextResponse.json(
-    { examples, articles, naming, lessons },
-    { headers: { "Cache-Control": "private, no-store" } }
-  )
+    // 확정 표기 힌트 — 규칙(무엇을 en 으로 볼지)은 notation 모듈이 소유한다
+    // A real empty list is valid; an unavailable list must not look like no owner guidance.
+    const [{ hints: naming }, lessons, editorial_rules] = await Promise.all([
+      loadNotation(supabase),
+      loadDeskLessons(supabase),
+      loadEditorialRules(supabase),
+    ])
+    return NextResponse.json(
+      {
+        examples,
+        articles,
+        naming,
+        lessons,
+        editorial_rules,
+        guidance_available: true,
+        policy_version: NEWS_WRITER_POLICY_VERSION,
+        loaded_at: new Date().toISOString(),
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    )
+  } catch {
+    return NextResponse.json(
+      {
+        guidance_available: false,
+        error: "표기 사전과 편집 기준을 불러오지 못해 새 기사 작성을 보류합니다.",
+      },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } }
+    )
+  }
 }
 
 export const GET = handler

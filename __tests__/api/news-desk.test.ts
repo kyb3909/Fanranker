@@ -114,4 +114,96 @@ describe("news desk access and saving", () => {
     expect((await POST(req({ ...body, status: "published" }))).status).toBe(400)
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
+
+  it("stores the editor's explanation and instruction when explicitly confirming a lesson", async () => {
+    const chain = {
+      update: vi.fn(),
+      eq: vi.fn(),
+      select: vi.fn(),
+      maybeSingle: vi.fn(async () => ({ data: { id }, error: null })),
+    }
+    for (const method of [chain.update, chain.eq, chain.select]) method.mockReturnValue(chain)
+    mocks.from.mockReturnValue(chain)
+    const { POST } = await import("@/app/api/admin/news-desk/route")
+    const lesson = {
+      action: "lesson",
+      id,
+      active: true,
+      expected: "2026-09-15T06:00:00.000Z",
+      explanation: "원문은 협상 중인데 제목이 확정으로 단정했다.",
+      instruction: "협상·합의·발표 단계를 구분하고 원문보다 강한 확정 표현을 쓰지 않는다.",
+    }
+    const response = await POST(req(lesson))
+    expect(response.status).toBe(200)
+    const result = await response.json()
+    expect(result).toMatchObject({ ok: true, updated_at: expect.any(String) })
+    expect(mocks.from).toHaveBeenCalledWith("news_desk_lessons")
+    expect(chain.update).toHaveBeenCalledWith({
+      active: true,
+      explanation: lesson.explanation,
+      instruction: lesson.instruction,
+      review_status: "reviewed",
+      updated_at: result.updated_at,
+    })
+    expect(chain.eq.mock.calls).toEqual([
+      ["id", id],
+      ["updated_at", lesson.expected],
+    ])
+    expect(mocks.after).not.toHaveBeenCalled()
+    expect(mocks.learn).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it("rejects a stale lesson confirmation without overwriting a newer interpretation", async () => {
+    const chain = {
+      update: vi.fn(),
+      eq: vi.fn(),
+      select: vi.fn(),
+      maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+    }
+    for (const method of [chain.update, chain.eq, chain.select]) method.mockReturnValue(chain)
+    mocks.from.mockReturnValue(chain)
+    const { POST } = await import("@/app/api/admin/news-desk/route")
+    const expected = "2026-09-15T06:00:00.000Z"
+    const response = await POST(
+      req({
+        action: "lesson",
+        id,
+        active: true,
+        expected,
+        explanation: "오래된 해석",
+        instruction: "오래된 적용 지침",
+      })
+    )
+    expect(response.status).toBe(409)
+    expect(chain.eq).toHaveBeenCalledWith("updated_at", expected)
+    expect(mocks.learn).not.toHaveBeenCalled()
+    expect(mocks.after).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { instruction: "검증 가능한 원문 수준으로 쓴다." },
+    { expected: "2026-09-15T06:00:00.000Z" },
+    { expected: "2026-09-15T06:00:00.000Z", instruction: "짧음" },
+  ])(
+    "requires a version timestamp and reusable instruction before confirming learning: %j",
+    async (fields) => {
+      const { POST } = await import("@/app/api/admin/news-desk/route")
+      expect(
+        (
+          await POST(
+            req({
+              action: "lesson",
+              id,
+              active: true,
+              explanation: "사용자가 확인한 해석",
+              ...fields,
+            })
+          )
+        ).status
+      ).toBe(400)
+      expect(mocks.from).not.toHaveBeenCalled()
+      expect(mocks.after).not.toHaveBeenCalled()
+    }
+  )
 })

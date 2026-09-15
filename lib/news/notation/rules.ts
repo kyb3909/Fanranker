@@ -20,6 +20,10 @@ export interface NotationEntry {
   romanized: string | null
   surfaces: string[] | null
   hangul_alts: string[] | null
+  /** Operator-entered name parts. Never derive these from word order. */
+  given_name_ko?: string | null
+  family_name_ko?: string | null
+  short_name_ko?: string | null
   /** 소속팀 표기 `|` 구분 — 성씨 한 토막을 그 팀 기사에서만 믿게 하는 열쇠 */
   disambiguation?: string | null
 }
@@ -39,9 +43,10 @@ export type NamingPair = [from: string, to: string]
  *  - 긴 표기 우선 정렬 ('코디 갓포'를 먼저, 그 다음 '갓포' — 이중 치환 방지)
  */
 export function buildNamingPairs(
-  rows: Pick<NotationEntry, "preferred_ko" | "hangul_alts">[]
+  rows: Pick<NotationEntry, "preferred_ko" | "hangul_alts" | "short_name_ko">[]
 ): NamingPair[] {
-  const preferredSet = new Set(rows.map((r) => r.preferred_ko))
+  // An explicitly accepted short mention is not a typo, including non-substring nicknames.
+  const preferredSet = new Set(rows.flatMap((r) => [r.preferred_ko, r.short_name_ko?.trim() ?? ""]))
   const pairs: NamingPair[] = []
   const seen = new Set<string>()
   for (const row of rows) {
@@ -274,11 +279,12 @@ function lookupBySourceUrl(map: Map<string, string>, url: string): string | unde
  */
 export function unknownPersonNames(
   namesKr: string[],
-  dictionary: Pick<NotationEntry, "preferred_ko" | "hangul_alts">[]
+  dictionary: Pick<NotationEntry, "preferred_ko" | "hangul_alts" | "short_name_ko">[]
 ): string[] {
   const known = new Set<string>()
   for (const d of dictionary) {
     known.add(d.preferred_ko.replace(/\s+/g, ""))
+    if (d.short_name_ko?.trim()) known.add(d.short_name_ko.replace(/\s+/g, ""))
     for (const alt of d.hangul_alts ?? []) known.add(alt.replace(/\s+/g, ""))
   }
   return namesKr.filter((n) => {
@@ -386,6 +392,16 @@ export interface NotationHint {
    *    아스널 기사에 "이고르 파이샤오 영입설"이 통째로 붙어 나갔다.
    */
   kind: "person" | "label"
+  /** Explicit glossary terms may occur in lowercase (clean sheet) or as short forms (xG). */
+  allow_lowercase?: boolean
+  /** Full first mention and explicit subsequent form; no surname or order inference. */
+  first_mention_ko?: string
+  subsequent_mention_ko?: string
+  given_name_ko?: string
+  family_name_ko?: string
+  short_name_ko?: string
+  /** Set for a source that mentions different people sharing the configured family/short name. */
+  short_name_ambiguous?: boolean
   /** 영어 원문에 실제로 나타날 수 있는 형태만. **어디에 나와도** 이 사람으로 본다 */
   en: string[]
   /**
@@ -412,16 +428,24 @@ export interface NotationHint {
 export function buildNotationHints(
   rows: Pick<
     NotationEntry,
-    "category" | "preferred_ko" | "romanized" | "surfaces" | "disambiguation"
+    | "category"
+    | "preferred_ko"
+    | "romanized"
+    | "surfaces"
+    | "disambiguation"
+    | "given_name_ko"
+    | "family_name_ko"
+    | "short_name_ko"
   >[]
 ): NotationHint[] {
   const out: NotationHint[] = []
   for (const row of rows) {
     const ko = row.preferred_ko?.trim()
     if (!ko) continue
+    const isTerm = row.category === "term"
     const all = [...new Set([row.romanized ?? "", ...(row.surfaces ?? [])])]
       .map((s) => s.trim().toLowerCase())
-      .filter((s) => s.length > 3 && !s.includes(".") && !/[가-힣]/.test(s))
+      .filter((s) => s.length >= (isTerm ? 2 : 4) && !s.includes(".") && !/[가-힣]/.test(s))
 
     /**
      * 소속팀 표기 — 스쿼드 동기화가 `disambiguation` 에 `|` 로 넣어둔다.
@@ -439,14 +463,31 @@ export function buildNotationHints(
      * ⚠️ 팀 정보가 없는 **옛 항목은 종전대로 전역**이다. 'simons'·'savinho' 처럼
      *    사람이 넣어 잘 돌던 표기까지 갑자기 막으면 멀쩡한 교정이 사라진다.
      */
-    const scoped = team.length > 0
+    const scoped = !isTerm && team.length > 0
     const en = all.filter((s) => !scoped || s.includes(" "))
     const enTeam = scoped ? all.filter((s) => !s.includes(" ")) : []
 
     if (en.length === 0 && enTeam.length === 0) continue
     const kind: NotationHint["kind"] =
       row.category === "player" || row.category === "coach" ? "person" : "label"
-    out.push(enTeam.length > 0 ? { ko, kind, en, enTeam, team } : { ko, kind, en })
+    const given = row.given_name_ko?.trim() ?? ""
+    const family = row.family_name_ko?.trim() ?? ""
+    const short = row.short_name_ko?.trim() ?? ""
+    const mentions =
+      kind === "person" && (given || family || short)
+        ? {
+            first_mention_ko: ko,
+            subsequent_mention_ko: short || ko,
+            ...(given ? { given_name_ko: given } : {}),
+            ...(family ? { family_name_ko: family } : {}),
+            ...(short ? { short_name_ko: short } : {}),
+          }
+        : {}
+    out.push(
+      enTeam.length > 0
+        ? { ko, kind, en, enTeam, team, ...mentions }
+        : { ko, kind, en, ...(isTerm ? { allow_lowercase: true } : {}), ...mentions }
+    )
   }
   return out
 }
@@ -478,6 +519,7 @@ export function findNotationViolations(
   for (const d of dictionary) {
     for (const alt of d.hangul_alts ?? []) {
       if (!alt || alt.length < 2 || alt === d.preferred_ko) continue
+      if (d.short_name_ko?.trim() === alt.trim()) continue
       // ⚠️ alt 가 대표 표기를 **포함**하면 그건 오표기가 아니라 더 긴 정식 표기다.
       // hangul_alts 에는 성질이 다른 두 가지가 섞여 산다:
       //   · 진짜 오표기      — '하비 알론소'(정: 사비 알론소), '카릭'(정: 캐릭)
@@ -559,6 +601,7 @@ export function findAliasPoisoning(dictionary: NotationEntry[]): AliasPoisoning[
     const pk = compact(d.preferred_ko)
     for (const alt of d.hangul_alts ?? []) {
       if (!alt || alt === d.preferred_ko) continue
+      if (d.short_name_ko?.trim() === alt.trim()) continue
       const ak = compact(alt)
       if (pk.includes(ak) || ak.includes(pk)) continue // 길이 변형 — 정상
 

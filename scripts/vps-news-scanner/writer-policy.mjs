@@ -60,7 +60,7 @@ export function reusableDeskLessons(lessons = []) {
       id: lesson.id,
       category: lesson.category,
       scope: lesson.scope,
-      instruction: String(lesson.instruction ?? "").slice(0, 500),
+      instruction: String(lesson.instruction ?? "").slice(0, 1000),
       before: lesson.scope === "case" ? "" : String(lesson.wrong ?? "").slice(0, 400),
       after: lesson.scope === "case" ? "" : String(lesson.correct ?? "").slice(0, 400),
       explanation:

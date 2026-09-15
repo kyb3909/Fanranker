@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
 import useSWR from "swr"
 import {
   BookOpen,
@@ -17,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { DeskArticlePicker } from "@/components/admin/desk-article-picker"
 import {
   CATEGORY_LABELS,
   type DeskItem,
@@ -94,8 +96,23 @@ export function DeskWorkspace() {
   const item = data?.items.find((i) => i.id === selected) ?? items[0]
   // Pin the first selection so a newly generated item cannot replace an editor's open draft.
   useEffect(() => {
-    if (!selected && items[0]) setSelected(items[0].id)
-  }, [selected, items])
+    if (selected) return
+    if (window.location.hash === "#lessons" && data) {
+      const pending = new Set(
+        data.lessons.filter((l) => l.review_status === "pending").map((l) => l.revision_id)
+      )
+      const recent =
+        data.revisions.find(
+          (r) => pending.has(r.id) && data.items.some((i) => i.id === r.item_id)
+        ) ?? data.revisions.find((r) => data.items.some((i) => i.id === r.item_id))
+      if (recent) {
+        setFilter("all")
+        setSelected(recent.item_id)
+        return
+      }
+    }
+    if (items[0]) setSelected(items[0].id)
+  }, [selected, items, data])
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -138,7 +155,29 @@ export function DeskWorkspace() {
         <div className="space-y-2">
           <p className="text-wc-mute text-xs font-medium tracking-wide">NEWSROOM / EDITOR’S DESK</p>
           <h1 className="text-2xl font-bold tracking-tight">기사 데스킹</h1>
-          <p className={muted}>원문을 확인하고, 문장을 고치고, 다음 기사에 기준을 남깁니다.</p>
+          <p className={muted}>
+            올라온 기사를 직접 고치면 AI가 교정 이유와 다음 작성 기준을 정리합니다.
+          </p>
+          {data?.isAdmin && (
+            <nav aria-label="학습 작업 이동" className="flex gap-4 text-sm">
+              <Link
+                className="underline"
+                href="/admin/news-training"
+                onClick={(e) => {
+                  if (
+                    dirty &&
+                    !window.confirm("저장하지 않은 수정이 있습니다. 학습 작업대로 이동할까요?")
+                  )
+                    e.preventDefault()
+                }}
+              >
+                학습 작업대로
+              </Link>
+              <Link className="underline" href="/admin/news-dictionary" target="_blank">
+                표기 사전 열기
+              </Link>
+            </nav>
+          )}
         </div>
         <div className="flex gap-2">
           <Button
@@ -160,7 +199,7 @@ export function DeskWorkspace() {
               ) : (
                 <Plus className="mr-2 size-4" />
               )}
-              초안 1건 추가
+              새 연습 초안 생성
             </Button>
           )}
         </div>
@@ -186,6 +225,15 @@ export function DeskWorkspace() {
       )}
       {data && (
         <>
+          <DeskArticlePicker
+            disabled={dirty || busy}
+            onChoose={async (id) => {
+              window.history.replaceState(null, "", window.location.pathname)
+              setFilter("all")
+              setSelected(id)
+              await mutate()
+            }}
+          />
           <section className={box + " overflow-hidden"} aria-label="자동 작성 현황">
             <div className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
@@ -428,16 +476,24 @@ function ArticleEditor({
   const [version, setVersion] = useState(item.version)
   const [reason, setReason] = useState("")
   const [tab, setTab] = useState("edit")
+  useEffect(() => {
+    if (window.location.hash === "#lessons") setTab("learning")
+  }, [])
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState("")
   const [compare, setCompare] = useState(false)
+  const [lessonEdits, setLessonEdits] = useState<Record<string, boolean>>({})
+  const lessonDirtyChanged = useCallback((id: string, value: boolean) => {
+    setLessonEdits((previous) => (previous[id] === value ? previous : { ...previous, [id]: value }))
+  }, [])
+  const hasLessonEdits = Object.values(lessonEdits).some(Boolean)
   const dirty =
     draft.title !== (base?.title ?? "") ||
     draft.article !== (base?.article ?? "") ||
     Boolean(reason)
   useEffect(() => {
-    dirtyChanged(dirty)
-  }, [dirty, dirtyChanged])
+    dirtyChanged(dirty || hasLessonEdits)
+  }, [dirty, hasLessonEdits, dirtyChanged])
   useEffect(() => {
     if (!dirty && (item.version > version || (!base && item.draft))) {
       setDraft(item.draft ?? { title: "", article: "" })
@@ -457,10 +513,11 @@ function ArticleEditor({
       setBase(normalized)
       setVersion(saved.version)
       setReason("")
-      dirtyChanged(false)
+      dirtyChanged(hasLessonEdits)
+      if (saved.changed) setTab("learning")
       setNotice(
         saved.changed
-          ? "수정을 저장했습니다. 변경 이유를 분석해 학습 이력에 추가하고 있습니다."
+          ? "수정을 저장했습니다. AI가 교정 이유를 해석하고 있습니다. 설명을 확인한 뒤 학습에 사용해 주세요."
           : "검수 상태를 저장했습니다."
       )
       await refresh()
@@ -472,6 +529,25 @@ function ArticleEditor({
   }
   return (
     <section className={box + " min-w-0 overflow-hidden"} aria-label="기사 편집">
+      {item.origin && (
+        <div className="border-wc-line bg-wc-paper border-b p-4 text-sm">
+          <p className="font-medium">
+            {item.origin.kind === "post" ? "발행된 기사" : "발행 대기 기사"}를 불러온 학습용 수정본
+          </p>
+          <p className="text-wc-mute mt-1 text-xs">
+            이곳에서 저장한 교정은 학습에 사용됩니다. 공개 기사 반영은 뉴스 검수에서 진행합니다.
+          </p>
+          {item.origin.kind === "post" && (
+            <Link
+              className="mt-2 inline-block underline"
+              target="_blank"
+              href={"/post/" + item.origin.id}
+            >
+              현재 발행본 열기
+            </Link>
+          )}
+        </div>
+      )}
       <div className="border-wc-line flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div className="text-wc-mute flex flex-wrap items-center gap-3 text-xs">
           <span className="bg-wc-paper text-wc-ink rounded-full px-3 py-1 font-medium">
@@ -595,8 +671,8 @@ function ArticleEditor({
                 />
               </label>
               <p className="text-wc-mute text-xs leading-relaxed">
-                이유를 비워도 바뀐 구절을 분석합니다. AI가 제안한 설명은 ‘수정·학습 이력’에서 고칠
-                수 있습니다.
+                이유는 선택입니다. 직접 고친 원고를 기준으로 AI가 먼저 해석하고, ‘수정·학습
+                이력’에서 의도에 맞게 설명을 보완할 수 있습니다.
               </p>
               <div className="flex flex-wrap justify-between gap-3">
                 <Button variant="ghost" size="sm" onClick={() => setCompare(!compare)}>
@@ -616,7 +692,7 @@ function ArticleEditor({
                     ) : (
                       <Save className="mr-2 size-4" />
                     )}
-                    수정 저장·학습
+                    수정 저장·AI 해석 보기
                   </Button>
                 </div>
               </div>
@@ -628,8 +704,8 @@ function ArticleEditor({
                 </div>
               )}
               <p className="text-wc-mute text-xs">
-                이 기사에 참고한 기존 학습 {item.applied_lesson_ids.length}건 · 검수 완료는 공개
-                발행을 의미하지 않습니다.
+                이 기사에 참고한 기존 학습 {item.applied_lesson_ids.length}건 · 상시 원칙{" "}
+                {item.applied_rule_ids?.length ?? 0}건 · 검수 완료는 공개 발행을 의미하지 않습니다.
               </p>
               {item.applied_lesson_ids.length > 0 && (
                 <details>
@@ -668,6 +744,12 @@ function ArticleEditor({
           aria-labelledby="desk-tab-evidence"
           className="space-y-6 p-4 sm:p-6"
         >
+          {!item.sources.length && (
+            <p className="text-wc-mute rounded-lg border p-4 text-sm">
+              이 기사와 연결된 외부 원문이 저장되어 있지 않습니다. 문장과 기사 구성은 교정할 수
+              있으며, 사실 확인에는 별도의 원문 대조가 필요합니다.
+            </p>
+          )}
           {item.research && (
             <section className="space-y-4">
               <div>
@@ -767,35 +849,36 @@ function ArticleEditor({
           </section>
         </div>
       )}
-      {tab === "learning" && (
-        <div
-          role="tabpanel"
-          id="desk-panel-learning"
-          aria-labelledby="desk-tab-learning"
-          className="space-y-6 p-4 sm:p-6"
-        >
-          <div>
-            <h2 className="text-base font-semibold">수정한 부분과 그 이유</h2>
-            <p className="text-wc-mute mt-2 text-sm leading-relaxed">
-              실제로 바뀐 구절만 기록합니다. AI의 설명이 의도와 다르면 수정하고, 잘못된 학습은 꺼
-              주세요.
-            </p>
-          </div>
-          {!revisions.length && (
-            <p className="text-wc-mute py-8 text-sm">
-              아직 저장된 수정이 없습니다. 제목이나 본문을 고친 뒤 ‘수정 저장·학습’을 눌러 주세요.
-            </p>
-          )}
-          {revisions.map((r) => (
-            <RevisionCard
-              key={r.id}
-              revision={r}
-              lessons={lessons.filter((l) => l.revision_id === r.id)}
-              refresh={refresh}
-            />
-          ))}
+      <div
+        hidden={tab !== "learning"}
+        role="tabpanel"
+        id="desk-panel-learning"
+        aria-labelledby="desk-tab-learning"
+        className="space-y-6 p-4 sm:p-6"
+      >
+        <div id="lessons" className="scroll-mt-6">
+          <h2 className="text-base font-semibold">수정한 부분과 AI가 이해한 이유</h2>
+          <p className="text-wc-mute mt-2 text-sm leading-relaxed">
+            AI가 이해한 이유와 다음 작성 기준을 확인해 주세요. 해석이 맞으면 학습에 사용하고, 의도와
+            다르면 직접 고칠 수 있습니다.
+          </p>
         </div>
-      )}
+        {!revisions.length && (
+          <p className="text-wc-mute py-8 text-sm">
+            아직 저장된 수정이 없습니다. 제목이나 본문을 고친 뒤 ‘수정 저장·AI 해석 보기’를 눌러
+            주세요.
+          </p>
+        )}
+        {revisions.map((r) => (
+          <RevisionCard
+            key={r.id}
+            revision={r}
+            lessons={lessons.filter((l) => l.revision_id === r.id)}
+            refresh={refresh}
+            dirtyChanged={lessonDirtyChanged}
+          />
+        ))}
+      </div>
     </section>
   )
 }
@@ -803,10 +886,12 @@ function RevisionCard({
   revision: r,
   lessons,
   refresh,
+  dirtyChanged,
 }: {
   revision: DeskRevision
   lessons: DeskLesson[]
   refresh: () => Promise<void>
+  dirtyChanged: (id: string, value: boolean) => void
 }) {
   const [notice, setNotice] = useState("")
   async function retry() {
@@ -859,7 +944,7 @@ function RevisionCard({
         </p>
       )}
       {lessons.map((l) => (
-        <LessonCard key={l.id + ":" + l.updated_at} lesson={l} refresh={refresh} />
+        <LessonCard key={l.id} lesson={l} refresh={refresh} dirtyChanged={dirtyChanged} />
       ))}
       <details className="text-wc-mute text-xs">
         <summary className="cursor-pointer">저장된 수정 전후 전체 보기</summary>
@@ -882,18 +967,80 @@ function RevisionCard({
     </section>
   )
 }
-function LessonCard({ lesson, refresh }: { lesson: DeskLesson; refresh: () => Promise<void> }) {
+function LessonCard({
+  lesson,
+  refresh,
+  dirtyChanged,
+}: {
+  lesson: DeskLesson
+  refresh: () => Promise<void>
+  dirtyChanged: (id: string, value: boolean) => void
+}) {
   const [explanation, setExplanation] = useState(lesson.explanation)
+  const [instruction, setInstruction] = useState(lesson.instruction)
   const [active, setActive] = useState(lesson.active)
+  const [expected, setExpected] = useState(lesson.updated_at)
+  const [reviewed, setReviewed] = useState(lesson.review_status !== "pending")
+  const [base, setBase] = useState({
+    explanation: lesson.explanation,
+    instruction: lesson.instruction,
+    active: lesson.active,
+  })
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState("")
-  async function save() {
+  const dirty =
+    explanation !== base.explanation || instruction !== base.instruction || active !== base.active
+  useEffect(() => {
+    dirtyChanged(lesson.id, dirty)
+  }, [dirty, dirtyChanged, lesson.id])
+  useEffect(() => {
+    if (!busy && !dirty && Date.parse(lesson.updated_at) > Date.parse(expected)) {
+      setExplanation(lesson.explanation)
+      setInstruction(lesson.instruction)
+      setActive(lesson.active)
+      setExpected(lesson.updated_at)
+      setReviewed(lesson.review_status !== "pending")
+      setBase({
+        explanation: lesson.explanation,
+        instruction: lesson.instruction,
+        active: lesson.active,
+      })
+    }
+  }, [busy, dirty, expected, lesson])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (dirty) {
+        event.preventDefault()
+        event.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
+  async function save(use = active) {
     setBusy(true)
     setNotice("")
     try {
-      await request({ action: "lesson", id: lesson.id, explanation, active })
-      setNotice("학습 설정을 저장했습니다.")
-      await refresh()
+      const result = await request({
+        action: "lesson",
+        id: lesson.id,
+        explanation,
+        instruction,
+        active: use,
+        expected,
+      })
+      setActive(use)
+      setReviewed(true)
+      setExpected(result.updated_at)
+      setBase({ explanation, instruction, active: use })
+      setNotice(
+        use
+          ? "이 해석을 학습에 사용합니다. 다음 기사 작성부터 참고합니다."
+          : "이 해석은 학습에 사용하지 않도록 저장했습니다."
+      )
+      await refresh().catch(() =>
+        setNotice("학습 설정은 저장했습니다. 목록 갱신은 다시 시도해 주세요.")
+      )
     } catch (e) {
       setNotice(errorText(e))
     } finally {
@@ -909,7 +1056,7 @@ function LessonCard({ lesson, refresh }: { lesson: DeskLesson; refresh: () => Pr
           {CATEGORY_LABELS[lesson.category]} · {lesson.field === "title" ? "제목" : "본문"}
         </span>
         <span className="text-wc-mute">
-          {lesson.scope === "case" ? "사례로 보관 · 확인 원칙만 적용" : "다음 기사에 참고"}
+          {!reviewed ? "내 확인을 기다리는 AI 해석" : active ? "학습에 사용 중" : "사용 안 함"}
         </span>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
@@ -936,26 +1083,51 @@ function LessonCard({ lesson, refresh }: { lesson: DeskLesson; refresh: () => Pr
           className="mt-2 min-h-20 text-sm font-normal"
         />
       </label>
-      <p className="text-wc-mute text-xs leading-relaxed">
-        다음 작성 시 확인: {lesson.instruction}
-      </p>
+      <label className="block text-xs font-medium">
+        다음 기사에 적용할 기준 · 직접 수정 가능
+        <Textarea
+          aria-label={CATEGORY_LABELS[lesson.category] + " 다음 작성 기준"}
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          maxLength={1000}
+          className="mt-2 min-h-20 text-sm font-normal"
+        />
+      </label>
+      {lesson.scope === "case" && (
+        <p className="text-wc-mute text-xs">
+          이번 기사의 이름·금액·날짜 자체는 다른 기사에 복사하지 않고, 확인할 기준만 참고합니다.
+        </p>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            className="accent-wc-burgundy size-4"
-          />
-          이 학습 사용
-        </label>
+        {reviewed ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+              className="accent-wc-burgundy size-4"
+            />
+            이 학습 사용
+          </label>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy || !explanation.trim() || instruction.trim().length < 5}
+            onClick={() => void save(false)}
+          >
+            이 해석 사용 안 함
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"
-          disabled={busy || (explanation === lesson.explanation && active === lesson.active)}
-          onClick={() => void save()}
+          disabled={
+            busy || !explanation.trim() || instruction.trim().length < 5 || (reviewed && !dirty)
+          }
+          onClick={() => void save(reviewed ? active : true)}
         >
-          학습 설정 저장
+          {reviewed ? "학습 설정 저장" : "이 해석으로 학습"}
         </Button>
       </div>
       {notice && (

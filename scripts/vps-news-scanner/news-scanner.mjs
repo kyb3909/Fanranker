@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { NEWS_WRITER_POLICY } from "./writer-policy.mjs"
+import { NEWS_WRITER_POLICY, NEWS_WRITER_POLICY_VERSION } from "./writer-policy.mjs"
 /**
  * news-scanner.mjs — 스포츠 뉴스 스캐너 (결정적 스캔 + OpenAI 작성. 축구 + NBA)
  *
@@ -496,10 +496,13 @@ async function discoverMatchNews(seen, cursor) {
  */
 async function judgeAndWrite(
   post,
-  corrections = { examples: [], articles: [], naming: [] },
+  corrections,
   material = null,
   retryNote = ""
 ) {
+  if (!corrections?.guidance_available) {
+    throw Error("표기 사전과 편집 기준을 확인하지 못해 새 기사 작성을 보류합니다.")
+  }
   const sourceKind = isTweet(post.url)
     ? "tweet"
     : isBsky(post.url)
@@ -631,7 +634,9 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
             "\n\n다음 편집 원칙은 위의 느슨한 통과 기준보다 우선한다. 사실 추출·출처 검증·자체 검수를 먼저 수행하고, 근거 부족이면 worthy=false로 보류한다. 기존 JSON 출력 형식은 유지한다.\n" +
             NEWS_WRITER_POLICY +
             "\n\n편집자가 저장한 활성 학습(사례 값은 새 기사 사실이 아님):\n" +
-            JSON.stringify((corrections.lessons ?? []).slice(0, 12)),
+            JSON.stringify((corrections.lessons ?? []).slice(0, 12)) +
+            "\n\n관리자가 등록한 상시 편집 원칙(사실 정확성을 지키면서 높은 우선순위부터 적용):\n" +
+            JSON.stringify((corrections.editorial_rules ?? []).slice(0, 20)),
         },
         { role: "user", content: user },
       ],
@@ -749,25 +754,43 @@ function buildContent(summary, mediaNode) {
  * articles 는 검수자가 "고치고 반려"·수정 발행으로 다시 쓴 기사에서 나온다 —
  * 구조·톤을 통째로 흉내내는 게 목적.
  */
-async function fetchCorrectionExamples() {
-  const empty = { examples: [], articles: [], naming: [] }
-  if (!CRON_SECRET) return empty
+async function fetchCorrectionExamples({ baseUrl = BASE_URL, cronSecret = CRON_SECRET, fetchImpl = fetch } = {}) {
+  const unavailable = (error) => ({ guidance_available: false, error })
+  if (!cronSecret) return unavailable("학습 자료 인증 설정이 없습니다.")
   try {
-    const res = await fetch(`${BASE_URL}/api/news/correction-examples`, {
-      headers: { Authorization: `Bearer ${CRON_SECRET}` },
+    const res = await fetchImpl(`${baseUrl}/api/news/correction-examples`, {
+      headers: { Authorization: `Bearer ${cronSecret}` },
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) return empty
-    const d = await res.json().catch(() => ({}))
+    if (!res.ok) return unavailable(`학습 자료 조회 실패 (${res.status}). 다음 회차에 재시도합니다.`)
+    const d = await res.json()
+    if (d?.guidance_available !== true ||
+      !["examples", "articles", "naming", "lessons", "editorial_rules"].every((key) => Array.isArray(d[key])) ||
+      d.policy_version !== NEWS_WRITER_POLICY_VERSION || !Number.isFinite(Date.parse(d.loaded_at))) {
+      return unavailable("학습 자료와 작성 정책 버전을 확인하지 못했습니다. 앱과 스캐너 배포 상태를 확인해 주세요.")
+    }
     return {
-      examples: Array.isArray(d?.examples) ? d.examples : [],
-      articles: Array.isArray(d?.articles) ? d.articles : [],
+      guidance_available: true,
+      loaded_at: d.loaded_at,
+      examples: d.examples,
+      articles: d.articles,
       // 확정 표기 사전 [{ ko, en[] }] — 지어내기 전에 정답을 주기 위한 재료
-      naming: Array.isArray(d?.naming) ? d.naming : [],
-      lessons: Array.isArray(d?.lessons) ? d.lessons.slice(0, 12) : [],
+      naming: d.naming,
+      lessons: d.lessons.slice(0, 12),
+      editorial_rules: d.editorial_rules.slice(0, 20),
     }
   } catch {
-    return empty
+    return unavailable("학습 자료 연결에 실패했습니다. 다음 회차에 재시도합니다.")
+  }
+}
+
+/** IDs record actual prompt inputs, not a claim that the generated article obeyed each rule. */
+function editorialGuidanceTrace(corrections) {
+  return {
+    policy_version: NEWS_WRITER_POLICY_VERSION,
+    loaded_at: corrections.loaded_at,
+    applied_lesson_ids: corrections.lessons.slice(0, 12).map((lesson) => lesson.id),
+    applied_rule_ids: corrections.editorial_rules.slice(0, 20).map((rule) => rule.id),
   }
 }
 
@@ -781,7 +804,7 @@ async function fetchCorrectionExamples() {
  * 강한 지시라 틀린 힌트는 없느니만 못하다. 영어는 고유명사를 대문자로 쓰므로
  * 이 한 줄이 대부분을 가른다 (문장 첫머리 오탐은 남지만, 그건 힌트 한 칸 낭비일 뿐).
  */
-function includesProperNoun(text, lowerText, needle) {
+function includesProperNoun(text, lowerText, needle, allowLowercase = false) {
   if (!needle) return false
   let i = lowerText.indexOf(needle)
   while (i !== -1) {
@@ -790,7 +813,7 @@ function includesProperNoun(text, lowerText, needle) {
     if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) {
       const c = text[i] ?? ""
       // 대문자(Šeško 같은 비ASCII 포함) 또는 숫자 시작(90min)이면 고유명사로 본다
-      if (c !== c.toLowerCase() || /[0-9]/.test(c)) return true
+      if (allowLowercase || c !== c.toLowerCase() || /[0-9]/.test(c)) return true
     }
     i = lowerText.indexOf(needle, i + 1)
   }
@@ -932,6 +955,7 @@ const AMBIGUOUS_EN = new Set([
   "february",
   "march",
   "april",
+  "may",
   "june",
   "july",
   "august",
@@ -967,7 +991,7 @@ function buildNamingHints(naming, sourceText) {
       [...list]
         .filter((en) => !AMBIGUOUS_EN.has(en))
         .sort((a, b) => b.length - a.length)
-        .find((en) => includesProperNoun(sourceText, lower, en))
+        .find((en) => includesProperNoun(sourceText, lower, en, row.allow_lowercase === true && row.kind === "label"))
 
     let matched = pick(row.en)
 
@@ -987,16 +1011,34 @@ function buildNamingHints(naming, sourceText) {
       if (teamSeen) matched = pick(row.enTeam)
     }
 
-    if (matched) hits.push({ en: matched, ko: row.ko })
+    if (matched) hits.push({ ...row, en: matched })
   }
   if (hits.length === 0) return ""
+  const mentionOwners = new Map()
+  for (const hit of hits) {
+    if (hit.kind !== "person") continue
+    for (const name of [hit.family_name_ko, hit.short_name_ko]) {
+      const key = name?.replace(/\s+/g, "")
+      if (!key) continue
+      const owners = mentionOwners.get(key) ?? new Set()
+      owners.add(hit.first_mention_ko ?? hit.ko)
+      mentionOwners.set(key, owners)
+    }
+  }
   // 상한을 넘길 땐 **긴 표기부터** 남긴다 — 'manchester united'가 'young'보다 값지다
   const top = hits.sort((a, b) => b.en.length - a.en.length).slice(0, MAX_NAMING_HINTS)
   return `\n\n## 확정 한글 표기 (반드시 이대로)\n원문에 등장하는 고유명사다. 아래 한글 표기를 **그대로** 써라 — 다르게 음차하지 마라:\n${top
-    .map((h) => `- ${h.en} = ${h.ko}`)
+    .map((h) => {
+      if (!h.first_mention_ko) return `- ${h.en} = ${h.ko}`
+      const ambiguous = h.kind === "person" && [h.family_name_ko, h.short_name_ko].some((name) =>
+        (mentionOwners.get(name?.replace(/\s+/g, "") ?? "")?.size ?? 0) > 1
+      )
+      const subsequent = ambiguous ? h.first_mention_ko : h.subsequent_mention_ko || h.first_mention_ko
+      return `- ${h.en} = ${h.ko} · 본문 첫 언급: ${h.first_mention_ko} · 이후: ${subsequent}${h.given_name_ko ? ` · 이름: ${h.given_name_ko}` : ""}${h.family_name_ko ? ` · 성: ${h.family_name_ko}` : ""}${ambiguous ? " · 같은 성·호칭의 다른 인물이 함께 등장하므로 전체 이름 유지" : ""}`
+    })
     .join(
       "\n"
-    )}\n단, 같은 철자가 일반 단어로 쓰인 자리(예: 'young'이 '어린'이라는 뜻으로 쓰인 문장)에는 적용하지 마라.\n이 목록에 없는 이름만 네가 판단해 음차하고, 확신이 없으면 영문 원어를 그대로 둔다.`
+    )}\n단, 같은 철자가 일반 단어로 쓰인 자리(예: 'young'이 '어린'이라는 뜻으로 쓰인 문장)에는 적용하지 마라.\n본문 첫 언급과 이후 표기가 지정된 인물은 그 순서를 따른다. 성·이름의 순서를 바꾸거나 마지막 단어를 성으로 추측하지 않는다. 반복 표기가 지정되지 않은 이름은 기존 대표 표기를 유지한다.\n이 목록에 없는 이름만 네가 판단해 음차하고, 확신이 없으면 영문 원어를 그대로 둔다.`
 }
 
 // ── VS 쟁점 2단 판정 (2026-07-31, 3인 회의 VS-RESULT 스펙) ──────────────
@@ -1137,12 +1179,12 @@ async function main() {
     `${fetchedSubs}/${scanSubs.length}개 소스 → 신규 후보 ${candidates.length}개 (LLM 상한 ${MAX_LLM_PER_RUN})`
   )
 
-  // 검수 교정 예시 로드 (few-shot 학습) — 실패해도 스캔은 계속
+  // A missing guidance response must never silently create an untrained live draft.
   const corrections = await fetchCorrectionExamples()
-  if (corrections.examples.length || corrections.articles.length || corrections.naming.length)
-    log(
-      `검수 few-shot 로드 — 제목 교정 ${corrections.examples.length}건 / 기사 재작성 ${corrections.articles.length}건 / 확정 표기 사전 ${corrections.naming.length}건`
-    )
+  if (!corrections.guidance_available) throw Error(corrections.error)
+  log(
+    `검수 자료 로드 — 제목 교정 ${corrections.examples.length}건 / 기사 재작성 ${corrections.articles.length}건 / 표기 사전 ${corrections.naming.length}건 / 교정 사례 ${corrections.lessons.length}건 / 상시 원칙 ${corrections.editorial_rules.length}건`
+  )
 
   let drafted = 0
   let llmCalls = 0
@@ -1383,6 +1425,7 @@ ${v.summary || ""}`,
         original_title: p.title.slice(0, 2000),
         subreddit: p.subreddit,
         evidence: { ...p.evidence, published_at: articlePublishedAt },
+        editorial_guidance: editorialGuidanceTrace(corrections),
         content: buildContent(summary, mediaNode),
         // 원문 재료를 초안에 보존 — 검수자가 원문과 대조하며 고칠 수 있게
         source_text: material
@@ -1521,7 +1564,7 @@ async function reportHeat(rotation) {
   log(`heat: 측정 ${items.length}건 → 발행글 매칭 ${d.updated ?? 0}건 (${res.status})`)
 }
 
-export { judgeAndWrite, fetchArticleBody, findDateViolations, findNameViolations }
+export { judgeAndWrite, fetchArticleBody, findDateViolations, findNameViolations, fetchCorrectionExamples, editorialGuidanceTrace, buildNamingHints }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => {
     log("치명적 오류:", e.stack || e.message)
