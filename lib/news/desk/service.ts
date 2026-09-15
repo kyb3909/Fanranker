@@ -30,6 +30,7 @@ import { loadEditorialRules } from "@/lib/news/training/settings"
 import { selectNotationHints } from "@/lib/news/notation/select-hints"
 import { DESK_LEARNING_PROMPT } from "./learning-prompt"
 import { loadCorrectionCases } from "./correction-cases"
+import { applyPendingDeskLessons } from "./auto-apply-lessons"
 
 const MODEL = "gpt-5.6-terra"
 const messageOf = (error: unknown) =>
@@ -442,13 +443,23 @@ given_name_ko·family_name_ko는 운영자가 구분한 이름·성이다. 단�
 }
 
 export async function learnDeskRevision(db: SupabaseClient, revisionId?: string) {
+  let recovered
+  try {
+    // Also repairs an activation interrupted after complete_news_desk_learning committed.
+    recovered = await applyPendingDeskLessons(db)
+  } catch (error) {
+    return { error: messageOf(error) }
+  }
   const token = randomUUID()
   const { data } = checked(
     await db.rpc("claim_news_desk_learning", { p_token: token, p_revision: revisionId ?? null })
   )
   const revision = (data as DeskRevision[] | null)?.[0]
-  if (!revision) return { skipped: true }
+  if (!revision) return { skipped: true, ...recovered }
+  let completed = false
+  let learned = 0
   try {
+    const rules = await loadEditorialRules(db)
     const parsed = z.object({ lessons: z.array(LessonProposalSchema).max(12) }).parse(
       await ask(
         "news-desk-learning",
@@ -457,6 +468,7 @@ export async function learnDeskRevision(db: SupabaseClient, revisionId?: string)
           before: revision.before_draft,
           after: revision.after_draft,
           editor_reason: revision.editor_reason,
+          rules,
         },
         5000
       )
@@ -475,9 +487,20 @@ export async function learnDeskRevision(db: SupabaseClient, revisionId?: string)
         p_lessons: lessons,
       })
     )
-    return { revision: revision.id, learned: lessons.length }
+    completed = true
+    learned = lessons.length
+    const applied = await applyPendingDeskLessons(db, revision.id)
+    return {
+      revision: revision.id,
+      learned,
+      applied: recovered.applied + applied.applied,
+      excluded: recovered.excluded + applied.excluded,
+    }
   } catch (error) {
     const reason = messageOf(error)
+    // The lessons already exist; retain ready and retry activation instead of regenerating duplicates.
+    if (completed)
+      return { revision: revision.id, learned, activation_pending: true, error: reason }
     await db
       .from("news_desk_revisions")
       .update({

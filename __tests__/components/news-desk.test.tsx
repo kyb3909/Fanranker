@@ -263,7 +263,7 @@ describe("desk editing while the automatic queue refreshes", () => {
         Response.json({ error: "다른 창에서 해석을 변경했습니다." }, { status: 409 })
       )
     vi.stubGlobal("fetch", fetcher)
-    fireEvent.click(screen.getByRole("button", { name: "이 해석으로 학습" }))
+    fireEvent.click(screen.getByRole("button", { name: "지금 반영" }))
     await waitFor(() => expect(fetcher).toHaveBeenCalled())
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toMatchObject({
       active: true,

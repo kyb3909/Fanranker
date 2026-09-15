@@ -625,7 +625,7 @@ function ArticleEditor({
       dirtyChanged(hasLessonEdits)
       setNotice(
         saved.changed
-          ? `${saved.applied_to_article ? "기사에 수정을 반영했습니다." : "수정을 저장했습니다."} 교정 사례를 다음 작성의 참고 자료에 추가했습니다. AI 해석은 ‘수정·학습 이력’에서 확인할 수 있습니다.`
+          ? `${saved.applied_to_article ? "기사에 수정을 반영했습니다." : "수정을 저장했습니다."} 교정 사례를 다음 작성의 참고 자료에 추가했습니다. 분석한 작성 기준도 자동 반영되며 ‘수정·학습 이력’에서 수정하거나 끌 수 있습니다.`
           : "검수 상태를 저장했습니다."
       )
       await refresh()
@@ -826,8 +826,8 @@ function ArticleEditor({
                 />
               </label>
               <p className="text-wc-mute text-xs leading-relaxed">
-                이유는 선택입니다. 직접 고친 원고를 기준으로 AI가 먼저 해석하고, ‘수정·학습
-                이력’에서 의도에 맞게 설명을 보완할 수 있습니다.
+                이유는 선택입니다. 수정 내용을 분석한 작성 기준은 자동 반영됩니다. ‘수정·학습
+                이력’에서 의도에 맞게 설명을 보완하거나 사용을 끌 수 있습니다.
               </p>
               <div className="border-wc-line bg-wc-card sticky bottom-0 z-10 flex flex-wrap justify-between gap-3 border-t py-3">
                 <Button variant="ghost" size="sm" onClick={() => setCompare(!compare)}>
@@ -1028,8 +1028,8 @@ function ArticleEditor({
         <div id="lessons" className="scroll-mt-6">
           <h2 className="text-base font-semibold">수정한 부분과 AI가 이해한 이유</h2>
           <p className="text-wc-mute mt-2 text-sm leading-relaxed">
-            직접 저장한 교정 사례는 다음 작성의 참고 자료에 바로 추가됩니다. AI가 별도로 해석한
-            이유와 상시 기준은 확인 후 사용할 수 있습니다. 의도와 다르면 직접 고쳐 주세요.
+            직접 저장한 교정 사례는 다음 작성의 참고 자료에 바로 추가됩니다. 분석한 작성 기준도 현재
+            활성 규칙을 우선해 자동 반영됩니다. 의도와 다르면 수정하거나 사용을 끌 수 있습니다.
           </p>
         </div>
         {!revisions.length && (
@@ -1225,7 +1225,7 @@ function LessonCard({
           {CATEGORY_LABELS[lesson.category]} · {lesson.field === "title" ? "제목" : "본문"}
         </span>
         <span className="text-wc-mute">
-          {!reviewed ? "내 확인을 기다리는 AI 해석" : active ? "학습에 사용 중" : "사용 안 함"}
+          {!reviewed ? "자동 반영 처리 중" : active ? "학습에 사용 중" : "사용 안 함"}
         </span>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
@@ -1296,7 +1296,7 @@ function LessonCard({
           }
           onClick={() => void save(reviewed ? active : true)}
         >
-          {reviewed ? "학습 설정 저장" : "이 해석으로 학습"}
+          {reviewed ? "학습 설정 저장" : "지금 반영"}
         </Button>
       </div>
       {notice && (

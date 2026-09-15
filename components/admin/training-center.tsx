@@ -441,10 +441,10 @@ function Guide({ data, navigate }: { data: TrainingData; navigate: (tab: Tab) =>
         <div className="bg-primary/5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
           <div>
             <p className="text-sm font-semibold">
-              AI가 정리한 교정 이유 {pendingLessons}건을 확인해 주세요.
+              교정 지침 {pendingLessons}건을 자동 반영하고 있습니다.
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
-              조회된 학습 이력 중 확인 대기 · 내 의도와 맞는지 읽고 보완하세요.
+              별도 승인 없이 반영됩니다. 수정·학습 이력에서 기준을 고치거나 사용을 끌 수 있습니다.
             </p>
           </div>
           <Button asChild size="sm">
