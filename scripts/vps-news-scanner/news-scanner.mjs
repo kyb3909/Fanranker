@@ -2,6 +2,7 @@
 import {
   NEWS_WRITER_POLICY,
   NEWS_WRITER_POLICY_VERSION,
+  CURRENT_EDITORIAL_GUIDANCE,
   enforceEditorialStyle,
   findEditorialStyleViolations,
 } from "./writer-policy.mjs"
@@ -524,17 +525,16 @@ async function judgeAndWrite(post, corrections, material = null, retryNote = "")
     `${post.title || ""}\n${material?.text || ""}\n${(post.evidence?.background ?? []).map((b) => b.excerpt).join("\n")}`
   )
   const fewshot = examples.length
-    ? `\n\n## 최근 검수 교정 예시 (원본 → 발행본)\n검수자가 아래처럼 다듬었다. 같은 표기·스타일(특히 팀·선수·기자명 한글 표기)을 따르라:\n${examples
+    ? `\n\n## 과거 제목 교정 기록 (수정 전 → 수정 후)\n변경된 부분의 의도만 참고한다. 현재 활성 규칙과 확정 표기 사전이 이 기록보다 우선한다:\n${examples
         .map((e) => `- "${e.from}" → "${e.to}"`)
         .join("\n")}`
     : ""
-  // 기사 재작성 few-shot — 검수자가 봇 초안을 통째로 다시 쓴 사례. 문장 구조·문단
-  // 배치·정보 밀도를 이 최종본처럼 쓰라고 지시한다 (표기 사전보다 상위의 스타일 학습).
+  // Historical edits may be partial: learn the change, never treat the whole article as a model answer.
   const styleshot = articles.length
-    ? `\n\n## 검수자가 기사를 다시 쓴 예시 ${articles.length}건 (봇 초안 → 검수자 최종본)\n검수자는 봇 초안을 아래 "최종본"처럼 고쳐 쓴다. 처음부터 최종본의 문장 구조·문단 흐름·정보 밀도로 써라 (내용은 당연히 지금 글의 재료에서만):\n${articles
+    ? `\n\n## 과거 기사 교정 기록 ${articles.length}건 (수정 전 → 수정 후)\n수정 후 원고에도 오류가 남아 있을 수 있다. 수정 전후의 차이와 편집자 메모에서 현재 규칙에 맞는 수정 의도만 참고한다. 기사 전체를 모범 답안으로 모방하지 않는다:\n${articles
         .map(
           (a, i) =>
-            `[예시 ${i + 1} — 봇 초안]\n${a.beforeTitle ? `제목: ${a.beforeTitle}\n` : ""}${a.before}\n[예시 ${i + 1} — 검수자 최종본]\n${a.afterTitle ? `제목: ${a.afterTitle}\n` : ""}${a.after}${a.reason ? `\n편집자가 설명한 수정 이유: ${a.reason}` : ""}`
+            `[교정 ${i + 1} — 수정 전]\n${a.beforeTitle ? `제목: ${a.beforeTitle}\n` : ""}${a.before}\n[교정 ${i + 1} — 수정 후, 부분 교정 기록]\n${a.afterTitle ? `제목: ${a.afterTitle}\n` : ""}${a.after}${a.reason ? `\n편집자가 설명한 수정 이유: ${a.reason}` : ""}`
         )
         .join("\n\n")}`
     : ""
@@ -642,7 +642,7 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
             JSON.stringify((corrections.lessons ?? []).slice(0, 12)) +
             "\n\n관리자가 등록한 상시 편집 원칙(사실 정확성을 지키면서 높은 우선순위부터 적용):\n" +
             JSON.stringify((corrections.editorial_rules ?? []).slice(0, 20)) +
-            "\n상시 편집 원칙은 과거 교정 예시와 일반 문체 안내보다 우선한다. 교정 예시에 남은 존댓말·오타·수정하지 않은 문장을 그대로 모방하지 않는다. 편집자의 수정 이유를 함께 읽고 그 의도를 적용한다.",
+            CURRENT_EDITORIAL_GUIDANCE,
         },
         { role: "user", content: user },
       ],

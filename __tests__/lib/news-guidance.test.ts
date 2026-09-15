@@ -85,7 +85,9 @@ describe("owner style rules on the generated article", () => {
     expect(prompt).toContain("재인용 매체 대신 직접 인터뷰 출처")
     expect(prompt).not.toContain("첫 문장은 누구의 보도인지로 연다")
     expect(prompt).not.toContain('와이어체("~라고 합니다"')
-    expect(prompt).toContain("상시 편집 원칙은 과거 교정 예시")
+    expect(prompt).toContain("현재 활성 규칙 >")
+    expect(prompt).toContain("수정 후 원고에도 오류가 남아 있을 수 있다")
+    expect(prompt).not.toContain("처음부터 최종본의 문장 구조")
   })
 })
 

@@ -1,5 +1,15 @@
 // Shared by the live scanner and the editorial practice generator.
-export const NEWS_WRITER_POLICY_VERSION = "2026-09-15.1"
+export const NEWS_WRITER_POLICY_VERSION = "2026-09-16.1"
+export const CURRENT_EDITORIAL_GUIDANCE = `
+## 현재 규칙 우선 — 운영자 지시
+이번 작성에 불러온 활성 rules/editorial_rules가 현재 편집 기준이다. 문체·구성·출처 표현은 현재 규칙으로 결정한다.
+현재 활성 규칙 > 현재 규칙과 일치하는 승인된 교정 지침 > 과거 수정 사례의 순서로 참고한다. 원문에서 확인한 사실과 현재 확정 표기 사전은 항상 지킨다.
+과거 기사에는 잘못된 사실·표현·구성이 많이 남아 있을 수 있다. 발행·검수 완료·수정 후 상태를 완전한 정답의 증거로 취급하지 않는다.
+교정 사례는 수정 전후의 차이와 편집자의 수정 이유에서 확인되는 의도만 참고한다. 고치지 않은 문장이나 기사 전체의 말투·구성을 그대로 따라 쓰지 않는다.
+과거 예시나 교정 지침이 현재 활성 규칙과 다르면 현재 규칙을 따른다. 과거 원고의 존댓말·오타·추정·이름·소속·숫자를 새 기사에 옮기지 않는다.
+사실은 이번 원문과 제공된 검증 자료에서 다시 확인한다. 이전 기사 자체를 독립적인 사실 근거로 삼지 않는다. 이전 원고를 재작성할 때도 사실을 재확인하고 현재 규칙으로 새로 구성한다.
+출력 전에 현재 활성 규칙을 하나씩 대조한다. 이전 예시와 닮았는지가 아니라 현재 규칙과 원문을 지켰는지를 기준으로 고친다.
+`
 // Checks only these explicitly approved style rules; this is not a factual verdict.
 export const EDITORIAL_STYLE_RULE_IDS = {
   declarative: "8f228310-bbe8-44b5-a705-c31d217e1401",

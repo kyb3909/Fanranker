@@ -73,7 +73,7 @@ describe("private live guidance API", () => {
 
 describe("live draft guidance provenance", () => {
   const trace = {
-    policy_version: "2026-09-15.1",
+    policy_version: "2026-09-16.1",
     loaded_at: "2026-09-15T00:00:00.000Z",
     applied_lesson_ids: ["11111111-1111-4111-8111-111111111111"],
     applied_rule_ids: ["22222222-2222-4222-8222-222222222222"],
