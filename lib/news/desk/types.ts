@@ -112,7 +112,13 @@ export interface DeskItem {
   quality: { pass: boolean; reasons: string[] } | null
   applied_lesson_ids: string[]
   applied_rule_ids?: string[]
-  origin?: { kind: "post" | "draft"; id: string; title: string; imported_at: string }
+  origin?: {
+    kind: "post" | "draft"
+    id: string
+    title: string
+    imported_at: string
+    status?: string
+  }
   version: number
   error: string | null
   created_at: string

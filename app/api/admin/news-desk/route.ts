@@ -39,11 +39,14 @@ const ActionSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("retry_learning"), id: z.string().uuid() }),
 ])
-export async function GET() {
+export async function GET(req: NextRequest) {
   const auth = await requireStaffApi()
   if (auth instanceof NextResponse) return auth
   try {
-    return json(await loadDesk(auth.supabase, auth.role === "admin"))
+    const item = req.nextUrl.searchParams.get("item")
+    if (item && !z.string().uuid().safeParse(item).success)
+      return json({ error: "기사 식별자를 확인해 주세요." }, 400)
+    return json(await loadDesk(auth.supabase, auth.role === "admin", item ?? undefined))
   } catch {
     return json({ error: "데스킹 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." }, 503)
   }
@@ -133,7 +136,7 @@ export async function POST(req: NextRequest) {
       })
       return json({ ok: true }, 202)
     }
-    const { data: saved, error } = await db.rpc("save_news_desk_edit", {
+    const { data: saved, error } = await db.rpc("save_news_desk_article", {
       p_id: data.id,
       p_expected_version: data.version,
       p_title: data.draft.title,

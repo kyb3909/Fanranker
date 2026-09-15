@@ -5,6 +5,7 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { loadNotation } from "@/lib/news/notation"
 import { loadDeskLessons } from "@/lib/news/desk/service"
 import { loadEditorialRules } from "@/lib/news/training/settings"
+import { loadCorrectionCases } from "@/lib/news/desk/correction-cases"
 import type { TipTapNode } from "@/types/post"
 import { NEWS_WRITER_POLICY_VERSION } from "@/scripts/vps-news-scanner/writer-policy.mjs"
 
@@ -67,7 +68,7 @@ async function handler(req: NextRequest) {
 
     // 기사 재작성 쌍 — 봇 원본(draft.original)이 보존된 것 중 본문이 실제로 바뀐 것.
     // 프롬프트 예산상 최근 2건만, 각 측 길이 제한.
-    const articles = rows
+    const legacyArticles = rows
       .flatMap((r) => {
         const orig = r.draft?.original
         if (!orig?.content || !r.draft?.content) return []
@@ -87,15 +88,22 @@ async function handler(req: NextRequest) {
 
     // 확정 표기 힌트 — 규칙(무엇을 en 으로 볼지)은 notation 모듈이 소유한다
     // A real empty list is valid; an unavailable list must not look like no owner guidance.
-    const [{ hints: naming }, lessons, editorial_rules] = await Promise.all([
+    const [{ hints: naming }, lessons, editorial_rules, corrections] = await Promise.all([
       loadNotation(supabase),
       loadDeskLessons(supabase),
       loadEditorialRules(supabase),
+      loadCorrectionCases(supabase),
     ])
     return NextResponse.json(
       {
-        examples,
-        articles,
+        examples: [
+          ...corrections
+            .filter((c) => c.beforeTitle !== c.afterTitle)
+            .map((c) => ({ from: c.beforeTitle, to: c.afterTitle })),
+          ...examples,
+        ].slice(0, 12),
+        articles: [...corrections, ...legacyArticles].slice(0, 2),
+        correction_revision_ids: corrections.map((c) => c.revision_id),
         naming,
         lessons,
         editorial_rules,

@@ -207,17 +207,21 @@ describe("actual article picker", () => {
       {
         kind: "post",
         id: "published-id",
+        status: "published",
         title: "지금 올라온 아스널 기사",
         created_at: "2026-09-15T00:00:00Z",
       },
       {
         kind: "draft",
         id: "draft-id",
+        status: "drafted",
         title: "발행을 기다리는 기사",
         created_at: "2026-09-15T00:00:00Z",
       },
     ],
-    limit: 80,
+    limit: 30,
+    page: 1,
+    total: 2,
   }
   it("opens a published article by identity and resumes its existing desk item", async () => {
     mock.data = articles
@@ -228,7 +232,7 @@ describe("actual article picker", () => {
     vi.stubGlobal("fetch", fetcher)
     render(<DeskArticlePicker onChoose={onChoose} disabled={false} />)
     fireEvent.click(screen.getByRole("button", { name: /지금 올라온 아스널 기사/ }))
-    await waitFor(() => expect(onChoose).toHaveBeenCalledWith("existing-desk"))
+    await waitFor(() => expect(onChoose).toHaveBeenCalledWith("existing-desk", [articles.items[1]]))
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ kind: "post", id: "published-id" })
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toContain("이어서 수정하세요")

@@ -23,12 +23,28 @@ const item = (id: string) => ({
   draft: { title: "제목 " + id, article: "원문에서 확인한 충분한 길이의 기사 본문입니다." },
   original: { title: "제목 " + id, article: "원문에서 확인한 충분한 길이의 기사 본문입니다." },
   applied_lesson_ids: [],
+  origin: { kind: "draft", id, title: "제목 " + id, imported_at: "2026-09-14T01:00:00Z" },
 })
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
 describe("desk editing while the automatic queue refreshes", () => {
+  it("does not put standalone practice articles into the actual article work queue", () => {
+    const practice = { ...item("practice"), origin: undefined }
+    mock.data = {
+      items: [practice],
+      isAdmin: false,
+      lessons: [],
+      revisions: [],
+      settings: { enabled: false, pending_target: 6, daily_limit: 12 },
+      counts: { pending: 1, reviewed: 0, lessons: 0, today: 1 },
+    }
+    render(<DeskWorkspace />)
+    expect(screen.queryByLabelText("기사 제목")).toBeNull()
+    expect(screen.getByText("실제 작성된 기사를 선택해 주세요")).toBeTruthy()
+    expect(screen.queryByText(practice.draft.title)).toBeNull()
+  })
   it("keeps the selected article and unsaved text when a new draft arrives", async () => {
     const data = {
       items: [item("first")],
@@ -50,14 +66,14 @@ describe("desk editing while the automatic queue refreshes", () => {
       .fn()
       .mockResolvedValue(Response.json({ version: 1, changed: true, revision_id: "revision" }))
     vi.stubGlobal("fetch", fetcher)
-    fireEvent.click(screen.getByRole("button", { name: "수정 저장·AI 해석 보기" }))
+    fireEvent.click(screen.getByRole("button", { name: "수정 저장·기사 반영" }))
     await waitFor(() => expect(fetcher).toHaveBeenCalled())
     const body = JSON.parse(fetcher.mock.calls[0][1].body)
     expect(body.id).toBe("first")
     expect(body.draft.title).toBe("편집 중인 내 제목")
     await waitFor(() => expect(screen.getByText(/수정을 저장했습니다/)).toBeTruthy())
     expect(screen.getByRole("tab", { name: "수정·학습 이력" }).getAttribute("aria-selected")).toBe(
-      "true"
+      "false"
     )
     fireEvent.click(screen.getByRole("tab", { name: "기사 수정" }))
     expect((screen.getByLabelText("기사 제목") as HTMLTextAreaElement).value).toBe(

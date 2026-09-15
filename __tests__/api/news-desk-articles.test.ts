@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server"
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), list: vi.fn(), import: vi.fn() }))
 vi.mock("@/lib/admin/roles", () => ({ requireStaffApi: mocks.auth }))
-vi.mock("@/lib/news/desk/live-articles", async () => ({
-  ...(await vi.importActual("@/lib/news/desk/live-articles")),
-  listLiveArticles: mocks.list,
-  importLiveArticle: mocks.import,
+vi.mock("@/lib/news/desk/catalog", async () => ({
+  ...(await vi.importActual("@/lib/news/desk/catalog")),
+  listDeskCatalog: mocks.list,
+  openDeskArticle: mocks.import,
 }))
 vi.mock("@/lib/news/publish", () => ({ NEWS_BOT_USER_ID: "user_bot_soccer_kr" }))
 const db = { from: vi.fn(), rpc: vi.fn() }
@@ -21,7 +21,12 @@ const req = (data: unknown) =>
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.auth.mockResolvedValue({ userId: "editor-id", role: "editor", supabase: db })
-  mocks.list.mockResolvedValue([{ kind: "post", id, title: "기존 기사", created_at: "2026-09-15" }])
+  mocks.list.mockResolvedValue({
+    items: [{ kind: "post", id, title: "기존 기사", created_at: "2026-09-15" }],
+    total: 1,
+    page: 1,
+    limit: 30,
+  })
   mocks.import.mockResolvedValue({ id: "desk-id", existing: false })
 })
 
@@ -59,12 +64,12 @@ describe("existing article desk import API", () => {
     const { GET } = await import("@/app/api/admin/news-desk/articles/route")
     const response = await GET(
       new NextRequest(
-        `https://gongnori.fan/api/admin/news-desk/articles?q=${encodeURIComponent(`  ${"가".repeat(230)}  `)}`
+        `https://gongnori.fan/api/admin/news-desk/articles?q=${encodeURIComponent("  과거 기사  ")}&page=4&status=rejected`
       )
     )
-    expect(mocks.list).toHaveBeenCalledWith(db, "가".repeat(200))
+    expect(mocks.list).toHaveBeenCalledWith(db, { q: "과거 기사", page: 4, status: "rejected" })
     expect(response.headers.get("Cache-Control")).toBe("private, no-store")
-    expect(await response.json()).toMatchObject({ limit: 80, items: [{ id }] })
+    expect(await response.json()).toMatchObject({ limit: 30, items: [{ id }] })
   })
 
   it("opens the existing private desk item when the import RPC reports it already exists", async () => {

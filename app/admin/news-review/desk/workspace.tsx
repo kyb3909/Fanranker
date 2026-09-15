@@ -11,7 +11,6 @@ import {
   Loader2,
   Pause,
   Play,
-  Plus,
   RefreshCw,
   Save,
 } from "lucide-react"
@@ -60,8 +59,8 @@ const SKIP: Record<string, string> = {
   no_source: "최근 원문 중 아직 작성하지 않은 신뢰 출처가 없습니다.",
   duplicate_source: "이미 작성한 원문입니다.",
 }
-async function request(body?: unknown) {
-  const response = await fetch(API, {
+async function request(body?: unknown, url = API) {
+  const response = await fetch(url, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
@@ -77,23 +76,32 @@ const box = "rounded-xl border border-wc-line bg-wc-card"
 const muted = "text-sm text-wc-mute"
 
 export function DeskWorkspace() {
-  const { data, error, isLoading, mutate } = useSWR<DeskResponse>(API, () => request(), {
-    refreshInterval: 10000,
-    revalidateOnFocus: true,
-  })
   const [selected, setSelected] = useState<string | null>(null)
+  const { data, error, isLoading, mutate } = useSWR<DeskResponse>(
+    selected ? `${API}?item=${selected}` : API,
+    (url: string) => request(undefined, url),
+    {
+      refreshInterval: 10000,
+      revalidateOnFocus: true,
+    }
+  )
   const [filter, setFilter] = useState("pending")
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState("")
-  const items = (data?.items ?? []).filter(
-    (item) =>
-      filter === "all" ||
-      (filter === "pending" && ["drafted", "generating"].includes(item.status)) ||
-      (filter === "reviewed" && item.status === "reviewed") ||
-      (filter === "failed" && ["failed", "rejected"].includes(item.status))
+  const [nextArticles, setNextArticles] = useState<Array<{ kind: "post" | "draft"; id: string }>>(
+    []
   )
-  const item = data?.items.find((i) => i.id === selected) ?? items[0]
+  const items = (data?.items ?? [])
+    .filter((entry) => Boolean(entry.origin))
+    .filter(
+      (item) =>
+        filter === "all" ||
+        (filter === "pending" && ["drafted", "generating"].includes(item.status)) ||
+        (filter === "reviewed" && item.status === "reviewed") ||
+        (filter === "failed" && ["failed", "rejected"].includes(item.status))
+    )
+  const item = selected ? data?.items.find((i) => i.id === selected) : items[0]
   // Pin the first selection so a newly generated item cannot replace an editor's open draft.
   useEffect(() => {
     if (selected) return
@@ -128,6 +136,20 @@ export function DeskWorkspace() {
     if (dirty && !window.confirm("저장하지 않은 수정이 있습니다. 다른 기사로 이동할까요?")) return
     setDirty(false)
     setSelected(id)
+    setNextArticles([])
+  }
+  async function nextArticle() {
+    const next = nextArticles[0]
+    if (!next) return
+    const response = await fetch(API + "/articles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    })
+    const result = await response.json()
+    if (!response.ok) throw Error(result.error || "다음 기사를 불러오지 못했습니다.")
+    setSelected(result.id)
+    setNextArticles((queue) => queue.slice(1))
   }
   async function act(body: unknown) {
     setBusy(true)
@@ -156,7 +178,7 @@ export function DeskWorkspace() {
           <p className="text-wc-mute text-xs font-medium tracking-wide">NEWSROOM / EDITOR’S DESK</p>
           <h1 className="text-2xl font-bold tracking-tight">기사 데스킹</h1>
           <p className={muted}>
-            올라온 기사를 직접 고치면 AI가 교정 이유와 다음 작성 기준을 정리합니다.
+            기사를 고치고 저장하면 실제 기사와 교정 사례에 바로 반영됩니다. 이유는 선택입니다.
           </p>
           {data?.isAdmin && (
             <nav aria-label="학습 작업 이동" className="flex gap-4 text-sm">
@@ -188,20 +210,6 @@ export function DeskWorkspace() {
           >
             <RefreshCw className="size-4" />
           </Button>
-          {data?.isAdmin && (
-            <Button
-              size="sm"
-              onClick={() => void act({ action: "generate" })}
-              disabled={busy || data.items.some((i) => i.status === "generating")}
-            >
-              {busy ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Plus className="mr-2 size-4" />
-              )}
-              새 연습 초안 생성
-            </Button>
-          )}
         </div>
       </header>
       {notice && (
@@ -227,102 +235,111 @@ export function DeskWorkspace() {
         <>
           <DeskArticlePicker
             disabled={dirty || busy}
-            onChoose={async (id) => {
+            autoSelect={!selected}
+            refreshKey={item ? `${item.id}:${item.version}` : undefined}
+            onChoose={async (id, next) => {
               window.history.replaceState(null, "", window.location.pathname)
               setFilter("all")
               setSelected(id)
+              setNextArticles(next ?? [])
               await mutate()
             }}
           />
-          <section className={box + " overflow-hidden"} aria-label="자동 작성 현황">
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <span>
-                  대기 <strong className="ml-1 text-lg">{data.counts.pending}</strong>
-                  <span className="text-wc-mute"> / {data.settings.pending_target}</span>
-                </span>
-                <span>
-                  검수 완료 <strong className="ml-1 text-lg">{data.counts.reviewed}</strong>
-                </span>
-                <span>
-                  활성 학습 <strong className="ml-1 text-lg">{data.counts.lessons}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <span className="flex items-center gap-2">
-                  {data.settings.enabled ? (
-                    <Play className="text-wc-burgundy size-3" />
-                  ) : (
-                    <Pause className="size-3" />
-                  )}
-                  {data.settings.enabled ? "매시간 자동 보충" : "자동 작성 멈춤"}
-                </span>
-                {data.isAdmin && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() =>
-                      void act({
-                        action: "settings",
-                        enabled: !data.settings.enabled,
-                        pending_target: data.settings.pending_target,
-                        daily_limit: data.settings.daily_limit,
-                      })
-                    }
-                  >
-                    {data.settings.enabled ? "일시정지" : "다시 시작"}
-                  </Button>
-                )}
-              </div>
-            </div>
-            <details className="border-wc-line border-t px-4 py-3">
-              <summary className="text-wc-mute cursor-pointer text-xs">
-                오늘 {data.counts.today} / {data.settings.daily_limit}건 · 운영 설정과 작성 원칙
-              </summary>
-              <div className="mt-4 grid gap-5 text-sm md:grid-cols-2">
-                <div className="space-y-2 leading-relaxed">
-                  <p>
-                    실제 축구 뉴스 원문에서 소재를 골라 별도 연습 초안을 만듭니다. 이 공간의 초안은
-                    공개 발행되지 않습니다.
-                  </p>
-                  <p>
-                    정확성 → 명료함 → 속도 → 문체 순으로 작성합니다. 원문에 없는 사실을 보태지 않고,
-                    보도·주장·의견을 구분합니다.
-                  </p>
-                  <p className="text-wc-mute">
-                    수정 전후와 이유를 다음 작성 때 참고합니다. 모델 자체를 재훈련하는 방식은
-                    아닙니다. 이름·금액·날짜의 정정은 해당 사례에만 보관하고, 다음 기사에는 확인
-                    원칙만 전달합니다.
-                  </p>
-                  <p className="text-wc-mute text-xs">
-                    최신 기사 80건과 최근 학습 이력을 표시합니다. 기록은 계속 보관됩니다.
-                  </p>
+          <details>
+            <summary className="text-wc-mute cursor-pointer text-xs">
+              별도 연습 초안 자동 작성 설정
+            </summary>
+            <section className={box + " mt-3 overflow-hidden"} aria-label="자동 작성 현황">
+              <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                  <span>
+                    대기 <strong className="ml-1 text-lg">{data.counts.pending}</strong>
+                    <span className="text-wc-mute"> / {data.settings.pending_target}</span>
+                  </span>
+                  <span>
+                    검수 완료 <strong className="ml-1 text-lg">{data.counts.reviewed}</strong>
+                  </span>
+                  <span>
+                    활성 학습 <strong className="ml-1 text-lg">{data.counts.lessons}</strong>
+                  </span>
                 </div>
-                <div>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="flex items-center gap-2">
+                    {data.settings.enabled ? (
+                      <Play className="text-wc-burgundy size-3" />
+                    ) : (
+                      <Pause className="size-3" />
+                    )}
+                    {data.settings.enabled ? "매시간 자동 보충" : "자동 작성 멈춤"}
+                  </span>
                   {data.isAdmin && (
-                    <SettingsForm
-                      key={data.settings.pending_target + ":" + data.settings.daily_limit}
-                      data={data}
-                      busy={busy}
-                      save={act}
-                    />
-                  )}
-                  <p className="text-wc-mute mt-3 text-xs">
-                    마지막 확인 {date(data.settings.last_run_at)} · 다음 보충{" "}
-                    {date(data.settings.next_auto_at)} 이후
-                  </p>
-                  <p className="text-wc-mute mt-1 text-xs">
-                    한국 시간 기준 · 실패한 작성도 생성 한도에 포함됩니다. 이미 시작한 작성은
-                    일시정지 후에도 마무리됩니다.
-                  </p>
-                  {data.settings.last_error && (
-                    <p className="text-wc-mute mt-2 text-sm">{data.settings.last_error}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        void act({
+                          action: "settings",
+                          enabled: !data.settings.enabled,
+                          pending_target: data.settings.pending_target,
+                          daily_limit: data.settings.daily_limit,
+                        })
+                      }
+                    >
+                      {data.settings.enabled ? "일시정지" : "다시 시작"}
+                    </Button>
                   )}
                 </div>
               </div>
-            </details>
-          </section>
+              <details className="border-wc-line border-t px-4 py-3">
+                <summary className="text-wc-mute cursor-pointer text-xs">
+                  오늘 {data.counts.today} / {data.settings.daily_limit}건 · 운영 설정과 작성 원칙
+                </summary>
+                <div className="mt-4 grid gap-5 text-sm md:grid-cols-2">
+                  <div className="space-y-2 leading-relaxed">
+                    <p>
+                      실제 축구 뉴스 원문에서 소재를 골라 별도 연습 초안을 만듭니다. 이 공간의
+                      초안은 공개 발행되지 않습니다.
+                    </p>
+                    <p>
+                      정확성 → 명료함 → 속도 → 문체 순으로 작성합니다. 원문에 없는 사실을 보태지
+                      않고, 보도·주장·의견을 구분합니다.
+                    </p>
+                    <p className="text-wc-mute">
+                      수정 전후와 이유를 다음 작성 때 참고합니다. 모델 자체를 재훈련하는 방식은
+                      아닙니다. 이름·금액·날짜의 정정은 해당 사례에만 보관하고, 다음 기사에는 확인
+                      원칙만 전달합니다.
+                    </p>
+                    <p className="text-wc-mute text-xs">
+                      전체 기사 검색은 기간 제한 없이 제공하며, 아래 작업 목록에는 최근 데스킹
+                      80건을 표시합니다.
+                    </p>
+                  </div>
+                  <div>
+                    {data.isAdmin && (
+                      <SettingsForm
+                        key={data.settings.pending_target + ":" + data.settings.daily_limit}
+                        data={data}
+                        busy={busy}
+                        save={act}
+                      />
+                    )}
+                    <p className="text-wc-mute mt-3 text-xs">
+                      마지막 확인 {date(data.settings.last_run_at)} · 다음 보충{" "}
+                      {date(data.settings.next_auto_at)} 이후
+                    </p>
+                    <p className="text-wc-mute mt-1 text-xs">
+                      한국 시간 기준 · 실패한 작성도 생성 한도에 포함됩니다. 이미 시작한 작성은
+                      일시정지 후에도 마무리됩니다.
+                    </p>
+                    {data.settings.last_error && (
+                      <p className="text-wc-mute mt-2 text-sm">{data.settings.last_error}</p>
+                    )}
+                  </div>
+                </div>
+              </details>
+            </section>
+          </details>
           <div className="grid items-start gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
             <aside className={box + " min-w-0 p-3"} aria-label="기사 대기함">
               <div className="mb-3 flex items-center justify-between gap-2">
@@ -378,6 +395,7 @@ export function DeskWorkspace() {
                 item={item}
                 data={data}
                 dirtyChanged={setDirty}
+                next={nextArticles.length ? nextArticle : undefined}
                 refresh={async () => {
                   await mutate()
                 }}
@@ -389,9 +407,9 @@ export function DeskWorkspace() {
                 }
               >
                 <BookOpen className="text-wc-mute size-8" />
-                <h2 className="text-lg font-semibold">첫 기사를 기다리고 있습니다</h2>
+                <h2 className="text-lg font-semibold">실제 작성된 기사를 선택해 주세요</h2>
                 <p className={muted}>
-                  초안이 준비되면 제목과 본문을 직접 고칠 수 있습니다.
+                  위 전체 기사 목록에서 제목을 누르면 현재 원고가 열립니다.
                   <br />
                   수정 이유를 함께 적으면 의도를 더 정확히 반영합니다.
                 </p>
@@ -465,11 +483,13 @@ function ArticleEditor({
   data,
   dirtyChanged,
   refresh,
+  next,
 }: {
   item: DeskItem
   data: DeskResponse
   dirtyChanged: (v: boolean) => void
   refresh: () => Promise<void>
+  next?: () => Promise<void>
 }) {
   const [draft, setDraft] = useState(item.draft ?? { title: "", article: "" })
   const [base, setBase] = useState(item.draft)
@@ -492,8 +512,8 @@ function ArticleEditor({
     draft.article !== (base?.article ?? "") ||
     Boolean(reason)
   useEffect(() => {
-    dirtyChanged(dirty || hasLessonEdits)
-  }, [dirty, hasLessonEdits, dirtyChanged])
+    dirtyChanged(dirty || hasLessonEdits || busy)
+  }, [dirty, hasLessonEdits, busy, dirtyChanged])
   useEffect(() => {
     if (!dirty && (item.version > version || (!base && item.draft))) {
       setDraft(item.draft ?? { title: "", article: "" })
@@ -503,7 +523,7 @@ function ArticleEditor({
   }, [item.version, item.draft, version, base, dirty])
   const revisions = data.revisions.filter((r) => r.item_id === item.id)
   const lessons = data.lessons.filter((l) => revisions.some((r) => r.id === l.revision_id))
-  async function save(status: "drafted" | "reviewed" | "rejected") {
+  async function save(status: "drafted" | "reviewed" | "rejected", advance = false) {
     setBusy(true)
     setNotice("")
     try {
@@ -514,13 +534,13 @@ function ArticleEditor({
       setVersion(saved.version)
       setReason("")
       dirtyChanged(hasLessonEdits)
-      if (saved.changed) setTab("learning")
       setNotice(
         saved.changed
-          ? "수정을 저장했습니다. AI가 교정 이유를 해석하고 있습니다. 설명을 확인한 뒤 학습에 사용해 주세요."
+          ? `${saved.applied_to_article ? "기사에 수정을 반영했습니다." : "수정을 저장했습니다."} 교정 사례를 다음 작성의 참고 자료에 추가했습니다. AI 해석은 ‘수정·학습 이력’에서 확인할 수 있습니다.`
           : "검수 상태를 저장했습니다."
       )
       await refresh()
+      if (advance && next) await next()
     } catch (e) {
       setNotice(errorText(e))
     } finally {
@@ -532,10 +552,18 @@ function ArticleEditor({
       {item.origin && (
         <div className="border-wc-line bg-wc-paper border-b p-4 text-sm">
           <p className="font-medium">
-            {item.origin.kind === "post" ? "발행된 기사" : "발행 대기 기사"}를 불러온 학습용 수정본
+            {item.origin.status === "deleted"
+              ? "삭제된 기사"
+              : item.origin.kind === "post"
+                ? "발행된 기사"
+                : item.origin.status === "rejected"
+                  ? "반려 기사"
+                  : "저장된 기사"}{" "}
+            직접 수정
           </p>
           <p className="text-wc-mute mt-1 text-xs">
-            이곳에서 저장한 교정은 학습에 사용됩니다. 공개 기사 반영은 뉴스 검수에서 진행합니다.
+            저장하면 실제 제목·본문과 교정 사례가 함께 갱신됩니다. 현재 발행·반려·삭제 상태는
+            유지됩니다.
           </p>
           {item.origin.kind === "post" && (
             <Link
@@ -636,6 +664,7 @@ function ArticleEditor({
                 제목
                 <Textarea
                   aria-label="기사 제목"
+                  disabled={busy}
                   value={draft.title}
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                   maxLength={300}
@@ -652,6 +681,7 @@ function ArticleEditor({
                 </span>
                 <Textarea
                   aria-label="기사 본문"
+                  disabled={busy}
                   value={draft.article}
                   onChange={(e) => setDraft({ ...draft, article: e.target.value })}
                   maxLength={8000}
@@ -662,6 +692,7 @@ function ArticleEditor({
                 수정 이유 <span className="text-wc-mute font-normal">(선택)</span>
                 <Textarea
                   aria-label="수정 이유"
+                  disabled={busy}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   maxLength={2000}
@@ -676,7 +707,11 @@ function ArticleEditor({
               </p>
               <div className="flex flex-wrap justify-between gap-3">
                 <Button variant="ghost" size="sm" onClick={() => setCompare(!compare)}>
-                  {compare ? "최초 초안 접기" : "최초 AI 초안과 비교"}
+                  {compare
+                    ? "비교 원고 접기"
+                    : item.origin
+                      ? "처음 불러온 원고와 비교"
+                      : "최초 AI 초안과 비교"}
                 </Button>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" disabled={busy} onClick={() => void save("rejected")}>
@@ -692,13 +727,24 @@ function ArticleEditor({
                     ) : (
                       <Save className="mr-2 size-4" />
                     )}
-                    수정 저장·AI 해석 보기
+                    수정 저장·기사 반영
                   </Button>
+                  {next && (
+                    <Button
+                      variant="outline"
+                      disabled={busy || hasLessonEdits}
+                      onClick={() => void save("reviewed", true)}
+                    >
+                      저장 후 다음 기사
+                    </Button>
+                  )}
                 </div>
               </div>
               {compare && item.original && (
                 <div className="border-wc-line bg-wc-paper space-y-4 rounded-lg border p-4">
-                  <h3 className="text-sm font-semibold">최초 AI 초안</h3>
+                  <h3 className="text-sm font-semibold">
+                    {item.origin ? "처음 불러온 원고" : "최초 AI 초안"}
+                  </h3>
                   <p className="leading-relaxed font-semibold">{item.original.title}</p>
                   <p className="text-sm leading-7 whitespace-pre-wrap">{item.original.article}</p>
                 </div>
@@ -859,13 +905,13 @@ function ArticleEditor({
         <div id="lessons" className="scroll-mt-6">
           <h2 className="text-base font-semibold">수정한 부분과 AI가 이해한 이유</h2>
           <p className="text-wc-mute mt-2 text-sm leading-relaxed">
-            AI가 이해한 이유와 다음 작성 기준을 확인해 주세요. 해석이 맞으면 학습에 사용하고, 의도와
-            다르면 직접 고칠 수 있습니다.
+            직접 저장한 교정 사례는 다음 작성의 참고 자료에 바로 추가됩니다. AI가 별도로 해석한
+            이유와 상시 기준은 확인 후 사용할 수 있습니다. 의도와 다르면 직접 고쳐 주세요.
           </p>
         </div>
         {!revisions.length && (
           <p className="text-wc-mute py-8 text-sm">
-            아직 저장된 수정이 없습니다. 제목이나 본문을 고친 뒤 ‘수정 저장·AI 해석 보기’를 눌러
+            아직 저장된 수정이 없습니다. 제목이나 본문을 고친 뒤 ‘수정 저장·기사 반영’을 눌러
             주세요.
           </p>
         )}

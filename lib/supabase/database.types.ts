@@ -235,6 +235,87 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_training_audit: {
+        Row: {
+          actor: string
+          after_value: Json | null
+          before_value: Json | null
+          created_at: string
+          id: string
+          kind: string
+          target: string
+        }
+        Insert: {
+          actor: string
+          after_value?: Json | null
+          before_value?: Json | null
+          created_at?: string
+          id?: string
+          kind: string
+          target: string
+        }
+        Update: {
+          actor?: string
+          after_value?: Json | null
+          before_value?: Json | null
+          created_at?: string
+          id?: string
+          kind?: string
+          target?: string
+        }
+        Relationships: []
+      }
+      admin_training_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          lease_until: string | null
+          payload: Json
+          requested_by: string
+          result: Json | null
+          review: Json | null
+          review_version: number
+          reviewed_at: string | null
+          status: string
+          token: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          lease_until?: string | null
+          payload: Json
+          requested_by: string
+          result?: Json | null
+          review?: Json | null
+          review_version?: number
+          reviewed_at?: string | null
+          status?: string
+          token?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          lease_until?: string | null
+          payload?: Json
+          requested_by?: string
+          result?: Json | null
+          review?: Json | null
+          review_version?: number
+          reviewed_at?: string | null
+          status?: string
+          token?: string | null
+        }
+        Relationships: []
+      }
       agent_actions: {
         Row: {
           action_type: string
@@ -443,6 +524,7 @@ export type Database = {
           ai_body: string
           ai_title: string
           angle: string | null
+          applied_training_ids: string[]
           body_excerpt: string | null
           category: string | null
           created_at: string
@@ -458,11 +540,13 @@ export type Database = {
           source_title: string
           status: string
           structure: string
+          training_job_id: string | null
         }
         Insert: {
           ai_body: string
           ai_title: string
           angle?: string | null
+          applied_training_ids?: string[]
           body_excerpt?: string | null
           category?: string | null
           created_at?: string
@@ -478,11 +562,13 @@ export type Database = {
           source_title: string
           status?: string
           structure: string
+          training_job_id?: string | null
         }
         Update: {
           ai_body?: string
           ai_title?: string
           angle?: string | null
+          applied_training_ids?: string[]
           body_excerpt?: string | null
           category?: string | null
           created_at?: string
@@ -498,8 +584,17 @@ export type Database = {
           source_title?: string
           status?: string
           structure?: string
+          training_job_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agg_training_entries_training_job_id_fkey"
+            columns: ["training_job_id"]
+            isOneToOne: true
+            referencedRelation: "admin_training_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       announcement_banners: {
         Row: {
@@ -4095,12 +4190,15 @@ export type Database = {
           category: string
           confidence: number
           disambiguation: string | null
+          family_name_ko: string
+          given_name_ko: string
           hangul_alts: string[] | null
           id: string
           ko_first_seen: string | null
           notes: string | null
           preferred_ko: string
           romanized: string
+          short_name_ko: string
           surfaces: string[]
           updated_at: string
         }
@@ -4108,12 +4206,15 @@ export type Database = {
           category: string
           confidence: number
           disambiguation?: string | null
+          family_name_ko?: string
+          given_name_ko?: string
           hangul_alts?: string[] | null
           id: string
           ko_first_seen?: string | null
           notes?: string | null
           preferred_ko: string
           romanized: string
+          short_name_ko?: string
           surfaces: string[]
           updated_at?: string
         }
@@ -4121,12 +4222,15 @@ export type Database = {
           category?: string
           confidence?: number
           disambiguation?: string | null
+          family_name_ko?: string
+          given_name_ko?: string
           hangul_alts?: string[] | null
           id?: string
           ko_first_seen?: string | null
           notes?: string | null
           preferred_ko?: string
           romanized?: string
+          short_name_ko?: string
           surfaces?: string[]
           updated_at?: string
         }
@@ -4313,12 +4417,15 @@ export type Database = {
       news_desk_items: {
         Row: {
           applied_lesson_ids: string[]
+          applied_rule_ids: string[]
           created_at: string
           draft: Json | null
           error: string | null
           generated_at: string | null
           generation_token: string
           id: string
+          origin: Json | null
+          origin_snapshot: Json | null
           original: Json | null
           quality: Json | null
           research: Json | null
@@ -4330,12 +4437,15 @@ export type Database = {
         }
         Insert: {
           applied_lesson_ids?: string[]
+          applied_rule_ids?: string[]
           created_at?: string
           draft?: Json | null
           error?: string | null
           generated_at?: string | null
           generation_token: string
           id?: string
+          origin?: Json | null
+          origin_snapshot?: Json | null
           original?: Json | null
           quality?: Json | null
           research?: Json | null
@@ -4347,12 +4457,15 @@ export type Database = {
         }
         Update: {
           applied_lesson_ids?: string[]
+          applied_rule_ids?: string[]
           created_at?: string
           draft?: Json | null
           error?: string | null
           generated_at?: string | null
           generation_token?: string
           id?: string
+          origin?: Json | null
+          origin_snapshot?: Json | null
           original?: Json | null
           quality?: Json | null
           research?: Json | null
@@ -4375,6 +4488,8 @@ export type Database = {
           id: string
           instruction: string
           ordinal: number
+          priority: number
+          review_status: string
           revision_id: string
           scope: string
           updated_at: string
@@ -4390,6 +4505,8 @@ export type Database = {
           id?: string
           instruction: string
           ordinal: number
+          priority?: number
+          review_status?: string
           revision_id: string
           scope: string
           updated_at?: string
@@ -4405,6 +4522,8 @@ export type Database = {
           id?: string
           instruction?: string
           ordinal?: number
+          priority?: number
+          review_status?: string
           revision_id?: string
           scope?: string
           updated_at?: string
@@ -4515,6 +4634,39 @@ export type Database = {
           next_auto_at?: string
           pending_target?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      news_editorial_rules: {
+        Row: {
+          active: boolean
+          category: string
+          id: string
+          instruction: string
+          priority: number
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          id?: string
+          instruction: string
+          priority?: number
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          id?: string
+          instruction?: string
+          priority?: number
+          title?: string
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -4714,6 +4866,33 @@ export type Database = {
           thumbnail_url?: string | null
           ticker_tag?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      news_training_settings: {
+        Row: {
+          daily_job_limit: number
+          id: boolean
+          per_run_cap: number
+          publish_enabled: boolean | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          daily_job_limit?: number
+          id?: boolean
+          per_run_cap?: number
+          publish_enabled?: boolean | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          daily_job_limit?: number
+          id?: boolean
+          per_run_cap?: number
+          publish_enabled?: boolean | null
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -8112,6 +8291,17 @@ export type Database = {
         }
         Relationships: []
       }
+      news_desk_catalog: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          kind: string | null
+          source_id: string | null
+          status: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
       news_reservoir_queue_lengths: {
         Row: {
           count: number | null
@@ -8184,6 +8374,31 @@ export type Database = {
       }
       can_post_comment: { Args: { user_id_param: string }; Returns: boolean }
       check_achievements: { Args: { p_user_id: string }; Returns: Json }
+      claim_admin_training: {
+        Args: { p_id: string; p_token: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          lease_until: string | null
+          payload: Json
+          requested_by: string
+          result: Json | null
+          review: Json | null
+          review_version: number
+          reviewed_at: string | null
+          status: string
+          token: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_training_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_lfa_material_recovery: {
         Args: { p_lfa_match_id: string }
         Returns: boolean
@@ -8229,6 +8444,10 @@ export type Database = {
         Args: { days_old?: number }
         Returns: number
       }
+      complete_admin_training: {
+        Args: { p_entry?: Json; p_id: string; p_result: Json; p_token: string }
+        Returns: boolean
+      }
       complete_news_desk_learning: {
         Args: { p_lessons: Json; p_revision: string; p_token: string }
         Returns: number
@@ -8243,6 +8462,10 @@ export type Database = {
         Returns: Json
       }
       draft_pick_stats: { Args: { p_slug: string }; Returns: Json }
+      enqueue_admin_training: {
+        Args: { p_actor: string; p_kind: string; p_payload: Json }
+        Returns: string
+      }
       enqueue_temperature_update: {
         Args: { p_post_id: string }
         Returns: undefined
@@ -8342,6 +8565,16 @@ export type Database = {
           round_id: string
         }[]
       }
+      import_news_desk_article: {
+        Args: {
+          p_actor: string
+          p_draft: Json
+          p_kind: string
+          p_origin_id: string
+          p_sources: Json
+        }
+        Returns: Json
+      }
       increment_battle_participants: {
         Args: { p_battle_id: string }
         Returns: undefined
@@ -8424,6 +8657,25 @@ export type Database = {
         Args: { p_amount: number; p_purpose?: string; p_user_id: string }
         Returns: Json
       }
+      news_desk_content: {
+        Args: { article: string; previous: Json }
+        Returns: Json
+      }
+      news_desk_media: { Args: { node: Json }; Returns: Json }
+      news_desk_origin: {
+        Args: { p_kind: string; p_origin_id: string }
+        Returns: Json
+      }
+      news_desk_plain_text: { Args: { node: Json }; Returns: string }
+      open_news_desk_article: {
+        Args: {
+          p_actor: string
+          p_kind: string
+          p_origin_id: string
+          p_sources: Json
+        }
+        Returns: Json
+      }
       pay_analysis_seller: { Args: { p_purchase_id: string }; Returns: Json }
       process_temperature_queue: {
         Args: { batch_size?: number }
@@ -8504,6 +8756,18 @@ export type Database = {
         }
         Returns: Json
       }
+      save_news_desk_article: {
+        Args: {
+          p_article: string
+          p_editor: string
+          p_expected_version: number
+          p_id: string
+          p_reason: string
+          p_status: string
+          p_title: string
+        }
+        Returns: Json
+      }
       save_news_desk_edit: {
         Args: {
           p_article: string
@@ -8514,6 +8778,37 @@ export type Database = {
           p_status: string
           p_title: string
         }
+        Returns: Json
+      }
+      save_news_editorial_rule: {
+        Args: { p_actor: string; p_rule: Json }
+        Returns: Json
+      }
+      save_news_notation_entry: {
+        Args: {
+          p_actor: string
+          p_delete: boolean
+          p_entry: Json
+          p_expected: string
+        }
+        Returns: Json
+      }
+      save_news_training_setting: {
+        Args: {
+          p_actor: string
+          p_cap: number
+          p_enabled: boolean
+          p_limit: number
+          p_version: number
+        }
+        Returns: Json
+      }
+      save_player_naming_row: {
+        Args: { p_actor: string; p_row: Json }
+        Returns: undefined
+      }
+      save_player_naming_rows: {
+        Args: { p_actor: string; p_rows: Json }
         Returns: Json
       }
       season_event_points: {

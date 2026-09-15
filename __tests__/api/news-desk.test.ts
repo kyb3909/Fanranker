@@ -51,7 +51,9 @@ describe("news desk access and saving", () => {
   it("rejects unauthenticated access before touching private data or paid services", async () => {
     mocks.auth.mockResolvedValue(NextResponse.json({ error: "로그인 필요" }, { status: 401 }))
     const { GET, POST } = await import("@/app/api/admin/news-desk/route")
-    expect((await GET()).status).toBe(401)
+    expect((await GET(new NextRequest("https://gongnori.fan/api/admin/news-desk"))).status).toBe(
+      401
+    )
     expect((await POST(req(body))).status).toBe(401)
     expect(mocks.load).not.toHaveBeenCalled()
     expect(mocks.rpc).not.toHaveBeenCalled()
@@ -67,7 +69,7 @@ describe("news desk access and saving", () => {
     expect(mocks.from).not.toHaveBeenCalled()
     expect((await POST(req(body))).status).toBe(200)
     expect(mocks.rpc).toHaveBeenCalledWith(
-      "save_news_desk_edit",
+      "save_news_desk_article",
       expect.objectContaining({
         p_expected_version: 2,
         p_editor: "editor-id",

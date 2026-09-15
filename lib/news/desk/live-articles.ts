@@ -64,7 +64,7 @@ export async function listLiveArticles(db: SupabaseClient, q: string) {
     .slice(0, 80)
 }
 
-function material(row: SourceRow | null): DeskSource[] {
+export function material(row: SourceRow | null): DeskSource[] {
   if (!row?.urls?.source || !/^https?:\/\//i.test(row.urls.source)) return []
   try {
     new URL(row.urls.source)
