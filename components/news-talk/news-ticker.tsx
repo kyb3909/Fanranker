@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Zap } from "lucide-react"
 import { NewsTalkBoard } from "./news-talk-board"
-import { PostSummaryModal } from "./post-summary-modal"
 
 export type TickerTag = "live" | "breaking" | "result"
 
@@ -179,9 +178,10 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
               className="flex items-center gap-10 whitespace-nowrap will-change-transform"
             >
               {items.map((item, i) =>
-                item.href && !(item.postId && item.detail) ? (
-                  // 떡밥 항목 중 요약이 아직 없는 글 — 우리 글로 간다. 레거시 패널의 자체 댓글
-                  // 스레드(그림자 스레드)는 쓰지 않는다 (2026-09-02).
+                item.href ? (
+                  // 떡밥 항목 — 게시판 티커는 우리 글 페이지로 간다 (2026-09-18 운영자: "메인
+                  // 오늘의 떡밥에서는 모달, 운동장 게시판에서는 제대로"). 요약 모달은 홈 카드 몫.
+                  // 레거시 패널의 자체 댓글 스레드(그림자 스레드)는 쓰지 않는다 (2026-09-02).
                   <Link
                     key={`${item.id}-${i}`}
                     href={item.href}
@@ -210,19 +210,13 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
         </div>
       </div>
 
-      {selectedItem && selectedItem.postId && selectedItem.detail ? (
-        // 떡밥 요약 모달 (2026-09-18) — 댓글은 글의 댓글 그대로
-        <PostSummaryModal
-          item={selectedItem as TickerItem & { postId: string }}
-          onClose={() => setSelectedItem(null)}
-        />
-      ) : selectedItem ? (
+      {selectedItem && (
         <NewsTalkBoard
           item={selectedItem}
           isOpen={!!selectedItem}
           onClose={() => setSelectedItem(null)}
         />
-      ) : null}
+      )}
     </>
   )
 }
