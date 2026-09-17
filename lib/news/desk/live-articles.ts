@@ -1,7 +1,7 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { z } from "zod"
-import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
+import { NEWS_BOT_USER_ID } from "@/lib/constants/bot-users"
 import { ArticleSchema, SourceSchema, type DeskSource } from "./types"
 import { sourceIdentity, type SourceRow } from "./evidence"
 

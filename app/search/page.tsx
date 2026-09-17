@@ -353,8 +353,7 @@ function SearchContent() {
                   className="rounded-xl p-8 text-center"
                   style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
                 >
-                  {/* 골네트 뒤 원경 삽화 (P2) — 빈 결과가 "오류"가 아니라 "허탕"으로 읽히게 */}
-                  <EmptyScene src="/images/empty/empty-no-results.webp" size={280} />
+                  <EmptyScene scene="search" size={192} />
                   <p className="mt-3 mb-2 text-sm" style={{ color: "var(--wc-mute)" }}>
                     검색 결과가 없습니다.
                   </p>

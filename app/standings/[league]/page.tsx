@@ -183,7 +183,7 @@ export default async function StandingsPage({
                 border: "1px solid var(--wc-line)",
               }}
             >
-              <EmptyScene src="/images/empty/empty-preseason.webp" size={300} />
+              <EmptyScene scene="rest" size={208} />
               <p className="mt-4 text-[13px]" style={{ color: "var(--wc-mute)" }}>
                 순위표를 준비 중입니다.
               </p>

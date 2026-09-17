@@ -3,6 +3,7 @@ import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
 import { EmptyScene } from "@/components/empty-scene"
+import { FootballEasterEgg } from "@/components/football-easter-egg"
 import { FixturesTarotHook } from "@/components/tarot/fixtures-tarot-hook"
 import { BridgeRow } from "@/components/bridge-row"
 import {
@@ -268,7 +269,7 @@ export default async function MatchesPage({
               border: "1px solid var(--wc-line)",
             }}
           >
-            <EmptyScene src="/images/empty/empty-no-matches.webp" size={320} />
+            <EmptyScene scene="rest" size={208} />
             <p className="mt-4 text-[13px]" style={{ color: "var(--wc-mute)" }}>
               이 날짜에는 대상 리그 경기가 없습니다.
             </p>
@@ -463,6 +464,9 @@ export default async function MatchesPage({
             action="순위표 →"
           />
           <BridgeRow href="/" title="오늘의 축구 소식 보러 가기" action="담벼락 →" />
+        </div>
+        <div className="relative">
+          <FootballEasterEgg slot="fixtures" className="absolute top-2 right-4 hidden lg:block" />
         </div>
       </main>
     </div>

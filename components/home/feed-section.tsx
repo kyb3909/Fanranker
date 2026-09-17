@@ -2,6 +2,7 @@
 
 import React, { memo } from "react"
 import { PostCard } from "@/components/post-card"
+import { EmptyScene } from "@/components/empty-scene"
 import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { Loader2, Compass } from "lucide-react"
@@ -109,7 +110,7 @@ export const FeedSection = memo(function FeedSection({
           boxShadow: "var(--wc-shadow-1)",
         }}
       >
-        <Compass className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute)" }} />
+        <EmptyScene scene="chat" size={160} />
         <p className="mb-2 text-sm font-bold" style={{ color: "var(--wc-ink)" }}>
           {isSignedIn
             ? "관심 게시판을 팔로우해보세요!"

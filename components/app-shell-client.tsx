@@ -7,6 +7,7 @@ import { isStadiumPlayRoute } from "@/lib/stadium/routes"
 import { useOnboardingGuard } from "@/hooks/use-onboarding-guard"
 import { SiteFooter } from "@/components/site-footer"
 import { StadiumPipProvider } from "@/components/metaverse/stadium-pip"
+import { FootballEasterEgg, FootballEasterEggProvider } from "@/components/football-easter-egg"
 
 const AnnouncementCarousel = dynamic(
   () =>
@@ -46,42 +47,50 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     // /stadium 처럼 자체 dark 배경을 쓰는 페이지는 페이지 내부 div 가 덮어씀.
     // StadiumPipProvider: 스타디움을 전역 상주(미니 플레이어)로 — 라우트 이동에도 연결 유지.
     <StadiumPipProvider>
-      <div className="worldcup-scope min-h-screen">
-        {/* 본문 바로가기 — 키보드 사용자용 (2026-08-25 외부 감사).
+      <FootballEasterEggProvider>
+        <div className="worldcup-scope min-h-screen">
+          {/* 본문 바로가기 — 키보드 사용자용 (2026-08-25 외부 감사).
             타깃(`#main-content` + `scroll-margin-top`)은 이미 준비돼 있었는데 **링크만
             없었다**. 그래서 키보드로는 페이지마다 헤더·GNB·검색을 전부 지나야 본문에
             닿았다(홈 기준 20탭 이상).
             ⚠️ `sr-only` 로 숨기고 포커스 시에만 드러낸다 — 마우스 사용자 화면은 무변화. */}
-        {!hideChrome && (
-          <a
-            href="#content-start"
-            className="bg-primary text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:text-[14px] focus:font-bold focus:no-underline"
-          >
-            본문 바로가기
-          </a>
-        )}
-        {!hideChrome && header}
-        {/* 배너 = 피드 위 오버레이 레이어. 홈에서만 절대 위치로 상단 덮개. */}
-        {/* min-h-screen: 본문(스트리밍/하이드레이션)이 채워지기 전에도 본문 영역을 뷰포트 높이로
+          {!hideChrome && (
+            <a
+              href="#content-start"
+              className="bg-primary text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:text-[14px] focus:font-bold focus:no-underline"
+            >
+              본문 바로가기
+            </a>
+          )}
+          {!hideChrome && header}
+          {/* 배너 = 피드 위 오버레이 레이어. 홈에서만 절대 위치로 상단 덮개. */}
+          {/* min-h-screen: 본문(스트리밍/하이드레이션)이 채워지기 전에도 본문 영역을 뷰포트 높이로
           예약 → footer 가 처음부터 fold 밖. 안 하면 본문이 늦게 자랄 때(특히 홈 피드) footer 가
           밀려 CLS 발생(콜드 로그아웃 포함 ~0.15-0.3, audit:cwv raw 샘플 10/12 스파이크). */}
-        {/* ⚠️ 스킵 링크 타깃은 **셸이 소유한다** (2026-08-25).
+          {/* ⚠️ 스킵 링크 타깃은 **셸이 소유한다** (2026-08-25).
             페이지 48곳이 각자 `id="main-content"` 를 갖고 있는데, 홈·매치센터·일정·
             승부예측 같은 주요 지면엔 **없다**. 셸에 같은 id 를 또 달면 중복 id 가 되고,
             48곳에서 걷어내는 건 이 작업의 범위를 넘는다. 그래서 셸 전용 앵커를 따로 둔다 —
             페이지가 뭘 갖고 있든 모든 지면에서 링크가 도착한다. */}
-        <div id="content-start" tabIndex={-1} className="relative min-h-screen">
-          {showBanner && (
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
-              <div className="pointer-events-auto w-full">
-                <AnnouncementCarousel />
+          <div id="content-start" tabIndex={-1} className="relative min-h-screen">
+            {showBanner && (
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
+                <div className="pointer-events-auto w-full">
+                  <AnnouncementCarousel />
+                </div>
               </div>
-            </div>
+            )}
+            {children}
+          </div>
+          {!hideFooter && <SiteFooter />}
+          {!hideChrome && (
+            <>
+              <FootballEasterEgg slot="corner" className="fixed bottom-24 left-4 z-20" />
+              <FootballEasterEgg slot="corner-right" className="fixed right-4 bottom-40 z-20" />
+            </>
           )}
-          {children}
         </div>
-        {!hideFooter && <SiteFooter />}
-      </div>
+      </FootballEasterEggProvider>
     </StadiumPipProvider>
   )
 }

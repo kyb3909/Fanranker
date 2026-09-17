@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { openDeskArticle } from "./catalog"
 import { loadEditorialRules } from "@/lib/news/training/settings"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
-import { kstDayStart } from "./service"
+import { kstDayStart } from "./time"
 
 const ACTOR = "system:news-desk-auto-queue"
 type ExistingItem = {

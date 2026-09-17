@@ -11,6 +11,9 @@ export function isBotUserId(userId: string | null | undefined): boolean {
   return !!userId && BOT_USER_ID_RE.test(userId)
 }
 
+/** 발행 뉴스 작성자 = 공놀이봇. 봇 글은 종목 무관 전부 이 계정. */
+export const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
+
 /** 불판(라이브 매치 스레드) 봇 — 닉네임 "중계불판" (2026-08-20 운영자 지정) */
 export const MATCH_THREAD_BOT_USER_ID = "user_bot_matchthread"
 

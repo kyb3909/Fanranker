@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({ open: vi.fn(), rules: vi.fn() }))
 vi.mock("server-only", () => ({}))
 vi.mock("@/lib/news/desk/catalog", () => ({ openDeskArticle: mocks.open }))
 vi.mock("@/lib/news/training/settings", () => ({ loadEditorialRules: mocks.rules }))
-vi.mock("@/lib/news/desk/service", () => ({ kstDayStart: () => "2026-09-15T15:00:00.000Z" }))
 import { refillLiveDesk } from "@/lib/news/desk/auto-queue"
 
 const now = Date.parse("2026-09-15T19:00:00Z")

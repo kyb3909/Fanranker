@@ -8,6 +8,7 @@ import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
+import { FootballEasterEgg } from "@/components/football-easter-egg"
 
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -224,6 +225,9 @@ export const ActivitySidebar = memo(function ActivitySidebar({
       <AdPlaceholder variant="sidebar" />
 
       {/* 리그 순위표 일단 숨김 — 월드컵 이벤트 집중 (복원: StandingsWidget + IntersectionObserver 복구) */}
+      <div className="relative hidden lg:block">
+        <FootballEasterEgg slot="sidebar" className="absolute top-2 right-4" />
+      </div>
     </div>
   )
 })

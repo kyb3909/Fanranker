@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server"
  *      (2026-06-20 /↔/sign-up 무한 루프 회귀의 재발 방지선)
  *   4. 신규 유저(PGRST116)·미완료 유저 → /sign-up 리다이렉트
  *   5. 완료 유저 → 통과 + onboarding_done 쿠키 24h 캐싱
- *   6. DB 예외 → /sign-up 리다이렉트 (미완료 쪽으로 fail)
+ *   6. DB 반환 오류·예외·미확인 상태 → /sign-up 리다이렉트 (완료 캐시 금지)
  */
 
 const singleMock = vi.fn()
@@ -95,6 +95,46 @@ describe("onboardingGuard", () => {
     const res = await onboardingGuard(authAs("user_1"), makeReq("/"))
     expect(new URL(res!.headers.get("location")!).pathname).toBe("/sign-up")
   })
+
+  it.each([
+    ["프로필 없음", null],
+    ["완료 필드 없음", {}],
+    ["완료 값 null", { onboarding_completed: null }],
+    ["완료 값이 boolean이 아님", { onboarding_completed: "true" }],
+  ])("미확인 상태(%s)를 완료로 캐싱하지 않는다", async (_label, profile) => {
+    singleMock.mockResolvedValue({ data: profile, error: null })
+    const nextResponse = NextResponse.next()
+    const res = await runOnboardingGuard(authAs("user_1"), makeReq("/"), nextResponse)
+
+    expect(new URL(res!.headers.get("location")!).pathname).toBe("/sign-up")
+    expect(res!.cookies.get("onboarding_done")).toBeUndefined()
+    expect(nextResponse.cookies.get("onboarding_done")).toBeUndefined()
+  })
+
+  it.each([null, { onboarding_completed: true }])(
+    "DB가 오류를 반환하면 완료 캐시를 만들지 않고, 다음 정상 조회로 회복한다 (data=%j)",
+    async (profile) => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+      try {
+        singleMock
+          .mockResolvedValueOnce({ data: profile, error: { code: "57014", message: "timeout" } })
+          .mockResolvedValueOnce({ data: { onboarding_completed: true }, error: null })
+        const nextResponse = NextResponse.next()
+        const failed = await runOnboardingGuard(authAs("user_1"), makeReq("/"), nextResponse)
+
+        expect(new URL(failed!.headers.get("location")!).pathname).toBe("/sign-up")
+        expect(failed!.cookies.get("onboarding_done")).toBeUndefined()
+        expect(nextResponse.cookies.get("onboarding_done")).toBeUndefined()
+
+        const recovered = await onboardingGuard(authAs("user_1"), makeReq("/"))
+        expect(recovered!.headers.get("location")).toBeNull()
+        expect(recovered!.cookies.get("onboarding_done")?.value).toBe("1")
+        expect(singleMock).toHaveBeenCalledTimes(2)
+      } finally {
+        errorSpy.mockRestore()
+      }
+    }
+  )
 
   it("완료 유저는 통과하고 onboarding_done 쿠키가 24시간으로 캐싱된다", async () => {
     singleMock.mockResolvedValue({ data: { onboarding_completed: true }, error: null })

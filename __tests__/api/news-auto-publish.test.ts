@@ -78,6 +78,7 @@ vi.mock("@/lib/news/vs-issue", () => ({
 
 interface DraftRow {
   id: string
+  updated_at: string
   status: string
   urls: { source?: string | null } | null
   draft: { title?: string; content?: unknown; original?: { title?: string } }
@@ -92,6 +93,10 @@ let drafts: DraftRow[] = []
 let botPublishedToday = 0
 let autoPublishedToday = 0
 let recentPostRows: { title: string; source_url: string | null; content?: unknown }[] = []
+let recentPostsError: { message: string } | null = null
+let atomicOutcome: "published" | "already_published" | "duplicate" = "published"
+let beforeStaleUpdate: ((row: DraftRow) => void) | null = null
+let staleWriteError: { message: string } | null = null
 let knownCandidates: { candidate_id: string; state: string; last_reason_code: string | null }[] = []
 const inserted: Record<string, unknown>[] = []
 const reservoirUpdates: Array<{ id: string; patch: Record<string, unknown> }> = []
@@ -100,10 +105,26 @@ const ledgerEvents: { candidate_id: string; to_state: string; reason_code?: stri
 
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
-    rpc: async (
-      _name: string,
-      args: { p_events: { candidate_id: string; to_state: string; reason_code?: string }[] }
-    ) => {
+    rpc: async (name: string, args: Record<string, any>) => {
+      if (name === "publish_news_draft_atomic") {
+        if (atomicOutcome !== "published") {
+          return {
+            data: { outcome: atomicOutcome, post_id: "existing-post", title: "동일 원문 기사" },
+            error: null,
+          }
+        }
+        inserted.push(args.p_post)
+        const postId = `post_${inserted.length}`
+        reservoirUpdates.push({
+          id: args.p_reservoir_id,
+          patch: {
+            status: "published",
+            draft: args.p_draft,
+            publish: { ...args.p_publish, post_id: postId, published_at: new Date().toISOString() },
+          },
+        })
+        return { data: { outcome: "published", post_id: postId }, error: null }
+      }
       ledgerEvents.push(...args.p_events)
       return { data: args.p_events.length, error: null }
     },
@@ -125,7 +146,7 @@ vi.mock("@/lib/supabase/server", () => ({
               : {
                   eq: () => ({
                     is: () => ({
-                      gte: async () => ({ data: recentPostRows, error: null }),
+                      gte: async () => ({ data: recentPostRows, error: recentPostsError }),
                     }),
                   }),
                 },
@@ -157,12 +178,37 @@ vi.mock("@/lib/supabase/server", () => ({
                     }),
                   }),
                 },
-          update: (patch: Record<string, unknown>) => ({
-            eq: async (_col: string, id: string) => {
+          update: (patch: Record<string, unknown>) => {
+            const filters = new Map<string, unknown>()
+            const execute = () => {
+              const id = String(filters.get("id"))
+              if (patch.status === "rejected") {
+                const current = drafts.find((row) => row.id === id)
+                if (current) beforeStaleUpdate?.(current)
+                if (staleWriteError) return { data: null, error: staleWriteError }
+                if (
+                  !current ||
+                  [...filters].some(([key, value]) => current[key as keyof DraftRow] !== value)
+                ) {
+                  return { data: null, error: null }
+                }
+                Object.assign(current, patch)
+              }
               reservoirUpdates.push({ id, patch })
-              return { error: null }
-            },
-          }),
+              return { data: { id }, error: null }
+            }
+            const query = {
+              eq: (key: string, value: unknown) => {
+                filters.set(key, value)
+                return query
+              },
+              select: () => query,
+              maybeSingle: async () => execute(),
+              then: (resolve: (value: ReturnType<typeof execute>) => unknown) =>
+                Promise.resolve(execute()).then(resolve),
+            }
+            return query
+          },
         }
       }
       if (table === "news_alias_dictionary") {
@@ -257,6 +303,7 @@ const solankeDoc = {
 function draft(id: string, content: unknown, ageHours = 0): DraftRow {
   return {
     id,
+    updated_at: new Date().toISOString(),
     status: "drafted",
     urls: null,
     draft: { title: `기사 ${id}`, content },
@@ -278,6 +325,86 @@ async function call() {
 }
 
 describe("GET /api/cron/news-auto-publish", () => {
+  it.each(["published", "edited"])(
+    "does not overwrite a %s draft or emit rejected when the stale-article check races",
+    async (change) => {
+      drafts = [draft("stale-race", visualDoc)]
+      drafts[0].urls = { source: "https://example.com/2020/01/01/story" }
+      beforeStaleUpdate = (current) => {
+        if (change === "published") current.status = "published"
+        else {
+          current.updated_at = new Date(Date.parse(current.updated_at) + 1000).toISOString()
+          current.draft = { ...current.draft, title: "새로 데스킹한 제목" }
+        }
+      }
+      const result = await (await call()).json()
+      expect(result.skipCounts.draft_changed).toBe(1)
+      expect(reservoirUpdates).toHaveLength(0)
+      expect(ledgerEvents.some((event) => event.to_state === "rejected")).toBe(false)
+      expect(drafts[0].status).toBe(change === "published" ? "published" : "drafted")
+      if (change === "edited") expect(drafts[0].draft.title).toBe("새로 데스킹한 제목")
+    }
+  )
+  it("records stale-article rejection only after the conditional write succeeds", async () => {
+    drafts = [draft("stale-success", visualDoc)]
+    drafts[0].urls = { source: "https://example.com/2020/01/01/story" }
+    const result = await (await call()).json()
+    expect(result.skipCounts.stale_article).toBe(1)
+    expect(drafts[0].status).toBe("rejected")
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "rejected",
+      reason_code: "stale_article",
+    })
+  })
+  it("does not record a successful stale-article rejection after a database failure", async () => {
+    drafts = [draft("stale-error", visualDoc)]
+    drafts[0].urls = { source: "https://example.com/2020/01/01/story" }
+    staleWriteError = { message: "write timeout" }
+    const result = await (await call()).json()
+    expect(result.ok).toBe(false)
+    expect(drafts[0].status).toBe("drafted")
+    expect(reservoirUpdates).toHaveLength(0)
+    expect(ledgerEvents.some((event) => event.to_state === "rejected")).toBe(false)
+  })
+  it("keeps a concurrent source duplicate as duplicate instead of overwriting its ledger state with retry_wait", async () => {
+    drafts = [draft("racing-duplicate", visualDoc)]
+    atomicOutcome = "duplicate"
+    const result = await (await call()).json()
+    expect(result).toMatchObject({ ok: true, published: 0 })
+    expect(result.gated).toEqual(["racing-duplicate: URL 중복"])
+    expect(inserted).toHaveLength(0)
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "duplicate",
+      reason_code: "same_source_url_blocked",
+    })
+  })
+  it("does not count an already-committed publication twice and repairs the published ledger state", async () => {
+    drafts = [draft("retry-committed", visualDoc)]
+    atomicOutcome = "already_published"
+    const result = await (await call()).json()
+    expect(result).toMatchObject({
+      ok: true,
+      published: 0,
+      postIds: [],
+      skipCounts: { already_published: 1 },
+    })
+    expect(inserted).toHaveLength(0)
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "published",
+      reason_code: "post_publish_recovered",
+    })
+  })
+  it("does not inspect, publish or reject drafts when the recent-post duplicate lookup fails", async () => {
+    drafts = [draft("lookup-error", visualDoc)]
+    recentPostsError = { message: "database timeout" }
+    const { inspectDraft } = await import("@/lib/news/quality-gate")
+    vi.mocked(inspectDraft).mockClear()
+    const response = await call()
+    expect(response.status).toBe(503)
+    expect(inserted).toHaveLength(0)
+    expect(reservoirUpdates).toHaveLength(0)
+    expect(inspectDraft).not.toHaveBeenCalled()
+  })
   it.each(["new_information", "duplicate", "unavailable"])(
     "compares similar titles using source-backed followup evidence: %s",
     async (verdict) => {
@@ -374,6 +501,10 @@ describe("GET /api/cron/news-auto-publish", () => {
     botPublishedToday = 0
     autoPublishedToday = 0
     recentPostRows = []
+    recentPostsError = null
+    atomicOutcome = "published"
+    beforeStaleUpdate = null
+    staleWriteError = null
     knownCandidates = []
     inserted.length = 0
     reservoirUpdates.length = 0

@@ -1,5 +1,6 @@
 import { after } from "next/server"
 import type { createServiceRoleClient } from "@/lib/supabase/server"
+import { NEWS_BOT_USER_ID } from "@/lib/constants/bot-users"
 import { rehostExternalImage, isSelfHostedImageUrl } from "@/lib/images/rehost"
 import { isContentFreeText } from "@/lib/news/content-quality"
 import {
@@ -41,8 +42,8 @@ import {
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
-/** 발행 뉴스 작성자 = 공놀이봇(user_bot_soccer_kr). 봇 글은 종목 무관 전부 이 계정. */
-export const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
+// Preserve existing publisher imports while read-only callers use the pure constants module.
+export { NEWS_BOT_USER_ID }
 const FOOTBALL_CATEGORY_ID = "22105623-6c99-487d-975f-15073e0990fc"
 const FOOTBALL_SLUG = "football"
 
@@ -64,6 +65,8 @@ function reservoirSport(item: Pick<NewsReservoirItem, "raw">): NewsSport {
 
 export interface NewsReservoirItem {
   id: string
+  /** Read with the draft; the atomic publisher rejects edits made while publication is prepared. */
+  updated_at?: string
   urls: { source?: string | null } | null
   draft: {
     title?: string
@@ -157,6 +160,9 @@ export async function publishNewsDraft(
   /** 검수자 지정 연결의 결과 (자동 연결은 after 에서 처리돼 여기 없음) */
   saga?: { slug: string; title: string } | null
   sagaError?: string
+  /** A previous attempt already committed this draft; do not repeat publication side effects. */
+  alreadyPublished?: boolean
+  duplicate?: boolean
 }> {
   const now = new Date().toISOString()
 
@@ -199,34 +205,22 @@ export async function publishNewsDraft(
   // 자동발행은 자체 게이트가 먼저 거르지만, 여기는 **사람 검수 발행까지 포함한 모든
   // 발행이 지나는 초크포인트**다. 살아있는 봇 글 중 같은 원문이 있으면 발행을 막는다.
   // 원본 글을 지운 뒤라면(재발행 의도) deleted_at 필터에 안 걸려 정상 통과한다.
+  let duplicatePostId: string | null = null
   if (sourceUrl) {
     const canonical = canonicalSourceUrl(sourceUrl)
-    const { data: recentSame } = await supabase
+    const { data: recentSame, error: duplicateReadError } = await supabase
       .from("posts")
       .select("id, title, source_url")
       .eq("user_id", NEWS_BOT_USER_ID)
       .is("deleted_at", null)
       .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
+    if (duplicateReadError) {
+      return { error: "기존 기사 중복 여부를 확인하지 못해 발행을 보류했습니다. 다시 시도하세요." }
+    }
     const dup = (recentSame ?? []).find(
       (p) => p.source_url && canonicalSourceUrl(p.source_url as string) === canonical
     )
-    if (dup) {
-      await recordNewsCandidateEvents(supabase, [
-        {
-          candidate_id: item.id,
-          reservoir_id: item.id,
-          canonical_url: sourceUrl,
-          to_state: "duplicate",
-          actor: opts.auto ? "news-auto-publish" : "news-desk",
-          reason_code: "same_source_url_blocked",
-          details: { existing_post: dup.id },
-          run_id: newsCandidateRunId(opts.auto ? "news-auto-publish" : "news-desk"),
-        },
-      ])
-      return {
-        error: `동일 원문 기사가 이미 발행되어 있습니다: "${String(dup.title).slice(0, 60)}" — 재발행하려면 기존 글을 먼저 내려주세요.`,
-      }
-    }
+    duplicatePostId = dup?.id ?? null
   }
 
   // 종목 → 게시판 확정 (raw.sport 기반, 기본 football)
@@ -286,9 +280,11 @@ export async function publishNewsDraft(
     if (hold) return { error: hold.reasons.join(" / "), editorialHold: hold }
   }
 
-  const { data: post, error: postErr } = await supabase
-    .from("posts")
-    .insert({
+  // The source lock, draft check, post insert and reservoir receipt share one DB transaction.
+  // A lost response can safely retry: the RPC returns the committed post without inserting again.
+  const { data: committed, error: commitError } = await supabase.rpc("publish_news_draft_atomic", {
+    p_reservoir_id: item.id,
+    p_post: {
       user_id: NEWS_BOT_USER_ID,
       category_id: board.categoryId,
       community_slug: board.slug,
@@ -297,12 +293,63 @@ export async function publishNewsDraft(
       ...(image ? { image } : {}),
       ...(sourceUrl ? { source_url: sourceUrl } : {}),
       ...(primaryFlairId ? { flair_id: primaryFlairId } : {}),
-    })
-    .select("id")
-    .single<{ id: string }>()
-  if (postErr || !post) {
-    return { error: postErr?.message ?? "posts insert 실패" }
+    },
+    p_draft: { ...(item.draft ?? {}), title: opts.title, content },
+    p_publish: {
+      ...(opts.auto ? { auto: true } : {}),
+      ...(opts.preEdit ? { pre_edit: opts.preEdit } : {}),
+    },
+    p_source_key: sourceUrl ? canonicalSourceUrl(sourceUrl) : null,
+    p_duplicate_post_id: duplicatePostId,
+    p_expected_updated_at: item.updated_at ?? null,
+  })
+  if (commitError || !committed?.post_id) {
+    return {
+      error:
+        commitError?.code === "40001"
+          ? "초안이 변경되었거나 이미 처리되었습니다. 새로 불러온 뒤 다시 확인하세요."
+          : "기사 발행을 완료하지 못했습니다. 다시 시도하세요.",
+    }
   }
+  if (committed.outcome === "duplicate") {
+    await recordNewsCandidateEvents(supabase, [
+      {
+        candidate_id: item.id,
+        reservoir_id: item.id,
+        canonical_url: sourceUrl ?? undefined,
+        to_state: "duplicate",
+        actor: opts.auto ? "news-auto-publish" : "news-desk",
+        reason_code: "same_source_url_blocked",
+        details: { existing_post: committed.post_id },
+        run_id: newsCandidateRunId(opts.auto ? "news-auto-publish" : "news-desk"),
+      },
+    ])
+    return {
+      error: `동일 원문 기사가 이미 발행되어 있습니다: "${String(committed.title ?? "").slice(0, 60)}" — 재발행하려면 기존 글을 먼저 내려주세요.`,
+      duplicate: true,
+    }
+  }
+  if (committed.outcome === "already_published") {
+    // Repair the candidate state if the previous response was lost after the DB commit.
+    // Discord, learning, saga/poll and flair side effects are not replayed.
+    await recordNewsCandidateEvents(supabase, [
+      {
+        candidate_id: item.id,
+        reservoir_id: item.id,
+        canonical_url: sourceUrl ?? undefined,
+        to_state: "published",
+        actor: opts.auto ? "news-auto-publish" : "news-desk",
+        reason_code: "post_publish_recovered",
+        details: { post_id: committed.post_id, auto: Boolean(opts.auto) },
+        run_id: newsCandidateRunId(opts.auto ? "news-auto-publish" : "news-desk"),
+      },
+    ])
+    return { postId: committed.post_id, alreadyPublished: true }
+  }
+  if (committed.outcome !== "published") {
+    return { error: "기사 발행 결과를 확인하지 못했습니다. 다시 시도하세요." }
+  }
+  const post = { id: committed.post_id as string }
 
   // 다중 말머리 — post_flair_map 에 전체 기록 (대표 포함). 실패해도 발행은 유지.
   if (flairIds.length > 0) {
@@ -314,43 +361,17 @@ export async function publishNewsDraft(
     }
   }
 
-  // 수정 전 원본(pre_edit)은 교정 학습기(learn-from-edits)가 원본↔발행본 diff 에서
-  // 표기 교정을 추출하는 재료 — draft 는 편집본으로 덮어쓰므로 여기 남기지 않으면 사라진다.
-  const { error: reservoirError } = await supabase
-    .from("news_reservoir")
-    .update({
-      status: "published",
-      publish: {
-        post_id: post.id,
-        published_at: now,
-        ...(opts.auto ? { auto: true } : {}),
-        ...(opts.preEdit ? { pre_edit: opts.preEdit } : {}),
-      },
-      draft: { ...(item.draft ?? {}), title: opts.title, content },
-      updated_at: now,
-    })
-    .eq("id", item.id)
-  if (reservoirError) {
-    // 포스트는 이미 만들어졌으므로 여기서 실패 응답을 반환하면 호출부 재시도로 중복 글이
-    // 생긴다. 발행은 유지하되 운영자가 즉시 복구할 수 있도록 치명 로그를 남긴다.
-    console.error(
-      "[news-publish] CRITICAL: 글 발행 후 저수지 상태 기록 실패",
-      { reservoirId: item.id, postId: post.id },
-      reservoirError
-    )
-  }
   await recordNewsCandidateEvents(supabase, [
     {
       candidate_id: item.id,
       reservoir_id: item.id,
       canonical_url: sourceUrl ?? undefined,
-      to_state: reservoirError ? "partially_published" : "published",
+      to_state: "published",
       actor: opts.auto ? "news-auto-publish" : "news-desk",
-      reason_code: reservoirError ? "reservoir_update_failed" : "post_published",
+      reason_code: "post_published",
       details: {
         post_id: post.id,
         auto: Boolean(opts.auto),
-        ...(reservoirError ? { error: reservoirError.message } : {}),
       },
       run_id: newsCandidateRunId(opts.auto ? "news-auto-publish" : "news-desk"),
     },

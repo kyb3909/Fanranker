@@ -8,7 +8,6 @@ vi.mock("@/lib/news/desk/catalog", async () => ({
   listDeskCatalog: mocks.list,
   openDeskArticle: mocks.import,
 }))
-vi.mock("@/lib/news/publish", () => ({ NEWS_BOT_USER_ID: "user_bot_soccer_kr" }))
 const db = { from: vi.fn(), rpc: vi.fn() }
 const id = "11111111-1111-4111-8111-111111111111"
 const req = (data: unknown) =>

@@ -1,0 +1,108 @@
+[
+  {
+    "id": "sky-meditator",
+    "width": 128,
+    "height": 128,
+    "sourceFrames": 24,
+    "encodedFrames": 16,
+    "delay": [
+      100,
+      100,
+      100,
+      200,
+      300,
+      200,
+      100,
+      100,
+      100,
+      100,
+      100,
+      200,
+      300,
+      200,
+      100,
+      100
+    ],
+    "loops": 2,
+    "cycleMs": 2400,
+    "totalMs": 4800,
+    "hasAlpha": true,
+    "gifBytes": 36277
+  },
+  {
+    "id": "white-camera",
+    "width": 128,
+    "height": 128,
+    "sourceFrames": 24,
+    "encodedFrames": 3,
+    "delay": [
+      500,
+      700,
+      1200
+    ],
+    "loops": 2,
+    "cycleMs": 2400,
+    "totalMs": 4800,
+    "hasAlpha": true,
+    "gifBytes": 5805
+  },
+  {
+    "id": "red-jump",
+    "width": 128,
+    "height": 128,
+    "sourceFrames": 24,
+    "encodedFrames": 6,
+    "delay": [
+      300,
+      200,
+      200,
+      200,
+      200,
+      1300
+    ],
+    "loops": 2,
+    "cycleMs": 2400,
+    "totalMs": 4800,
+    "hasAlpha": true,
+    "gifBytes": 8041
+  },
+  {
+    "id": "striped-trophy",
+    "width": 128,
+    "height": 128,
+    "sourceFrames": 24,
+    "encodedFrames": 8,
+    "delay": [
+      300,
+      300,
+      300,
+      300,
+      300,
+      300,
+      300,
+      300
+    ],
+    "loops": 2,
+    "cycleMs": 2400,
+    "totalMs": 4800,
+    "hasAlpha": true,
+    "gifBytes": 13553
+  },
+  {
+    "id": "navy-arms",
+    "width": 128,
+    "height": 128,
+    "sourceFrames": 24,
+    "encodedFrames": 3,
+    "delay": [
+      500,
+      700,
+      1200
+    ],
+    "loops": 2,
+    "cycleMs": 2400,
+    "totalMs": 4800,
+    "hasAlpha": true,
+    "gifBytes": 5589
+  }
+]

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceRoleClient()
   const { data: drafts } = await supabase
     .from("news_reservoir")
-    .select("id, status, urls, draft, entities, tags")
+    .select("id, status, updated_at, urls, draft, raw, entities, tags")
     .in("id", ids)
     .eq("status", "drafted")
 

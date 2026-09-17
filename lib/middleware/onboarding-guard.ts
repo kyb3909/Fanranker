@@ -63,10 +63,10 @@ export async function onboardingGuard(
       .eq("user_id", userId)
       .single()
 
-    const isNewUser = !profile && profileError?.code === "PGRST116"
-    const isOnboardingIncomplete = profile && profile.onboarding_completed === false
+    // Supabase returns query failures as error values; they do not reach catch by themselves.
+    if (profileError && profileError.code !== "PGRST116") throw profileError
 
-    if (isNewUser || isOnboardingIncomplete) {
+    if (profileError || profile?.onboarding_completed !== true) {
       // negative cache 없이 매번 DB 로 판정 → 완료 즉시 루프 없이 통과.
       return NextResponse.redirect(new URL("/sign-up", req.url))
     }

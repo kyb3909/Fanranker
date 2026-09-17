@@ -146,7 +146,7 @@ async function run(request: NextRequest) {
   const freshCutoff = new Date(Date.now() - MAX_AGE_HOURS * 3600 * 1000).toISOString()
   const { data: drafts, error } = await supabase
     .from("news_reservoir")
-    .select("id, status, urls, draft, raw, entities, tags, decision, created_at")
+    .select("id, status, updated_at, urls, draft, raw, entities, tags, decision, created_at")
     .eq("status", "drafted")
     .gte("created_at", freshCutoff)
     .order("created_at", { ascending: false }) // 최신 우선 — 뉴스는 신선한 것부터
@@ -208,12 +208,18 @@ async function run(request: NextRequest) {
   // 소식이 여러 개 올라와 '헨더슨 첼시 합류'가 3번 발행됨 / 2026-08-06: 같은 가디언
   // 원문의 초안 3벌 중 제목을 바꿔 쓴 1벌이 유사도 0.40 으로 제목 게이트를 빠져나가
   // 같은 기사가 2번 발행됨 — 같은 URL 은 제목이 아무리 달라도 같은 기사다)
-  const { data: recentPosts } = await supabase
+  const { data: recentPosts, error: recentPostsError } = await supabase
     .from("posts")
     .select("title, source_url, content")
     .eq("user_id", NEWS_BOT_USER_ID)
     .is("deleted_at", null)
     .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
+  if (recentPostsError) {
+    return NextResponse.json(
+      { error: "기존 기사 중복 여부를 확인하지 못해 자동 발행을 보류했습니다." },
+      { status: 503 }
+    )
+  }
   const recentTitles = (recentPosts ?? []).map((p) => p.title as string)
   const recentUrls = new Set(
     (recentPosts ?? [])
@@ -352,7 +358,7 @@ async function run(request: NextRequest) {
       sourceUrl: row.urls?.source,
     })
     if (articleAge != null && articleAge > MAX_ARTICLE_AGE_HOURS) {
-      const { error: staleErr } = await supabase
+      const { data: rejected, error: staleErr } = await supabase
         .from("news_reservoir")
         .update({
           status: "rejected",
@@ -367,7 +373,20 @@ async function run(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", row.id)
-      if (staleErr) errors.push(`${row.id}: 옛 기사 반려 기록 실패 — ${staleErr.message}`)
+        .eq("status", "drafted")
+        .eq("updated_at", row.updated_at)
+        .select("id")
+        .maybeSingle()
+      if (staleErr) {
+        errors.push(`${row.id}: 옛 기사 반려 기록 실패 — ${staleErr.message}`)
+        continue
+      }
+      if (!rejected) {
+        // A human or another run already changed it. Preserve that actor's state and ledger.
+        skipCounts.draft_changed = (skipCounts.draft_changed ?? 0) + 1
+        skipped.push(`${row.id}: draft_changed`)
+        continue
+      }
       noteSkip(row.id, "stale_article", "rejected")
       continue
     }
@@ -777,6 +796,11 @@ async function run(request: NextRequest) {
       auto: true,
     })
     if (result.error) {
+      if (result.duplicate) {
+        // The atomic publisher already recorded duplicate. Do not overwrite it with retry_wait.
+        gated.push(`${row.id}: URL 중복`)
+        continue
+      }
       if (result.editorialHold) {
         noteSkip(
           row.id,
@@ -798,8 +822,13 @@ async function run(request: NextRequest) {
       })
       continue
     }
-    published++
-    publishedIds.push(result.postId!)
+    if (result.alreadyPublished) {
+      skipCounts.already_published = (skipCounts.already_published ?? 0) + 1
+      skipped.push(`${row.id}: already_published`)
+    } else {
+      published++
+      publishedIds.push(result.postId!)
+    }
     // 같은 run 안의 다음 후보도 방금 발행분과 중복 검사되도록 (제목 + 원문 URL)
     recentTitles.push(title)
     recentPosts?.push({ title, source_url: row.urls?.source ?? null, content: workingContent })

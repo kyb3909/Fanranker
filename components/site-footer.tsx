@@ -1,4 +1,5 @@
 import Link from "@/components/ui/app-link"
+import { FootballEasterEgg } from "@/components/football-easter-egg"
 import {
   BUSINESS_INFO,
   isBusinessInfoConfigured,
@@ -21,12 +22,13 @@ const LINKS = [
 export function SiteFooter() {
   return (
     <footer
-      className="gn-band mt-12 w-full"
+      className="gn-band relative mt-12 w-full"
       style={{
         background:
           "radial-gradient(800px 300px at 50% 130%, rgba(150,30,55,.22), transparent 65%), var(--gn-night)",
       }}
     >
+      <FootballEasterEgg slot="footer" className="absolute top-6 left-6 hidden lg:block" />
       <div className="mx-auto max-w-[1280px] px-4 py-12 text-center sm:px-6">
         <span
           className="inline-block leading-none"

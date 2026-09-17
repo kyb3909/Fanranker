@@ -31,6 +31,9 @@ import { selectNotationHints } from "@/lib/news/notation/select-hints"
 import { DESK_LEARNING_PROMPT } from "./learning-prompt"
 import { loadCorrectionCases } from "./correction-cases"
 import { applyPendingDeskLessons } from "./auto-apply-lessons"
+import { kstDayStart } from "./time"
+
+export { kstDayStart }
 
 const MODEL = "gpt-5.6-terra"
 const messageOf = (error: unknown) =>
@@ -66,10 +69,6 @@ export async function ask(task: string, system: string, data: unknown, maxTokens
   } catch {
     throw Error("AI 응답 형식을 확인하지 못했습니다.")
   }
-}
-export function kstDayStart(now = Date.now()) {
-  const day = new Date(now + 9 * 3600000).toISOString().slice(0, 10)
-  return new Date(day + "T00:00:00+09:00").toISOString()
 }
 export async function loadDesk(
   db: SupabaseClient,

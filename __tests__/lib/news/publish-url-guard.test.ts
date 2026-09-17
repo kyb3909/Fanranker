@@ -31,13 +31,28 @@ vi.mock("@/lib/news/vs-issue", () => ({ createVsPollFromDraft: vi.fn().mockResol
 let recentPostRows: { id: string; title: string; source_url: string | null }[] = []
 const inserted: Record<string, unknown>[] = []
 const ledgerEvents: { candidate_id: string; to_state: string; reason_code?: string }[] = []
+let duplicateReadError: { message: string } | null = null
+let commitError: { code: string; message: string } | null = null
+let alreadyPublished = false
+let publicationCalls = 0
 
 function mockSupabase() {
   return {
-    rpc: async (
-      _name: string,
-      args: { p_events: { candidate_id: string; to_state: string; reason_code?: string }[] }
-    ) => {
+    rpc: async (name: string, args: Record<string, any>) => {
+      if (name === "publish_news_draft_atomic") {
+        publicationCalls++
+        if (commitError) return { data: null, error: commitError }
+        if (alreadyPublished)
+          return { data: { outcome: "already_published", post_id: "existing" }, error: null }
+        const duplicate = recentPostRows.find((post) => post.id === args.p_duplicate_post_id)
+        if (duplicate)
+          return {
+            data: { outcome: "duplicate", post_id: duplicate.id, title: duplicate.title },
+            error: null,
+          }
+        inserted.push(args.p_post)
+        return { data: { outcome: "published", post_id: "post_new" }, error: null }
+      }
       ledgerEvents.push(...args.p_events)
       return { data: args.p_events.length, error: null }
     },
@@ -46,7 +61,9 @@ function mockSupabase() {
         return {
           select: () => ({
             eq: () => ({
-              is: () => ({ gte: async () => ({ data: recentPostRows, error: null }) }),
+              is: () => ({
+                gte: async () => ({ data: recentPostRows, error: duplicateReadError }),
+              }),
             }),
           }),
           insert: (row: Record<string, unknown>) => {
@@ -84,6 +101,11 @@ describe("publishNewsDraft — 원문 URL 최후 방어선", () => {
     recentPostRows = []
     inserted.length = 0
     ledgerEvents.length = 0
+    duplicateReadError = null
+    commitError = null
+    alreadyPublished = false
+    publicationCalls = 0
+    vi.clearAllMocks()
   })
 
   it("살아있는 봇 글과 같은 원문이면 발행을 막고 사유를 돌려준다 (검수 발행 포함)", async () => {
@@ -109,6 +131,7 @@ describe("publishNewsDraft — 원문 URL 최후 방어선", () => {
     )
 
     expect(result.error).toContain("동일 원문")
+    expect(result.duplicate).toBe(true)
     expect(inserted).toHaveLength(0)
     expect(ledgerEvents).toEqual([
       expect.objectContaining({
@@ -152,5 +175,61 @@ describe("publishNewsDraft — 원문 URL 최후 방어선", () => {
 
     expect(result.error).toBeUndefined()
     expect(result.postId).toBe("post_new")
+    expect(publicationCalls).toBe(1)
+  })
+
+  it("중복 조회 장애는 빈 목록으로 취급하지 않고 발행을 보류한다", async () => {
+    const { publishNewsDraft } = await import("@/lib/news/publish")
+    duplicateReadError = { message: "timeout" }
+    const result = await publishNewsDraft(
+      mockSupabase(),
+      {
+        id: "draft-1",
+        urls: { source: "https://example.com/story" },
+        draft: null,
+        entities: null,
+        tags: null,
+      },
+      { title: "새 기사", content: doc }
+    )
+    expect(result.error).toContain("중복 여부")
+    expect(publicationCalls).toBe(0)
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("원자적 발행 장애 시 성공이나 후속 알림을 반환하지 않는다", async () => {
+    const { publishNewsDraft } = await import("@/lib/news/publish")
+    const { notifyNewsPublished } = await import("@/lib/discord/news-notify")
+    commitError = { code: "57014", message: "timeout" }
+    const result = await publishNewsDraft(
+      mockSupabase(),
+      { id: "draft-1", urls: null, draft: null, entities: null, tags: null },
+      { title: "새 기사", content: doc }
+    )
+    expect(result.error).toBeTruthy()
+    expect(result.postId).toBeUndefined()
+    expect(inserted).toHaveLength(0)
+    expect(notifyNewsPublished).not.toHaveBeenCalled()
+    expect(ledgerEvents).toHaveLength(0)
+  })
+
+  it("응답 유실 재시도는 기존 글을 반환하며 알림과 학습을 반복하지 않는다", async () => {
+    const { publishNewsDraft } = await import("@/lib/news/publish")
+    const { notifyNewsPublished } = await import("@/lib/discord/news-notify")
+    const { learnFromDeskEdit } = await import("@/lib/news/learn-corrections")
+    alreadyPublished = true
+    const result = await publishNewsDraft(
+      mockSupabase(),
+      { id: "draft-1", urls: null, draft: null, entities: null, tags: null },
+      { title: "새 기사", content: doc, preEdit: { title: "이전 제목", content: doc } }
+    )
+    expect(result).toMatchObject({ postId: "existing", alreadyPublished: true })
+    expect(inserted).toHaveLength(0)
+    expect(notifyNewsPublished).not.toHaveBeenCalled()
+    expect(learnFromDeskEdit).not.toHaveBeenCalled()
+    expect(ledgerEvents.at(-1)).toMatchObject({
+      to_state: "published",
+      reason_code: "post_publish_recovered",
+    })
   })
 })

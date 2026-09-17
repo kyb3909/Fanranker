@@ -47,7 +47,7 @@ const BodySchema = z.object({
     .optional(),
 })
 
-type DraftReservoirRow = NewsReservoirItem & { status: string }
+type DraftReservoirRow = NewsReservoirItem & { status: string; updated_at: string }
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,12 +69,18 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceRoleClient()
   const now = new Date().toISOString()
 
-  const { data: item } = await supabase
+  const { data: item, error: loadError } = await supabase
     .from("news_reservoir")
     // raw 는 종목 라우팅(reservoirSport)에 필요 — 빼먹으면 농구 기사가 축구로 발행된다
-    .select("id, status, urls, draft, raw, entities, tags")
+    .select("id, status, updated_at, urls, draft, raw, entities, tags")
     .eq("id", id)
     .maybeSingle<DraftReservoirRow>()
+  if (loadError) {
+    return NextResponse.json(
+      { error: "초안을 불러오지 못했습니다. 잠시 후 다시 시도하세요." },
+      { status: 503 }
+    )
+  }
   if (!item) return NextResponse.json({ error: "초안을 찾을 수 없습니다." }, { status: 404 })
   if (item.status !== "drafted") {
     return NextResponse.json(
@@ -101,7 +107,7 @@ export async function POST(req: NextRequest) {
       (rejectContent !== undefined &&
         JSON.stringify(rejectContent) !== JSON.stringify(original.content))
 
-    await supabase
+    const { data: rejected, error: rejectError } = await supabase
       .from("news_reservoir")
       .update({
         status: "rejected",
@@ -118,6 +124,22 @@ export async function POST(req: NextRequest) {
           : {}),
       })
       .eq("id", id)
+      .eq("status", "drafted")
+      .eq("updated_at", item.updated_at)
+      .select("id")
+      .maybeSingle()
+    if (rejectError) {
+      return NextResponse.json(
+        { error: "반려를 저장하지 못했습니다. 잠시 후 다시 시도하세요." },
+        { status: 503 }
+      )
+    }
+    if (!rejected) {
+      return NextResponse.json(
+        { error: "초안이 변경되었거나 이미 처리되었습니다. 새로 불러온 뒤 다시 확인하세요." },
+        { status: 409 }
+      )
+    }
 
     if (rejectEdited) {
       after(async () => {
@@ -144,7 +166,26 @@ export async function POST(req: NextRequest) {
 
   // 수정 저장만 (발행 안 함)
   if (action === "save") {
-    await supabase.from("news_reservoir").update({ draft: nextDraft, updated_at: now }).eq("id", id)
+    const { data: saved, error: saveError } = await supabase
+      .from("news_reservoir")
+      .update({ draft: nextDraft, updated_at: now })
+      .eq("id", id)
+      .eq("status", "drafted")
+      .eq("updated_at", item.updated_at)
+      .select("id")
+      .maybeSingle()
+    if (saveError) {
+      return NextResponse.json(
+        { error: "수정 내용을 저장하지 못했습니다. 잠시 후 다시 시도하세요." },
+        { status: 503 }
+      )
+    }
+    if (!saved) {
+      return NextResponse.json(
+        { error: "초안이 변경되었거나 이미 처리되었습니다. 새로 불러온 뒤 다시 확인하세요." },
+        { status: 409 }
+      )
+    }
     return NextResponse.json({ ok: true, status: "drafted", saved: true })
   }
 

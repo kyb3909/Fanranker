@@ -117,6 +117,7 @@ type LineupResponse =
     }
 
 const WINDOW_BEFORE_MS = 150 * 60 * 1000
+const WINDOW_AFTER_MS = 48 * 3600_000
 // 브라우저 재시도 간격이며 실제 유료 구매는 서버 공용 캐시에서 제한한다.
 const POLL_MS = 60_000
 
@@ -145,15 +146,33 @@ export function MatchLineup({
   defaultOpen = false,
   alwaysOpen = false,
 }: MatchLineupProps) {
-  const [state, setState] = useState({ gameId, initial, data: initial ?? null })
+  const [state, setState] = useState({
+    gameId,
+    initial,
+    data: initial ?? null,
+    requestFailed: false,
+    checkedAt: Date.now(),
+  })
   // router.refresh preserves this component. Consume changed server props immediately,
   // without replacing a confirmed roster with an older pending/projected response.
   if (gameId !== state.gameId) {
-    setState({ gameId, initial, data: initial ?? null })
+    setState({
+      gameId,
+      initial,
+      data: initial ?? null,
+      requestFailed: false,
+      checkedAt: Date.now(),
+    })
   } else if (initial !== state.initial) {
     const confirmed = state.data?.status === "ready" && state.data.projected === false
     const replace = initial?.status === "ready" && (!confirmed || initial.projected === false)
-    setState({ gameId, initial, data: replace ? initial : state.data })
+    setState({
+      ...state,
+      initial,
+      data: replace ? initial : state.data,
+      requestFailed: replace ? false : state.requestFailed,
+      checkedAt: Date.now(),
+    })
   }
   const data = state.data
   const isConfirmed = data?.status === "ready" && data.projected === false
@@ -167,7 +186,7 @@ export function MatchLineup({
     if (!Number.isFinite(kickoff)) return
     const inWindow = () => {
       const now = Date.now()
-      return now >= kickoff - WINDOW_BEFORE_MS && now <= kickoff + 48 * 3600_000
+      return now >= kickoff - WINDOW_BEFORE_MS && now <= kickoff + WINDOW_AFTER_MS
     }
 
     let stopped = false
@@ -177,7 +196,9 @@ export function MatchLineup({
     const load = async () => {
       if (stopped || loading) return
       if (timer) clearTimeout(timer)
-      if (Date.now() > kickoff + 48 * 3600_000) return
+      // Keep the empty-state wording current when an open tab crosses kickoff/the retry window.
+      setState((previous) => ({ ...previous, checkedAt: Date.now() }))
+      if (Date.now() > kickoff + WINDOW_AFTER_MS) return
       if (document.hidden || !inWindow()) {
         timer = setTimeout(load, POLL_MS)
         return
@@ -189,18 +210,19 @@ export function MatchLineup({
         if (!res.ok) throw new Error("lineup-request-failed")
         const j = (await res.json()) as LineupResponse
         if (stopped) return
-        if (j.status === "ready") {
-          confirmed = j.projected === false
-          setState((previous) => ({
-            ...previous,
-            data:
-              previous.data?.status === "ready" && previous.data.projected === false && !confirmed
-                ? previous.data
-                : j,
-          }))
-        }
+        confirmed = j.status === "ready" && j.projected === false
+        setState((previous) => ({
+          ...previous,
+          requestFailed: false,
+          data:
+            j.status !== "ready" ||
+            (previous.data?.status === "ready" && previous.data.projected === false && !confirmed)
+              ? previous.data
+              : j,
+        }))
       } catch {
         // Transient failure must not erase an existing roster or permanently stop retries.
+        if (!stopped) setState((previous) => ({ ...previous, requestFailed: true }))
       } finally {
         loading = false
         if (!stopped && !confirmed) timer = setTimeout(load, POLL_MS)
@@ -221,11 +243,25 @@ export function MatchLineup({
   if (data?.status !== "ready") {
     // 매치 페이지(alwaysOpen)에서는 빈 방을 남기지 않는다 (2026-08-20 폴리시 2-1) —
     // 탭은 사용자가 명시적으로 부른 화면이라 조용한 대기 블록이 최소 예의다.
-    // 스피너·스켈레톤 금지: 기다린다고 오는 것이 아니다. 곁들이 위젯(betting 카드 등)은
-    // 종전대로 조용히 사라진다.
+    // API의 none에는 미제공과 서버 오류가 섞이므로 원인을 단정하지 않는다.
+    // 실제 경기 상태는 props에 없으므로 킥오프 시각만으로 종료를 확정하지 않는다.
+    // 곁들이 위젯(betting 카드 등)은 종전대로 조용히 사라진다.
     if (alwaysOpen) {
       const t = new Date(matchTime)
-      const kickoffLabel = Number.isFinite(t.getTime())
+      const kickoff = t.getTime()
+      const validKickoff = Number.isFinite(kickoff)
+      const expired = validKickoff && state.checkedAt > kickoff + WINDOW_AFTER_MS
+      const failed = state.requestFailed && validKickoff && !expired
+      const message = expired
+        ? "이 경기의 라인업을 제공하지 못하고 있습니다"
+        : failed
+          ? "라인업을 불러오지 못했습니다"
+          : !validKickoff || state.checkedAt >= kickoff
+            ? "이 경기의 라인업을 아직 확인할 수 없습니다"
+            : state.checkedAt >= kickoff - 60 * 60_000
+              ? "아직 확인된 라인업이 없습니다"
+              : "라인업은 보통 킥오프 약 1시간 전에 공개됩니다"
+      const kickoffLabel = validKickoff
         ? t.toLocaleString("ko-KR", {
             month: "long",
             day: "numeric",
@@ -238,11 +274,15 @@ export function MatchLineup({
       return (
         <div
           className="rounded-xl px-4 py-8 text-center"
-          style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
+          style={{ background: "var(--wc-card)", color: "var(--wc-mute)" }}
         >
-          {/* 빈 더그아웃 + 백지 전술판 삽화 (P2) — 대기가 "고장"이 아니라 "발표 전"으로 읽히게 */}
-          <EmptyScene src="/images/empty/empty-lineup-wait.webp" size={260} />
-          <p className="mt-3 text-[13px] font-semibold">라인업은 킥오프 약 1시간 전에 공개됩니다</p>
+          {!failed && <EmptyScene scene="lineup" size={192} />}
+          <p className="mt-3 text-[13px] font-semibold">{message}</p>
+          {failed && (
+            <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
+              잠시 후 자동으로 다시 확인합니다
+            </p>
+          )}
           {kickoffLabel && (
             <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
               킥오프 <span className="gn-num font-bold">{kickoffLabel}</span> KST
