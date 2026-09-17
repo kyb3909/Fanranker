@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (botUserId) {
       const { data: posts, error: postsError } = await supabase
         .from("posts")
-        .select("id, title, source_url, created_at")
+        .select("id, title, source_url, source_name, comment_count, created_at")
         .eq("user_id", botUserId)
         .eq("community_slug", root)
         .is("deleted_at", null)
@@ -55,8 +55,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         apiError("Ticker posts query error", 500, postsError)
         return NextResponse.json({ items: [] })
       }
+      // 세 줄 요약 (2026-09-18) — 있으면 항목이 모달을 연다. 없으면 종전대로 글 페이지로 간다.
+      // 요약 조회 실패는 티커를 죽이지 않는다 — 요약 없는 티커로 내려간다.
+      const ids = (posts ?? []).map((p) => String(p.id))
+      const { data: summaries } = ids.length
+        ? await supabase
+            .from("post_summaries")
+            .select("post_id, lines, kind, source_name")
+            .in("post_id", ids)
+        : { data: [] }
       return NextResponse.json(
-        { items: postsToTickerItems(posts ?? []) },
+        { items: postsToTickerItems(posts ?? [], 20, summaries ?? []) },
         { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" } }
       )
     }

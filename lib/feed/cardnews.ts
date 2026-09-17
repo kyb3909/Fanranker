@@ -28,6 +28,13 @@ export interface CardNewsItem {
   media: { provider: "youtube" | "instagram" | "x"; url: string; videoId?: string } | null
   /** 연결된 이적설 사가 slug — 있으면 카드 클릭이 /saga/[slug] 로 간다 (2026-08-03 오너) */
   sagaSlug?: string | null
+  /** 원문 URL — 요약 모달의 "원문" 링크용 */
+  sourceUrl?: string | null
+  /**
+   * 세 줄 요약 (2026-09-18 운영자: "오늘의 떡밥이 3줄로 … 모달로"). 있으면 카드 클릭이
+   * 글 페이지 대신 요약 모달을 연다 — 댓글은 그 글의 댓글 그대로. 없으면 종전대로.
+   */
+  summary?: { lines: string[]; kind: "news" | "interview" } | null
   /** VS 쟁점 — 질문 + 양측 + 퍼센트. 카드에서 바로 투표 가능 (폴 없으면 undefined) */
   vs?: {
     pollId: string
@@ -104,6 +111,7 @@ export async function fetchCardNews(
   // confidence >= 0.7 이고 켜진 폴만 (본문 하단은 켜진 것 전부 — fetchVsPoll 몫)
   await attachVsToCards(supabase, cards)
   await attachSagaLinks(supabase, cards)
+  await attachSummaries(supabase, cards)
 
   return {
     // 사진 없는 글은 떡밥에서 배제한다 (2026-07-28 규칙 유지).
@@ -205,6 +213,7 @@ async function buildCards(
       voteCount: p.vote_count ?? 0,
       commentCount: p.comment_count ?? 0,
       createdAt: p.created_at,
+      sourceUrl: p.source_url ?? null,
       topComments: (topOf.get(p.id) ?? []).map((c) => ({
         nickname: nickOf.get(c.user_id) ?? "익명",
         content: toPreview(c.content),
@@ -335,6 +344,7 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
   const heroes = cards.filter((c) => !!c.image).slice(0, limit)
   await attachVsToCards(supabase, heroes)
   await attachSagaLinks(supabase, heroes)
+  await attachSummaries(supabase, heroes)
   return heroes
 }
 
@@ -343,6 +353,33 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
  * 킬 스위치: env SAGA_CARD_ROUTING=off 면 부착하지 않음 → 카드는 전부 기존
  * /post 로 간다 (사가 라우팅의 소비처가 여기 한 곳뿐이라 이 스위치로 전체가 꺼짐).
  */
+/**
+ * 세 줄 요약 부착 (2026-09-18). 요약 조회 실패는 피드를 죽이지 않는다 — 요약 없는 카드로
+ * 내려가고, 카드 클릭은 종전대로 글 페이지로 간다.
+ */
+async function attachSummaries(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  cards: CardNewsItem[]
+): Promise<void> {
+  if (cards.length === 0) return
+  const { data } = await supabase
+    .from("post_summaries")
+    .select("post_id, lines, kind")
+    .in(
+      "post_id",
+      cards.map((c) => c.id)
+    )
+  if (!data?.length) return
+  const byPost = new Map(data.map((r) => [String(r.post_id), r]))
+  for (const card of cards) {
+    const s = byPost.get(card.id)
+    card.summary =
+      s && Array.isArray(s.lines) && s.lines.length >= 2
+        ? { lines: s.lines.map(String), kind: s.kind === "interview" ? "interview" : "news" }
+        : null
+  }
+}
+
 async function attachSagaLinks(
   supabase: ReturnType<typeof createServiceRoleClient>,
   cards: CardNewsItem[]

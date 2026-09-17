@@ -5316,6 +5316,47 @@ export type Database = {
           },
         ]
       }
+      post_summaries: {
+        Row: {
+          content_hash: string
+          created_at: string
+          kind: string
+          lines: string[]
+          model: string
+          post_id: string
+          source_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          kind: string
+          lines: string[]
+          model: string
+          post_id: string
+          source_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          kind?: string
+          lines?: string[]
+          model?: string
+          post_id?: string
+          source_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_summaries_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_flairs: {
         Row: {
           color: string | null
@@ -8680,6 +8721,18 @@ export type Database = {
       process_temperature_queue: {
         Args: { batch_size?: number }
         Returns: number
+      }
+      publish_news_draft_atomic: {
+        Args: {
+          p_draft: Json
+          p_duplicate_post_id?: string
+          p_expected_updated_at?: string
+          p_post: Json
+          p_publish: Json
+          p_reservoir_id: string
+          p_source_key: string
+        }
+        Returns: Json
       }
       purchase_noun_title: {
         Args: { p_noun_title_id: string; p_user_id: string }

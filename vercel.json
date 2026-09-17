@@ -59,6 +59,10 @@
       "schedule": "7,37 * * * *"
     },
     {
+      "path": "/api/cron/ticker-summaries",
+      "schedule": "17,47 * * * *"
+    },
+    {
       "path": "/api/cron/agg-auto-approve",
       "schedule": "25,55 * * * *"
     },

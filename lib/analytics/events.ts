@@ -79,7 +79,7 @@ type AnalyticsEvent =
       params: {
         post_id: string
         destination: "post" | "saga"
-        via?: "chip_filter" | "article_related" | "article_next" | "ft_row"
+        via?: "chip_filter" | "article_related" | "article_next" | "ft_row" | "summary_modal"
         comment_count_bucket?: "0" | "1-2" | "3-9" | "10+"
       }
     }

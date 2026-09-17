@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Zap } from "lucide-react"
 import { NewsTalkBoard } from "./news-talk-board"
+import { PostSummaryModal } from "./post-summary-modal"
 
 export type TickerTag = "live" | "breaking" | "result"
 
 export interface TickerItemDetail {
   summary: string[]
+  /** 떡밥 요약 종류 (2026-09-18). 레거시 티커 항목엔 없다 */
+  kind?: "news" | "interview"
   source: string
   sourceUrl: string
   redditUrl?: string
@@ -26,8 +29,10 @@ export interface TickerItem {
   id: string
   tag: TickerTag
   text: string
-  /** 우리 글 페이지 (떡밥 공급원). 있으면 패널을 열지 않고 여기로 이동한다 (2026-09-02) */
+  /** 우리 글 페이지 (떡밥 공급원). 요약이 없으면 여기로 이동, 있으면 모달의 "글 보기" 링크 */
   href?: string
+  /** 떡밥 글 id — 모달 댓글이 이 글의 댓글 그대로다 (2026-09-18) */
+  postId?: string
   detail?: TickerItemDetail
 }
 
@@ -174,9 +179,9 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
               className="flex items-center gap-10 whitespace-nowrap will-change-transform"
             >
               {items.map((item, i) =>
-                item.href ? (
-                  // 떡밥 항목 — 우리 글로 간다. 패널의 자체 댓글 스레드를 열면 글의 진짜
-                  // 토론과 갈라진 그림자 스레드가 생기므로 패널을 쓰지 않는다 (2026-09-02).
+                item.href && !(item.postId && item.detail) ? (
+                  // 떡밥 항목 중 요약이 아직 없는 글 — 우리 글로 간다. 레거시 패널의 자체 댓글
+                  // 스레드(그림자 스레드)는 쓰지 않는다 (2026-09-02).
                   <Link
                     key={`${item.id}-${i}`}
                     href={item.href}
@@ -205,13 +210,19 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
         </div>
       </div>
 
-      {selectedItem && (
+      {selectedItem && selectedItem.postId && selectedItem.detail ? (
+        // 떡밥 요약 모달 (2026-09-18) — 댓글은 글의 댓글 그대로
+        <PostSummaryModal
+          item={selectedItem as TickerItem & { postId: string }}
+          onClose={() => setSelectedItem(null)}
+        />
+      ) : selectedItem ? (
         <NewsTalkBoard
           item={selectedItem}
           isOpen={!!selectedItem}
           onClose={() => setSelectedItem(null)}
         />
-      )}
+      ) : null}
     </>
   )
 }

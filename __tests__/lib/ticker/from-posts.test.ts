@@ -21,8 +21,38 @@ describe("postsToTickerItems", () => {
   it("봇 글 → 우리 글 페이지로 가는 티커 항목", () => {
     const items = postsToTickerItems([row("a1", "[로마노] 아스날, 미드필더 영입 임박")])
     expect(items).toEqual([
-      { id: "post-a1", tag: "breaking", text: "아스날, 미드필더 영입 임박", href: "/post/a1" },
+      {
+        id: "post-a1",
+        tag: "breaking",
+        text: "아스날, 미드필더 영입 임박",
+        href: "/post/a1",
+        postId: "a1",
+      },
     ])
+  })
+
+  it("세 줄 요약이 있으면 detail 을 붙인다 — 출처는 요약 → 글 → 제목 프리픽스 순 (2026-09-18)", () => {
+    const rows = [
+      { ...row("s1", "[로마노] 요약 있는 글"), comment_count: 3 },
+      row("s2", "[BBC] 요약 없는 글"),
+      row("s3", "[골닷컴] 줄이 하나뿐"),
+    ]
+    const items = postsToTickerItems(rows, 20, [
+      { post_id: "s1", lines: ["첫째.", "둘째.", "셋째."], kind: "interview", source_name: null },
+      { post_id: "s3", lines: ["하나뿐."], kind: "news", source_name: "골닷컴" },
+    ])
+    expect(items[0].detail).toEqual({
+      summary: ["첫째.", "둘째.", "셋째."],
+      kind: "interview",
+      source: "로마노",
+      sourceUrl: "https://theathletic.com/x",
+      participants: 3,
+      postedAt: "2026-09-02T10:00:00Z",
+    })
+    expect(items[1].detail).toBeUndefined()
+    // 두 줄 미만은 요약으로 안 친다 — 글 페이지로 간다
+    expect(items[2].detail).toBeUndefined()
+    expect(items[2].href).toBe("/post/s3")
   })
 
   it("한국 매체 출처는 뺀다 — 떡밥과 같은 규칙", () => {

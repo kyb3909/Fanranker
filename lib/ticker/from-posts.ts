@@ -39,7 +39,16 @@ export interface TickerPostRow {
   id: string
   title: string
   source_url: string | null
+  source_name?: string | null
+  comment_count?: number | null
   created_at: string
+}
+
+export interface TickerPostSummaryRow {
+  post_id: string
+  lines: string[]
+  kind: "news" | "interview"
+  source_name: string | null
 }
 
 export interface TickerItemFromPost {
@@ -47,8 +56,19 @@ export interface TickerItemFromPost {
   /** 스트립에는 안 그려진다(타입 계약용). 떡밥은 전부 속보 취급 */
   tag: "breaking"
   text: string
-  /** 우리 글 페이지 — 있으면 패널 대신 여기로 이동한다 */
+  /** 우리 글 페이지 — 요약이 없으면 여기로 이동, 있으면 모달의 "글 보기" 링크 */
   href: string
+  /** 모달 댓글이 붙는 글. 댓글은 posts 의 comments 그대로다 (그림자 스레드 금지) */
+  postId: string
+  /** 세 줄 요약 (2026-09-18). 있으면 스트립 클릭이 모달을 연다 */
+  detail?: {
+    summary: string[]
+    kind: "news" | "interview"
+    source: string
+    sourceUrl: string
+    participants: number
+    postedAt: string
+  }
 }
 
 /**
@@ -56,15 +76,38 @@ export interface TickerItemFromPost {
  * (그건 DB 쿼리 몫). 여기서는 한국 매체 제외와 제목 정리만 한다.
  *
  * `[출처]` 프리픽스는 뗀다 — 한 줄 스트립에 "[로마노]" 가 앞에 붙으면 제목이 잘린다.
- * 출처는 글 페이지에 그대로 있다.
+ * 출처는 모달·글 페이지에 그대로 있다.
  */
-export function postsToTickerItems(rows: TickerPostRow[], limit = 20): TickerItemFromPost[] {
+export function postsToTickerItems(
+  rows: TickerPostRow[],
+  limit = 20,
+  summaries: TickerPostSummaryRow[] = []
+): TickerItemFromPost[] {
+  const byPost = new Map(summaries.map((s) => [String(s.post_id), s]))
   const out: TickerItemFromPost[] = []
   for (const r of rows) {
     if (isKoreanSource(r.source_url)) continue
-    const { title } = stripSourcePrefix(r.title ?? "")
+    const { source, title } = stripSourcePrefix(r.title ?? "")
     if (!title) continue
-    out.push({ id: `post-${r.id}`, tag: "breaking", text: title, href: `/post/${r.id}` })
+    const item: TickerItemFromPost = {
+      id: `post-${r.id}`,
+      tag: "breaking",
+      text: title,
+      href: `/post/${r.id}`,
+      postId: String(r.id),
+    }
+    const s = byPost.get(String(r.id))
+    if (s && Array.isArray(s.lines) && s.lines.length >= 2) {
+      item.detail = {
+        summary: s.lines,
+        kind: s.kind === "interview" ? "interview" : "news",
+        source: s.source_name || r.source_name || source || "원문",
+        sourceUrl: r.source_url ?? "",
+        participants: r.comment_count ?? 0,
+        postedAt: r.created_at,
+      }
+    }
+    out.push(item)
     if (out.length >= limit) break
   }
   return out

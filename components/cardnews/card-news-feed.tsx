@@ -10,6 +10,7 @@ import { QuickComposer } from "@/components/home/quick-composer"
 import { BridgeRow } from "@/components/bridge-row"
 import { suggestTarot } from "@/lib/tarot/suggest"
 import { TarotModal } from "@/components/tarot/tarot-modal"
+import { PostSummaryModal } from "@/components/news-talk/post-summary-modal"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
 import {
   MessageCircle,
@@ -350,7 +351,7 @@ function openPost(
   id: string,
   destination: "post" | "saga" = "post",
   extra?: {
-    via?: "chip_filter" | "article_related" | "article_next" | "ft_row"
+    via?: "chip_filter" | "article_related" | "article_next" | "ft_row" | "summary_modal"
     bucket?: "0" | "1-2" | "3-9" | "10+"
   }
 ) {
@@ -614,11 +615,14 @@ function CompactCard({
   card,
   allowQuestion,
   via,
+  onOpenSummary,
 }: {
   card: CardNewsItem
   allowQuestion: boolean
   /** 어느 장치를 거친 노출인가 — 클릭 계측의 via 로 실린다 (칩 필터 뷰 등) */
   via?: "chip_filter"
+  /** 세 줄 요약 모달 열기 (2026-09-18). 요약이 있고 사가 라우팅이 아닐 때만 쓴다 */
+  onOpenSummary?: (card: CardNewsItem) => void
 }) {
   const faceFocus = useFaceFocus(card.image)
 
@@ -641,12 +645,19 @@ function CompactCard({
           }
           className="absolute inset-0 z-[1]"
           aria-label={card.title}
-          onClick={() =>
+          onClick={(e) => {
+            // 요약이 있으면 페이지를 떠나지 않고 모달 (2026-09-18 운영자). 사가 연결 글은 위키로.
+            // 계측은 갈라 둔다 — 모달은 글 열람이 아니다 (via=summary_modal).
+            const toModal = !!onOpenSummary && !!card.summary && !card.sagaSlug
             openPost(card.id, card.sagaSlug ? "saga" : "post", {
-              via,
+              via: toModal ? "summary_modal" : via,
               bucket: commentBucket(card.commentCount),
             })
-          }
+            if (toModal) {
+              e.preventDefault()
+              onOpenSummary!(card)
+            }
+          }}
         />
 
         <div className="min-w-0 flex-1">
@@ -779,6 +790,8 @@ export function CardNewsFeed({
   const [cards, setCards] = useState(initialCards)
   const [cursor, setCursor] = useState(initialCursor)
   const [loading, setLoading] = useState(false)
+  /** 세 줄 요약 모달에 올린 카드 (2026-09-18) — 댓글은 그 글의 댓글 그대로 */
+  const [summaryCard, setSummaryCard] = useState<CardNewsItem | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   /** 이미 실은 카드 id — 빈 페이지 건너뛰기 루프에서 동기적으로 중복을 걸러야 한다.
    *  excludeIds(히어로 글)를 시드해두면 무한스크롤 뒷페이지에서도 자연히 걸러진다. */
@@ -936,7 +949,13 @@ export function CardNewsFeed({
       {chip !== "all" && (
         <>
           {filtered.map((card) => (
-            <CompactCard key={card.id} card={card} allowQuestion={false} via="chip_filter" />
+            <CompactCard
+              key={card.id}
+              card={card}
+              allowQuestion={false}
+              via="chip_filter"
+              onOpenSummary={setSummaryCard}
+            />
           ))}
           <div
             className="flex items-baseline justify-between rounded-xl px-4 py-3"
@@ -979,7 +998,11 @@ export function CardNewsFeed({
                 }
               />
             ))}
-            <CompactCard card={card} allowQuestion={questionCards.has(i)} />
+            <CompactCard
+              card={card}
+              allowQuestion={questionCards.has(i)}
+              onOpenSummary={setSummaryCard}
+            />
             {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
               폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정
               (2026-07-30 워룸). 3번째 카드 뒤 폴 1개, 9번째 뒤 디스코드 1개 — 도배 금지. */}
@@ -1031,6 +1054,26 @@ export function CardNewsFeed({
           count={cards.length}
           wallPosts={endWallPosts ?? []}
           tomorrowTitle={tomorrowTitle ?? null}
+        />
+      )}
+      {summaryCard?.summary && (
+        <PostSummaryModal
+          item={{
+            id: `post-${summaryCard.id}`,
+            tag: "breaking",
+            text: summaryCard.title,
+            href: `/post/${summaryCard.id}?utm_source=cardnews`,
+            postId: summaryCard.id,
+            detail: {
+              summary: summaryCard.summary.lines,
+              kind: summaryCard.summary.kind,
+              source: summaryCard.source ?? "원문",
+              sourceUrl: summaryCard.sourceUrl ?? "",
+              participants: summaryCard.commentCount,
+              postedAt: summaryCard.createdAt,
+            },
+          }}
+          onClose={() => setSummaryCard(null)}
         />
       )}
     </div>

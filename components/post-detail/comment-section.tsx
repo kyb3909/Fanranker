@@ -3,6 +3,7 @@
 import { useUser, useClerk } from "@clerk/nextjs"
 import { ArrowUpDown } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { EmptyScene } from "@/components/empty-scene"
 import { toast } from "@/hooks/use-toast"
 import { CommentItem } from "./comment-item"
 import { CommentForm } from "./comment-form"
@@ -21,6 +22,11 @@ interface CommentSectionProps {
   initialData?: CommentsInitialData
   /** 라이브 폴링 간격 ms (불판 전용, A2) — use-comments 로 그대로 전달 */
   pollMs?: number
+  /**
+   * "embedded" = 카드 프레임(면·보더·그림자·패딩) 없이 내용만. 이미 프레임이 있는 표면(떡밥 요약
+   * 모달, 2026-09-18) 안에 넣을 때 — 카드 안 카드가 되지 않게. 기본은 종전 "card".
+   */
+  variant?: "card" | "embedded"
 }
 
 export function CommentSection({
@@ -29,6 +35,7 @@ export function CommentSection({
   initialData,
   vsFaction,
   pollMs,
+  variant = "card",
 }: CommentSectionProps) {
   const { user, isLoaded } = useUser()
   const clerk = useClerk()
@@ -55,22 +62,31 @@ export function CommentSection({
 
   return (
     <div
-      className="rounded-xl"
-      style={{
-        background: "var(--wc-card)",
-        border: "1px solid var(--wc-line)",
-        boxShadow: "var(--wc-shadow-1)",
-        padding: "18px 24px 22px",
-      }}
+      className={variant === "card" ? "rounded-xl" : undefined}
+      style={
+        variant === "card"
+          ? {
+              background: "var(--wc-card)",
+              border: "1px solid var(--wc-line)",
+              boxShadow: "var(--wc-shadow-1)",
+              padding: "18px 24px 22px",
+            }
+          : undefined
+      }
     >
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
-            댓글{" "}
-            <span className="tnum" style={{ color: "var(--wc-burgundy)" }}>
-              {countAllComments(comments)}
-            </span>
-          </h2>
+        {/* embedded 표면은 바깥이 제목("이 글의 댓글 N")을 이미 달았다 — 여기선 정렬 버튼만 */}
+        <div
+          className={variant === "card" ? "flex items-center justify-between" : "flex justify-end"}
+        >
+          {variant === "card" && (
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
+              댓글{" "}
+              <span className="tnum" style={{ color: "var(--wc-burgundy)" }}>
+                {countAllComments(comments)}
+              </span>
+            </h2>
+          )}
           {comments.length > 1 && (
             <button
               onClick={() => setCommentSort((s) => (s === "newest" ? "popular" : "newest"))}
@@ -120,9 +136,13 @@ export function CommentSection({
               </button>
             </div>
           ) : comments.length === 0 ? (
-            <div className="py-8 text-center">
+            <div className="py-4 text-center">
+              <EmptyScene scene="chat" size={96} />
               <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
                 아직 댓글이 없습니다.
+              </p>
+              <p className="mt-1 text-xs" style={{ color: "var(--wc-mute-2)" }}>
+                첫 이야기를 남겨보세요.
               </p>
             </div>
           ) : (
