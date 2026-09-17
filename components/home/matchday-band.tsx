@@ -9,6 +9,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
+import { PostSummaryModal } from "@/components/news-talk/post-summary-modal"
 import type { GroupedMatch } from "@/types/betting"
 // type-only — games-payload 는 server-only 모듈이지만 타입 import 는 컴파일 시 소거된다
 import type { LiveMatchRow } from "@/lib/betman/games-payload"
@@ -312,6 +313,11 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const touchX = useRef<number | null>(null)
+  // 요약이 있는 기사면 페이지를 떠나지 않고 모달 — 떡밥 카드와 같은 규칙 (2026-09-18 운영자:
+  // "메인에서는 모달"). 사가 연결 글·이벤트 슬라이드는 종전대로 링크.
+  const [summaryCard, setSummaryCard] = useState<CardNewsItem | null>(null)
+  const summaryOf = (c: CardNewsItem) =>
+    c.id !== EVENT_SLIDE_ID && c.summary && !c.sagaSlug ? c : null
 
   const go = useCallback(
     (n: number) => setIdx((n + slides.length) % slides.length),
@@ -391,6 +397,12 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               <Link
                 href={c.id === EVENT_SLIDE_ID ? "/season/join?ref=hero-slide" : `/post/${c.id}`}
                 className="hover:underline"
+                onClick={(e) => {
+                  const target = summaryOf(c)
+                  if (!target) return
+                  e.preventDefault()
+                  setSummaryCard(target)
+                }}
               >
                 {c.title}
               </Link>
@@ -407,7 +419,13 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
             )}
             {/* VS 쟁점 — 결과만 보던 스트립을 **그 자리에서 투표**로 (2026-08-12 운영자).
                 다크 밴드(선언 영역) 안이라 다크 허용. 기사 진입은 컴포넌트 안 별도 링크. */}
-            {c.vs && <HeroVsVote vs={c.vs} postId={c.id} />}
+            {c.vs && (
+              <HeroVsVote
+                vs={c.vs}
+                postId={c.id}
+                onOpenStory={summaryOf(c) ? () => setSummaryCard(c) : undefined}
+              />
+            )}
             {/* 0 카운트는 노출하지 않는다 (피드 count>0 규칙과 통일, 2026-07-30 워룸
                 — "댓글 0 · 추천 0" 전시는 유령 사이트 각인만 남긴다). CTA 링크는
                 2026-08-04 운영자 지시로 제거 — 제목 링크가 내비게이션을 담당한다. */}
@@ -466,6 +484,27 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
       <span className="sr-only" aria-live="polite">
         {cur ? `${idx + 1} / ${slides.length} — ${cur.title}` : ""}
       </span>
+
+      {summaryCard?.summary && (
+        <PostSummaryModal
+          item={{
+            id: `post-${summaryCard.id}`,
+            tag: "breaking",
+            text: summaryCard.title,
+            href: `/post/${summaryCard.id}?utm_source=hero`,
+            postId: summaryCard.id,
+            detail: {
+              summary: summaryCard.summary.lines,
+              kind: summaryCard.summary.kind,
+              source: summaryCard.source ?? "원문",
+              sourceUrl: summaryCard.sourceUrl ?? "",
+              participants: summaryCard.commentCount,
+              postedAt: summaryCard.createdAt,
+            },
+          }}
+          onClose={() => setSummaryCard(null)}
+        />
+      )}
     </div>
   )
 }

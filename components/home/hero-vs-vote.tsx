@@ -31,9 +31,12 @@ const SHOW_PCT_MIN_VOTES = 10
 export function HeroVsVote({
   vs,
   postId,
+  onOpenStory,
 }: {
   vs: NonNullable<CardNewsItem["vs"]>
   postId: string
+  /** 있으면 "이야기 보러 가기"가 페이지 이동 대신 이걸 부른다 (요약 모달, 2026-09-18) */
+  onOpenStory?: () => void
 }) {
   const { isSignedIn } = useAuth()
   const clerk = useClerk()
@@ -182,7 +185,15 @@ export function HeroVsVote({
         {!isSignedIn && " · 투표는 로그인 후"}
         {" · "}
         {/* 기사 진입은 별도 링크로 — 투표 버튼과 영역이 겹치면 오클릭이 난다 */}
-        <Link href={`/post/${postId}`} className="underline underline-offset-2">
+        <Link
+          href={`/post/${postId}`}
+          className="underline underline-offset-2"
+          onClick={(e) => {
+            if (!onOpenStory) return
+            e.preventDefault()
+            onOpenStory()
+          }}
+        >
           이야기 보러 가기
         </Link>
       </p>
