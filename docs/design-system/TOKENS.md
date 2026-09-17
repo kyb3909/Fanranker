@@ -22,6 +22,7 @@
 | `--wc-card` | `#ffffff` | 카드·패널 면 |
 | `--wc-canvas` | `#ffffff` | 보드 페이지 캔버스 |
 | `--wc-soft` | `#f2efea` | 소프트 서피스 (hover·칩 바탕) |
+| `--wc-soft-cool` | `#f4f5f7` | 읽기용 본문 상자 — 쿨 그레이. 요약 모달의 본문·댓글 미리보기 전용 (2026-09-18 운영자: 웜 톤 상자는 "누리끼리"). hover·칩에는 쓰지 않는다 |
 | `--wc-tint` | `#e8e3db` | 강조 서피스 (사이드바 헤더) |
 | `--wc-wine-tint` | `#fbf2f4` | 와인 faint fill (pill·단계 번호) |
 

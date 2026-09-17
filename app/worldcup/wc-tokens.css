@@ -23,6 +23,7 @@
   --wc-mute: #5c6470;
   --wc-mute-2: #6b7280; /* WCAG AA: 4.8:1 on white (구 #8b93a0 = 3.09:1, 미달) */
   --wc-soft: #f2efea; /* 소프트 서피스 — 웜 페이퍼 (2026-07-28 쿨 스틸 #eceef2 에서 전환) */
+  --wc-soft-cool: #f4f5f7; /* 읽기용 본문 상자 — 쿨 그레이 (2026-09-18 운영자: 웜 톤은 "누리끼리". 요약 모달 본문·댓글 미리보기 전용) */
   --wc-tint: #e8e3db; /* 강조 서피스 — 사이드바 헤더 등 (웜 페이퍼) */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */
   --wc-wine-tint: #fbf2f4; /* 와인 faint fill — pill/step number */

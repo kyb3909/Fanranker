@@ -27,6 +27,13 @@ interface CommentSectionProps {
    * 모달, 2026-09-18) 안에 넣을 때 — 카드 안 카드가 되지 않게. 기본은 종전 "card".
    */
   variant?: "card" | "embedded"
+  /**
+   * 최상위 댓글을 이 개수까지만 그린다 (요약 모달, 2026-09-18). 넘치는 만큼은 `moreHref`
+   * 로 안내한다 — 모달은 반응을 붙이는 입구이고 긴 토론은 글 페이지 몫.
+   */
+  limit?: number
+  /** limit 초과분을 이어 볼 곳 (글 페이지 #comments) */
+  moreHref?: string
 }
 
 export function CommentSection({
@@ -36,6 +43,8 @@ export function CommentSection({
   vsFaction,
   pollMs,
   variant = "card",
+  limit,
+  moreHref,
 }: CommentSectionProps) {
   const { user, isLoaded } = useUser()
   const clerk = useClerk()
@@ -153,6 +162,7 @@ export function CommentSection({
                 // 최신순: createdAt 내림차순 (최신이 위)
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
               })
+              .slice(0, limit ?? Number.POSITIVE_INFINITY)
               .map((comment) => (
                 <CommentItem
                   key={comment.id}
@@ -178,6 +188,26 @@ export function CommentSection({
               ))
           )}
         </div>
+        {limit != null && comments.length > limit && (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 text-[13px]"
+            style={{ borderColor: "var(--wc-line)", color: "var(--wc-mute)" }}
+          >
+            <span>
+              여기까지 {limit}개 ·{" "}
+              <b style={{ color: "var(--wc-ink-2)" }}>나머지 {comments.length - limit}개</b>
+            </span>
+            {moreHref && (
+              <a
+                href={moreHref}
+                className="font-bold underline-offset-4 hover:underline"
+                style={{ color: "var(--wc-burgundy)" }}
+              >
+                글에서 이어 보기 ›
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -101,12 +101,12 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
               {isInterview ? (
                 /* 인터뷰 = 발언이 주인공. 발언 블록은 소프트 틴트, 맥락(질문·주제)은 한 단 흐리게.
                    같은 맥락이 이어지면 라벨은 한 번만 (2026-09-18 운영자: "질문 → 대답(quote)") */
-                <div className="space-y-2.5">
+                <div className="rounded-xl px-4 py-1" style={{ background: "var(--wc-soft-cool)" }}>
                   {quoteBlocks.map((block, i) => (
                     <div
                       key={`${item.id}-q${i}`}
-                      className="rounded-xl px-4 py-3"
-                      style={{ background: "var(--wc-soft)" }}
+                      className={`py-3${i > 0 ? "border-t" : ""}`}
+                      style={{ borderColor: "var(--wc-line)" }}
                     >
                       {block.context && (
                         <p
@@ -133,12 +133,17 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
               ) : (
                 /* 단신 뉴스 = 초록(abstract)처럼 한 단락 (2026-09-18 운영자: "1,2,3 하지 말고
                    진짜 요약"). 문장은 저장 단위(lines)지만 화면은 공백으로 이어 붙인다 */
-                <p
-                  className="text-[16px] leading-[1.65] [word-break:keep-all]"
-                  style={{ color: "var(--wc-ink)" }}
+                <div
+                  className="rounded-xl px-4 py-3.5"
+                  style={{ background: "var(--wc-soft-cool)" }}
                 >
-                  {detail.summary.join(" ")}
-                </p>
+                  <p
+                    className="text-[16px] leading-[1.7] [word-break:keep-all]"
+                    style={{ color: "var(--wc-ink)" }}
+                  >
+                    {detail.summary.join(" ")}
+                  </p>
+                </div>
               )}
 
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
@@ -192,7 +197,13 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
             </div>
 
             {writing ? (
-              <CommentSection postId={item.postId} variant="embedded" />
+              /* 모달 안에서는 상위 20개까지 — 긴 토론은 글 페이지 몫 (2026-09-18 시안 3) */
+              <CommentSection
+                postId={item.postId}
+                variant="embedded"
+                limit={20}
+                moreHref={`${href}${href.includes("?") ? "&" : "?"}from=summary#comments`}
+              />
             ) : (
               <>
                 {preview.length > 0 && (
@@ -201,7 +212,7 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
                       <li
                         key={String(c.id)}
                         className="rounded-xl px-4 py-3"
-                        style={{ background: "var(--wc-soft)" }}
+                        style={{ background: "var(--wc-soft-cool)" }}
                       >
                         <p className="mb-1 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                           <span className="font-semibold" style={{ color: "var(--wc-ink-2)" }}>
@@ -240,14 +251,16 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
                     {isLoaded && !user ? "로그인하고 댓글 쓰기" : "댓글 쓰기"}
                   </button>
                   {count > preview.length && (
-                    <Link
-                      href={`${href}${href.includes("?") ? "&" : "?"}from=summary#comments`}
+                    // 그 자리에서 펼친다 (2026-09-18 시안 1). 20개 넘는 나머지는 펼친 부품이 글로 안내
+                    <button
+                      type="button"
+                      onClick={() => setWriting(true)}
                       className="inline-flex min-h-11 items-center gap-0.5 text-[13px] font-semibold underline-offset-4 hover:underline sm:min-h-0"
                       style={{ color: "var(--wc-mute)" }}
                     >
                       댓글 {count - preview.length}개 더 보기{" "}
                       <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
+                    </button>
                   )}
                 </div>
               </>
