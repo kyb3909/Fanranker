@@ -105,7 +105,7 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
                   {quoteBlocks.map((block, i) => (
                     <div
                       key={`${item.id}-q${i}`}
-                      className={`py-3${i > 0 ? "border-t" : ""}`}
+                      className={i > 0 ? "border-t py-3" : "py-3"}
                       style={{ borderColor: "var(--wc-line)" }}
                     >
                       {block.context && (
