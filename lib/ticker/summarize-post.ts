@@ -44,6 +44,8 @@ const PROMPT = `너는 한국 축구 커뮤니티의 데스크다. 아래 한국
 kind = "news" 일 때 — 요약:
 - 논문의 초록(abstract)처럼 자연스럽게 이어지는 한 단락, 2~3문장. 번호·목록 없음. 전체 120~180자. 각 문장은 "~다."로 끝난다.
 - 무슨 일인지 → 근거·배경 → 남은 쟁점이나 다음 일정 순.
+- **우리 주장이 아니라 매체의 보도를 전하는 문체(전문체)로 쓴다.** 첫 문장에서 출처 매체를 한 번 귀속시키고("[출처 매체]에 따르면 …" 또는 "[출처 매체]는 …고 보도했다"), 나머지 문장도 "~로 전해졌다", "~로 알려졌다", "~고 보도됐다"처럼 단정하지 않는다. 사실처럼 단정하는 문장("~했다"로 끝나는 우리 서술)은 쓰지 않는다.
+- 예외: 출처가 구단·리그·연맹의 공식 발표(오피셜)면 "구단은 …라고 발표했다"처럼 발표 주체를 밝히고 단정형을 써도 된다.
 - 기사 본문에 있는 사실만 쓴다. 본문에 없는 이름·숫자·평가를 덧붙이지 않는다. 추측·전망·감상 금지.
 
 kind = "interview" 일 때 — 발언 위주:
@@ -136,7 +138,10 @@ export async function summarizePost(input: SummaryInput): Promise<PostSummary | 
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: PROMPT },
-          { role: "user", content: `제목: ${title}\n\n본문:\n${text.slice(0, 6000)}` },
+          {
+            role: "user",
+            content: `출처 매체: ${summarySourceName(input.title, input.sourceName) ?? "미상"}\n제목: ${title}\n\n본문:\n${text.slice(0, 6000)}`,
+          },
         ],
       }),
       signal: AbortSignal.timeout(60000),

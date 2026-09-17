@@ -12,6 +12,11 @@ const limit = Number(arg("limit") ?? 20)
 const hours = Number(arg("hours") ?? 24)
 /** --kind=interview : 이미 그 종류로 저장된 글만 다시 만든다 (프롬프트 개정 후 재생성용) */
 const onlyKind = arg("kind")
+/** --ids=a,b,c : 특정 글만 (실패 건 재시도용). --force 와 같이 쓴다 */
+const onlyIds = arg("ids")
+  ?.split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 async function main() {
   const db = createClient(
@@ -30,6 +35,7 @@ async function main() {
     .limit(60)
   if (error) throw new Error(error.message)
   let targets = data ?? []
+  if (onlyIds?.length) targets = targets.filter((p) => onlyIds.includes(p.id))
   if (onlyKind) {
     const { data: kinds } = await db
       .from("post_summaries")
