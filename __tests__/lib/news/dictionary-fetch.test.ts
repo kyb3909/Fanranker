@@ -12,7 +12,10 @@ interface Row {
 }
 
 /** range(from,to) 를 실제 PostgREST 처럼 자르는 가짜 클라이언트 */
-function makeSupabase(total: number, opts: { pageCap?: number } = {}) {
+function makeSupabase(
+  total: number,
+  opts: { pageCap?: number; failAt?: number; nullAt?: number } = {}
+) {
   const cap = opts.pageCap ?? 1000
   const all: Row[] = Array.from({ length: total }, (_, i) => ({
     id: `r${String(i).padStart(5, "0")}`,
@@ -27,6 +30,9 @@ function makeSupabase(total: number, opts: { pageCap?: number } = {}) {
             order: () => ({
               range: async (from: number, to: number) => {
                 calls.push([from, to])
+                if (from === opts.failAt)
+                  return { data: null, error: { message: "page unavailable" } }
+                if (from === opts.nullAt) return { data: null, error: null }
                 const size = Math.min(to - from + 1, cap)
                 return { data: all.slice(from, from + size), error: null }
               },
@@ -39,6 +45,49 @@ function makeSupabase(total: number, opts: { pageCap?: number } = {}) {
 }
 
 describe("fetchDictionaryRows", () => {
+  it("빈 사전은 정상적으로 빈 배열을 반환한다", async () => {
+    const sb = makeSupabase(0)
+    expect(await fetchDictionaryRows(sb.client as never, "id", ["player"])).toEqual([])
+    expect(sb.calls).toHaveLength(1)
+  })
+
+  it("두 번째 페이지 실패 시 첫 페이지를 전체 사전처럼 반환하지 않는다", async () => {
+    const sb = makeSupabase(1001, { failAt: 1000 })
+    await expect(fetchDictionaryRows(sb.client as never, "id", ["player"])).rejects.toThrow(
+      "page unavailable"
+    )
+  })
+
+  it("데이터 없는 응답은 정상적인 빈 사전으로 간주하지 않는다", async () => {
+    const sb = makeSupabase(1001, { nullAt: 1000 })
+    await expect(fetchDictionaryRows(sb.client as never, "id", ["player"])).rejects.toThrow(
+      "no row data"
+    )
+  })
+
+  it("정확히 2만 행이면 마지막 확인 조회 뒤 전체를 반환한다", async () => {
+    const sb = makeSupabase(20000)
+    const rows = await fetchDictionaryRows<Row>(sb.client as never, "id", ["player"])
+    expect(rows).toHaveLength(20000)
+    expect(rows.at(-1)?.id).toBe("r19999")
+    expect(sb.calls.at(-1)).toEqual([20000, 20000])
+  })
+
+  it("2만 행을 초과하면 일부 사전을 반환하지 않고 상한 오류를 알린다", async () => {
+    const sb = makeSupabase(20001)
+    await expect(fetchDictionaryRows(sb.client as never, "id", ["player"])).rejects.toThrow(
+      "20000 row safety limit"
+    )
+    expect(sb.calls).toHaveLength(21)
+    expect(sb.calls.at(-1)).toEqual([20000, 20000])
+  })
+
+  it("상한 확인 조회가 실패해도 완료로 처리하지 않는다", async () => {
+    const sb = makeSupabase(20000, { failAt: 20000 })
+    await expect(fetchDictionaryRows(sb.client as never, "id", ["player"])).rejects.toThrow(
+      "page unavailable"
+    )
+  })
   it("1,000행을 넘어도 전량을 가져온다 (무음 절단 방지)", async () => {
     const sb = makeSupabase(1041)
     const rows = await fetchDictionaryRows<Row>(sb.client as never, "id", ["player"])

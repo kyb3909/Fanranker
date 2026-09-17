@@ -242,6 +242,7 @@ export function useBettingSlip(
       const predictionsArray = selectedBets.map((bet) => ({
         game_id: bet.gameId,
         prediction: bet.selection,
+        expected_odds: bet.odds,
       }))
       const idempotencyKey = crypto.randomUUID()
       const payload: Record<string, unknown> = {
@@ -260,6 +261,17 @@ export function useBettingSlip(
         body: JSON.stringify(payload),
       })
       const data = await res.json()
+      if (!res.ok && data?.code === "MARKET_CHANGED") {
+        const changedIds = new Set<string>(
+          Array.isArray(data.changed_game_ids) ? data.changed_game_ids : []
+        )
+        const remaining = selectedBets.filter((bet) => !changedIds.has(bet.gameId))
+        setSelectedBets(remaining)
+        if (remaining.length === 0) setSelectedSport(null)
+        loadMatches()
+        showAlert("warning", "선택한 배당이 변경되었습니다", data.error)
+        return
+      }
       // 이벤트 전용 기간에는 미신청자 제출이 403(needs_registration)으로 막힌다.
       // 그냥 실패 알림만 띄우면 유저는 "왜 안 되는지" 모른 채 이탈한다 — 신청 화면으로 넘긴다.
       if (!res.ok && data?.needs_registration) {

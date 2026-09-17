@@ -1,108 +1,115 @@
 import { describe, it, expect } from "vitest"
-import { dedupeMarketRows, marketSignature } from "@/lib/betman/market-dedup"
+import {
+  dedupeMarketRows,
+  marketSignature,
+  MarketRoundError,
+  type CurrentMarketRow,
+} from "@/lib/betman/market-dedup"
 
-// Regression: ISSUE-002 — 같은 경기가 betman 여러 라운드에 중복 등록되면
-// 동일 마켓 row 가 ×N 으로 복제되어 월드컵/메인 베팅 카드에 "승무패 ×3" 노출.
-// Found by /qa on 2026-06-11
-// Report: .gstack/qa-reports/qa-report-localhost-2026-06-11.md
-
-function row(over: Record<string, unknown> = {}) {
+function row(over: Partial<CurrentMarketRow> = {}): CurrentMarketRow {
   return {
-    id: "g1",
+    id: "old",
+    round_id: "round-109",
+    market_round: { gm_ts: "260109", year: 2026, round: 109 },
+    game_no: 10,
+    sport: "축구",
+    league_code: "EPL",
+    home_team_name: "아스날",
+    away_team_name: "리버풀",
+    match_time: "2026-09-18T10:00:00Z",
     game_type: "일반",
     handicap: null,
     over_under_line: null,
-    home_win_odds: "1.36",
-    away_win_odds: "8.40",
-    draw_odds: "3.90",
-    over_odds: null,
-    under_odds: null,
-    odd_odds: null,
-    even_odds: null,
+    home_win_odds: 1.36,
+    away_win_odds: 8.4,
+    draw_odds: 3.9,
     ...over,
   }
 }
+function newer(over: Partial<CurrentMarketRow> = {}) {
+  return row({
+    id: "new",
+    round_id: "round-110",
+    market_round: { gm_ts: "260110", year: 2026, round: 110 },
+    game_no: 99,
+    ...over,
+  })
+}
 
-describe("dedupeMarketRows", () => {
-  it("라운드 교차 완전 중복(타입·핸디·라인·배당 동일)은 첫 row 만 유지한다", () => {
-    // ISSUE-002 실데이터 형태: 멕시코 vs 남아공 — 같은 승무패 마켓이 3개 라운드에 등록
-    const games = [row({ id: "r1-g1" }), row({ id: "r2-g1" }), row({ id: "r3-g1" })]
-    const out = dedupeMarketRows(games)
-    expect(out).toHaveLength(1)
-    expect(out[0].id).toBe("r1-g1") // keep-first (game_no asc 정렬 후 첫 등장)
+describe("current full-time market selection", () => {
+  it.each([1.36, 1.5])("배당 %s: 가격과 배열 순서에 관계없이 최신 회차를 선택한다", (odds) => {
+    const latest = newer({ home_win_odds: odds })
+    expect(dedupeMarketRows([row(), latest])).toEqual([latest])
+    expect(dedupeMarketRows([latest, row()])).toEqual([latest])
   })
 
-  it("같은 키라도 배당이 다른 진짜 전반전 row 는 보존한다", () => {
-    // 풀타임 1.36/3.90/8.40 vs 전반 1.87/2.05/8.80 — 휴리스틱 1의 입력이 되어야 함
+  it("같은 회차의 완전 중복은 낮은 game_no, 같은 번호면 id로 고른다", () => {
+    const winner = row({ id: "a" })
+    expect(dedupeMarketRows([row({ id: "z" }), row({ game_no: 20 }), winner])).toEqual([winner])
+  })
+
+  it("종목·리그·팀·시각·마켓 종류·기준점이 다르면 각각 보존한다", () => {
     const games = [
-      row({ id: "full" }),
-      row({ id: "half", home_win_odds: "1.87", draw_odds: "2.05", away_win_odds: "8.80" }),
+      row(),
+      row({ id: "sport", sport: "농구" }),
+      row({ id: "league", league_code: "UCL" }),
+      row({ id: "teams", home_team_name: "첼시" }),
+      row({ id: "time", match_time: "2026-09-19T10:00:00Z" }),
+      row({ id: "hcp1", game_type: "핸디캡", handicap: -1 }),
+      row({ id: "hcp2", game_type: "핸디캡", handicap: -2 }),
+      row({ id: "ou1", game_type: "언더오버", over_under_line: 2.5 }),
+      row({ id: "ou2", game_type: "언더오버", over_under_line: 3.5 }),
     ]
-    const out = dedupeMarketRows(games)
-    expect(out).toHaveLength(2)
-    expect(out.map((g) => g.id)).toEqual(["full", "half"])
+    expect(dedupeMarketRows(games)).toEqual(games)
   })
 
-  it("중복 ×3 + 전반 ×3 혼합(ISSUE-002 원형)은 풀타임 1 + 전반 1 로 줄인다", () => {
-    const full = (id: string) => row({ id })
-    const half = (id: string) =>
-      row({ id, home_win_odds: "1.87", draw_odds: "2.05", away_win_odds: "8.80" })
-    const out = dedupeMarketRows([
-      full("r1-f"),
-      half("r1-h"),
-      full("r2-f"),
-      half("r2-h"),
-      full("r3-f"),
-      half("r3-h"),
-    ])
-    expect(out.map((g) => g.id)).toEqual(["r1-f", "r1-h"])
+  it("동일 시각의 다른 타임존 표기도 같은 경기로 처리한다", () => {
+    const latest = newer({ match_time: "2026-09-18T19:00:00+09:00" })
+    expect(dedupeMarketRows([row(), latest])).toEqual([latest])
   })
 
-  it("다른 마켓 타입(핸디캡·언더오버·SUM)은 서로 충돌하지 않는다", () => {
-    const games = [
-      row({ id: "wdl" }),
-      row({ id: "hcp", game_type: "핸디캡", handicap: -1.5, home_win_odds: "2.10" }),
-      row({
-        id: "ou",
-        game_type: "언더오버",
-        over_under_line: 2.5,
-        home_win_odds: null,
-        draw_odds: null,
-        away_win_odds: null,
-        over_odds: "1.90",
-        under_odds: "1.85",
-      }),
-      row({
-        id: "sum",
-        game_type: "SUM",
-        home_win_odds: null,
-        draw_odds: null,
-        away_win_odds: null,
-        odd_odds: "1.85",
-        even_odds: "1.85",
-      }),
-    ]
-    expect(dedupeMarketRows(games)).toHaveLength(4)
+  it("연도 경계와 gm_ts가 없는 구형 회차도 순서대로 비교한다", () => {
+    const latest = newer({ market_round: { gm_ts: null, year: 2027, round: 1 } })
+    expect(dedupeMarketRows([latest, row()])).toEqual([latest])
+    expect(
+      dedupeMarketRows([
+        row(),
+        newer({ market_round: { gm_ts: null, year: 2026, round: 260110 } }),
+      ])[0].id
+    ).toBe("new")
   })
 
-  it("SUM 중복도 1개는 남긴다 (전반전 휴리스틱 2의 디스크리미네이터 보존)", () => {
-    const sum = (id: string) =>
-      row({
-        id,
-        game_type: "SUM",
-        home_win_odds: null,
-        draw_odds: null,
-        away_win_odds: null,
-        odd_odds: "1.85",
-        even_odds: "1.85",
-      })
-    const out = dedupeMarketRows([sum("r1-s"), sum("r2-s"), sum("r3-s")])
-    expect(out).toHaveLength(1)
+  it.each([
+    { market_round: null },
+    { market_round: [] },
+    { round_id: null },
+    { market_round: { gm_ts: "bad", year: 2026, round: 110 } },
+    { market_round: { gm_ts: "260000", year: 2026, round: 0 } },
+    { market_round: { gm_ts: "250110", year: 2026, round: 110 } },
+    { market_round: { gm_ts: null, year: 2026, round: 250110 } },
+  ])("회차를 확인할 수 없으면 오래된 선택으로 대체하지 않는다 (%j)", (over) => {
+    expect(() => dedupeMarketRows([row(), newer(over)])).toThrow(MarketRoundError)
   })
 
-  it("null 과 undefined 는 같은 값으로 정규화한다", () => {
+  it("서로 다른 회차 ID의 순번이 같으면 명확한 순서를 요구한다", () => {
+    expect(() => dedupeMarketRows([row(), row({ round_id: "ambiguous" })])).toThrow(
+      MarketRoundError
+    )
+  })
+
+  it("단일 회차 배열 응답도 지원하지만 여러 회차는 거부한다", () => {
+    const metadata = { gm_ts: "260110", year: 2026, round: 110 }
+    const latest = newer({ market_round: [metadata] })
+    expect(dedupeMarketRows([row(), latest])).toEqual([latest])
+    expect(() => dedupeMarketRows([newer({ market_round: [metadata, metadata] })])).toThrow(
+      MarketRoundError
+    )
+  })
+
+  it("전반전 분류용 배당 서명은 유지한다", () => {
     expect(marketSignature(row({ handicap: null }))).toBe(
       marketSignature(row({ handicap: undefined }))
     )
+    expect(marketSignature(row())).not.toBe(marketSignature(row({ home_win_odds: 1.5 })))
   })
 })

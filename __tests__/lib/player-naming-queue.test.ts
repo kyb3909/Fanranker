@@ -52,8 +52,10 @@ describe("existing-player unfinished naming queue", () => {
       ],
       [notation("rico", { romanized: " Rico Lewis ", preferred_ko: "리코 루이스" })]
     )
-    expect(result.items.map((item) => item.id)).toEqual(["missing"])
-    expect(result.items[0].name_kr_draft).toBe("후보 이름")
+    // 기사 사전에만 한글이 있는 선수는 경기 화면에서 여전히 영문이다 — 큐에 남기고 제안만 붙인다.
+    expect(result.items.map((item) => item.id)).toEqual(["covered", "missing"])
+    expect(result.items[0]).toMatchObject({ name_kr: "Rico Lewis", news_name_kr: "리코 루이스" })
+    expect(result.items[1].name_kr_draft).toBe("후보 이름")
     expect(result.pageSize).toBe(100)
   })
 
@@ -75,7 +77,10 @@ describe("existing-player unfinished naming queue", () => {
         notation("alex2", { romanized: "Alex Smith", preferred_ko: "알렉스 스미스" }),
       ]
     )
-    expect(result.items.map((item) => item.id).sort()).toEqual(["accent", "ambiguous"])
+    // 정확일치 별칭이 있어도 명단 한글이 비면 큐에 남는다(기사 사전 제안만 붙는다).
+    expect(result.items.map((item) => item.id).sort()).toEqual(["accent", "alias", "ambiguous"])
+    expect(result.items.find((item) => item.id === "alias")?.news_name_kr).toBe("부카요 사카")
+    expect(result.items.find((item) => item.id === "ambiguous")?.news_name_kr).toBeNull()
   })
 
   it("includes article-dictionary people without a current roster and skips represented entries", () => {
@@ -141,6 +146,7 @@ describe("existing-player unfinished naming queue", () => {
       ["squad:arsenal:saka", "부카요 사카"],
     ])
     expect(buildPlayerNamingQueue(sources, dictionary).items.map((item) => item.id)).toEqual([
+      "rico",
       "unfilled",
     ])
   })

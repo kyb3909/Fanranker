@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { marketSignature } from "./market-dedup"
+import { marketSignature, physicalMatchKey, type CurrentMarketRow } from "./market-dedup"
 
 export interface MarketScopeRow {
   id: string
@@ -86,5 +86,51 @@ export async function loadMarketScopeRows(
   }
   if (targets.some((g) => !rows.some((row) => row.id === g.id)))
     throw new Error("Incomplete market scope")
+  return rows
+}
+
+export type PredictionMarketRow = MarketScopeRow &
+  CurrentMarketRow & {
+    status: string
+    daily_round_id: string | null
+    home_win_odds: number | null
+    away_win_odds: number | null
+    draw_odds: number | null
+    over_odds: number | null
+    under_odds: number | null
+  }
+
+/** New submissions need all listings of the selected physical matches, including
+ * newer rounds and non-scheduled/SUM rows. Settlement keeps its round-local loader.
+ */
+export async function loadPredictionMarketRows(
+  supabase: SupabaseClient,
+  targets: MarketScopeRow[]
+): Promise<PredictionMarketRow[]> {
+  if (!targets.length) return []
+  const times = [...new Set(targets.map((game) => game.match_time))]
+  const sports = [...new Set(targets.map((game) => game.sport))]
+  const matchKeys = new Set(targets.map(physicalMatchKey))
+  const rows: PredictionMarketRow[] = []
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase
+      .from("betman_games")
+      .select(
+        "id, round_id, game_no, daily_round_id, sport, league_code, home_team_name, away_team_name, match_time, game_type, handicap, over_under_line, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, market_round:betman_rounds!betman_games_round_id_fkey(gm_ts, year, round)"
+      )
+      .in("match_time", times)
+      .in("sport", sports)
+      .order("id")
+      .range(offset, offset + 499)
+    if (error || !data) throw new Error("Failed to load prediction market scope")
+    rows.push(
+      ...(data as unknown as PredictionMarketRow[]).filter((game) =>
+        matchKeys.has(physicalMatchKey(game))
+      )
+    )
+    if (data.length < 500) break
+  }
+  if (targets.some((target) => !rows.some((game) => game.id === target.id)))
+    throw new Error("Incomplete prediction market scope")
   return rows
 }

@@ -81,13 +81,10 @@ export function buildPlayerNamingQueue(
     const matches = [...(byEnglish.get(exactName(squad.name_en))?.values() ?? [])]
     matches.forEach((entry) => represented.add(entry.id))
     const match = matches.length === 1 ? matches[0] : undefined
-    // A settled article spelling is not new naming work. Missing name parts are an explicit,
-    // optional queue; completed Korean names do not reappear in the default queue.
-    if (
-      filter === "missing" &&
-      (hasKoreanPlayerName(squad.name_kr) || (match && hasKoreanPlayerName(match.preferred_ko)))
-    )
-      continue
+    // Match screens read team_squads.name_kr only, so an article spelling alone still shows
+    // English there (2026-09-17). Such rows stay in the missing queue with the article name
+    // offered as a one-click suggestion; completed roster names do not reappear.
+    if (filter === "missing" && hasKoreanPlayerName(squad.name_kr)) continue
     const team = Array.isArray(squad.team_dictionary)
       ? squad.team_dictionary[0]
       : squad.team_dictionary

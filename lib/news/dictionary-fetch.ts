@@ -15,7 +15,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 /** PostgREST 기본 상한과 같은 값 — 이보다 크게 잡아도 서버가 잘라서 무의미하다 */
 const PAGE_SIZE = 1000
-/** 폭주 방지 — 사전이 2만 건을 넘을 일은 없다 (넘으면 설계를 다시 봐야 한다) */
+/** 폭주 방지 — 상한을 넘으면 부분 사전을 반환하지 않고 오류로 알린다 */
 const MAX_PAGES = 20
 
 export async function fetchDictionaryRows<T>(
@@ -24,7 +24,7 @@ export async function fetchDictionaryRows<T>(
   categories: readonly string[]
 ): Promise<T[]> {
   const out: T[] = []
-  for (let page = 0; page < MAX_PAGES; page++) {
+  for (let page = 0; page <= MAX_PAGES; page++) {
     const from = page * PAGE_SIZE
     const { data, error } = await (supabase as SupabaseClient)
       .from("news_alias_dictionary")
@@ -32,9 +32,13 @@ export async function fetchDictionaryRows<T>(
       .in("category", [...categories])
       // 페이지 경계가 흔들리지 않도록 안정 정렬 — 없으면 행이 중복/누락될 수 있다
       .order("id", { ascending: true })
-      .range(from, from + PAGE_SIZE - 1)
+      // 상한까지 꽉 찼다면 1행을 더 확인해 정확히 2만 행인 경우와 초과를 구분한다.
+      .range(from, page === MAX_PAGES ? from : from + PAGE_SIZE - 1)
     if (error) throw new Error(error.message)
-    const rows = (data ?? []) as T[]
+    if (!Array.isArray(data)) throw new Error("Dictionary query returned no row data")
+    const rows = data as T[]
+    if (page === MAX_PAGES && rows.length > 0)
+      throw new Error(`Dictionary exceeds the ${MAX_PAGES * PAGE_SIZE} row safety limit`)
     out.push(...rows)
     if (rows.length < PAGE_SIZE) return out
   }

@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-const m = vi.hoisted(() => ({ fetch: vi.fn(), cache: new Map<string, unknown>() }))
+const m = vi.hoisted(() => ({
+  fetch: vi.fn(),
+  team: vi.fn(),
+  squad: vi.fn(),
+  cache: new Map<string, unknown>(),
+}))
 vi.mock("@/lib/lfa/client", () => ({ lfaFetch: m.fetch }))
-vi.mock("@/lib/match/resolve-team-id", () => ({ resolveTeamId: async () => null }))
+vi.mock("@/lib/match/resolve-team-id", () => ({ resolveTeamId: m.team }))
+vi.mock("@/lib/dictionary/squad-names", () => ({ fetchSquadNames: m.squad }))
 vi.mock("@/lib/supabase/server", () => ({ createServiceRoleClient: vi.fn() }))
 vi.mock("next/cache", () => ({
   unstable_cache:
@@ -20,7 +26,43 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-09-06T17:45:00Z"))
   m.cache.clear()
   m.fetch.mockReset()
+  m.team.mockReset().mockResolvedValue(null)
+  m.squad.mockReset()
   vi.spyOn(console, "info").mockImplementation(() => {})
+})
+
+it("수집한 선수 ID로 한글명을 선택하고 공급자 관측값을 유지한다", async () => {
+  m.team.mockResolvedValue("spurs")
+  m.squad.mockResolvedValue([
+    {
+      playerId: "lfa-solanke",
+      source: "lfa",
+      status: "confirmed",
+      nameEn: "D. Solanke",
+      nameKr: "도미닉 솔랑케",
+    },
+    {
+      playerId: "sw-solanke",
+      source: "namu",
+      status: "confirmed",
+      nameEn: "Solanke Dominic",
+      nameKr: "도미닉 솔랑케",
+    },
+  ])
+  m.fetch.mockResolvedValue({
+    is_projected: false,
+    home: { starting: [{ id: "lfa-solanke", name: "D. Solanke", number: 19 }] },
+    away: { starting: [{ name: "Other" }] },
+  })
+  const result = await getLfaLineup("match", "Home", "Away")
+  expect(result?.home.starters[0]).toEqual({
+    id: "lfa-solanke",
+    roman: "D. Solanke",
+    number: 19,
+    label: "도미닉 솔랑케",
+  })
+  expect(result?.fetchedAt).toBe("2026-09-06T17:45:00.000Z")
+  expect(result?.observation.id).toBeTruthy()
 })
 afterEach(() => {
   vi.useRealTimers()

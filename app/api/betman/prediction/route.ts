@@ -4,12 +4,14 @@ import { currentUser } from "@clerk/nextjs/server"
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { retryRefundTokens } from "@/lib/betman/refund-tokens"
-import { getExcludedMarketIds, loadMarketScopeRows } from "@/lib/betman/market-scope"
+import { getExcludedMarketIds, loadPredictionMarketRows } from "@/lib/betman/market-scope"
+import { dedupeMarketRows, fullTimeMarketKey, physicalMatchKey } from "@/lib/betman/market-dedup"
 import { recordFunnelMilestone } from "@/lib/analytics/funnel"
 import { z } from "zod"
 
 const predictionItemSchema = z.object({
   game_id: z.string().min(1, "게임 ID가 필요합니다."),
+  expected_odds: z.number().finite().positive().optional(),
   // SUM(홀짝) 마켓 중단(2026-06-11) — odd/even 은 더 이상 받지 않음
   prediction: z.enum(["home", "draw", "away", "over", "under"], {
     message: "잘못된 예측 값입니다.",
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate no duplicate physical matches
-    const matchKeys = games.map((g) => `${g.home_team_name}_${g.away_team_name}_${g.match_time}`)
+    const matchKeys = games.map(physicalMatchKey)
     const uniqueMatchKeys = [...new Set(matchKeys)]
     if (uniqueMatchKeys.length !== matchKeys.length) {
       return NextResponse.json(
@@ -193,10 +195,41 @@ export async function POST(request: NextRequest) {
     }
 
     // Selected IDs may omit the SUM boundary; inspect all sibling markets before spending.
-    const excludedMarkets = getExcludedMarketIds(await loadMarketScopeRows(supabase, games))
+    const marketRows = await loadPredictionMarketRows(supabase, games)
+    const excludedMarkets = getExcludedMarketIds(marketRows)
     if (games.some((g) => excludedMarkets.has(g.id))) {
       return NextResponse.json({ error: "전반전·SUM 마켓은 예측할 수 없습니다." }, { status: 400 })
     }
+
+    const currentMarkets = new Map(
+      dedupeMarketRows(marketRows.filter((game) => !excludedMarkets.has(game.id))).map((game) => [
+        game.id,
+        game,
+      ])
+    )
+    const changedGameIds = games
+      .filter((game) => {
+        const current = currentMarkets.get(game.id)
+        return (
+          !current ||
+          current.status !== "scheduled" ||
+          current.daily_round_id !== dailyRoundId ||
+          current.round_id !== game.round_id ||
+          fullTimeMarketKey(current) !== fullTimeMarketKey(game)
+        )
+      })
+      .map((game) => game.id)
+    const marketChanged = (gameIds: string[]) =>
+      NextResponse.json(
+        {
+          code: "MARKET_CHANGED",
+          error:
+            "선택한 경기의 배당 또는 판매 상태가 변경되었습니다. 최신 목록에서 다시 선택해주세요. 볼은 차감되지 않았습니다.",
+          changed_game_ids: gameIds,
+        },
+        { status: 409, headers: { "Cache-Control": "no-store" } }
+      )
+    if (changedGameIds.length > 0) return marketChanged(changedGameIds)
 
     // Check per-game bet deadlines (must bet before kickoff)
     const now = new Date()
@@ -263,7 +296,7 @@ export async function POST(request: NextRequest) {
     // 실패만 커버). 검증은 토큰 차감 이전에 끝낸다.
     const oddsByPrediction: Record<string, Record<string, number>> = {}
     for (const pred of predictions) {
-      const game = games.find((g) => g.id === pred.game_id)
+      const game = currentMarkets.get(pred.game_id)
       if (!game) continue
       const oddsMap: Record<string, number> = {
         home: parseFloat(String(game.home_win_odds)) || 0,
@@ -273,6 +306,8 @@ export async function POST(request: NextRequest) {
         under: parseFloat(String(game.under_odds)) || 0,
       }
       const odds = oddsMap[pred.prediction]
+      if (pred.expected_odds !== undefined && odds !== pred.expected_odds)
+        return marketChanged([pred.game_id])
       if (!odds || odds <= 0) {
         return NextResponse.json(
           {
@@ -417,22 +452,15 @@ export async function POST(request: NextRequest) {
     // ===== 예측 레코드 삽입 (슬립에 연결) =====
     const predictionRecords = predictions.map((pred) => {
       const game = games.find((g) => g.id === pred.game_id)
-      const oddsMap: Record<string, number> = {
-        home: parseFloat(game?.home_win_odds) || 0,
-        away: parseFloat(game?.away_win_odds) || 0,
-        draw: parseFloat(game?.draw_odds) || 0,
-        over: parseFloat(game?.over_odds) || 0,
-        under: parseFloat(game?.under_odds) || 0,
-      }
       return {
         user_id: user.id,
-        round_id: games[0].round_id,
+        round_id: game?.round_id,
         daily_round_id: dailyRoundId,
         game_id: pred.game_id,
         prediction: pred.prediction,
         slip_id: slip.id,
         stake,
-        locked_odds: oddsMap[pred.prediction] || 0,
+        locked_odds: oddsByPrediction[pred.game_id]?.[pred.prediction] || 0,
         locked_line: game?.over_under_line ?? null,
         locked_handicap: game?.handicap ?? null,
         created_at: new Date().toISOString(),

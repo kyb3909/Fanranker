@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaFetch } from "@/lib/lfa/client"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
+import { fetchSquadNames } from "@/lib/dictionary/squad-names"
 import { localizePlayerName, tidyFeedName, type SquadName } from "./player-name"
 // 응답 모양 해석은 순수 모듈이 소유한다 — 필드명 오독이 이 기능을 통째로 죽였다 (2026-08-31)
 import { normalizeLfaLineups, type LfaRawPlayer } from "./lineup-shape"
@@ -85,20 +86,9 @@ export const getTeamSquadNames = unstable_cache(
     // ⚠️ 정확일치 금지 — 사유는 lib/match/resolve-team-id.ts 주석 참조
     const teamId = await resolveTeamId(teamKr)
     if (!teamId) return []
-    const { data } = await createServiceRoleClient()
-      .from("team_squads")
-      .select("name_en, name_kr")
-      .eq("soccerway_team_id", teamId)
-      .neq("status", "rejected")
-    // ⚠️ 한글이 없는 선수도 **가져온다** — 예전엔 걸러냈고, 그래서 검수 전 선수는
-    //    피드 약어("Palacios C.")가 그대로 화면에 나갔다. 영문 풀네임이라도 쓰려면
-    //    목록에 있어야 한다. 한글 매칭은 아래에서 **먼저** 하므로 기존 동작은 안 변한다.
-    return (data ?? []).map((r) => ({
-      nameEn: String(r.name_en ?? ""),
-      nameKr: r.name_kr ? String(r.name_kr) : null,
-    }))
+    return fetchSquadNames(createServiceRoleClient(), teamId)
   },
-  ["lfa-lineup-squad-v4"],
+  ["lfa-lineup-squad-v5"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
@@ -110,7 +100,11 @@ function toPeople(list: LfaRawPlayer[] | undefined, squad: SquadName[]): LfaLine
     const n = Number(p.number)
     out.push({
       ...(p.id ? { id: p.id } : {}),
-      label: localizePlayerName(name, squad),
+      label: localizePlayerName(
+        name,
+        squad,
+        p.id ? { playerId: String(p.id), provider: "lfa" } : undefined
+      ),
       number: Number.isFinite(n) && n > 0 ? n : null,
       roman: name,
     })

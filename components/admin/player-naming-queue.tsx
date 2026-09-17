@@ -330,7 +330,14 @@ export function PlayerNamingQueue() {
                         {row.team_name || "기사 사전"}
                       </p>
                       {row.news_name_kr && row.news_name_kr !== row.name_kr && (
-                        <p className="text-primary mt-1 text-xs">기사 사전: {row.news_name_kr}</p>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          className="text-primary mt-1 text-left text-xs underline underline-offset-2"
+                          onClick={() => change(row, { name_kr: row.news_name_kr! })}
+                        >
+                          기사 사전: {row.news_name_kr}
+                        </button>
                       )}
                       {row.name_kr_draft && row.name_kr_draft !== values.name_kr && (
                         <button

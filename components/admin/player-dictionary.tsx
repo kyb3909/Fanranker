@@ -24,16 +24,16 @@ interface Candidate {
 }
 
 export function PlayerDictionaryCandidates() {
-  const { data, mutate } = useSWR<{ candidates: Candidate[]; dictionarySize: number }>(
-    "/api/admin/player-dictionary",
-    fetcher
-  )
+  const { data, error, isLoading, isValidating, mutate } = useSWR<{
+    candidates: Candidate[]
+    dictionarySize: number
+  }>("/api/admin/player-dictionary", fetcher)
   const candidates = data?.candidates ?? []
   const [busy, setBusy] = useState(false)
   const [romanized, setRomanized] = useState<Record<string, string>>({})
 
   const send = async (body: Record<string, unknown>, ok: string) => {
-    if (busy) return
+    if (busy || error) return
     setBusy(true)
     try {
       const res = await fetch("/api/admin/player-dictionary", {
@@ -61,16 +61,42 @@ export function PlayerDictionaryCandidates() {
       <summary className="cursor-pointer px-4 py-3 text-sm font-semibold select-none">
         표기 사전 후보{" "}
         <span className="text-muted-foreground font-normal">
-          {candidates.length}건 · 자동발행을 막은 이름
+          {error
+            ? "조회 실패"
+            : isLoading
+              ? "불러오는 중"
+              : `${candidates.length}건 · 자동발행을 막은 이름`}
         </span>
       </summary>
       <div className="border-t p-3">
-        <p className="text-muted-foreground mb-2 text-xs">
-          이 이름들 때문에 기사가 자동발행되지 못했습니다. 등재하면 다음 기사부터 통과합니다. 사전{" "}
-          {data?.dictionarySize ?? 0}건 등재됨.
-        </p>
+        {error && (
+          <div role="alert" className="mb-2 text-sm">
+            <p>
+              표기 사전 후보를 불러오지 못했습니다.{data ? " 이전 조회 결과를 표시합니다." : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => void mutate()}
+              disabled={isValidating}
+              className="mt-1 rounded border px-2 py-1 text-xs disabled:opacity-50"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
+        {isLoading && !error && (
+          <p role="status" className="text-muted-foreground py-2 text-xs">
+            표기 사전 후보를 불러오는 중입니다.
+          </p>
+        )}
+        {data && (
+          <p className="text-muted-foreground mb-2 text-xs">
+            이 이름들 때문에 기사가 자동발행되지 못했습니다. 등재하면 다음 기사부터 통과합니다. 사전{" "}
+            {data.dictionarySize}건 등재됨.
+          </p>
+        )}
         <ul className="space-y-1.5">
-          {candidates.length === 0 && (
+          {data && !error && candidates.length === 0 && (
             <li className="text-muted-foreground py-2 text-center text-xs">
               막힌 이름이 없습니다.
             </li>
@@ -105,7 +131,7 @@ export function PlayerDictionaryCandidates() {
                               "별칭으로 흡수"
                             )
                           }
-                          disabled={busy}
+                          disabled={busy || Boolean(error)}
                           title={`"${c.name}"을(를) "${s.preferred_ko}"의 다른 표기로 등재 — 앞으로 대표 표기를 씁니다`}
                           className="rounded border px-2 py-1 disabled:opacity-50"
                         >
@@ -118,7 +144,7 @@ export function PlayerDictionaryCandidates() {
                               "대표 표기 승격"
                             )
                           }
-                          disabled={busy}
+                          disabled={busy || Boolean(error)}
                           title={`사전 대표값을 "${c.name}"으로 바꾸고 "${s.preferred_ko}"를 옛 표기로 내립니다`}
                           className="rounded border px-2 py-1 disabled:opacity-50"
                         >
@@ -149,7 +175,7 @@ export function PlayerDictionaryCandidates() {
                       "새 선수 등재"
                     )
                   }
-                  disabled={busy}
+                  disabled={busy || Boolean(error)}
                   className="rounded bg-emerald-600 px-2.5 py-1 font-medium text-white disabled:opacity-50"
                 >
                   등재

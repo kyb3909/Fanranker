@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireStaffApi } from "@/lib/admin/roles"
 import { unknownPersonNames } from "@/lib/news/notation"
+import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
 import {
   parseUnknownNames,
@@ -36,63 +37,78 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth
   const { supabase } = auth
 
-  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000).toISOString()
-  const [{ data: rows }, { data: sagaHolds }] = await Promise.all([
-    supabase
-      .from("news_reservoir")
-      .select("draft, decision")
-      .gte("created_at", since)
-      .not("decision->auto_gate", "is", null)
-      .limit(500),
-    supabase
-      .from("saga_reservoir")
-      .select("title, extracted")
-      .eq("status", "queued")
-      .eq("error", "auto_hold:unknown_player")
-      .limit(200),
-  ])
+  try {
+    const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000).toISOString()
+    const [newsResult, sagaResult, dictionary] = await Promise.all([
+      supabase
+        .from("news_reservoir")
+        .select("draft, decision")
+        .gte("created_at", since)
+        .not("decision->auto_gate", "is", null)
+        .limit(500),
+      supabase
+        .from("saga_reservoir")
+        .select("title, extracted")
+        .eq("status", "queued")
+        .eq("error", "auto_hold:unknown_player")
+        .limit(200),
+      // 선수 후보 전용 범위는 유지하고, 전량 조회는 공통 페이지 함수를 사용한다.
+      fetchDictionaryRows<AliasTarget>(supabase, "id, preferred_ko, romanized, hangul_alts", [
+        "player",
+      ]),
+    ])
+    if (newsResult.error) throw newsResult.error
+    if (sagaResult.error) throw sagaResult.error
+    if (!Array.isArray(newsResult.data) || !Array.isArray(sagaResult.data))
+      throw new Error("Candidate query returned no row data")
+    const rows = newsResult.data
+    const sagaHolds = sagaResult.data
 
-  const newsRows = (
-    (rows ?? []) as { draft: { title?: string } | null; decision: Record<string, unknown> }[]
-  )
-    .map((r) => {
-      const gate = (r.decision?.auto_gate ?? {}) as { reasons?: unknown }
-      const reasons = Array.isArray(gate.reasons) ? gate.reasons.map(String) : []
-      return { reasons, title: r.draft?.title ?? "" }
-    })
-    .filter((r) => r.reasons.some((x) => x.startsWith(UNKNOWN_PLAYER_PREFIX)))
-
-  // 사가 큐 후보를 뉴스 게이트와 같은 사유 형태로 접어 한 파서로 처리한다
-  const sagaRows = ((sagaHolds ?? []) as { title: string | null; extracted: unknown }[])
-    .map((r) => {
-      const playerKr = (r.extracted as { player_kr?: string | null } | null)?.player_kr?.trim()
-      return playerKr && /[가-힣]/.test(playerKr)
-        ? { reasons: [`${UNKNOWN_PLAYER_PREFIX}${playerKr}`], title: r.title ?? "" }
-        : null
-    })
-    .filter((r): r is { reasons: string[]; title: string } => r !== null)
-
-  const parsed = parseUnknownNames([...newsRows, ...sagaRows])
-
-  const { data: dict } = await supabase
-    .from("news_alias_dictionary")
-    .select("id, preferred_ko, romanized, hangul_alts")
-    .eq("category", "player")
-  const dictionary = (dict ?? []) as AliasTarget[]
-
-  // 반려 이후 등재된 이름은 목록에서 사라진다 — 게이트와 같은 판정 함수를 쓴다
-  const stillUnknown = new Set(
-    unknownPersonNames(
-      parsed.map((p) => p.name),
-      dictionary.map((d) => ({ preferred_ko: d.preferred_ko, hangul_alts: d.hangul_alts }))
+    const newsRows = (
+      (rows ?? []) as { draft: { title?: string } | null; decision: Record<string, unknown> }[]
     )
-  )
+      .map((r) => {
+        const gate = (r.decision?.auto_gate ?? {}) as { reasons?: unknown }
+        const reasons = Array.isArray(gate.reasons) ? gate.reasons.map(String) : []
+        return { reasons, title: r.draft?.title ?? "" }
+      })
+      .filter((r) => r.reasons.some((x) => x.startsWith(UNKNOWN_PLAYER_PREFIX)))
 
-  const candidates = parsed
-    .filter((p) => stillUnknown.has(p.name))
-    .map((p) => ({ ...p, suggestions: suggestExisting(p.name, dictionary) }))
+    // 사가 큐 후보를 뉴스 게이트와 같은 사유 형태로 접어 한 파서로 처리한다
+    const sagaRows = ((sagaHolds ?? []) as { title: string | null; extracted: unknown }[])
+      .map((r) => {
+        const playerKr = (r.extracted as { player_kr?: string | null } | null)?.player_kr?.trim()
+        return playerKr && /[가-힣]/.test(playerKr)
+          ? { reasons: [`${UNKNOWN_PLAYER_PREFIX}${playerKr}`], title: r.title ?? "" }
+          : null
+      })
+      .filter((r): r is { reasons: string[]; title: string } => r !== null)
 
-  return NextResponse.json({ candidates, dictionarySize: dictionary.length })
+    const parsed = parseUnknownNames([...newsRows, ...sagaRows])
+
+    // 반려 이후 등재된 이름은 목록에서 사라진다 — 게이트와 같은 판정 함수를 쓴다
+    const stillUnknown = new Set(
+      unknownPersonNames(
+        parsed.map((p) => p.name),
+        dictionary.map((d) => ({ preferred_ko: d.preferred_ko, hangul_alts: d.hangul_alts }))
+      )
+    )
+
+    const candidates = parsed
+      .filter((p) => stillUnknown.has(p.name))
+      .map((p) => ({ ...p, suggestions: suggestExisting(p.name, dictionary) }))
+
+    return NextResponse.json(
+      { candidates, dictionarySize: dictionary.length },
+      { headers: { "Cache-Control": "no-store" } }
+    )
+  } catch (error) {
+    console.error("Failed to load player dictionary candidates:", error)
+    return NextResponse.json(
+      { error: "표기 사전 후보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요." },
+      { status: 503, headers: { "Cache-Control": "no-store" } }
+    )
+  }
 }
 
 const BodySchema = z.discriminatedUnion("mode", [

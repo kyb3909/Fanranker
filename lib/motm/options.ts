@@ -1,4 +1,4 @@
-import type { LineupResponse } from "@/lib/soccerway/lineup-lookup"
+import type { LineupResponse, DisplayPlayer } from "@/lib/match/lineup-types"
 import { foldLatin } from "@/lib/text/fold-latin"
 
 /**
@@ -58,6 +58,25 @@ function optionKeyFor(p: LineupPlayerLike, team: "home" | "away", used: Set<stri
   while (used.has(key)) key = `${team[0]}-${base}-${i++}`
   used.add(key)
   return key
+}
+
+/** Recover provider identity for a stored option without changing its voting key.
+ * Require the same side, team label, number and unique original key. Collision suffixes
+ * and old key formats are intentionally not guessed.
+ */
+export function playerForMotmOption(
+  option: MotmOption,
+  lineup: LineupResponse
+): DisplayPlayer | null {
+  if (lineup.status !== "ready" || !["home", "away"].includes(option.team)) return null
+  const side = lineup[option.team]
+  if (side.teamLabel !== option.team_label) return null
+  const all = [...side.starters, ...side.bench]
+  const keyMatches = all.filter((p) => optionKeyFor(p, option.team, new Set()) === option.key)
+  if (keyMatches.length !== 1 || keyMatches[0].number !== option.number) return null
+  const group =
+    option.group === "starter" ? side.starters : option.group === "sub" ? side.bench : []
+  return group.includes(keyMatches[0]) ? keyMatches[0] : null
 }
 
 /**

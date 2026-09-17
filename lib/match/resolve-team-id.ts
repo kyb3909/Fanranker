@@ -2,6 +2,8 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { fetchTeamNames } from "@/lib/dictionary/squad-names"
+import { resolveTeamName } from "./team-name-resolution"
 
 /**
  * 팀 한글명 → `team_dictionary.soccerway_team_id` (2026-08-24).
@@ -20,57 +22,12 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
  *    1건일 때만. 애매하면 붙이지 않는다 — 영문으로 남는 편이 오답보다 낫다.
  */
 
-/** 표기 흔들림 흡수용 정규화 — 공백·구두점·약어 기호를 지운다 */
-function norm(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[\s&·．.\-_'"()]/g, "")
-    .trim()
-}
-
-interface DictRow {
-  id: string
-  nameKr: string
-  aliases: string[]
-}
-
 const cachedDict = unstable_cache(
-  async (): Promise<DictRow[]> => {
-    const { data } = await createServiceRoleClient()
-      .from("team_dictionary")
-      .select("soccerway_team_id, name_kr, aliases_kr")
-      .neq("status", "rejected")
-      .not("name_kr", "is", null)
-    return (data ?? []).map((r) => ({
-      id: String(r.soccerway_team_id),
-      nameKr: String(r.name_kr),
-      aliases: ((r.aliases_kr as string[] | null) ?? []).map(String),
-    }))
-  },
-  ["team-id-dict-v1"],
+  () => fetchTeamNames(createServiceRoleClient()),
+  ["team-id-dict-v2"],
   { revalidate: 3600 }
 )
 
 export async function resolveTeamId(teamKr: string): Promise<string | null> {
-  const src = String(teamKr ?? "").trim()
-  if (!src) return null
-
-  const dict = await cachedDict().catch(() => [] as DictRow[])
-  if (dict.length === 0) return null
-
-  const exact = dict.find((d) => d.nameKr === src)
-  if (exact) return exact.id
-
-  const byAlias = dict.filter((d) => d.aliases.includes(src))
-  if (byAlias.length === 1) return byAlias[0].id
-
-  // 포함 관계 — 짧은 쪽이 3글자 미만이면 우연히 걸린다 ("렌"·"AC" 등) → 제외
-  const a = norm(src)
-  if (a.length < 3) return null
-  const hits = dict.filter((d) => {
-    const b = norm(d.nameKr)
-    if (b.length < 3) return false
-    return a.includes(b) || b.includes(a)
-  })
-  return hits.length === 1 ? hits[0].id : null
+  return resolveTeamName(await cachedDict(), String(teamKr ?? ""))
 }

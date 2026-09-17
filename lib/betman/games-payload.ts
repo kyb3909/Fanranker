@@ -8,7 +8,7 @@ import {
   getDailyWindow,
   getGameBetDeadline,
 } from "@/lib/betman/daily-round"
-import { dedupeMarketRows } from "@/lib/betman/market-dedup"
+import { dedupeMarketRows, physicalMatchKey } from "@/lib/betman/market-dedup"
 import { getExcludedMarketIds } from "@/lib/betman/market-scope"
 // 국가대표 표기 정리 (`괌_남자` → `괌`). ⚠️ 라벨 전용 — matchKey·대조는 원문으로 돈다.
 import { stripNationalSuffix } from "@/lib/match/team-display"
@@ -90,7 +90,7 @@ export async function runGamesHousekeeping(): Promise<void> {
  * 캐시 키가 발산하기 때문. 라우트는 자체 CDN 캐시 헤더로 처리한다.
  */
 export function getGamesPayloadForSsr(sport = "all") {
-  return unstable_cache(() => buildGamesPayload({ sport }), ["betman-games-ssr", sport], {
+  return unstable_cache(() => buildGamesPayload({ sport }), ["betman-games-ssr-v2", sport], {
     revalidate: 60,
     tags: ["betman-games"],
   })()
@@ -295,7 +295,7 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
   let query = supabase
     .from("betman_games")
     .select(
-      "id, round_id, game_no, match_time, sport, league_code, game_type, home_team_name, away_team_name, handicap, over_under_line, venue, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
+      "id, round_id, game_no, match_time, sport, league_code, game_type, home_team_name, away_team_name, handicap, over_under_line, venue, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id, market_round:betman_rounds!betman_games_round_id_fkey(gm_ts, year, round)"
     )
     // betman 다음 라운드 preview placeholder 차단 — '미정 vs 미정' 또는 빈 팀명
     .neq("home_team_name", "미정")
@@ -356,9 +356,9 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
 
   // Classify before status/type filters: otherwise the SUM boundary can disappear.
   const excludedMarkets = getExcludedMarketIds(games ?? [])
-  const eligibleGames = (games ?? []).filter(
+  const fullTimeGames = (games ?? []).filter((game) => !excludedMarkets.has(game.id))
+  const eligibleGames = dedupeMarketRows(fullTimeGames).filter(
     (game) =>
-      !excludedMarkets.has(game.id) &&
       (!isToday || game.status === "scheduled") &&
       (gameTypeFilter === "all" || game.game_type === gameTypeFilter)
   )
@@ -421,7 +421,7 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
     }
   > = {}
   gamesWithOdds.forEach((game) => {
-    const matchKey = `${game.home_team_name}_${game.away_team_name}_${game.match_time}`
+    const matchKey = physicalMatchKey(game)
     if (!groupedGames[matchKey]) {
       groupedGames[matchKey] = {
         matchKey,
@@ -437,29 +437,27 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
     groupedGames[matchKey].games.push(game)
   })
 
-  // Period exclusion has already used the complete group. Display dedup stays separate.
   for (const group of Object.values(groupedGames)) {
     group.games.sort((a, b) => Number(a.game_no ?? 0) - Number(b.game_no ?? 0))
-    group.games = dedupeMarketRows(group.games)
   }
-  // 그룹 dedup 에서 살아남은 row 만 flat 목록에도 반영 (total/bettable 카운트 일관성)
-  const keptIds = new Set<unknown>()
-  for (const group of Object.values(groupedGames)) {
-    for (const g of group.games) keptIds.add(g.id)
-  }
-  const visibleGames = gamesWithOdds.filter((g) => keptIds.has(g.id))
+  const visibleGames = gamesWithOdds
   const visibleGroups = Object.values(groupedGames).filter((group) => group.games.length > 0)
 
   // 내 예측은 **로그인 유저에게만** — 비로그인은 이 왕복을 통째로 건너뛴다.
   // (종전에는 `currentUser()` 로 Clerk API 를 매번 때리고, 비로그인이어도 그 왕복을 냈다.)
   let userPredictions: unknown[] = []
-  if (userId && visibleGames.length > 0) {
-    const gameIds = visibleGames.map((g) => g.id).filter(Boolean)
-    const { data: predictions } = await supabase
+  // Historical predictions retain their original game_id and locked_odds even
+  // when that listing is superseded or the newest listing is no longer on sale.
+  const predictionGameIds = fullTimeGames
+    .filter((game) => gameTypeFilter === "all" || game.game_type === gameTypeFilter)
+    .map((game) => game.id)
+  if (userId && predictionGameIds.length > 0) {
+    const { data: predictions, error: predictionsError } = await supabase
       .from("betman_predictions")
       .select("*")
       .eq("user_id", userId)
-      .in("game_id", gameIds)
+      .in("game_id", predictionGameIds)
+    if (predictionsError) throw new BetmanGamesError("내 예측을 가져오는 중 오류가 발생했습니다.")
     userPredictions = predictions || []
   }
 

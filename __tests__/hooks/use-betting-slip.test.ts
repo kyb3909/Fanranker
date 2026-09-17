@@ -271,6 +271,40 @@ describe("useBettingSlip", () => {
   })
 
   describe("제출", () => {
+    it.each([false, true])(
+      "MARKET_CHANGED: 변경된 선택만 지우고 새 목록을 요청한다 (남은 선택 %s)",
+      async (keepSecond) => {
+        const fetchMock = vi.fn().mockResolvedValue({
+          ok: false,
+          status: 409,
+          json: async () => ({
+            code: "MARKET_CHANGED",
+            changed_game_ids: ["g1"],
+            error: "배당이 변경되었습니다. 볼은 차감되지 않았습니다.",
+          }),
+        })
+        vi.stubGlobal("fetch", fetchMock)
+        const { result, loadMatches } = setup()
+        act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2)))
+        if (keepSecond)
+          act(() => result.current.handleBetSelection(...select("g2", "m2", "away", 3)))
+        act(() => result.current.setBetAmount(4))
+        await act(() => result.current.handleSubmitPrediction())
+        expect(result.current.selectedBets.map((bet) => bet.gameId)).toEqual(
+          keepSecond ? ["g2"] : []
+        )
+        expect(result.current.selectedSport).toBe(keepSecond ? "축구" : null)
+        expect(result.current.betAmount).toBe(4)
+        expect(result.current.alertModal).toMatchObject({ isOpen: true, type: "warning" })
+        expect(result.current.alertModal.message).toContain("차감되지 않았습니다")
+        expect(result.current.successModal.isOpen).toBe(false)
+        expect(result.current.isSubmittingPrediction).toBe(false)
+        expect(loadMatches).toHaveBeenCalledOnce()
+        expect(globalMutateMock).not.toHaveBeenCalled()
+        expect(predictionCalls(fetchMock)).toHaveLength(1)
+      }
+    )
+
     it("성공 — /api/sports/prediction 프록시로 idempotency_key 포함 POST, 슬립 초기화 + 완료 모달", async () => {
       // URL 분기 — 로그인 상태 마운트 시 잔액/프로필 fetch 가 같은 목을 타므로,
       // 잔액이 0 으로 덮여 "볼 부족" 거부가 나지 않게 balance 를 명시한다.
@@ -296,7 +330,7 @@ describe("useBettingSlip", () => {
       const [url, init] = calls[0]
       expect(url).toBe("/api/sports/prediction")
       const body = JSON.parse((init as RequestInit).body as string)
-      expect(body.predictions).toEqual([{ game_id: "g1", prediction: "home" }])
+      expect(body.predictions).toEqual([{ game_id: "g1", prediction: "home", expected_odds: 2 }])
       expect(body.betAmount).toBe(5)
       expect(typeof body.idempotency_key).toBe("string")
       expect(body.idempotency_key.length).toBeGreaterThan(0)

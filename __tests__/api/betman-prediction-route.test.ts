@@ -54,6 +54,7 @@ vi.mock("@/lib/supabase/server", () => ({
 interface Opts {
   scopeGames?: Record<string, unknown>[]
   scopeFails?: boolean
+  existingSlip?: { id: string }
   /** betman_games 가 돌려줄 경기들 */
   games?: Record<string, unknown>[]
   /** spend_tokens 결과 */
@@ -67,6 +68,7 @@ interface Opts {
 const baseGame = (over: Record<string, unknown> = {}) => ({
   id: "game-1",
   round_id: "round-1",
+  market_round: { gm_ts: "260109", year: 2026, round: 109 },
   game_no: 1,
   daily_round_id: "dr-1",
   sport: "축구",
@@ -96,6 +98,7 @@ function makeSupabase(o: Opts = {}) {
     slipInserts: [] as Record<string, unknown>[],
     predInserts: [] as Record<string, unknown>[][],
     slipDeletes: [] as string[],
+    scopeFilters: [] as string[],
   }
 
   const client: any = {
@@ -107,14 +110,27 @@ function makeSupabase(o: Opts = {}) {
       if (table === "betman_games") {
         return {
           select: () => ({
-            in: (column: string) => {
-              if (column === "id") return Promise.resolve({ data: games, error: null })
+            in: (column: string, values: unknown[]) => {
+              if (column === "id")
+                return Promise.resolve({
+                  data: games.filter((g) => values.includes(g.id)),
+                  error: null,
+                })
+              calls.scopeFilters.push(column)
+              const filters = [(g: Record<string, unknown>) => values.includes(g[column])]
               const query = {
+                in: (key: string, allowed: unknown[]) => {
+                  calls.scopeFilters.push(key)
+                  filters.push((g) => allowed.includes(g[key]))
+                  return query
+                },
                 gte: () => query,
                 lte: () => query,
                 order: () => query,
                 range: async (from: number, to: number) => ({
-                  data: (o.scopeGames ?? games).slice(from, to + 1),
+                  data: (o.scopeGames ?? games)
+                    .filter((g) => filters.every((filter) => filter(g)))
+                    .slice(from, to + 1),
                   error: o.scopeFails ? { message: "offline" } : null,
                 }),
               }
@@ -142,7 +158,9 @@ function makeSupabase(o: Opts = {}) {
       if (table === "prediction_slips") {
         return {
           select: () => ({
-            eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+            eq: () => ({
+              maybeSingle: async () => ({ data: o.existingSlip ?? null, error: null }),
+            }),
           }),
           insert: (row: Record<string, unknown>) => {
             calls.slipInserts.push(row)
@@ -225,6 +243,156 @@ beforeEach(() => {
   vi.resetModules()
   currentUserMock.mockResolvedValue({ id: "user-1" })
   vi.spyOn(console, "error").mockImplementation(() => {})
+})
+
+describe("POST /api/betman/prediction — 최신 마켓 확인", () => {
+  function listings() {
+    const old = baseGame()
+    const latest = {
+      ...old,
+      id: "new-game",
+      round_id: "round-2",
+      game_no: 100,
+      market_round: { gm_ts: "260110", year: 2026, round: 110 },
+      home_win_odds: "2.10",
+    }
+    return { old, latest }
+  }
+
+  async function submit(id = "game-1", expected_odds?: number) {
+    return (await loadRoute())(
+      req({ predictions: [{ game_id: id, prediction: "home", expected_odds }] }) as never
+    )
+  }
+
+  function expectNoSpend() {
+    expect(spendCalls()).toHaveLength(0)
+    expect(supabaseMock.calls.slipInserts).toHaveLength(0)
+    expect(supabaseMock.calls.predInserts).toHaveLength(0)
+    expect(retryRefundTokensMock).not.toHaveBeenCalled()
+  }
+
+  it.each(["2.00", "2.10"])(
+    "신회차 배당 %s: 구회차 ID 직접 제출은 차감 전에 409",
+    async (home_win_odds) => {
+      const { old, latest } = listings()
+      supabaseMock = makeSupabase({ games: [old], scopeGames: [old, { ...latest, home_win_odds }] })
+      const response = await submit()
+      expect(response.status).toBe(409)
+      expect(response.headers.get("Cache-Control")).toBe("no-store")
+      expect(await response.json()).toMatchObject({
+        code: "MARKET_CHANGED",
+        changed_game_ids: [old.id],
+      })
+      expect(supabaseMock.calls.scopeFilters).toEqual(["match_time", "sport"])
+      expectNoSpend()
+    }
+  )
+
+  it.each(["cancelled", "completed"])(
+    "신회차가 %s 상태여도 구회차를 받아주지 않는다",
+    async (status) => {
+      const { old, latest } = listings()
+      supabaseMock = makeSupabase({ games: [old], scopeGames: [old, { ...latest, status }] })
+      expect((await submit()).status).toBe(409)
+      expectNoSpend()
+    }
+  )
+
+  it("최신 선택은 확인한 배당과 원본 ID로 저장한다", async () => {
+    const { old, latest } = listings()
+    supabaseMock = makeSupabase({ games: [latest], scopeGames: [old, latest] })
+    expect((await submit(latest.id, 2.1)).status).toBe(200)
+    expect(supabaseMock.calls.predInserts[0][0]).toMatchObject({
+      game_id: latest.id,
+      round_id: latest.round_id,
+      locked_odds: 2.1,
+    })
+    expect(supabaseMock.calls.slipInserts[0].total_odds).toBe(2.1)
+  })
+
+  it("같은 ID의 배당이 바뀌면 재확인 전 차감하지 않는다", async () => {
+    const old = baseGame()
+    supabaseMock = makeSupabase({ games: [old], scopeGames: [{ ...old, home_win_odds: "2.10" }] })
+    expect((await submit(old.id, 2)).status).toBe(409)
+    expectNoSpend()
+  })
+
+  it("구형 클라이언트도 새로 확인한 배당을 저장한다", async () => {
+    const old = baseGame()
+    supabaseMock = makeSupabase({ games: [old], scopeGames: [{ ...old, home_win_odds: "2.10" }] })
+    expect((await submit()).status).toBe(200)
+    expect(supabaseMock.calls.predInserts[0][0].locked_odds).toBe(2.1)
+    expect(supabaseMock.calls.slipInserts[0].total_odds).toBe(2.1)
+  })
+
+  it("조회 도중 기준점이 바뀌면 같은 배당이어도 재선택을 요구한다", async () => {
+    const old = baseGame({ game_type: "핸디캡", handicap: -1 })
+    supabaseMock = makeSupabase({ games: [old], scopeGames: [{ ...old, handicap: -2 }] })
+    expect((await submit()).status).toBe(409)
+    expectNoSpend()
+  })
+
+  it("회차 확인 실패 시 차감하지 않는다", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ market_round: null })] })
+    expect((await submit()).status).toBe(500)
+    expectNoSpend()
+  })
+
+  it("다른 경기들 때문에 최신 회차가 500행 밖에 있어도 거부한다", async () => {
+    const { old, latest } = listings()
+    supabaseMock = makeSupabase({
+      games: [old],
+      scopeGames: [
+        old,
+        ...Array.from({ length: 499 }, (_, i) => ({
+          ...old,
+          id: `filler-${i}`,
+          home_team_name: `팀-${i}`,
+        })),
+        latest,
+      ],
+    })
+    expect((await submit()).status).toBe(409)
+    expectNoSpend()
+  })
+
+  it("이미 처리한 요청 재전송은 회차가 바뀌어도 기존 접수 결과만 반환한다", async () => {
+    supabaseMock = makeSupabase({ existingSlip: { id: "original-slip" }, scopeFails: true })
+    const response = await (
+      await loadRoute()
+    )(
+      req({
+        predictions: [{ game_id: "game-1", prediction: "home" }],
+        idempotency_key: "00000000-0000-4000-8000-000000000001",
+      }) as never
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ slipId: "original-slip", duplicate: true })
+    expectNoSpend()
+    expect(supabaseMock.calls.scopeFilters).toEqual([])
+  })
+
+  it("서로 다른 경기의 최신 회차가 다르면 각 예측의 회차를 보존한다", async () => {
+    const { old, latest } = listings()
+    const second = { ...latest, home_team_name: "전북", away_team_name: "울산" }
+    supabaseMock = makeSupabase({ games: [old, second] })
+    const response = await (
+      await loadRoute()
+    )(
+      req({
+        predictions: [
+          { game_id: old.id, prediction: "home" },
+          { game_id: second.id, prediction: "home" },
+        ],
+      }) as never
+    )
+    expect(response.status).toBe(200)
+    expect(supabaseMock.calls.predInserts[0].map((p) => p.round_id)).toEqual([
+      old.round_id,
+      second.round_id,
+    ])
+  })
 })
 
 describe("POST /api/betman/prediction — 볼 차감 계약", () => {
