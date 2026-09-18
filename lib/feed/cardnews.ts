@@ -34,7 +34,7 @@ export interface CardNewsItem {
    * 세 줄 요약 (2026-09-18 운영자: "오늘의 떡밥이 3줄로 … 모달로"). 있으면 카드 클릭이
    * 글 페이지 대신 요약 모달을 연다 — 댓글은 그 글의 댓글 그대로. 없으면 종전대로.
    */
-  summary?: { lines: string[]; kind: "news" | "interview" } | null
+  summary?: { lines: string[]; kind: "news" | "interview"; source?: string | null } | null
   /** VS 쟁점 — 질문 + 양측 + 퍼센트. 카드에서 바로 투표 가능 (폴 없으면 undefined) */
   vs?: {
     pollId: string
@@ -364,7 +364,7 @@ async function attachSummaries(
   if (cards.length === 0) return
   const { data } = await supabase
     .from("post_summaries")
-    .select("post_id, lines, kind")
+    .select("post_id, lines, kind, source_name")
     .in(
       "post_id",
       cards.map((c) => c.id)
@@ -375,7 +375,11 @@ async function attachSummaries(
     const s = byPost.get(card.id)
     card.summary =
       s && Array.isArray(s.lines) && s.lines.length >= 2
-        ? { lines: s.lines.map(String), kind: s.kind === "interview" ? "interview" : "news" }
+        ? {
+            lines: s.lines.map(String),
+            kind: s.kind === "interview" ? "interview" : "news",
+            source: s.source_name ?? null,
+          }
         : null
   }
 }

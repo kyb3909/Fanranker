@@ -104,6 +104,26 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
           {/* 요약 */}
           {detail && (
             <section className="px-5 pb-5 sm:px-6">
+              {/* 출처 — 요약 위에 한 줄, 원문 링크 필수 (2026-09-18 운영자: "출처 → 원문 링크 꼭 표기").
+                  문장 안의 "~에 따르면"을 여기로 옮겼다 — 귀속은 이 줄이 맡고 본문은 서술만 한다 */}
+              <p className="mb-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
+                출처{" : "}
+                {detail.sourceUrl ? (
+                  <a
+                    href={detail.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 font-semibold underline underline-offset-4"
+                    style={{ color: "var(--wc-ink-2)" }}
+                  >
+                    {detail.source} <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
+                ) : (
+                  <span className="font-semibold" style={{ color: "var(--wc-ink-2)" }}>
+                    {detail.source}
+                  </span>
+                )}
+              </p>
               {isInterview ? (
                 /* 인터뷰 = 발언이 주인공. 발언 블록은 소프트 틴트, 맥락(질문·주제)은 한 단 흐리게.
                    같은 맥락이 이어지면 라벨은 한 번만 (2026-09-18 운영자: "질문 → 대답(quote)") */
@@ -161,24 +181,6 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
               )}
 
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
-                <span style={{ color: "var(--wc-mute)" }}>
-                  출처{" "}
-                  {detail.sourceUrl ? (
-                    <a
-                      href={detail.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center gap-0.5 font-semibold underline-offset-4 hover:underline sm:min-h-0"
-                      style={{ color: "var(--wc-ink-2)" }}
-                    >
-                      {detail.source} <ArrowUpRight className="h-3.5 w-3.5" />
-                    </a>
-                  ) : (
-                    <span className="font-semibold" style={{ color: "var(--wc-ink-2)" }}>
-                      {detail.source}
-                    </span>
-                  )}
-                </span>
                 <Link
                   href={href}
                   className="ml-auto inline-flex min-h-11 items-center gap-0.5 font-semibold underline-offset-4 hover:underline sm:min-h-0"

@@ -1067,7 +1067,7 @@ export function CardNewsFeed({
             detail: {
               summary: summaryCard.summary.lines,
               kind: summaryCard.summary.kind,
-              source: summaryCard.source ?? "원문",
+              source: summaryCard.summary.source ?? summaryCard.source ?? "원문",
               sourceUrl: summaryCard.sourceUrl ?? "",
               participants: summaryCard.commentCount,
               postedAt: summaryCard.createdAt,
