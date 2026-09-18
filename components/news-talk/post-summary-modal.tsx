@@ -45,7 +45,13 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
     .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0) || b.createdAt.localeCompare(a.createdAt))
     .slice(0, 2)
 
-  const quoteBlocks = isInterview ? groupQuotes(detail?.summary ?? []) : []
+  // 인터뷰 lines[0] 은 상황 한 줄(lede, 따옴표 없음) — 발언 상자 위에 평문으로 (2026-09-18 운영자:
+  // "정보 전달이 안 된다"). 구버전 요약(발언만)은 lede 가 없으니 첫 줄 모양으로 가른다.
+  const interviewLines = isInterview ? (detail?.summary ?? []) : []
+  const lede = isInterviewLede(interviewLines[0]) ? interviewLines[0] : null
+  const quoteBlocks = isInterview
+    ? groupQuotes(lede ? interviewLines.slice(1) : interviewLines)
+    : []
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -102,10 +108,18 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
                 /* 인터뷰 = 발언이 주인공. 발언 블록은 소프트 틴트, 맥락(질문·주제)은 한 단 흐리게.
                    같은 맥락이 이어지면 라벨은 한 번만 (2026-09-18 운영자: "질문 → 대답(quote)") */
                 <div className="rounded-xl px-4 py-1" style={{ background: "var(--wc-soft-cool)" }}>
+                  {lede && (
+                    <p
+                      className="py-3 text-[14px] leading-[1.6] [word-break:keep-all]"
+                      style={{ color: "var(--wc-ink-2)" }}
+                    >
+                      {lede}
+                    </p>
+                  )}
                   {quoteBlocks.map((block, i) => (
                     <div
                       key={`${item.id}-q${i}`}
-                      className={i > 0 ? "border-t py-3" : "py-3"}
+                      className={i > 0 || lede ? "border-t py-3" : "py-3"}
                       style={{ borderColor: "var(--wc-line)" }}
                     >
                       {block.context && (
@@ -270,6 +284,11 @@ export function PostSummaryModal({ item, onClose }: PostSummaryModalProps) {
       </DialogContent>
     </Dialog>
   )
+}
+
+/** 따옴표가 하나도 없는 첫 줄 = 상황 한 줄(lede). 발언 줄은 반드시 “…” 를 품는다 */
+function isInterviewLede(line: string | undefined): line is string {
+  return !!line && !/[“”"]/.test(line)
 }
 
 /** `맥락 — “발언”` 줄들을 맥락별로 묶는다. 같은 맥락이 이어지면 라벨을 한 번만 단다 */

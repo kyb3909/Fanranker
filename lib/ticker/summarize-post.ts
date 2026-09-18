@@ -48,18 +48,18 @@ kind = "news" 일 때 — 요약:
 - 예외: 출처가 구단·리그·연맹의 공식 발표(오피셜)면 "구단은 …라고 발표했다"처럼 발표 주체를 밝히고 단정형을 써도 된다.
 - 기사 본문에 있는 사실만 쓴다. 본문에 없는 이름·숫자·평가를 덧붙이지 않는다. 추측·전망·감상 금지.
 
-kind = "interview" 일 때 — 발언 위주:
-- 요약하지 않는다. 그 사람이 실제로 한 말을 **본문의 큰따옴표 안 문장을 글자 그대로** 고른다. 가장 핵심적인 발언부터. 짧은 인터뷰면 2~3개, 발언이 풍부한 긴 인터뷰면 5~6개까지 실어도 된다 — 독자가 원문을 안 읽어도 무슨 말을 했는지 알 만큼.
-- 각 발언에 context 를 붙인다. 본문에 그 발언이 답한 **질문**이 나와 있으면(예: "~에 대한 질문에", "~라는 물음에", "~를 묻자") 그 질문을 의문문 한 문장으로 적는다(예: "가르나초는 왜 출전하지 못하나?"). 질문이 안 나와 있으면 무엇에 대한 말인지 짧은 주제(8자 안팎, 예: "부상 관리")만 적는다. 자명하면 빈 문자열.
-- "~라고 말했다", "~고 밝혔다" 같은 기자 서술, 해설, 평가는 넣지 않는다.
-- 발언은 요약·의역·합치기·어미 바꾸기 금지. 본문에 없는 말은 만들지 않는다.
+kind = "interview" 일 때 — 상황 한 줄 + 발언:
+- lede: 독자가 발언을 이해할 바탕을 한 문장으로. 누가(직함·소속), 어떤 자리에서(기자회견·인터뷰·SNS 등), 무엇에 대해 말했는지 — 그리고 그 말이 나온 배경(왜 지금 이 질문이 나왔는지)을 본문에 있으면 덧붙인다. **반드시 출처 매체를 문장 안에 넣는다**: "[출처 매체]에 따르면 …" / "[출처 매체]와의 인터뷰에서 …" / "[출처 매체]가 전한 기자회견에서 …". 출처가 구단·리그면 "구단 홈페이지 인터뷰에서 …"처럼 쓴다. 60~120자. 본문에 없는 사실은 넣지 않는다.
+- quotes: 그 사람이 실제로 한 말을 **본문의 큰따옴표 안 문장을 글자 그대로** 고른다. 핵심 발언 2~4개(발언이 풍부하면 5개까지). 발언은 **그 자체로 뜻이 통하는 완결된 문장**만 고른다 — "가능성은 있다", "상당히 비현실적" 같은 토막 어구는 앞뒤 문장을 포함해 한 덩어리로 고르거나 버린다. 발언 하나는 15자 이상.
+- 각 발언의 context 는 그 말이 **무엇에 대한 대답인지 독자가 바로 알 수 있는 짧은 절**로 쓴다(12~30자). 본문에 질문이 있으면 "~라는 질문에", "~를 묻자" 꼴, 없으면 "~에 대해" 꼴. 명사 두세 개짜리 라벨("부상 관리", "팀 분위기")은 쓰지 않는다. 예: "대표팀 제외 통보를 어떻게 받아들였느냐는 질문에", "첼시 첫 골의 의미에 대해".
+- "~라고 말했다" 같은 기자 서술, 해설, 평가는 quotes 에 넣지 않는다. 발언은 요약·의역·합치기·어미 바꾸기 금지. 본문에 없는 말은 만들지 않는다.
 
 출처 매체명은 넣지 않는다(따로 표시된다).
 
 JSON으로만 답한다:
 {"kind":"news","sentences":["문장1","문장2","문장3"]}
 또는
-{"kind":"interview","quotes":[{"context":"맥락 또는 빈 문자열","quote":"발언 그대로"}, ...]}`
+{"kind":"interview","lede":"상황 한 문장","quotes":[{"context":"무엇에 대한 대답인지","quote":"발언 그대로"}, ...]}`
 
 /** 인용문 대조용 정규화 — 공백·따옴표·문장부호 차이는 눈감고 글자만 본다 */
 function normalizeQuote(s: string): string {
@@ -134,7 +134,7 @@ export async function summarizePost(input: SummaryInput): Promise<PostSummary | 
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        ...chatParams(SUMMARY_MODEL, { temperature: 0, max_tokens: 900 }),
+        ...chatParams(SUMMARY_MODEL, { temperature: 0, max_tokens: 1400 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: PROMPT },
@@ -163,7 +163,7 @@ export async function summarizePost(input: SummaryInput): Promise<PostSummary | 
     logUsageFailure("ticker-summary", SUMMARY_MODEL, "network", Date.now() - startedAt)
     return null
   }
-  let parsed: { kind?: unknown; sentences?: unknown; quotes?: unknown }
+  let parsed: { kind?: unknown; sentences?: unknown; quotes?: unknown; lede?: unknown }
   try {
     parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}")
   } catch {
@@ -178,11 +178,18 @@ export async function summarizePost(input: SummaryInput): Promise<PostSummary | 
   const kind = parsed.kind === "interview" ? "interview" : "news"
   const debug = process.env.SUMMARY_DEBUG === "1"
   // news: lines = 단락을 이루는 문장들(화면은 공백으로 이어 한 단락).
-  // interview: lines = 발언 하나씩 `맥락 — “발언”` (화면은 발언마다 한 줄).
+  // interview: lines[0] = 상황 한 줄(lede, 따옴표 없음), 이후 발언 하나씩 `맥락 — “발언”`.
   let lines: string[]
   if (kind === "interview") {
+    const lede = String(parsed.lede ?? "")
+      .replace(/\s+/g, " ")
+      .trim()
+    if (lede.length < 20 || lede.length > 200 || /[“”"]/.test(lede)) {
+      if (debug) console.error("[summary-debug] bad-lede", input.postId, lede)
+      return null
+    }
     const quotes = Array.isArray(parsed.quotes) ? parsed.quotes : []
-    lines = quotes
+    const quoteLines = quotes
       .map((q) => {
         if (!q || typeof q !== "object") return null
         const quote = String((q as { quote?: unknown }).quote ?? "")
@@ -192,8 +199,8 @@ export async function summarizePost(input: SummaryInput): Promise<PostSummary | 
         const context = String((q as { context?: unknown }).context ?? "")
           .replace(/\s+/g, " ")
           .trim()
-          .slice(0, 60)
-        if (quote.length < 6 || quote.length > 300) return null
+          .slice(0, 80)
+        if (quote.length < 12 || quote.length > 300) return null
         if (!quoteInText(quote, text)) {
           if (debug) console.error("[summary-debug] quote-dropped", input.postId, quote)
           return null
@@ -201,7 +208,8 @@ export async function summarizePost(input: SummaryInput): Promise<PostSummary | 
         return joinQuoteLine(context, quote)
       })
       .filter((l): l is string => !!l)
-      .slice(0, 6)
+      .slice(0, 5)
+    lines = [lede, ...quoteLines]
   } else {
     lines = Array.isArray(parsed.sentences)
       ? parsed.sentences
